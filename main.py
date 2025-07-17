@@ -92,10 +92,13 @@ def load_settings():
         merged.update(base)
         env_key = os.getenv("DOCROPPER_LICENSE_KEY")
         env_name = os.getenv("DOCROPPER_LICENSE_NAME")
+        google_id = os.getenv("DOCROPPER_GOOGLE_CLIENT_ID")
         if env_key:
             merged["license_key"] = env_key
         if env_name:
             merged["license_name"] = env_name
+        if google_id:
+            merged["google_client_id"] = google_id
         return merged
     except Exception:
         return DEFAULT_SETTINGS.copy()

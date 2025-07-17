@@ -96,6 +96,25 @@ To stop the server, run the matching stop script or send a POST to `/shutdown/`.
 
 You may also launch `doccropper_tray.py` (or `.pyw`) to manage the server with a system tray icon.
 
+### Tray icon usage
+
+The tray helper works on Windows, macOS and most Linux desktops. If no graphical
+environment is available, run it with the `--no-tray` option to start the server
+without showing an icon:
+
+```bash
+python doccropper_tray.py --no-tray
+```
+If the tray cannot be shown, the script automatically launches the server
+without it.
+
+### Google Sign-In
+
+To enable optional Google authentication, set `google_client_id` in
+`settings.json` or provide it via the environment variable
+`DOCROPPER_GOOGLE_CLIENT_ID`. When configured, a sign-in button will appear in
+the web interface and tokens will be verified by the backend.
+
 ---
 
 ## 🔓 Licensing and PRO Features
