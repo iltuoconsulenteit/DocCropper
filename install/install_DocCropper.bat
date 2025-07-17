@@ -1,5 +1,13 @@
 @echo off
 setlocal
+set LOG_FILE=%TEMP%\DocCropper_install.log
+echo Starting installer > "%LOG_FILE%"
+call :main >>"%LOG_FILE%" 2>&1
+echo Log saved to %LOG_FILE%
+pause
+exit /b
+
+:main
 set REPO_URL=https://github.com/iltuoconsulenteit/DocCropper
 if not defined DOCROPPER_DEV_LICENSE set DOCROPPER_DEV_LICENSE=ILTUOCONSULENTEIT-DEV
 if not defined DOCROPPER_BRANCH set DOCROPPER_BRANCH=dgwo4q-codex/add-features-from-doccropper-project
@@ -90,16 +98,12 @@ if not "%LIC_KEY%"=="" (
 ) else (
   echo Demo mode enabled
 )
-set /p RUN_APP=Launch DocCropper with tray icon now? [Y/n]
+set /p RUN_APP=Launch DocCropper now? [Y/n]
 if /I "%RUN_APP%" NEQ "n" if /I "%RUN_APP%" NEQ "N" (
   pushd "%TARGET_DIR%"
-  where pythonw >nul 2>&1 && (
-    start "" pythonw doccropper_tray.py
-  ) || (
-    start "" python doccropper_tray.py
-  )
+  start "" scripts\start_DocCropper.bat
   popd
 )
 endlocal
-pause
+goto :EOF
 

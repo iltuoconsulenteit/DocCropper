@@ -1,5 +1,8 @@
 #!/bin/bash
 set -e
+LOG_FILE="/tmp/DocCropper_install.log"
+echo "Starting installer" > "$LOG_FILE"
+exec >> "$LOG_FILE" 2>&1
 
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"
@@ -103,13 +106,8 @@ else
   echo "ℹ️  Demo mode enabled"
 fi
 
-read -r -p "🚀 Launch DocCropper with tray icon now? [Y/n] " RUN_APP
+read -r -p "🚀 Launch DocCropper now? [Y/n] " RUN_APP
 if [[ ! "$RUN_APP" =~ ^[Nn]$ ]]; then
-  pushd "$TARGET_DIR" >/dev/null
-  if command -v pythonw >/dev/null 2>&1; then
-    (pythonw doccropper_tray.py &)
-  else
-    (python3 doccropper_tray.py &)
-  fi
-  popd >/dev/null
+  bash "$TARGET_DIR/scripts/start_DocCropper.sh" &
 fi
+echo "Log saved to $LOG_FILE"

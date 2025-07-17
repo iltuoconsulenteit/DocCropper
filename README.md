@@ -130,6 +130,27 @@ To activate:
 - Use a valid license key in `settings.json` or `.env`
 - Developer keys unlock full functionality for testing
 
+
+## 🔄 Updating DocCropper
+
+To update an existing installation to the latest code on the `main` branch,
+re-run the installer script for your platform:
+
+- **Windows**: `install/install_DocCropper.bat`
+- **Linux/macOS**: `bash install/install_DocCropper.sh`
+
+The installer will pull the most recent changes and preserve your
+configuration. To update from a different branch, set the environment variable
+`DOCROPPER_BRANCH` before running the installer:
+
+```bash
+set DOCROPPER_BRANCH=my-feature-branch  # Windows
+export DOCROPPER_BRANCH=my-feature-branch  # Linux/macOS
+```
+
+You can also trigger "Update from main" or "Update from branch" from the system
+tray icon.
+
 For inquiries: **doccropper@iltuoconsulenteit.it**
 
 

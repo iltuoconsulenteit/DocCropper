@@ -16,6 +16,9 @@ pip install --upgrade pip >nul
 pip install -r requirements.txt >nul
 
 echo Starting DocCropper on port %PORT%...
-python main.py --host 0.0.0.0 --port %PORT%
+where pythonw >nul 2>&1 && (
+    pythonw main.py --host 0.0.0.0 --port %PORT%
+) || (
+    python main.py --host 0.0.0.0 --port %PORT%
+)
 endlocal
-pause

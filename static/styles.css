@@ -44,6 +44,7 @@ h1, h2 {
 }
 
 #pageFooter {
+    position: relative;
     text-align: center;
     margin-top: 20px;
     color: #555;
@@ -51,7 +52,9 @@ h1, h2 {
 }
 
 #versionBox {
-    margin-left: 10px;
+    position: absolute;
+    right: 10px;
+    bottom: 5px;
     font-style: italic;
 }
 

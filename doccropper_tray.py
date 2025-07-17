@@ -7,10 +7,12 @@ from pystray import Icon, Menu, MenuItem
 from PIL import Image, ImageDraw
 import json
 from dotenv import load_dotenv
+import signal
 
 BASE_DIR = Path(__file__).resolve().parent
 INSTALL_DIR = BASE_DIR / 'install'
 SCRIPTS_DIR = BASE_DIR / 'scripts'
+PID_FILE = BASE_DIR / 'doccropper.pid'
 
 LOG_FILE = BASE_DIR / 'doccropper_tray.log'
 logging.basicConfig(
@@ -39,6 +41,8 @@ INSTALL_SCRIPTS = {
     'Darwin': 'install_DocCropper.command',
 }.get(SYSTEM, 'install_DocCropper.sh')
 
+app_running = False
+
 def is_developer():
     settings_file = BASE_DIR / 'settings.json'
     try:
@@ -66,11 +70,35 @@ def run_script(name, env=None, folder=INSTALL_DIR):
                          stdout=stdout, stderr=subprocess.STDOUT)
 
 
-def start_app():
-    run_script(START_SCRIPTS, folder=SCRIPTS_DIR)
+def is_app_running():
+    if PID_FILE.exists():
+        try:
+            pid = int(PID_FILE.read_text().strip())
+            os.kill(pid, 0)
+            return True
+        except Exception:
+            PID_FILE.unlink(missing_ok=True)
+    return False
 
-def stop_app():
+
+def refresh_menu(icon):
+    running = is_app_running()
+    start_item.enabled = not running
+    stop_item.enabled = running
+    start_item.icon = RED_DOT if not running else GREEN_DOT
+    stop_item.icon = GREEN_DOT if running else RED_DOT
+    icon.update_menu()
+
+
+def start_app(icon=None):
+    run_script(START_SCRIPTS, folder=SCRIPTS_DIR)
+    if icon:
+        refresh_menu(icon)
+
+def stop_app(icon=None):
     run_script(STOP_SCRIPTS, folder=SCRIPTS_DIR)
+    if icon:
+        refresh_menu(icon)
 
 def update_main():
     env = os.environ.copy()
@@ -87,12 +115,31 @@ def quit_app(icon, item):
     icon.stop()
 
 
-def create_image():
+def create_fallback_image():
     image = Image.new('RGB', (64, 64), 'white')
     draw = ImageDraw.Draw(image)
     draw.rectangle((8, 8, 56, 56), fill='black')
     draw.text((16, 20), 'DC', fill='white')
     return image
+
+
+def load_tray_icon():
+    logo = BASE_DIR / 'static' / 'logos' / 'header_logo.png'
+    try:
+        return Image.open(logo)
+    except Exception:
+        return create_fallback_image()
+
+
+def make_dot(color):
+    img = Image.new('RGB', (16, 16), (255, 255, 255, 0))
+    draw = ImageDraw.Draw(img)
+    draw.ellipse((3, 3, 13, 13), fill=color)
+    return img
+
+
+GREEN_DOT = make_dot('green')
+RED_DOT = make_dot('red')
 
 
 def main():
@@ -111,16 +158,20 @@ def main():
         start_app()
         return
 
+    global start_item, stop_item
+    start_item = MenuItem('Start DocCropper', lambda icon, item: start_app(icon))
+    stop_item = MenuItem('Stop DocCropper', lambda icon, item: stop_app(icon))
     menu_items = [
-        MenuItem('Start DocCropper', lambda icon, item: start_app()),
-        MenuItem('Stop DocCropper', lambda icon, item: stop_app()),
+        start_item,
+        stop_item,
         MenuItem('Update from main', lambda icon, item: update_main())
     ]
     if developer:
         menu_items.append(MenuItem('Update from branch', lambda icon, item: update_branch()))
     menu_items.append(MenuItem('Quit', quit_app))
 
-    icon = Icon('DocCropper', create_image(), 'DocCropper', menu=Menu(*menu_items))
+    icon = Icon('DocCropper', load_tray_icon(), 'DocCropper', menu=Menu(*menu_items))
+    refresh_menu(icon)
     try:
         icon.run()
     except Exception as e:
