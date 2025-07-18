@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$APP_DIR"
@@ -24,7 +24,7 @@ fi
 source venv/bin/activate
 echo "Installing Python packages..."
 python -m pip install --upgrade pip
-python -m pip install -r requirements.txt || { echo "Package installation failed"; exit 1; }
+python -m pip install -r requirements.txt || echo "Some packages failed to install, continuing"
 
 echo "Starting DocCropper on port $PORT..."
 python3 main.py --host 0.0.0.0 --port "$PORT"

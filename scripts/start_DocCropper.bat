@@ -37,10 +37,9 @@ if not exist venv (
 call venv\Scripts\activate.bat
 echo Installing Python packages...
 python -m pip install --upgrade pip
-python -m pip install -r requirements.txt || (
-    echo Package installation failed.
-    pause
-    exit /b 1
+python -m pip install -r requirements.txt
+if errorlevel 1 (
+    echo Some packages failed to install. Continuing anyway...
 )
 
 echo Starting DocCropper on port %PORT%...

@@ -228,6 +228,9 @@ async def scan_document():
     """Acquire a single image from the first available scanner."""
     try:
         import pyinsane2
+    except ModuleNotFoundError:
+        return JSONResponse(status_code=501, content={"message": "Scanning module not installed"})
+    try:
         pyinsane2.init()
         devices = pyinsane2.get_devices()
         if not devices:

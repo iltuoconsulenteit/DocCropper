@@ -110,6 +110,7 @@ You can pre-populate `settings.json` or override values using `.env` files in th
 ## ▶️ Running DocCropper
 
 Use the included start scripts from the `scripts/` directory. When launched, they create a virtual environment if needed and install Python packages before starting DocCropper. The commands now show the installation progress so that errors are visible.
+If some packages fail to install, the scripts continue so the basic features remain usable.
 Keep these scripts inside the DocCropper installation folder or create a shortcut to them.
 If you want to run a script from anywhere, set the environment variable `DOCROPPER_HOME` to the installation path.
 
@@ -146,6 +147,11 @@ and install the **Desktop development with C++** workload, then rerun the
 installer. A helper script is provided at
 `install\install_scanner_tools.bat` which automates this installation on
 Windows.
+
+If `pyinsane2` or other optional packages fail to build, the start scripts
+continue and DocCropper launches without scanning support. Check the
+installation log (`%TEMP%\DocCropper_install.log` on Windows or
+`/tmp/DocCropper_install.log` on Linux/macOS) for details.
 
 ### Google Sign-In
 
