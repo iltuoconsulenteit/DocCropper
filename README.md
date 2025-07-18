@@ -83,6 +83,7 @@ pip install -r requirements.txt
 Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh` (Linux/macOS). These scripts:
 - Clone the repo
 - Set up the environment
+- Automatically install Git if needed
 - Ask for optional license key
 - Launch the server or tray icon
 

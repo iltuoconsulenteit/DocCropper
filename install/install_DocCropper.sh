@@ -36,7 +36,22 @@ if [ "$UPPER_KEY" = "$DEV_UPPER" ]; then
 fi
 
 printf '\xF0\x9F\x94\xA7 Verifica pacchetti richiesti...\n'
-for cmd in git python3 pip3; do
+
+if ! command -v git >/dev/null 2>&1; then
+  echo "⚠️  git non trovato, provo ad installarlo..."
+  if command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get update && sudo apt-get install -y git
+  elif command -v yum >/dev/null 2>&1; then
+    sudo yum install -y git
+  elif command -v brew >/dev/null 2>&1; then
+    brew install git
+  else
+    echo "❌ impossibile installare git automaticamente" >&2
+    exit 1
+  fi
+fi
+
+for cmd in python3 pip3; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     echo "❌ $cmd non trovato" >&2
     exit 1

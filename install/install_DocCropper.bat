@@ -37,7 +37,20 @@ if /I "%LIC_KEY%"=="%DOCROPPER_DEV_LICENSE%" set BRANCH=%DOCROPPER_BRANCH%
 
 
 echo Checking required tools...
-for %%C in (git python pip) do (
+
+where git >nul 2>&1
+if errorlevel 1 (
+  echo Git not found. Attempting installation via winget...
+  where winget >nul 2>&1
+  if errorlevel 1 (
+    echo winget not available. Please install Git manually.
+    pause
+    exit /b 1
+  )
+  winget install --id Git.Git -e --source winget
+)
+
+for %%C in (python pip) do (
   where %%C >nul 2>&1
   if errorlevel 1 (
     echo %%C not found. Please install it first.
