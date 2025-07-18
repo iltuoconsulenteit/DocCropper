@@ -87,6 +87,7 @@ Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh
 - Ask for optional license key
 - Let you choose the branch to install (main or the developer branch)
 - Start the tray icon which launches the server
+- On Windows they try to install under `%ProgramFiles%\DocCropper`; if that directory cannot be created they fall back to a `DocCropper` folder next to the installer
 
 You can pre-populate `settings.json` or override values using `.env` files in the `env/` folder.
 

@@ -13,10 +13,20 @@ if not defined DOCROPPER_DEV_LICENSE set DOCROPPER_DEV_LICENSE=ILTUOCONSULENTEIT
 if not defined DOCROPPER_DEV_BRANCH set DOCROPPER_DEV_BRANCH=dgwo4q-codex/add-features-from-doccropper-project
 if not defined DOCROPPER_BRANCH set DOCROPPER_BRANCH=main
 
+rem Determine default install location
+set "SCRIPT_DIR=%~dp0"
+set "DEFAULT_DIR=%ProgramFiles%\DocCropper"
+if not exist "%ProgramFiles%" set "DEFAULT_DIR=%SCRIPT_DIR%DocCropper"
+
 set TARGET_DIR=
-set /p TARGET_DIR=Installation directory [%%ProgramFiles%%\DocCropper]:
-if "%TARGET_DIR%"=="" set TARGET_DIR=%ProgramFiles%\DocCropper
-if not exist "%TARGET_DIR%" mkdir "%TARGET_DIR%"
+set /p TARGET_DIR=Installation directory [%DEFAULT_DIR%]:
+if "%TARGET_DIR%"=="" set "TARGET_DIR=%DEFAULT_DIR%"
+mkdir "%TARGET_DIR%" 2>nul
+if not exist "%TARGET_DIR%" (
+  echo Failed to create "%TARGET_DIR%". Using "%SCRIPT_DIR%DocCropper" instead.
+  set "TARGET_DIR=%SCRIPT_DIR%DocCropper"
+  mkdir "%TARGET_DIR%" >nul 2>&1
+)
 echo Installing to: %TARGET_DIR%
 
 set DEFAULT_KEY=
