@@ -83,7 +83,8 @@ pip install -r requirements.txt
 Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh` (Linux/macOS). These scripts:
 - Clone the repo
 - Set up the environment
-- Automatically install Git if needed
+- Automatically install Git if needed (using winget or by downloading the
+  official installer)
 - Ask for optional license key
 - Let you choose the branch to install (type `1` for `main` or `2` for the developer branch)
 - You can override the developer branch by setting the `DOCROPPER_DEV_BRANCH` environment variable

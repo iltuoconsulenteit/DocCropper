@@ -49,12 +49,31 @@ exit /b
 :main
 where git >nul 2>&1
 if errorlevel 1 (
-    echo Git not found. Trying to install with winget...
-    where winget >nul 2>&1 || (
-        echo winget not available. Install Git manually.
+    echo Git not found. Trying to install...
+    where winget >nul 2>&1
+    if not errorlevel 1 (
+        winget install --id Git.Git -e --source winget
+    ) else (
+        echo winget not available. Downloading Git installer...
+        if defined PROCESSOR_ARCHITEW6432 (
+            set "GIT_URL=https://github.com/git-for-windows/git/releases/latest/download/Git-2.44.0-64-bit.exe"
+        ) else (
+            set "GIT_URL=https://github.com/git-for-windows/git/releases/latest/download/Git-2.44.0-32-bit.exe"
+        )
+        powershell -NoProfile -Command "try { Invoke-WebRequest -Uri '%GIT_URL%' -OutFile '%TEMP%\git_installer.exe' -ErrorAction Stop } catch { exit 1 }"
+        if exist "%TEMP%\git_installer.exe" (
+            echo Running Git installer...
+            start /wait "" "%TEMP%\git_installer.exe" /VERYSILENT /NORESTART
+            del "%TEMP%\git_installer.exe"
+        ) else (
+            echo Failed to download Git installer. Install Git manually.
+            exit /b 1
+        )
+    )
+    where git >nul 2>&1 || (
+        echo Git installation failed. Install Git manually.
         exit /b 1
     )
-    winget install --id Git.Git -e --source winget
 )
 
 if not exist "%APP_DIR%\.git" (
