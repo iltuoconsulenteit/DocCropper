@@ -107,7 +107,7 @@ You can pre-populate `settings.json` or override values using `.env` files in th
 
 ## ▶️ Running DocCropper
 
-Use the included start scripts from the `scripts/` directory. They handle virtualenv creation and dependency install.
+Use the included start scripts from the `scripts/` directory. When launched, they create a virtual environment if needed and install Python packages before starting DocCropper. The commands now show the installation progress so that errors are visible.
 Keep these scripts inside the DocCropper installation folder or create a shortcut to them.
 If you want to run a script from anywhere, set the environment variable `DOCROPPER_HOME` to the installation path.
 

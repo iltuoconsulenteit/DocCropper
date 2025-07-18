@@ -27,11 +27,21 @@ try: d=json.load(open('settings.json')); print(d.get('port',8000))\
 except Exception: print(8000)"') do set PORT=%%p
 
 if not exist venv (
-    python -m venv venv
+    echo Creating virtual environment...
+    python -m venv venv || (
+        echo Failed to create venv.
+        pause
+        exit /b 1
+    )
 )
 call venv\Scripts\activate.bat
-pip install --upgrade pip >nul
-pip install -r requirements.txt >nul
+echo Installing Python packages...
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt || (
+    echo Package installation failed.
+    pause
+    exit /b 1
+)
 
 echo Starting DocCropper on port %PORT%...
 where pythonw >nul 2>&1 && (

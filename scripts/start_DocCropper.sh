@@ -18,11 +18,13 @@ PY
 
 # Setup virtual environment
 if [ ! -d "venv" ]; then
-    python3 -m venv venv
+    echo "Creating virtual environment..."
+    python3 -m venv venv || { echo "Failed to create venv"; exit 1; }
 fi
 source venv/bin/activate
-pip install --upgrade pip >/dev/null
-pip install -r requirements.txt >/dev/null
+echo "Installing Python packages..."
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt || { echo "Package installation failed"; exit 1; }
 
 echo "Starting DocCropper on port $PORT..."
 python3 main.py --host 0.0.0.0 --port "$PORT"
