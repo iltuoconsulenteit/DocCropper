@@ -1,7 +1,7 @@
 @echo off
 setlocal
 set LOG_FILE=%TEMP%\DocCropper_install.log
-echo Starting installer > "%LOG_FILE%"
+echo Installer running... please wait. Output will also be saved to %LOG_FILE%
 call :main >>"%LOG_FILE%" 2>&1
 echo Log saved to %LOG_FILE%
 pause
@@ -32,8 +32,18 @@ PY
 )
 set /p LIC_KEY=Enter license key (leave blank for demo) [%DEFAULT_KEY%]:
 if "%LIC_KEY%"=="" set LIC_KEY=%DEFAULT_KEY%
+
+rem Branch selection
 set BRANCH=%DOCROPPER_BRANCH%
-if /I "%LIC_KEY%"=="%DOCROPPER_DEV_LICENSE%" if not defined DOCROPPER_BRANCH set BRANCH=%DOCROPPER_DEV_BRANCH%
+if not defined BRANCH set BRANCH=main
+if not defined DOCROPPER_BRANCH (
+  echo.
+  echo Choose branch to install:
+  echo   1. main
+  echo   2. %DOCROPPER_DEV_BRANCH%
+  set /p CHOICE=Select branch [1]:
+  if "%CHOICE%"=="2" set BRANCH=%DOCROPPER_DEV_BRANCH%
+)
 
 echo Using branch: %BRANCH%
 
@@ -118,9 +128,9 @@ set /p RUN_APP=Launch DocCropper with tray icon now? [Y/n]
 if /I "%RUN_APP%" NEQ "n" if /I "%RUN_APP%" NEQ "N" (
   pushd "%TARGET_DIR%"
   where pythonw >nul 2>&1 && (
-    start "" pythonw doccropper_tray.py
+    start "" pythonw doccropper_tray.py --auto-start
   ) || (
-    start "" python doccropper_tray.py
+    start "" python doccropper_tray.py --auto-start
   )
   popd
 )

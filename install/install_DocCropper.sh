@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 LOG_FILE="/tmp/DocCropper_install.log"
+echo "Installer running... see $LOG_FILE for details"
 echo "Starting installer" > "$LOG_FILE"
 exec >> "$LOG_FILE" 2>&1
 
@@ -31,9 +32,19 @@ read -r -p "🔑 Enter license key (leave blank for demo) [${DEFAULT_KEY}]: " LI
 [ -z "$LIC_KEY" ] && LIC_KEY="$DEFAULT_KEY"
 UPPER_KEY=$(echo "$LIC_KEY" | tr '[:lower:]' '[:upper:]')
 DEV_UPPER=$(echo "$DEV_KEY" | tr '[:lower:]' '[:upper:]')
+
 BRANCH="$DEFAULT_BRANCH"
-if [ "$UPPER_KEY" = "$DEV_UPPER" ]; then
-  BRANCH="${DOCROPPER_BRANCH:-$DEV_BRANCH}"
+if [ -z "$DOCROPPER_BRANCH" ]; then
+  echo
+  echo "Choose branch to install:" 
+  echo " 1) main"
+  echo " 2) $DEV_BRANCH"
+  read -r -p "Selection [1]: " ans
+  if [ "$ans" = "2" ]; then
+    BRANCH="$DEV_BRANCH"
+  fi
+else
+  BRANCH="$DOCROPPER_BRANCH"
 fi
 
 echo "Using branch: $BRANCH"
@@ -128,9 +139,9 @@ read -r -p "🚀 Launch DocCropper with tray icon now? [Y/n] " RUN_APP
 if [[ ! "$RUN_APP" =~ ^[Nn]$ ]]; then
   pushd "$TARGET_DIR" >/dev/null
   if command -v pythonw >/dev/null 2>&1; then
-    (pythonw doccropper_tray.py &)
+    (pythonw doccropper_tray.py --auto-start &)
   else
-    (python3 doccropper_tray.py &)
+    (python3 doccropper_tray.py --auto-start &)
   fi
   popd >/dev/null
 fi

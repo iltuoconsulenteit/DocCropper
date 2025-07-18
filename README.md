@@ -85,7 +85,8 @@ Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh
 - Set up the environment
 - Automatically install Git if needed
 - Ask for optional license key
-- Launch the server or tray icon
+- Let you choose the branch to install (main or the developer branch)
+- Start the tray icon which launches the server
 
 You can pre-populate `settings.json` or override values using `.env` files in the `env/` folder.
 
@@ -112,6 +113,8 @@ python doccropper_tray.py --no-tray
 ```
 If the tray cannot be shown, the script automatically launches the server
 without it.
+You can use the `--auto-start` flag to start the server immediately and still
+show the tray icon.
 
 ### Google Sign-In
 

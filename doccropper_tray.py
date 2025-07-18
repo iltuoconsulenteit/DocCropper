@@ -148,6 +148,8 @@ def main():
     parser = argparse.ArgumentParser(description="DocCropper tray helper")
     parser.add_argument("--no-tray", action="store_true",
                         help="Run without showing a system tray icon")
+    parser.add_argument("--auto-start", action="store_true",
+                        help="Start the server immediately")
     args = parser.parse_args()
 
     developer = os.environ.get('DOCROPPER_DEVELOPER') == '1' or is_developer()
@@ -157,6 +159,10 @@ def main():
         logging.info("--no-tray specified, launching server directly")
         start_app()
         return
+
+    if args.auto_start:
+        logging.info("--auto-start specified, starting server")
+        start_app()
 
     global start_item, stop_item
     start_item = MenuItem('Start DocCropper', lambda icon, item: start_app(icon))
