@@ -141,7 +141,9 @@ On Windows the `pyinsane2` installation may fail with a message like
 `Microsoft Visual C++ 14.0 or greater is required`. In that case download the
 [Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
 and install the **Desktop development with C++** workload, then rerun the
-installer.
+installer. A helper script is provided at
+`install\install_scanner_tools.bat` which automates this installation on
+Windows.
 
 ### Google Sign-In
 
