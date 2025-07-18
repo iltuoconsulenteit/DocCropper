@@ -94,7 +94,10 @@ Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh
 - Start the tray icon which launches the server
 - Write a log to `install.log` in the install folder while still showing prompts
 - By default they install to `%ProgramFiles%\DocCropper` on Windows,
-  `/opt/DocCropper` on Linux and `/Applications/DocCropper` on macOS
+  `/opt/DocCropper` on Linux and `/Applications/DocCropper` on macOS. If the
+  Windows installer cannot create the default directory (for example when not
+  running as Administrator) it falls back to a `DocCropper` folder next to the
+  batch script.
 
 You can pre-populate `settings.json` or override values using `.env` files in the `env/` folder.
 

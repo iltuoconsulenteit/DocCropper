@@ -36,7 +36,15 @@ set "CONFIG_FILE=settings.json"
 set "BACKUP_FILE=settings.local.json.bak"
 set "LOG_FILE=%APP_DIR%\install.log"
 
-if not exist "%APP_DIR%" mkdir "%APP_DIR%"
+if not exist "%APP_DIR%" (
+    mkdir "%APP_DIR%" >nul 2>&1
+    if errorlevel 1 (
+        echo Unable to create %APP_DIR%. Falling back to "%~dp0DocCropper"
+        set "APP_DIR=%~dp0DocCropper"
+        set "LOG_FILE=%APP_DIR%\install.log"
+        if not exist "%APP_DIR%" mkdir "%APP_DIR%"
+    )
+)
 
 echo Logging to %LOG_FILE%
 where powershell >nul 2>&1 && set "PWSH=powershell"
@@ -95,6 +103,10 @@ if errorlevel 1 (
 if not exist "%APP_DIR%\.git" (
     echo Cloning repository...
     git clone --branch %BRANCH% %REPO_URL% "%APP_DIR%"
+    if errorlevel 1 (
+        echo Clone failed. Check your network connection and permissions.
+        exit /b 1
+    )
 ) else (
     echo Repository present in %APP_DIR%
     set /p update_choice=Vuoi aggiornare il repository da GitHub? [s/N] 
@@ -151,11 +163,7 @@ if exist requirements.txt (
     echo File requirements.txt non trovato!
 )
 
-echo Avvio DocCropper tray...
-if exist "venv\Scripts\pythonw.exe" (
-    start "" venv\Scripts\pythonw.exe doccropper_tray.py --auto-start
-) else (
-    start "" venv\Scripts\python.exe doccropper_tray.py --auto-start
-)
+echo Avvio DocCropper...
+start "DocCropper" "%APP_DIR%\scripts\start_DocCropper.bat"
 
 exit /b
