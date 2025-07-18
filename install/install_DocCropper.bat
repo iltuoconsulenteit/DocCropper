@@ -101,10 +101,17 @@ if errorlevel 1 (
 )
 
 if not exist "%APP_DIR%\.git" (
+    rem ensure destination directory is empty before cloning
+    dir /b "%APP_DIR%" | findstr . >nul 2>&1
+    if not errorlevel 1 (
+        echo Destination %APP_DIR% exists and is not empty.
+        echo Please choose an empty directory or remove its contents.
+        exit /b 1
+    )
     echo Cloning repository...
     git clone --branch %BRANCH% %REPO_URL% "%APP_DIR%"
     if errorlevel 1 (
-        echo Clone failed. Check your network connection and permissions.
+        echo Clone failed. Check your network connection, permissions, and that %APP_DIR% is empty.
         exit /b 1
     )
 ) else (

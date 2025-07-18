@@ -80,8 +80,16 @@ if [ -d "$TARGET_DIR/.git" ]; then
     git -C "$TARGET_DIR" pull --rebase --autostash origin "$BRANCH"
   fi
 else
+  if [ -d "$TARGET_DIR" ] && [ "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then
+    echo "❌ Destination $TARGET_DIR already exists and is not empty." >&2
+    echo "   Remove its contents or choose another directory." >&2
+    exit 1
+  fi
   echo "📥 Clonazione repository in $TARGET_DIR..."
-  git clone --branch "$BRANCH" "$REPO_URL" "$TARGET_DIR"
+  if ! git clone --branch "$BRANCH" "$REPO_URL" "$TARGET_DIR"; then
+    echo "❌ Clone failed. Check your network connection, permissions, and ensure the destination directory is empty." >&2
+    exit 1
+  fi
 fi
 
 printf '\xE2\x9C\x85 Operazione completata.\n'

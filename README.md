@@ -98,6 +98,8 @@ Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh
   Windows installer cannot create the default directory (for example when not
   running as Administrator) it falls back to a `DocCropper` folder next to the
   batch script.
+- If the clone step fails, verify your network connection and ensure the chosen
+  directory is empty.
 
 You can pre-populate `settings.json` or override values using `.env` files in the `env/` folder.
 
