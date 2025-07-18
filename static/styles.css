@@ -277,6 +277,18 @@ button:hover {
     margin: 5px 0;
 }
 
+#imageAdjust {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#imageAdjust label {
+    margin-right: 4px;
+}
+
 @media (max-width: 600px) {
     #pageHeader {
         flex-direction: column;

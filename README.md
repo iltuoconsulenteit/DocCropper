@@ -11,6 +11,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - ✅ Multi-image upload and batch processing
 - 🔄 Automatic or manual perspective correction
 - 🖼️ Interactive cropping and preview
+- 🌞 Adjust brightness and contrast before processing
 - 📄 One-click PDF export
 - 🗂️ Persistent user settings
 - 🧭 Touchscreen-friendly interface
@@ -27,6 +28,7 @@ This project uses [Interact.JS](https://github.com/taye/interact.js) for managin
 The frontend allows the user to:
 - Upload one or more images (on mobile devices the file picker can use the camera directly)
 - Manually adjust the four corners of each image
+- Use brightness and contrast sliders to enhance the document
 - Submit data (image, coordinates, size) to the backend
 - Export all processed images to PDF
 - Choose how many processed images appear on each PDF page

@@ -5,6 +5,8 @@
   "arrangement": "auto",
   "scale_mode": "fit",
   "scale_percent": 100,
+  "brightness": 100,
+  "contrast": 100,
   "port": 8000,
   "license_key": "",
   "license_name": "",

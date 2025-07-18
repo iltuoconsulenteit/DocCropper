@@ -22,6 +22,8 @@ const orientationSelect = document.getElementById('orientationSelect');
 const arrangeSelect = document.getElementById('arrangeSelect');
 const scaleMode = document.getElementById('scaleMode');
 const scalePercent = document.getElementById('scalePercent');
+const brightnessRange = document.getElementById('brightnessRange');
+const contrastRange = document.getElementById('contrastRange');
 const processedImageElement = document.getElementById('processedImage');
 const processedGallery = document.getElementById('processedGallery');
 const statusMessageElement = document.getElementById('statusMessage');
@@ -108,6 +110,12 @@ function applySettings(cfg) {
     }
     if (cfg.scale_percent !== undefined) {
         scalePercent.value = cfg.scale_percent;
+    }
+    if (cfg.brightness !== undefined && brightnessRange) {
+        brightnessRange.value = cfg.brightness;
+    }
+    if (cfg.contrast !== undefined && contrastRange) {
+        contrastRange.value = cfg.contrast;
     }
     isLicensed = false;
     licenseName = '';
@@ -617,6 +625,12 @@ submitBtn.addEventListener('click', () => {
     formData.append('points', JSON.stringify(pointsForBackend));
     formData.append('original_width', Math.round(origW));
     formData.append('original_height', Math.round(origH));
+    if (brightnessRange) {
+        formData.append('brightness', parseInt(brightnessRange.value || '100'));
+    }
+    if (contrastRange) {
+        formData.append('contrast', parseInt(contrastRange.value || '100'));
+    }
 
     fetch('/process-image/', {
         method: 'POST',
@@ -743,6 +757,18 @@ scaleMode.addEventListener('change', () => {
 scalePercent.addEventListener('change', () => {
     saveSettings({ scale_percent: parseInt(scalePercent.value || '100') });
 });
+
+if (brightnessRange) {
+    brightnessRange.addEventListener('change', () => {
+        saveSettings({ brightness: parseInt(brightnessRange.value || '100') });
+    });
+}
+
+if (contrastRange) {
+    contrastRange.addEventListener('change', () => {
+        saveSettings({ contrast: parseInt(contrastRange.value || '100') });
+    });
+}
 
 function applyProStatus() {
     // In demo mode features remain usable but PDF pages beyond the first

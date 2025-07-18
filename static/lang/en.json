@@ -44,4 +44,6 @@
   ,"scanning": "Scanning..."
   ,"scanDone": "Scan complete."
   ,"scanFailed": "Scanning failed"
+  ,"brightness": "Brightness:"
+  ,"contrast": "Contrast:"
 }
