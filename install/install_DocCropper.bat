@@ -9,7 +9,7 @@ rem Default branches
 if defined DOCROPPER_DEV_BRANCH (
     set "DEV_BRANCH=%DOCROPPER_DEV_BRANCH%"
 ) else (
-    set "DEV_BRANCH=dgwo4q-codex/add-features-from-doccropper-project"
+    set "DEV_BRANCH=codex/move-version-number-to-bottom-right"
 )
 
 if not defined DOCROPPER_BRANCH (
