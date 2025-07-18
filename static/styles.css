@@ -147,6 +147,18 @@ button:hover {
     margin: 5px auto 0;
 }
 
+#instructionsBox {
+    position: fixed;
+    right: 10px;
+    top: 80px;
+    width: 200px;
+    border: 1px solid #888;
+    background: #fff;
+    padding: 10px;
+    font-size: 0.9em;
+    z-index: 50;
+}
+
 #statusMessage {
     margin-top: 10px;
     font-weight: bold;

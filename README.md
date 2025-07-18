@@ -158,6 +158,12 @@ tray icon.
 
 For inquiries: **doccropper@iltuoconsulenteit.it**
 
+## \uD83D\uDCD6 Usage Instructions
+
+Detailed instructions will be published soon on the project Wiki. Until then,
+explore the interface or visit the coming GitHub Wiki page:
+<https://github.com/iltuoconsulenteit/DocCropper/wiki>
+
 
 ## Credits
 

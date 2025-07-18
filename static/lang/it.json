@@ -36,5 +36,8 @@
   "loggedInAs": "Connesso come",
   "signInFailed": "Accesso fallito",
   "loginDisabled": "Accesso non configurato",
-  "version": "Versione"
+  "version": "Versione",
+  "instructions": "Istruzioni",
+  "comingSoon": "Prossimamente. Consulta il Wiki su GitHub per i dettagli.",
+  "wikiLink": "Wiki GitHub"
 }
