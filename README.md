@@ -45,7 +45,9 @@ JavaScript logic is contained in `static/app.js`.
 
 Images are processed and displayed as thumbnails with **Rotate**, **Edit**, and **Delete** buttons. Preview and layout configuration options are also provided before export.
 
-Logos and branding can be customized via `static/logos/`, `settings.json`, and `brand_html`. The footer displays the current Git commit hash.
+Logos and branding can be customized via `static/logos/`, `settings.json`, and the
+`brand_html` field which populates a client branding box in the header. The
+footer displays the current Git commit hash.
 
 User preferences are stored in the `users/` folder based on their email address. Anonymous users fallback to global settings in `settings.json`. The system supports optional Google sign-in and a configurable payment box (donation or subscription). Developer keys allow full access and can be defined in `settings.json` or `.env`.
 
@@ -113,7 +115,10 @@ without it.
 To enable optional Google authentication, set `google_client_id` in
 `settings.json` or provide it via the environment variable
 `DOCROPPER_GOOGLE_CLIENT_ID`. When configured, a sign-in button will appear in
-the web interface and tokens will be verified by the backend.
+the web interface and tokens will be verified by the backend. The current
+implementation only identifies the user and is not tied to license activation.
+You can implement alternative login methods by extending the
+`renderLogin` function in `static/app.js`.
 
 ---
 

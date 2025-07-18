@@ -107,7 +107,7 @@ function applySettings(cfg) {
         licenseName = cfg.license_name;
     }
     if (brandBox) {
-        brandBox.innerHTML = cfg.brand_html || '';
+        brandBox.innerHTML = cfg.brand_html || '<em>Your Brand</em>';
     }
     if (cfg.version) {
         appVersion = cfg.version;
