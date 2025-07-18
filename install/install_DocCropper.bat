@@ -1,149 +1,102 @@
 @echo off
-setlocal
-set LOG_FILE=%TEMP%\DocCropper_install.log
-echo Installer running... please wait. Output will also be saved to %LOG_FILE%
+setlocal EnableDelayedExpansion
+
+rem Installation directory next to this script
+set "APP_DIR=%cd%\DocCropper"
+set "REPO_URL=https://github.com/iltuoconsulenteit/DocCropper.git"
+if not defined DOCROPPER_BRANCH (
+    set "BRANCH=main"
+) else (
+    set "BRANCH=%DOCROPPER_BRANCH%"
+)
+set "CONFIG_FILE=settings.json"
+set "BACKUP_FILE=settings.local.json.bak"
+set "LOG_FILE=%APP_DIR%\install.log"
+
+if not exist "%APP_DIR%" mkdir "%APP_DIR%"
+
+echo Logging to %LOG_FILE%
 call :main >>"%LOG_FILE%" 2>&1
-echo Log saved to %LOG_FILE%
+if exist "%LOG_FILE%" echo Log saved to %LOG_FILE%
+endlocal
 pause
 exit /b
 
 :main
-set REPO_URL=https://github.com/iltuoconsulenteit/DocCropper
-if not defined DOCROPPER_DEV_LICENSE set DOCROPPER_DEV_LICENSE=ILTUOCONSULENTEIT-DEV
-if not defined DOCROPPER_DEV_BRANCH set DOCROPPER_DEV_BRANCH=dgwo4q-codex/add-features-from-doccropper-project
-if not defined DOCROPPER_BRANCH set DOCROPPER_BRANCH=main
-
-rem Determine default install location
-set "SCRIPT_DIR=%~dp0"
-set "DEFAULT_DIR=%ProgramFiles%\DocCropper"
-if not exist "%ProgramFiles%" set "DEFAULT_DIR=%SCRIPT_DIR%DocCropper"
-
-set TARGET_DIR=
-set /p TARGET_DIR=Installation directory [%DEFAULT_DIR%]:
-if "%TARGET_DIR%"=="" set "TARGET_DIR=%DEFAULT_DIR%"
-mkdir "%TARGET_DIR%" 2>nul
-if not exist "%TARGET_DIR%" (
-  echo Failed to create "%TARGET_DIR%". Using "%SCRIPT_DIR%DocCropper" instead.
-  set "TARGET_DIR=%SCRIPT_DIR%DocCropper"
-  mkdir "%TARGET_DIR%" >nul 2>&1
-)
-echo Installing to: %TARGET_DIR%
-
-set DEFAULT_KEY=
-if exist "%TARGET_DIR%\settings.json" (
-  for /f "usebackq" %%K in (`python - <<PY
-import json,sys
-try:
-    print(json.load(open(sys.argv[1])).get('license_key',''))
-except Exception:
-    pass
-PY
- "%TARGET_DIR%\settings.json"`) do set DEFAULT_KEY=%%K
-)
-set /p LIC_KEY=Enter license key (leave blank for demo) [%DEFAULT_KEY%]:
-if "%LIC_KEY%"=="" set LIC_KEY=%DEFAULT_KEY%
-
-rem Branch selection
-set BRANCH=%DOCROPPER_BRANCH%
-if not defined BRANCH set BRANCH=main
-if not defined DOCROPPER_BRANCH (
-  echo.
-  echo Choose branch to install:
-  echo   1. main
-  echo   2. %DOCROPPER_DEV_BRANCH%
-  set /p CHOICE=Select branch [1]:
-  if "%CHOICE%"=="2" set BRANCH=%DOCROPPER_DEV_BRANCH%
-)
-
-echo Using branch: %BRANCH%
-
-
-
-echo Checking required tools...
-
 where git >nul 2>&1
 if errorlevel 1 (
-  echo Git not found. Attempting installation via winget...
-  where winget >nul 2>&1
-  if errorlevel 1 (
-    echo winget not available. Please install Git manually.
-    pause
-    exit /b 1
-  )
-  winget install --id Git.Git -e --source winget
-)
-
-for %%C in (python pip) do (
-  where %%C >nul 2>&1
-  if errorlevel 1 (
-    echo %%C not found. Please install it first.
-    pause
-    exit /b 1
-  )
-)
-
-if exist "%TARGET_DIR%\.git" (
-  echo Repository already present at %TARGET_DIR%
-  set /p UPD=Update the repository from GitHub? [s/N]
-  if /I "%UPD%"=="s" (
-    echo Updating repository...
-    git -C "%TARGET_DIR%" pull --rebase --autostash origin %BRANCH%
-  )
-) else (
-  echo Cloning repository in %TARGET_DIR%...
-  git clone --branch %BRANCH% "%REPO_URL%" "%TARGET_DIR%"
-)
-
-echo Done.
-set SETTINGS_FILE=%TARGET_DIR%\settings.json
-if not exist "%SETTINGS_FILE%" (
-  echo { "language": "en", "layout": 1, "orientation": "portrait", "arrangement": "auto", "scale_mode": "fit", "scale_percent": 100, "port": 8000, "license_key": "", "license_name": "" } > "%SETTINGS_FILE%"
-)
-
-rem License key already read above
-if not "%LIC_KEY%"=="" (
-  >"%TEMP%\checklic.py" echo import os,sys
-  >>"%TEMP%\checklic.py" echo key=sys.argv[1].strip().upper()
-  >>"%TEMP%\checklic.py" echo dev=os.environ.get('DOCROPPER_DEV_LICENSE','ILTUOCONSULENTEIT-DEV').upper()
-  >>"%TEMP%\checklic.py" echo print('OK' if key in ('VALID',dev) else 'NO')
-  for /f %%r in ('python "%TEMP%\checklic.py" "%LIC_KEY%"') do set VALID=%%r
-  del "%TEMP%\checklic.py"
-  if /I "%VALID%"=="OK" (
-    set /p LIC_NAME=Licensed to:
-    set "SF=%SETTINGS_FILE%"
-    set "KY=%LIC_KEY%"
-    set "NM=%LIC_NAME%"
-    >"%TEMP%\updlic.py" echo import json, os
-    >>"%TEMP%\updlic.py" echo f=os.environ['SF']
-    >>"%TEMP%\updlic.py" echo data=json.load(open(f))
-    >>"%TEMP%\updlic.py" echo data['license_key']=os.environ['KY']
-    >>"%TEMP%\updlic.py" echo data['license_name']=os.environ['NM']
-    >>"%TEMP%\updlic.py" echo json.dump(data,open(f,'w'))
-    python "%TEMP%\updlic.py"
-    del "%TEMP%\updlic.py"
-    echo License saved
-    if /I "%LIC_KEY%"=="%DOCROPPER_DEV_LICENSE%" (
-      echo Switching to developer branch %DOCROPPER_BRANCH%
-      git -C "%TARGET_DIR%" fetch origin %DOCROPPER_BRANCH%
-      git -C "%TARGET_DIR%" checkout %DOCROPPER_BRANCH%
-      git -C "%TARGET_DIR%" pull --rebase --autostash origin %DOCROPPER_BRANCH%
+    echo Git not found. Trying to install with winget...
+    where winget >nul 2>&1 || (
+        echo winget not available. Install Git manually.
+        exit /b 1
     )
-  ) else (
-    echo License key invalid. Continuing in demo mode.
-  )
-) else (
-  echo Demo mode enabled
+    winget install --id Git.Git -e --source winget
 )
-set /p RUN_APP=Launch DocCropper with tray icon now? [Y/n]
-if /I "%RUN_APP%" NEQ "n" if /I "%RUN_APP%" NEQ "N" (
-  pushd "%TARGET_DIR%"
-  where pythonw >nul 2>&1 && (
-    start "" pythonw doccropper_tray.py --auto-start
-  ) || (
-    start "" python doccropper_tray.py --auto-start
-  )
-  popd
-)
-endlocal
-goto :EOF
 
+if not exist "%APP_DIR%\.git" (
+    echo Cloning repository...
+    git clone --branch %BRANCH% %REPO_URL% "%APP_DIR%"
+) else (
+    echo Repository present in %APP_DIR%
+    set /p update_choice=Vuoi aggiornare il repository da GitHub? [s/N] 
+    if /I "%update_choice%"=="s" (
+        cd /d "%APP_DIR%"
+        if exist "%CONFIG_FILE%" (
+            git status --porcelain | findstr "%CONFIG_FILE%" >nul && (
+                echo Backup di %CONFIG_FILE% in %BACKUP_FILE%...
+                copy /Y "%CONFIG_FILE%" "%BACKUP_FILE%"
+                git restore "%CONFIG_FILE%"
+            )
+        )
+        git checkout %BRANCH%
+        git pull origin %BRANCH%
+        if exist "%BACKUP_FILE%" (
+            echo Merge %BACKUP_FILE% in %CONFIG_FILE% (richiede tool esterno)
+            echo >> Merging skipped on Windows - manual merge suggested.
+            del "%BACKUP_FILE%"
+        )
+        cd /d "%~dp0"
+    )
+)
+
+cd /d "%APP_DIR%"
+
+:: show last 10 commits
+echo.
+echo Ultimi 10 commit:
+git log -n 10 --pretty=format:"%%h | %%ad | %%s" --date=short
+
+echo.
+set /p commit_hash=Vuoi ripristinare un commit specifico? (lascia vuoto per continuare): 
+if not "%commit_hash%"=="" (
+    echo Checkout del commit %commit_hash%...
+    git checkout %commit_hash%
+)
+
+if not exist "venv\Scripts\activate.bat" (
+    echo Creazione ambiente virtuale...
+    rmdir /S /Q venv 2>nul
+    python -m venv venv || (
+        echo Errore durante la creazione del venv
+        exit /b 1
+    )
+)
+
+call venv\Scripts\activate.bat
+
+if exist requirements.txt (
+    echo Installazione pacchetti Python...
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+) else (
+    echo File requirements.txt non trovato!
+)
+
+echo Avvio DocCropper tray...
+if exist "venv\Scripts\pythonw.exe" (
+    start "" venv\Scripts\pythonw.exe doccropper_tray.py --auto-start
+) else (
+    start "" venv\Scripts\python.exe doccropper_tray.py --auto-start
+)
+
+exit /b
