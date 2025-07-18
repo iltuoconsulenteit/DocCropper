@@ -160,8 +160,9 @@ For inquiries: **doccropper@iltuoconsulenteit.it**
 
 ## \uD83D\uDCD6 Usage Instructions
 
-Detailed instructions will be published soon on the project Wiki. Until then,
-explore the interface or visit the coming GitHub Wiki page:
+More extensive documentation is available in the project Wiki, stored in the
+`wiki/` folder of this repository. Start reading from
+[`wiki/Home.md`](wiki/Home.md) or browse the online version at:
 <https://github.com/iltuoconsulenteit/DocCropper/wiki>
 
 
