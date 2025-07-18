@@ -49,6 +49,16 @@ exit /b
 :main
 where git >nul 2>&1
 if errorlevel 1 (
+    rem Git may be installed but not in PATH - check common locations
+    if exist "%ProgramFiles%\Git\cmd\git.exe" (
+        set "PATH=%ProgramFiles%\Git\cmd;%PATH%"
+    ) else if exist "%ProgramFiles(x86)%\Git\cmd\git.exe" (
+        set "PATH=%ProgramFiles(x86)%\Git\cmd;%PATH%"
+    )
+)
+
+where git >nul 2>&1
+if errorlevel 1 (
     echo Git not found. Trying to install...
     where winget >nul 2>&1
     if not errorlevel 1 (

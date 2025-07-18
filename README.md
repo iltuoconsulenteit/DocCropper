@@ -84,7 +84,9 @@ Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh
 - Clone the repo
 - Set up the environment
 - Automatically install Git if needed (using winget or by downloading the
-  official installer)
+  official installer). If Git is installed but not in `PATH`, the Windows
+  installer searches the standard `Program Files` directories before
+  attempting a reinstall
 - Ask for optional license key
 - Let you choose the branch to install (type `1` for `main` or `2` for the developer branch)
 - You can override the developer branch by setting the `DOCROPPER_DEV_BRANCH` environment variable
