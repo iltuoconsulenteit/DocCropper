@@ -40,4 +40,8 @@
   "instructions": "Instructions",
   "comingSoon": "Coming soon. Check our GitHub Wiki for details.",
   "wikiLink": "GitHub Wiki"
+  ,"scanDocument": "Scan Document"
+  ,"scanning": "Scanning..."
+  ,"scanDone": "Scan complete."
+  ,"scanFailed": "Scanning failed"
 }

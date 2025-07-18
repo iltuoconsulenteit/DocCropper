@@ -13,6 +13,7 @@ const svgOverlayElement = document.getElementById('svgOverlay');
 const fogPathElement = document.getElementById('fogPath');
 // console.log('DEBUG: fogPathElement right after declaration:', fogPathElement); 
 const imageUploadElement = document.getElementById('imageUpload');
+const scanBtn = document.getElementById('scanBtn');
 const submitBtn = document.getElementById('submitBtn');
 const exportPdfBtn = document.getElementById('exportPdfBtn');
 const layoutControls = document.getElementById('layoutControls');
@@ -34,6 +35,18 @@ const paymentBox = document.getElementById('paymentBox');
 const loginArea = document.getElementById('loginArea');
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
+
+function dataURLToFile(dataUrl, filename) {
+    const arr = dataUrl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+}
 
 let isLicensed = false;
 let licenseName = '';
@@ -514,6 +527,38 @@ imageUploadElement.addEventListener('change', (event) => {
         reader.readAsDataURL(files[0]);
     }
 });
+
+if (scanBtn) {
+    scanBtn.addEventListener('click', async () => {
+        statusMessageElement.textContent = t('scanning');
+        try {
+            const resp = await fetch('/scan/', { method: 'POST' });
+            const data = await resp.json();
+            if (!resp.ok) {
+                throw new Error(data.message || 'Scan failed');
+            }
+            if (data.image) {
+                const dataUrl = 'data:image/png;base64,' + data.image;
+                const file = dataURLToFile(dataUrl, 'scan.png');
+                files = [file];
+                currentFileIndex = 0;
+                processedImages = [];
+                processedFiles = [];
+                editingIndex = null;
+                processedGallery.innerHTML = '';
+                exportPdfBtn.style.display = 'none';
+                layoutControls.style.display = 'none';
+                setupImage(dataUrl);
+                statusMessageElement.textContent = t('scanDone');
+            } else {
+                statusMessageElement.textContent = t('scanFailed');
+            }
+        } catch (e) {
+            statusMessageElement.textContent = t('scanFailed');
+            console.error(e);
+        }
+    });
+}
 
 interact('.draggable').draggable({
     modifiers: [

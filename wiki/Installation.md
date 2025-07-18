@@ -20,3 +20,9 @@ bash install/install_DocCropper.sh
 
 The installer logs its progress to a file in your temporary folder so you can inspect it later.
 
+### Scanner Support
+
+To use the optional scanning feature you need a working scanner driver.
+On Windows DocCropper relies on WIA, while on Linux/macOS it uses SANE.
+Make sure your device is configured properly before launching the application.
+

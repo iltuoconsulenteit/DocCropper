@@ -221,6 +221,38 @@ async def google_login(token: str = Body(...)):
         return JSONResponse(status_code=400, content={"message": "Invalid token"})
 
 
+@app.post("/scan/")
+async def scan_document():
+    """Acquire a single image from the first available scanner."""
+    try:
+        import pyinsane2
+        pyinsane2.init()
+        devices = pyinsane2.get_devices()
+        if not devices:
+            pyinsane2.exit()
+            return JSONResponse(status_code=404, content={"message": "No scanner found"})
+        scanner = devices[0]
+        scan_session = scanner.scan(multiple=False)
+        while True:
+            try:
+                scan_session.scan.read()
+            except EOFError:
+                break
+        img = scan_session.images[-1]
+        pyinsane2.exit()
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+        return {"image": img_b64}
+    except Exception as e:
+        try:
+            pyinsane2.exit()
+        except Exception:
+            pass
+        logger.exception("Scanning failed")
+        return JSONResponse(status_code=500, content={"message": str(e)})
+
+
 @app.post("/process-image/")
 async def process_image(
     request: Request,

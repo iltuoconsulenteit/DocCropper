@@ -16,3 +16,9 @@ Right-click the icon to start, stop, or update the application.
 You can also run the start scripts in the `scripts/` folder directly.
 
 Open a web browser and navigate to `http://localhost:8000` by default. Upload your document images, adjust the corners, and export the final PDF.
+
+## Scanning
+
+Click **Scan Document** in the interface to acquire an image from a connected scanner.
+This uses `pyinsane2` with WIA on Windows or SANE on Linux/macOS, so ensure your
+scanner drivers are installed.

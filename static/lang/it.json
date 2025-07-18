@@ -40,4 +40,8 @@
   "instructions": "Istruzioni",
   "comingSoon": "Prossimamente. Consulta il Wiki su GitHub per i dettagli.",
   "wikiLink": "Wiki GitHub"
+  ,"scanDocument": "Acquisisci da scanner"
+  ,"scanning": "Acquisizione in corso..."
+  ,"scanDone": "Acquisizione completata."
+  ,"scanFailed": "Acquisizione non riuscita"
 }

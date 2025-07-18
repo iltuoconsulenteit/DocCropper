@@ -16,6 +16,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🧭 Touchscreen-friendly interface
 - 🌐 Works offline or over LAN (no internet required)
 - 👤 Multi-user environment support (optional)
+- 📠 Acquire images directly from a connected scanner (requires `pyinsane2`)
 
 ---
 
@@ -122,6 +123,14 @@ If the tray cannot be shown, the script automatically launches the server
 without it.
 You can use the `--auto-start` flag to start the server immediately and still
 show the tray icon.
+
+### Scanning documents
+
+If a compatible scanner is connected, press the **Scan Document** button in the
+web interface to acquire an image directly. DocCropper uses
+[`pyinsane2`](https://github.com/openpaperwork/pyinsane2), which relies on WIA
+on Windows and SANE on Linux/macOS. Ensure the appropriate drivers are
+installed for your device.
 
 ### Google Sign-In
 
