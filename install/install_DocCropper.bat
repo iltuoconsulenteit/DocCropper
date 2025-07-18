@@ -1,8 +1,14 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-rem Installation directory next to this script
-set "APP_DIR=%cd%\DocCropper"
+rem Default installation directory
+if defined DOCROPPER_HOME (
+    set "APP_DIR=%DOCROPPER_HOME%"
+) else (
+    set "APP_DIR=%ProgramFiles%\DocCropper"
+)
+set /p TARGET_DIR=Installation directory [%APP_DIR%]:
+if not "%TARGET_DIR%"=="" set "APP_DIR=%TARGET_DIR%"
 set "REPO_URL=https://github.com/iltuoconsulenteit/DocCropper.git"
 
 rem Default branches
