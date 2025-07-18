@@ -98,10 +98,14 @@ if not "%LIC_KEY%"=="" (
 ) else (
   echo Demo mode enabled
 )
-set /p RUN_APP=Launch DocCropper now? [Y/n]
+set /p RUN_APP=Launch DocCropper with tray icon now? [Y/n]
 if /I "%RUN_APP%" NEQ "n" if /I "%RUN_APP%" NEQ "N" (
   pushd "%TARGET_DIR%"
-  start "" scripts\start_DocCropper.bat
+  where pythonw >nul 2>&1 && (
+    start "" pythonw doccropper_tray.py
+  ) || (
+    start "" python doccropper_tray.py
+  )
   popd
 )
 endlocal
