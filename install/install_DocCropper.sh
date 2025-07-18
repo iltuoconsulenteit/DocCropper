@@ -6,7 +6,8 @@ exec >> "$LOG_FILE" 2>&1
 
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"
-DEV_BRANCH="${DOCROPPER_BRANCH:-dgwo4q-codex/add-features-from-doccropper-project}"
+DEV_BRANCH="${DOCROPPER_DEV_BRANCH:-dgwo4q-codex/add-features-from-doccropper-project}"
+DEFAULT_BRANCH="${DOCROPPER_BRANCH:-main}"
 
 DEFAULT_DIR="/opt/DocCropper"
 read -r -p "Installation directory [$DEFAULT_DIR]: " TARGET_DIR
@@ -30,10 +31,12 @@ read -r -p "🔑 Enter license key (leave blank for demo) [${DEFAULT_KEY}]: " LI
 [ -z "$LIC_KEY" ] && LIC_KEY="$DEFAULT_KEY"
 UPPER_KEY=$(echo "$LIC_KEY" | tr '[:lower:]' '[:upper:]')
 DEV_UPPER=$(echo "$DEV_KEY" | tr '[:lower:]' '[:upper:]')
-BRANCH="main"
+BRANCH="$DEFAULT_BRANCH"
 if [ "$UPPER_KEY" = "$DEV_UPPER" ]; then
-  BRANCH="$DEV_BRANCH"
+  BRANCH="${DOCROPPER_BRANCH:-$DEV_BRANCH}"
 fi
+
+echo "Using branch: $BRANCH"
 
 printf '\xF0\x9F\x94\xA7 Verifica pacchetti richiesti...\n'
 
@@ -109,10 +112,10 @@ PY
     echo "✅ License saved"
     DEV_UP=$(echo "$DEV_KEY" | tr '[:lower:]' '[:upper:]')
     if [ "$UPPER_KEY" = "$DEV_UP" ]; then
-      echo "🔀 Switching to developer branch $DEV_BRANCH"
-      git -C "$TARGET_DIR" fetch origin "$DEV_BRANCH"
-      git -C "$TARGET_DIR" checkout "$DEV_BRANCH"
-      git -C "$TARGET_DIR" pull --rebase --autostash origin "$DEV_BRANCH"
+      echo "🔀 Switching to branch $BRANCH"
+      git -C "$TARGET_DIR" fetch origin "$BRANCH"
+      git -C "$TARGET_DIR" checkout "$BRANCH"
+      git -C "$TARGET_DIR" pull --rebase --autostash origin "$BRANCH"
     fi
   else
     echo "❌ License key invalid. Continuing in demo mode."

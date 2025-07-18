@@ -10,7 +10,8 @@ exit /b
 :main
 set REPO_URL=https://github.com/iltuoconsulenteit/DocCropper
 if not defined DOCROPPER_DEV_LICENSE set DOCROPPER_DEV_LICENSE=ILTUOCONSULENTEIT-DEV
-if not defined DOCROPPER_BRANCH set DOCROPPER_BRANCH=dgwo4q-codex/add-features-from-doccropper-project
+if not defined DOCROPPER_DEV_BRANCH set DOCROPPER_DEV_BRANCH=dgwo4q-codex/add-features-from-doccropper-project
+if not defined DOCROPPER_BRANCH set DOCROPPER_BRANCH=main
 
 set TARGET_DIR=
 set /p TARGET_DIR=Installation directory [%%ProgramFiles%%\DocCropper]:
@@ -31,8 +32,10 @@ PY
 )
 set /p LIC_KEY=Enter license key (leave blank for demo) [%DEFAULT_KEY%]:
 if "%LIC_KEY%"=="" set LIC_KEY=%DEFAULT_KEY%
-set BRANCH=main
-if /I "%LIC_KEY%"=="%DOCROPPER_DEV_LICENSE%" set BRANCH=%DOCROPPER_BRANCH%
+set BRANCH=%DOCROPPER_BRANCH%
+if /I "%LIC_KEY%"=="%DOCROPPER_DEV_LICENSE%" if not defined DOCROPPER_BRANCH set BRANCH=%DOCROPPER_DEV_BRANCH%
+
+echo Using branch: %BRANCH%
 
 
 

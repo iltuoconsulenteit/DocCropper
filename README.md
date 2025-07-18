@@ -152,8 +152,8 @@ configuration. To update from a different branch, set the environment variable
 `DOCROPPER_BRANCH` before running the installer:
 
 ```bash
-set DOCROPPER_BRANCH=my-feature-branch  # Windows
-export DOCROPPER_BRANCH=my-feature-branch  # Linux/macOS
+set DOCROPPER_BRANCH=my-feature-branch && install\install_DocCropper.bat  # Windows
+export DOCROPPER_BRANCH=my-feature-branch && bash install/install_DocCropper.sh  # Linux/macOS
 ```
 
 You can also trigger "Update from main" or "Update from branch" from the system
