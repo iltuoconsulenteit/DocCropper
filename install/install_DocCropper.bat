@@ -4,8 +4,25 @@ setlocal EnableDelayedExpansion
 rem Installation directory next to this script
 set "APP_DIR=%cd%\DocCropper"
 set "REPO_URL=https://github.com/iltuoconsulenteit/DocCropper.git"
+
+rem Default branches
+if defined DOCROPPER_DEV_BRANCH (
+    set "DEV_BRANCH=%DOCROPPER_DEV_BRANCH%"
+) else (
+    set "DEV_BRANCH=dgwo4q-codex/add-features-from-doccropper-project"
+)
+
 if not defined DOCROPPER_BRANCH (
-    set "BRANCH=main"
+    echo.
+    echo Choose branch to install:
+    echo  1^) main
+    echo  2^) %DEV_BRANCH%
+    set /p BSEL=Selection [1]: 
+    if "%BSEL%"=="2" (
+        set "BRANCH=%DEV_BRANCH%"
+    ) else (
+        set "BRANCH=main"
+    )
 ) else (
     set "BRANCH=%DOCROPPER_BRANCH%"
 )

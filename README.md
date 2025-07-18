@@ -85,7 +85,8 @@ Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh
 - Set up the environment
 - Automatically install Git if needed
 - Ask for optional license key
-- Let you choose the branch to install (main or the developer branch)
+- Let you choose the branch to install (type `1` for `main` or `2` for the developer branch)
+- You can override the developer branch by setting the `DOCROPPER_DEV_BRANCH` environment variable
 - Start the tray icon which launches the server
 - Write a log to `install.log` in the install folder while still showing prompts
 - On Windows they install to a `DocCropper` directory beside the installer
