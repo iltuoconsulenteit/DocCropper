@@ -15,7 +15,13 @@ h1, h2 {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 10px;
-    text-align: center;
+}
+
+#headerRight {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
 }
 
 #languageChoice,
@@ -36,14 +42,19 @@ h1, h2 {
 #brandBox {
     font-size: 0.8em;
     color: #333;
-    min-width: 80px;
+    min-width: 100px;
     text-align: right;
+    border: 1px solid #888;
+    padding: 2px 6px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
 }
 #loginArea button {
     margin-left: 5px;
 }
 
 #pageFooter {
+    position: relative;
     text-align: center;
     margin-top: 20px;
     color: #555;
@@ -51,7 +62,9 @@ h1, h2 {
 }
 
 #versionBox {
-    margin-left: 10px;
+    position: absolute;
+    right: 10px;
+    bottom: 5px;
     font-style: italic;
 }
 
@@ -125,14 +138,25 @@ button:hover {
 
 #headerLogo {
     max-height: 60px;
-    display: block;
-    margin: 0 auto 10px;
+    margin-right: 20px;
 }
 
 #footerLogo {
     max-height: 40px;
     display: block;
     margin: 5px auto 0;
+}
+
+#instructionsBox {
+    position: fixed;
+    right: 10px;
+    top: 80px;
+    width: 200px;
+    border: 1px solid #888;
+    background: #fff;
+    padding: 10px;
+    font-size: 0.9em;
+    z-index: 50;
 }
 
 #statusMessage {
@@ -251,6 +275,18 @@ button:hover {
 
 #paymentBox li {
     margin: 5px 0;
+}
+
+#imageAdjust {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#imageAdjust label {
+    margin-right: 4px;
 }
 
 @media (max-width: 600px) {

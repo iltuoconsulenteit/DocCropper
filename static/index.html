@@ -8,21 +8,30 @@
 <body>
     <header id="pageHeader">
         <img id="headerLogo" src="/static/logos/header_logo.png" onerror="this.onerror=null;this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO3RqqEAAAAASUVORK5CYII='" alt="DocCropper logo">
-        <div id="languageChoice">
-            <label for="langSelect" data-i18n="language">Language:</label>
-            <select id="langSelect">
-                <option value="en" data-i18n="english">English</option>
-                <option value="it" data-i18n="italian">Italiano</option>
-            </select>
+        <div id="headerRight">
+            <div id="languageChoice">
+                <label for="langSelect" data-i18n="language">Language:</label>
+                <select id="langSelect">
+                    <option value="en" data-i18n="english">English</option>
+                    <option value="it" data-i18n="italian">Italiano</option>
+                </select>
+            </div>
+            <div id="loginArea"></div>
+            <div id="licenseInfo"></div>
+            <div id="brandBox"></div>
         </div>
-        <div id="loginArea"></div>
-        <div id="licenseInfo"></div>
-        <div id="brandBox"></div>
     </header>
+
+    <div id="instructionsBox">
+        <h3 data-i18n="instructions">Instructions</h3>
+        <p data-i18n="comingSoon">Coming soon. Check our Wiki for details.</p>
+        <p><a href="https://github.com/iltuoconsulenteit/DocCropper/wiki" target="_blank" data-i18n="wikiLink">GitHub Wiki</a></p>
+    </div>
 
     <div>
         <label for="imageUpload" data-i18n="uploadLabel">Upload Document Image(s):</label>
         <input type="file" id="imageUpload" accept="image/*" capture="environment" multiple>
+        <button id="scanBtn" data-i18n="scanDocument">Scan Document</button>
     </div>
 
     <div id="wrapper">
@@ -36,6 +45,13 @@
         <svg id="svgOverlay">
             <path id="fogPath" fill-rule="evenodd" fill="rgba(0,0,0,0.5)" stroke="red" stroke-width="1"/>
         </svg>
+    </div>
+
+    <div id="imageAdjust">
+        <label for="brightnessRange" data-i18n="brightness">Brightness:</label>
+        <input type="range" id="brightnessRange" min="0" max="200" value="100">
+        <label for="contrastRange" data-i18n="contrast">Contrast:</label>
+        <input type="range" id="contrastRange" min="0" max="200" value="100">
     </div>
 
     <button id="submitBtn" data-i18n="processImage">Process Image</button>

@@ -1,9 +1,14 @@
 #!/bin/bash
 set -e
+LOG_FILE="/tmp/DocCropper_install.log"
+echo "Installer running... see $LOG_FILE for details"
+echo "Starting installer" > "$LOG_FILE"
+exec >> "$LOG_FILE" 2>&1
 
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"
-DEV_BRANCH="${DOCROPPER_BRANCH:-dgwo4q-codex/add-features-from-doccropper-project}"
+DEV_BRANCH="${DOCROPPER_DEV_BRANCH:-codex/move-version-number-to-bottom-right}"
+DEFAULT_BRANCH="${DOCROPPER_BRANCH:-main}"
 
 DEFAULT_DIR="/opt/DocCropper"
 read -r -p "Installation directory [$DEFAULT_DIR]: " TARGET_DIR
@@ -27,13 +32,40 @@ read -r -p "🔑 Enter license key (leave blank for demo) [${DEFAULT_KEY}]: " LI
 [ -z "$LIC_KEY" ] && LIC_KEY="$DEFAULT_KEY"
 UPPER_KEY=$(echo "$LIC_KEY" | tr '[:lower:]' '[:upper:]')
 DEV_UPPER=$(echo "$DEV_KEY" | tr '[:lower:]' '[:upper:]')
-BRANCH="main"
-if [ "$UPPER_KEY" = "$DEV_UPPER" ]; then
-  BRANCH="$DEV_BRANCH"
+
+BRANCH="$DEFAULT_BRANCH"
+if [ -z "$DOCROPPER_BRANCH" ]; then
+  echo
+  echo "Choose branch to install:" 
+  echo " 1) main"
+  echo " 2) $DEV_BRANCH"
+  read -r -p "Selection [1]: " ans
+  if [ "$ans" = "2" ]; then
+    BRANCH="$DEV_BRANCH"
+  fi
+else
+  BRANCH="$DOCROPPER_BRANCH"
 fi
 
+echo "Using branch: $BRANCH"
+
 printf '\xF0\x9F\x94\xA7 Verifica pacchetti richiesti...\n'
-for cmd in git python3 pip3; do
+
+if ! command -v git >/dev/null 2>&1; then
+  echo "⚠️  git non trovato, provo ad installarlo..."
+  if command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get update && sudo apt-get install -y git
+  elif command -v yum >/dev/null 2>&1; then
+    sudo yum install -y git
+  elif command -v brew >/dev/null 2>&1; then
+    brew install git
+  else
+    echo "❌ impossibile installare git automaticamente" >&2
+    exit 1
+  fi
+fi
+
+for cmd in python3 pip3; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     echo "❌ $cmd non trovato" >&2
     exit 1
@@ -48,8 +80,16 @@ if [ -d "$TARGET_DIR/.git" ]; then
     git -C "$TARGET_DIR" pull --rebase --autostash origin "$BRANCH"
   fi
 else
+  if [ -d "$TARGET_DIR" ] && [ "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then
+    echo "❌ Destination $TARGET_DIR already exists and is not empty." >&2
+    echo "   Remove its contents or choose another directory." >&2
+    exit 1
+  fi
   echo "📥 Clonazione repository in $TARGET_DIR..."
-  git clone --branch "$BRANCH" "$REPO_URL" "$TARGET_DIR"
+  if ! git clone --branch "$BRANCH" "$REPO_URL" "$TARGET_DIR"; then
+    echo "❌ Clone failed. Check your network connection, permissions, and ensure the destination directory is empty." >&2
+    exit 1
+  fi
 fi
 
 printf '\xE2\x9C\x85 Operazione completata.\n'
@@ -91,10 +131,10 @@ PY
     echo "✅ License saved"
     DEV_UP=$(echo "$DEV_KEY" | tr '[:lower:]' '[:upper:]')
     if [ "$UPPER_KEY" = "$DEV_UP" ]; then
-      echo "🔀 Switching to developer branch $DEV_BRANCH"
-      git -C "$TARGET_DIR" fetch origin "$DEV_BRANCH"
-      git -C "$TARGET_DIR" checkout "$DEV_BRANCH"
-      git -C "$TARGET_DIR" pull --rebase --autostash origin "$DEV_BRANCH"
+      echo "🔀 Switching to branch $BRANCH"
+      git -C "$TARGET_DIR" fetch origin "$BRANCH"
+      git -C "$TARGET_DIR" checkout "$BRANCH"
+      git -C "$TARGET_DIR" pull --rebase --autostash origin "$BRANCH"
     fi
   else
     echo "❌ License key invalid. Continuing in demo mode."
@@ -107,9 +147,10 @@ read -r -p "🚀 Launch DocCropper with tray icon now? [Y/n] " RUN_APP
 if [[ ! "$RUN_APP" =~ ^[Nn]$ ]]; then
   pushd "$TARGET_DIR" >/dev/null
   if command -v pythonw >/dev/null 2>&1; then
-    (pythonw doccropper_tray.py &)
+    (pythonw doccropper_tray.py --auto-start &)
   else
-    (python3 doccropper_tray.py &)
+    (python3 doccropper_tray.py --auto-start &)
   fi
   popd >/dev/null
 fi
+echo "Log saved to $LOG_FILE"

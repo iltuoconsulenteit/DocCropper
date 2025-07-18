@@ -36,5 +36,14 @@
   "loggedInAs": "Logged in as",
   "signInFailed": "Login failed",
   "loginDisabled": "Login not configured",
-  "version": "Version"
+  "version": "Version",
+  "instructions": "Instructions",
+  "comingSoon": "Coming soon. Check our GitHub Wiki for details.",
+  "wikiLink": "GitHub Wiki"
+  ,"scanDocument": "Scan Document"
+  ,"scanning": "Scanning..."
+  ,"scanDone": "Scan complete."
+  ,"scanFailed": "Scanning failed"
+  ,"brightness": "Brightness:"
+  ,"contrast": "Contrast:"
 }

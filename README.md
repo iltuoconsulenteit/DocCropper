@@ -11,11 +11,13 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - ✅ Multi-image upload and batch processing
 - 🔄 Automatic or manual perspective correction
 - 🖼️ Interactive cropping and preview
+- 🌞 Adjust brightness and contrast before processing
 - 📄 One-click PDF export
 - 🗂️ Persistent user settings
 - 🧭 Touchscreen-friendly interface
 - 🌐 Works offline or over LAN (no internet required)
 - 👤 Multi-user environment support (optional)
+- 📠 Acquire images directly from a connected scanner (requires `pyinsane2`)
 
 ---
 
@@ -26,6 +28,7 @@ This project uses [Interact.JS](https://github.com/taye/interact.js) for managin
 The frontend allows the user to:
 - Upload one or more images (on mobile devices the file picker can use the camera directly)
 - Manually adjust the four corners of each image
+- Use brightness and contrast sliders to enhance the document
 - Submit data (image, coordinates, size) to the backend
 - Export all processed images to PDF
 - Choose how many processed images appear on each PDF page
@@ -45,7 +48,9 @@ JavaScript logic is contained in `static/app.js`.
 
 Images are processed and displayed as thumbnails with **Rotate**, **Edit**, and **Delete** buttons. Preview and layout configuration options are also provided before export.
 
-Logos and branding can be customized via `static/logos/`, `settings.json`, and `brand_html`. The footer displays the current Git commit hash.
+Logos and branding can be customized via `static/logos/`, `settings.json`, and the
+`brand_html` field which populates a client branding box in the header. The
+footer displays the current Git commit hash.
 
 User preferences are stored in the `users/` folder based on their email address. Anonymous users fallback to global settings in `settings.json`. The system supports optional Google sign-in and a configurable payment box (donation or subscription). Developer keys allow full access and can be defined in `settings.json` or `.env`.
 
@@ -81,8 +86,22 @@ pip install -r requirements.txt
 Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh` (Linux/macOS). These scripts:
 - Clone the repo
 - Set up the environment
+- Automatically install Git if needed (using winget or by downloading the
+  official installer). If Git is installed but not in `PATH`, the Windows
+  installer searches the standard `Program Files` directories before
+  attempting a reinstall
 - Ask for optional license key
-- Launch the server or tray icon
+- Let you choose the branch to install (type `1` for `main` or `2` for the developer branch)
+- You can override the developer branch by setting the `DOCROPPER_DEV_BRANCH` environment variable
+- Start the tray icon which launches the server
+- Write a log to `install.log` in the install folder while still showing prompts
+- By default they install to `%ProgramFiles%\DocCropper` on Windows,
+  `/opt/DocCropper` on Linux and `/Applications/DocCropper` on macOS. If the
+  Windows installer cannot create the default directory (for example when not
+  running as Administrator) it falls back to a `DocCropper` folder next to the
+  batch script.
+- If the clone step fails, verify your network connection and ensure the chosen
+  directory is empty.
 
 You can pre-populate `settings.json` or override values using `.env` files in the `env/` folder.
 
@@ -90,7 +109,10 @@ You can pre-populate `settings.json` or override values using `.env` files in th
 
 ## ▶️ Running DocCropper
 
-Use the included start scripts from the `scripts/` directory. They handle virtualenv creation and dependency install.
+Use the included start scripts from the `scripts/` directory. When launched, they create a virtual environment if needed and install Python packages before starting DocCropper. The commands now show the installation progress so that errors are visible.
+If some packages fail to install, the scripts continue so the basic features remain usable.
+Keep these scripts inside the DocCropper installation folder or create a shortcut to them.
+If you want to run a script from anywhere, set the environment variable `DOCROPPER_HOME` to the installation path.
 
 To stop the server, run the matching stop script or send a POST to `/shutdown/`.
 
@@ -107,13 +129,39 @@ python doccropper_tray.py --no-tray
 ```
 If the tray cannot be shown, the script automatically launches the server
 without it.
+You can use the `--auto-start` flag to start the server immediately and still
+show the tray icon.
+
+### Scanning documents
+
+If a compatible scanner is connected, press the **Scan Document** button in the
+web interface to acquire an image directly. DocCropper uses
+[`pyinsane2`](https://github.com/openpaperwork/pyinsane2), which relies on WIA
+on Windows and SANE on Linux/macOS. Ensure the appropriate drivers are
+installed for your device.
+
+On Windows the `pyinsane2` installation may fail with a message like
+`Microsoft Visual C++ 14.0 or greater is required`. In that case download the
+[Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+and install the **Desktop development with C++** workload, then rerun the
+installer. A helper script is provided at
+`install\install_scanner_tools.bat` which automates this installation on
+Windows.
+
+If `pyinsane2` or other optional packages fail to build, the start scripts
+continue and DocCropper launches without scanning support. Check the
+installation log (`%TEMP%\DocCropper_install.log` on Windows or
+`/tmp/DocCropper_install.log` on Linux/macOS) for details.
 
 ### Google Sign-In
 
 To enable optional Google authentication, set `google_client_id` in
 `settings.json` or provide it via the environment variable
 `DOCROPPER_GOOGLE_CLIENT_ID`. When configured, a sign-in button will appear in
-the web interface and tokens will be verified by the backend.
+the web interface and tokens will be verified by the backend. The current
+implementation only identifies the user and is not tied to license activation.
+You can implement alternative login methods by extending the
+`renderLogin` function in `static/app.js`.
 
 ---
 
@@ -130,7 +178,35 @@ To activate:
 - Use a valid license key in `settings.json` or `.env`
 - Developer keys unlock full functionality for testing
 
+
+## 🔄 Updating DocCropper
+
+To update an existing installation to the latest code on the `main` branch,
+re-run the installer script for your platform:
+
+- **Windows**: `install/install_DocCropper.bat`
+- **Linux/macOS**: `bash install/install_DocCropper.sh`
+
+The installer will pull the most recent changes and preserve your
+configuration. To update from a different branch, set the environment variable
+`DOCROPPER_BRANCH` before running the installer:
+
+```bash
+set DOCROPPER_BRANCH=my-feature-branch && install\install_DocCropper.bat  # Windows
+export DOCROPPER_BRANCH=my-feature-branch && bash install/install_DocCropper.sh  # Linux/macOS
+```
+
+You can also trigger "Update from main" or "Update from branch" from the system
+tray icon.
+
 For inquiries: **doccropper@iltuoconsulenteit.it**
+
+## \uD83D\uDCD6 Usage Instructions
+
+More extensive documentation is available in the project Wiki, stored in the
+`wiki/` folder of this repository. Start reading from
+[`wiki/Home.md`](wiki/Home.md) or browse the online version at:
+<https://github.com/iltuoconsulenteit/DocCropper/wiki>
 
 
 ## Credits

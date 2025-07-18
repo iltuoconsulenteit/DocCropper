@@ -36,5 +36,14 @@
   "loggedInAs": "Connesso come",
   "signInFailed": "Accesso fallito",
   "loginDisabled": "Accesso non configurato",
-  "version": "Versione"
+  "version": "Versione",
+  "instructions": "Istruzioni",
+  "comingSoon": "Prossimamente. Consulta il Wiki su GitHub per i dettagli.",
+  "wikiLink": "Wiki GitHub"
+  ,"scanDocument": "Acquisisci da scanner"
+  ,"scanning": "Acquisizione in corso..."
+  ,"scanDone": "Acquisizione completata."
+  ,"scanFailed": "Acquisizione non riuscita"
+  ,"brightness": "Luminosità:"
+  ,"contrast": "Contrasto:"
 }
