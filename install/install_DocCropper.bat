@@ -16,7 +16,14 @@ set "LOG_FILE=%APP_DIR%\install.log"
 if not exist "%APP_DIR%" mkdir "%APP_DIR%"
 
 echo Logging to %LOG_FILE%
-call :main >>"%LOG_FILE%" 2>&1
+where powershell >nul 2>&1 && set "PWSH=powershell"
+if defined PWSH (
+    %PWSH% -NoProfile -Command "Start-Transcript -Path '%LOG_FILE%' -Append" >nul
+)
+call :main
+if defined PWSH (
+    %PWSH% -NoProfile -Command "Stop-Transcript" >nul
+)
 if exist "%LOG_FILE%" echo Log saved to %LOG_FILE%
 endlocal
 pause
