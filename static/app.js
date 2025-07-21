@@ -507,20 +507,35 @@ function setupImage(imageUrl) {
 
 
 imageUploadElement.addEventListener('change', (event) => {
-    files = Array.from(event.target.files);
-    currentFileIndex = 0;
-    processedImages = [];
-    processedFiles = [];
-    editingIndex = null;
-    processedGallery.innerHTML = '';
-    exportPdfBtn.style.display = 'none';
-    layoutControls.style.display = 'none';
-    if (files.length > 0) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            setupImage(e.target.result);
-        };
-        reader.readAsDataURL(files[0]);
+    const newFiles = Array.from(event.target.files);
+    if (files.length === 0 && processedImages.length === 0) {
+        // first batch of files
+        files = newFiles;
+        currentFileIndex = 0;
+        processedImages = [];
+        processedFiles = [];
+        editingIndex = null;
+        processedGallery.innerHTML = '';
+        exportPdfBtn.style.display = 'none';
+        layoutControls.style.display = 'none';
+        if (files.length > 0) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setupImage(e.target.result);
+            };
+            reader.readAsDataURL(files[0]);
+        }
+    } else {
+        // add new files to existing queue
+        const startProcessing = currentFileIndex >= files.length;
+        files = files.concat(newFiles);
+        if (startProcessing && newFiles.length > 0) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setupImage(e.target.result);
+            };
+            reader.readAsDataURL(files[currentFileIndex]);
+        }
     }
 });
 

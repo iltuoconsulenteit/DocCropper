@@ -26,6 +26,7 @@ This project uses [Interact.JS](https://github.com/taye/interact.js) for managin
 
 The frontend allows the user to:
 - Upload one or more images (on mobile devices the file picker lets you choose existing photos or take a new picture)
+- Add more images later without losing previously processed ones
 - Manually adjust the four corners of each image
 - Submit data (image, coordinates, size) to the backend
 - Export all processed images to PDF
