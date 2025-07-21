@@ -1,20 +1,8 @@
 @echo off
 
-rem Start a PowerShell transcript so we capture all output even when the user
-rem launches this script from another location. We rerun the batch file inside
-rem PowerShell to keep prompts visible while logging.
-if "%~1" neq "inner" (
-    rem Always set a log file path; use %TEMP% when available
-    set "LOG_FILE=%~dp0install.log"
-    if defined TEMP if not "%TEMP%"=="" set "LOG_FILE=%TEMP%\DocCropper_install.log"
-    echo Logging to %LOG_FILE%
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Transcript -Path \"$env:LOG_FILE\" -Append; cmd /c \"\"%~f0\" inner\"; Stop-Transcript"
-    if exist "%LOG_FILE%" echo Log saved to %LOG_FILE%
-    pause
-    exit /b
-)
-
-shift
+rem Previous versions logged installer output using PowerShell's Start-Transcript
+rem but this sometimes failed with a "Path argument is null" error. For now we
+rem run the installer directly without logging so setup can continue smoothly.
 setlocal EnableDelayedExpansion
 
 rem Default installation directory

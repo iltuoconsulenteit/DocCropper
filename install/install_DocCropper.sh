@@ -1,9 +1,5 @@
 #!/bin/bash
 set -e
-LOG_FILE="/tmp/DocCropper_install.log"
-echo "Installer running... see $LOG_FILE for details"
-echo "Starting installer" > "$LOG_FILE"
-exec >> "$LOG_FILE" 2>&1
 
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"
@@ -153,4 +149,3 @@ if [[ ! "$RUN_APP" =~ ^[Nn]$ ]]; then
   fi
   popd >/dev/null
 fi
-echo "Log saved to $LOG_FILE"

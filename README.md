@@ -95,8 +95,6 @@ Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh
 - The default developer branch is `dgwo4q-codex/add-features-from-doccropper-project` but you can override it with the `DOCROPPER_DEV_BRANCH` environment variable
 - Start the tray icon which launches the server
 - Prompt to launch DocCropper immediately at the end of installation
-- Write a log to `%TEMP%\DocCropper_install.log` on Windows (or
-  `/tmp/DocCropper_install.log` on Linux/macOS) while still showing prompts
 - By default they install to `%ProgramFiles%\DocCropper` on Windows,
   `/opt/DocCropper` on Linux and `/Applications/DocCropper` on macOS. If the
   Windows installer cannot create the default directory (for example when not
@@ -159,8 +157,6 @@ again.
 
 If `pyinsane2` fails to build, you can still use DocCropper without scanning.
 The start scripts continue and you may rerun the add-on installer later.
-Check the installation log (`%TEMP%\DocCropper_install.log` on Windows or
-`/tmp/DocCropper_install.log` on Linux/macOS) for details.
 
 ### Google Sign-In
 
