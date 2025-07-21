@@ -8,7 +8,7 @@ if "%~1" neq "inner" (
     set "LOG_FILE=%~dp0install.log"
     if defined TEMP if not "%TEMP%"=="" set "LOG_FILE=%TEMP%\DocCropper_install.log"
     echo Logging to %LOG_FILE%
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Transcript -Path '%LOG_FILE%' -Append; cmd /c \"\"%~f0\" inner\"; Stop-Transcript"
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Transcript -Path \"$env:LOG_FILE\" -Append; cmd /c \"\"%~f0\" inner\"; Stop-Transcript"
     if exist "%LOG_FILE%" echo Log saved to %LOG_FILE%
     pause
     exit /b
