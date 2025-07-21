@@ -5,6 +5,8 @@ import logging
 from pathlib import Path
 from pystray import Icon, Menu, MenuItem
 from PIL import Image, ImageDraw
+import webbrowser
+import threading
 import json
 from dotenv import load_dotenv
 import signal
@@ -81,17 +83,29 @@ def is_app_running():
     return False
 
 
+def get_port():
+    try:
+        with open(BASE_DIR / 'settings.json') as fh:
+            data = json.load(fh)
+        return int(data.get('port', 8000))
+    except Exception:
+        return 8000
+
+
 def refresh_menu(icon):
     running = is_app_running()
     start_item.enabled = not running
     stop_item.enabled = running
     start_item.icon = RED_DOT if not running else GREEN_DOT
     stop_item.icon = GREEN_DOT if running else RED_DOT
+    icon.icon = ICON_RUNNING if running else ICON_STOPPED
     icon.update_menu()
 
 
 def start_app(icon=None):
     run_script(START_SCRIPTS, folder=SCRIPTS_DIR)
+    port = get_port()
+    threading.Timer(2.0, lambda: webbrowser.open(f"http://127.0.0.1:{port}")).start()
     if icon:
         refresh_menu(icon)
 
@@ -131,6 +145,15 @@ def load_tray_icon():
         return create_fallback_image()
 
 
+def overlay_status(base, color):
+    base = base.copy()
+    dot = Image.new('RGB', (12, 12), (255, 255, 255, 0))
+    draw = ImageDraw.Draw(dot)
+    draw.ellipse((0, 0, 11, 11), fill=color)
+    base.paste(dot, (base.width - 14, base.height - 14))
+    return base
+
+
 def make_dot(color):
     img = Image.new('RGB', (16, 16), (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
@@ -140,6 +163,10 @@ def make_dot(color):
 
 GREEN_DOT = make_dot('green')
 RED_DOT = make_dot('red')
+
+BASE_ICON = load_tray_icon()
+ICON_RUNNING = overlay_status(BASE_ICON, 'green')
+ICON_STOPPED = overlay_status(BASE_ICON, 'red')
 
 
 def main():
@@ -167,7 +194,9 @@ def main():
     global start_item, stop_item
     start_item = MenuItem('Start DocCropper', lambda icon, item: start_app(icon))
     stop_item = MenuItem('Stop DocCropper', lambda icon, item: stop_app(icon))
+    open_item = MenuItem('Open DocCropper', lambda icon, item: webbrowser.open(f"http://127.0.0.1:{get_port()}"))
     menu_items = [
+        open_item,
         start_item,
         stop_item,
         MenuItem('Update from main', lambda icon, item: update_main())
@@ -176,7 +205,7 @@ def main():
         menu_items.append(MenuItem('Update from branch', lambda icon, item: update_branch()))
     menu_items.append(MenuItem('Quit', quit_app))
 
-    icon = Icon('DocCropper', load_tray_icon(), 'DocCropper', menu=Menu(*menu_items))
+    icon = Icon('DocCropper', ICON_STOPPED, 'DocCropper', menu=Menu(*menu_items))
     refresh_menu(icon)
     try:
         icon.run()

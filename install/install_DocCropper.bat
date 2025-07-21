@@ -1,5 +1,13 @@
 @echo off
 
+:: Ensure we have administrator rights
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Elevating privileges...
+    powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
+    exit /b
+)
+
 rem Previous versions logged installer output using PowerShell's Start-Transcript
 rem but this sometimes failed with a "Path argument is null" error. For now we
 rem run the installer directly without logging so setup can continue smoothly.

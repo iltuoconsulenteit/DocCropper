@@ -95,6 +95,9 @@ Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh
 - The default developer branch is `codex/move-version-number-to-bottom-right` but you can override it with the `DOCROPPER_DEV_BRANCH` environment variable
 - Start the tray icon which launches the server
 - Prompt to launch DocCropper immediately at the end of installation
+- On Windows the installer requires administrator rights to install under
+  `%ProgramFiles%`. If not run as admin it will re-launch itself requesting
+  elevation.
 - By default they install to `%ProgramFiles%\DocCropper` on Windows,
   `/opt/DocCropper` on Linux and `/Applications/DocCropper` on macOS. If the
   Windows installer cannot create the default directory (for example when not
@@ -130,6 +133,10 @@ If the tray cannot be shown, the script automatically launches the server
 without it.
 You can use the `--auto-start` flag to start the server immediately and still
 show the tray icon.
+
+While DocCropper is running the tray icon displays a small green dot that
+turns red when the server is stopped. Use the **Open DocCropper** menu item
+to launch your browser to the configured address.
 
 ### Optional scanning support
 
