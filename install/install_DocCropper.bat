@@ -2,7 +2,7 @@
 setlocal
 set REPO_URL=https://github.com/iltuoconsulenteit/DocCropper
 if not defined DOCROPPER_DEV_LICENSE set DOCROPPER_DEV_LICENSE=ILTUOCONSULENTEIT-DEV
-if not defined DOCROPPER_BRANCH set DOCROPPER_BRANCH=dgwo4q-codex/add-features-from-doccropper-project
+if not defined DOCROPPER_BRANCH set DOCROPPER_BRANCH=codex/move-version-number-to-bottom-right
 
 set TARGET_DIR=
 set /p TARGET_DIR=Installation directory [%%ProgramFiles%%\DocCropper]:

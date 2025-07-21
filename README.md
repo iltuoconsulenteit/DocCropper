@@ -80,6 +80,7 @@ pip install -r requirements.txt
 
 Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh` (Linux/macOS). These scripts:
 - Clone the repo
+- Let you choose `main` or developer branch (`codex/move-version-number-to-bottom-right`)
 - Set up the environment
 - Ask for optional license key
 - Launch the server or tray icon

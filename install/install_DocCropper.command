@@ -3,7 +3,7 @@ set -e
 
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"
-DEV_BRANCH="${DOCROPPER_BRANCH:-dgwo4q-codex/add-features-from-doccropper-project}"
+DEV_BRANCH="${DOCROPPER_BRANCH:-codex/move-version-number-to-bottom-right}"
 
 DEFAULT_DIR="/Applications/DocCropper"
 read -r -p "Installation directory [$DEFAULT_DIR]: " TARGET_DIR
