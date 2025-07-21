@@ -4,7 +4,11 @@ rem Start a PowerShell transcript so we capture all output even when the user
 rem launches this script from another location. We rerun the batch file inside
 rem PowerShell to keep prompts visible while logging.
 if "%~1" neq "inner" (
-    set "LOG_FILE=%TEMP%\DocCropper_install.log"
+    if defined TEMP (
+        set "LOG_FILE=%TEMP%\DocCropper_install.log"
+    ) else (
+        set "LOG_FILE=%~dp0install.log"
+    )
     echo Logging to %LOG_FILE%
     powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Transcript -Path '%LOG_FILE%' -Append; cmd /c \"\"%~f0\" inner\"; Stop-Transcript"
     if exist "%LOG_FILE%" echo Log saved to %LOG_FILE%
