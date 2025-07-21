@@ -48,10 +48,13 @@ h1, h2 {
     margin-top: 20px;
     color: #555;
     font-size: 0.9em;
+    position: relative; /* allow absolute positioning inside */
 }
 
 #versionBox {
-    margin-left: 10px;
+    position: absolute;
+    right: 10px;
+    bottom: 5px;
     font-style: italic;
 }
 

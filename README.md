@@ -47,7 +47,7 @@ Images are processed and displayed as thumbnails with **Rotate**, **Edit**, and 
 
 Logos and branding can be customized via `static/logos/`, `settings.json`, and `brand_html`. The footer displays the current Git commit hash.
 
-User preferences are stored in the `users/` folder based on their email address. Anonymous users fallback to global settings in `settings.json`. The system supports optional Google sign-in and a configurable payment box (donation or subscription). Developer keys allow full access and can be defined in `settings.json` or `.env`.
+User preferences are stored in the `users/` folder based on their email address. Anonymous users fallback to global settings in `settings.json`. The system supports optional Google sign-in and a configurable payment box (donation or subscription). Google login is available to all users simply for identification and is not tied to licensing. Developer keys allow full access and can be defined in `settings.json` or `.env`.
 
 ---
 
