@@ -111,6 +111,8 @@ Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh
   batch script. When the chosen directory already contains files you can let the installer remove them or choose a new location.
 - If the clone step fails, verify your network connection. If the directory already exists you can let the installer wipe it or choose another location.
 
+If the installation resides under `%ProgramFiles%`, updating also requires administrator rights. Run `install\install_DocCropper.bat` as Administrator again, or install to a folder you can write to such as `%LOCALAPPDATA%\DocCropper`.
+
 You can pre-populate `settings.json` or override values using `.env` files in the `env/` folder.
 
 ---
