@@ -97,6 +97,9 @@ Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh
 - Prompt to launch DocCropper immediately at the end of installation
 - Place small wrapper scripts (start and stop) in the installation folder
   which call the real scripts under `scripts/`
+- When updating an existing installation the repository is reset to the chosen
+  branch and untracked files are removed so missing scripts are restored and
+  obsolete files cleaned up
 - On Windows the installer requires administrator rights to install under
   `%ProgramFiles%`. If not run as admin it will re-launch itself requesting
   elevation.
@@ -201,7 +204,8 @@ re-run the installer script for your platform:
 - **Windows**: `install/install_DocCropper.bat`
 - **Linux/macOS**: `bash install/install_DocCropper.sh`
 
-The installer will pull the most recent changes and preserve your
+The installer resets the installation to match the selected branch,
+restoring missing files and cleaning up old ones while preserving your
 configuration. To update from a different branch, set the environment variable
 `DOCROPPER_BRANCH` before running the installer:
 

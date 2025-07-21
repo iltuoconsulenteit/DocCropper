@@ -134,7 +134,10 @@ if not exist "%APP_DIR%\.git" (
             )
         )
         git checkout %BRANCH%
-        git pull origin %BRANCH%
+        git fetch origin %BRANCH%
+        git reset --hard origin/%BRANCH%
+        git clean -fd
+        git pull --ff-only
         if exist "%BACKUP_FILE%" (
             echo Merge %BACKUP_FILE% in %CONFIG_FILE% (richiede tool esterno)
             echo >> Merging skipped on Windows - manual merge suggested.

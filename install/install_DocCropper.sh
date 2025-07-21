@@ -73,7 +73,9 @@ if [ -d "$TARGET_DIR/.git" ]; then
   read -r -p "🔄 Vuoi aggiornare il repository da GitHub? [s/N] " ans
   if [[ "$ans" =~ ^[sS]$ ]]; then
     echo "📥 Aggiornamento repository..."
-    git -C "$TARGET_DIR" pull --rebase --autostash origin "$BRANCH"
+    git -C "$TARGET_DIR" fetch origin "$BRANCH"
+    git -C "$TARGET_DIR" reset --hard "origin/$BRANCH"
+    git -C "$TARGET_DIR" clean -fd
   fi
 else
   if [ -d "$TARGET_DIR" ] && [ "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then
@@ -130,7 +132,8 @@ PY
       echo "🔀 Switching to branch $BRANCH"
       git -C "$TARGET_DIR" fetch origin "$BRANCH"
       git -C "$TARGET_DIR" checkout "$BRANCH"
-      git -C "$TARGET_DIR" pull --rebase --autostash origin "$BRANCH"
+      git -C "$TARGET_DIR" reset --hard "origin/$BRANCH"
+      git -C "$TARGET_DIR" clean -fd
     fi
   else
     echo "❌ License key invalid. Continuing in demo mode."
