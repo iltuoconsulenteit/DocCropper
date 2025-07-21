@@ -95,8 +95,8 @@ Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh
 - The default developer branch is `codex/move-version-number-to-bottom-right` but you can override it with the `DOCROPPER_DEV_BRANCH` environment variable
 - Start the tray icon which launches the server
 - Prompt to launch DocCropper immediately at the end of installation
-- Overwrite the start and stop scripts in the installation folder with the
-  latest versions
+- Place small wrapper scripts (start and stop) in the installation folder
+  which call the real scripts under `scripts/`
 - On Windows the installer requires administrator rights to install under
   `%ProgramFiles%`. If not run as admin it will re-launch itself requesting
   elevation.
@@ -113,7 +113,7 @@ You can pre-populate `settings.json` or override values using `.env` files in th
 
 ## ▶️ Running DocCropper
 
-Use the included start scripts from the `scripts/` directory. When launched, they create a virtual environment if needed and install Python packages before starting DocCropper. The commands now show the installation progress so that errors are visible.
+Use the start scripts located in the installation folder. They are small wrappers which invoke the real scripts under `scripts/`. When launched, the scripts create a virtual environment if needed and install Python packages before starting DocCropper. The commands show the installation progress so that errors are visible.
 If some packages fail to install, the scripts continue so the basic features remain usable. Output from the server is written to `doccropper.log` in the installation folder so you can diagnose issues later.
 Keep these scripts inside the DocCropper installation folder or create a shortcut to them.
 If you want to run a script from anywhere, set the environment variable `DOCROPPER_HOME` to the installation path.

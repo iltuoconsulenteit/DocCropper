@@ -177,10 +177,10 @@ if exist requirements.txt (
     echo File requirements.txt non trovato!
 )
 
-rem Ensure latest start scripts are available in the installation root
+rem Ensure wrapper start/stop scripts exist in the installation root
 echo Aggiornamento script di avvio...
-copy /Y "%APP_DIR%\scripts\start_DocCropper.bat" "%APP_DIR%" >nul
-copy /Y "%APP_DIR%\scripts\stop_DocCropper.bat"  "%APP_DIR%" >nul
+copy /Y "%~dp0..\start_DocCropper.bat" "%APP_DIR%" >nul
+copy /Y "%~dp0..\stop_DocCropper.bat"  "%APP_DIR%" >nul
 
 set /p RUN_APP=Launch DocCropper with tray icon now? [Y/n]
 if /I "%RUN_APP%" NEQ "n" if /I "%RUN_APP%" NEQ "N" (
