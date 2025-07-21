@@ -195,8 +195,8 @@ if exist requirements.txt (
 
 rem Ensure wrapper start/stop scripts exist in the installation root
 call :log "Aggiornamento script di avvio..."
-copy /Y "%~dp0..\start_DocCropper.bat" "%APP_DIR%" >>"%LOG_FILE%" 2>&1
-copy /Y "%~dp0..\stop_DocCropper.bat"  "%APP_DIR%" >>"%LOG_FILE%" 2>&1
+copy /Y "%APP_DIR%\scripts\start_DocCropper.bat" "%APP_DIR%\start_DocCropper.bat" >>"%LOG_FILE%" 2>&1
+copy /Y "%APP_DIR%\scripts\stop_DocCropper.bat"  "%APP_DIR%\stop_DocCropper.bat" >>"%LOG_FILE%" 2>&1
 
 set /p RUN_APP=Launch DocCropper with tray icon now? [Y/n]
 if /I "%RUN_APP%" NEQ "n" if /I "%RUN_APP%" NEQ "N" (
