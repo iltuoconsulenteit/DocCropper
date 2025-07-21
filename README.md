@@ -95,6 +95,8 @@ Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh
 - The default developer branch is `codex/move-version-number-to-bottom-right` but you can override it with the `DOCROPPER_DEV_BRANCH` environment variable
 - Start the tray icon which launches the server
 - Prompt to launch DocCropper immediately at the end of installation
+- Overwrite the start and stop scripts in the installation folder with the
+  latest versions
 - On Windows the installer requires administrator rights to install under
   `%ProgramFiles%`. If not run as admin it will re-launch itself requesting
   elevation.
