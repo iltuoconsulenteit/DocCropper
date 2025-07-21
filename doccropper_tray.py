@@ -96,8 +96,21 @@ def create_image():
 
 
 def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(description="DocCropper tray helper")
+    parser.add_argument("--no-tray", action="store_true",
+                        help="Run without showing a system tray icon")
+    args = parser.parse_args()
+
     developer = os.environ.get('DOCROPPER_DEVELOPER') == '1' or is_developer()
     logging.info("Tray icon started (developer=%s)", developer)
+
+    if args.no_tray:
+        logging.info("--no-tray specified, launching server directly")
+        start_app()
+        return
+
     menu_items = [
         MenuItem('Start DocCropper', lambda icon, item: start_app()),
         MenuItem('Stop DocCropper', lambda icon, item: stop_app()),
@@ -112,6 +125,8 @@ def main():
         icon.run()
     except Exception as e:
         logging.exception("Tray icon error: %s", e)
+        logging.info("Falling back to running without tray")
+        start_app()
 
 
 if __name__ == '__main__':
