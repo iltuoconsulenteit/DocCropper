@@ -53,19 +53,25 @@ def is_developer():
         return False
 
 def run_script(name, env=None, folder=INSTALL_DIR):
+    """Run a helper script while logging output.
+
+    The log file is opened only for the duration of the spawn so we don't keep
+    the handle locked after starting the child process.
+    """
     script = folder / name
     logging.info("Running %s", script)
-    stdout = open(LOG_FILE, 'a')
     if SYSTEM == 'Windows':
         flags = 0
         if hasattr(subprocess, 'CREATE_NO_WINDOW'):
             flags = subprocess.CREATE_NO_WINDOW
-        subprocess.Popen(['cmd', '/c', str(script)], env=env,
-                         stdout=stdout, stderr=subprocess.STDOUT,
-                         creationflags=flags)
+        with open(LOG_FILE, 'a') as stdout:
+            subprocess.Popen(['cmd', '/c', str(script)], env=env,
+                             stdout=stdout, stderr=subprocess.STDOUT,
+                             creationflags=flags)
     else:
-        subprocess.Popen(['bash', str(script)], env=env,
-                         stdout=stdout, stderr=subprocess.STDOUT)
+        with open(LOG_FILE, 'a') as stdout:
+            subprocess.Popen(['bash', str(script)], env=env,
+                             stdout=stdout, stderr=subprocess.STDOUT)
 
 
 def start_app():
