@@ -147,7 +147,7 @@ def load_tray_icon():
 
 def overlay_status(base, color):
     base = base.copy()
-    dot = Image.new('RGB', (12, 12), (255, 255, 255, 0))
+    dot = Image.new('RGBA', (12, 12), (255, 255, 255, 0))
     draw = ImageDraw.Draw(dot)
     draw.ellipse((0, 0, 11, 11), fill=color)
     base.paste(dot, (base.width - 14, base.height - 14))
@@ -155,7 +155,7 @@ def overlay_status(base, color):
 
 
 def make_dot(color):
-    img = Image.new('RGB', (16, 16), (255, 255, 255, 0))
+    img = Image.new('RGBA', (16, 16), (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
     draw.ellipse((3, 3, 13, 13), fill=color)
     return img

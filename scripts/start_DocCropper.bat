@@ -1,6 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
 
+set "LOG_FILE=%~dp0..\doccropper.log"
+
 rem Determine installation directory
 if defined DOCROPPER_HOME (
     set "APP_DIR=%DOCROPPER_HOME%"
@@ -43,9 +45,11 @@ if errorlevel 1 (
 )
 
 echo Starting DocCropper on port %PORT%...
+if exist "%LOG_FILE%" del "%LOG_FILE%"
 where pythonw >nul 2>&1 && (
-    pythonw main.py --host 0.0.0.0 --port %PORT%
+    start "DocCropper" pythonw -u main.py --host 0.0.0.0 --port %PORT% >>"%LOG_FILE%" 2>&1
 ) || (
-    python main.py --host 0.0.0.0 --port %PORT%
+    start "DocCropper" python -u main.py --host 0.0.0.0 --port %PORT% >>"%LOG_FILE%" 2>&1
 )
+echo Log written to %LOG_FILE%
 endlocal
