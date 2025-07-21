@@ -92,7 +92,7 @@ Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh
   attempting a reinstall
 - Ask for optional license key
 - Let you choose the branch to install (type `1` for `main` or `2` for the developer branch)
-- You can override the developer branch by setting the `DOCROPPER_DEV_BRANCH` environment variable
+- The default developer branch is `dgwo4q-codex/add-features-from-doccropper-project` but you can override it with the `DOCROPPER_DEV_BRANCH` environment variable
 - Start the tray icon which launches the server
 - Write a log to `%TEMP%\DocCropper_install.log` on Windows (or
   `/tmp/DocCropper_install.log` on Linux/macOS) while still showing prompts

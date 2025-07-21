@@ -7,7 +7,7 @@ exec >> "$LOG_FILE" 2>&1
 
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"
-DEV_BRANCH="${DOCROPPER_DEV_BRANCH:-codex/move-version-number-to-bottom-right}"
+DEV_BRANCH="${DOCROPPER_DEV_BRANCH:-dgwo4q-codex/add-features-from-doccropper-project}"
 DEFAULT_BRANCH="${DOCROPPER_BRANCH:-main}"
 
 DEFAULT_DIR="/opt/DocCropper"

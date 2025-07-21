@@ -3,7 +3,7 @@ set -e
 
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"
-DEV_BRANCH="${DOCROPPER_BRANCH:-codex/move-version-number-to-bottom-right}"
+DEV_BRANCH="${DOCROPPER_DEV_BRANCH:-dgwo4q-codex/add-features-from-doccropper-project}"
 
 DEFAULT_DIR="/Applications/DocCropper"
 read -r -p "Installation directory [$DEFAULT_DIR]: " TARGET_DIR
@@ -26,12 +26,23 @@ read -r -p "🔑 Enter license key (leave blank for demo) [${DEFAULT_KEY}]: " LI
 [ -z "$LIC_KEY" ] && LIC_KEY="$DEFAULT_KEY"
 UPPER_KEY=$(echo "$LIC_KEY" | tr '[:lower:]' '[:upper:]')
 DEV_UPPER=$(echo "$DEV_KEY" | tr '[:lower:]' '[:upper:]')
-BRANCH="main"
-if [ "$UPPER_KEY" = "$DEV_UPPER" ]; then
-  BRANCH="$DEV_BRANCH"
+
+if [ -z "$DOCROPPER_BRANCH" ]; then
+  echo
+  echo "Choose branch to install:"
+  echo " 1) main"
+  echo " 2) $DEV_BRANCH"
+  read -r -p "Selection [1]: " ans
+  if [ "$ans" = "2" ]; then
+    BRANCH="$DEV_BRANCH"
+  else
+    BRANCH="main"
+  fi
+else
+  BRANCH="$DOCROPPER_BRANCH"
 fi
 
-# Determine branch from license if not specified
+echo "Using branch: $BRANCH"
 
 printf '\xF0\x9F\x94\xA7 Verifica pacchetti richiesti...\n'
 for cmd in git python3 pip3; do
