@@ -41,8 +41,8 @@ if not defined DOCROPPER_BRANCH (
     echo Choose branch to install:
     echo  1^) main
     echo  2^) %DEV_BRANCH%
-    set /p BSEL=Selection [1]: 
-    if "%BSEL%"=="2" (
+    set /p BSEL=Selection [1]:
+    if "!BSEL!"=="2" (
         set "BRANCH=%DEV_BRANCH%"
     ) else (
         set "BRANCH=main"
@@ -135,8 +135,8 @@ if not exist "%APP_DIR%\.git" (
     )
 ) else (
     call :log "Repository present in %APP_DIR%"
-    set /p update_choice=Vuoi aggiornare il repository da GitHub? [s/N] 
-    if /I "%update_choice%"=="s" (
+    set /p update_choice=Vuoi aggiornare il repository da GitHub? [s/N]
+    if /I "!update_choice!"=="s" (
         cd /d "%APP_DIR%"
         if exist "%CONFIG_FILE%" (
             git status --porcelain | findstr "%CONFIG_FILE%" >nul && (
