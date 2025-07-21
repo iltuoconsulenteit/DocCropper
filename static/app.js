@@ -13,7 +13,6 @@ const svgOverlayElement = document.getElementById('svgOverlay');
 const fogPathElement = document.getElementById('fogPath');
 // console.log('DEBUG: fogPathElement right after declaration:', fogPathElement); 
 const imageUploadElement = document.getElementById('imageUpload');
-const scanBtn = document.getElementById('scanBtn');
 const submitBtn = document.getElementById('submitBtn');
 const exportPdfBtn = document.getElementById('exportPdfBtn');
 const layoutControls = document.getElementById('layoutControls');
@@ -22,8 +21,6 @@ const orientationSelect = document.getElementById('orientationSelect');
 const arrangeSelect = document.getElementById('arrangeSelect');
 const scaleMode = document.getElementById('scaleMode');
 const scalePercent = document.getElementById('scalePercent');
-const brightnessRange = document.getElementById('brightnessRange');
-const contrastRange = document.getElementById('contrastRange');
 const processedImageElement = document.getElementById('processedImage');
 const processedGallery = document.getElementById('processedGallery');
 const statusMessageElement = document.getElementById('statusMessage');
@@ -37,18 +34,6 @@ const paymentBox = document.getElementById('paymentBox');
 const loginArea = document.getElementById('loginArea');
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
-
-function dataURLToFile(dataUrl, filename) {
-    const arr = dataUrl.split(',');
-    const mime = arr[0].match(/:(.*?);/)[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], filename, { type: mime });
-}
 
 let isLicensed = false;
 let licenseName = '';
@@ -66,19 +51,6 @@ let editingIndex = null;
 let translations = {};
 let currentLang = 'en';
 let currentSettings = {};
-
-async function checkScanAvailable() {
-    if (!scanBtn) return;
-    try {
-        const resp = await fetch('/scan/available');
-        const data = await resp.json();
-        if (!data.available) {
-            scanBtn.style.display = 'none';
-        }
-    } catch (e) {
-        scanBtn.style.display = 'none';
-    }
-}
 
 async function loadSettings() {
     const url = userInfo ? '/user-settings/' : '/settings/';
@@ -124,12 +96,6 @@ function applySettings(cfg) {
     if (cfg.scale_percent !== undefined) {
         scalePercent.value = cfg.scale_percent;
     }
-    if (cfg.brightness !== undefined && brightnessRange) {
-        brightnessRange.value = cfg.brightness;
-    }
-    if (cfg.contrast !== undefined && contrastRange) {
-        contrastRange.value = cfg.contrast;
-    }
     isLicensed = false;
     licenseName = '';
     if (cfg.license_key && cfg.license_key.trim()) {
@@ -141,7 +107,7 @@ function applySettings(cfg) {
         licenseName = cfg.license_name;
     }
     if (brandBox) {
-        brandBox.innerHTML = cfg.brand_html || '<em>Your Brand</em>';
+        brandBox.innerHTML = cfg.brand_html || '';
     }
     if (cfg.version) {
         appVersion = cfg.version;
@@ -549,38 +515,6 @@ imageUploadElement.addEventListener('change', (event) => {
     }
 });
 
-if (scanBtn) {
-    scanBtn.addEventListener('click', async () => {
-        statusMessageElement.textContent = t('scanning');
-        try {
-            const resp = await fetch('/scan/', { method: 'POST' });
-            const data = await resp.json();
-            if (!resp.ok) {
-                throw new Error(data.message || 'Scan failed');
-            }
-            if (data.image) {
-                const dataUrl = 'data:image/png;base64,' + data.image;
-                const file = dataURLToFile(dataUrl, 'scan.png');
-                files = [file];
-                currentFileIndex = 0;
-                processedImages = [];
-                processedFiles = [];
-                editingIndex = null;
-                processedGallery.innerHTML = '';
-                exportPdfBtn.style.display = 'none';
-                layoutControls.style.display = 'none';
-                setupImage(dataUrl);
-                statusMessageElement.textContent = t('scanDone');
-            } else {
-                statusMessageElement.textContent = t('scanFailed');
-            }
-        } catch (e) {
-            statusMessageElement.textContent = t('scanFailed');
-            console.error(e);
-        }
-    });
-}
-
 interact('.draggable').draggable({
     modifiers: [
         interact.modifiers.restrictRect({
@@ -638,12 +572,6 @@ submitBtn.addEventListener('click', () => {
     formData.append('points', JSON.stringify(pointsForBackend));
     formData.append('original_width', Math.round(origW));
     formData.append('original_height', Math.round(origH));
-    if (brightnessRange) {
-        formData.append('brightness', parseInt(brightnessRange.value || '100'));
-    }
-    if (contrastRange) {
-        formData.append('contrast', parseInt(contrastRange.value || '100'));
-    }
 
     fetch('/process-image/', {
         method: 'POST',
@@ -771,18 +699,6 @@ scalePercent.addEventListener('change', () => {
     saveSettings({ scale_percent: parseInt(scalePercent.value || '100') });
 });
 
-if (brightnessRange) {
-    brightnessRange.addEventListener('change', () => {
-        saveSettings({ brightness: parseInt(brightnessRange.value || '100') });
-    });
-}
-
-if (contrastRange) {
-    contrastRange.addEventListener('change', () => {
-        saveSettings({ contrast: parseInt(contrastRange.value || '100') });
-    });
-}
-
 function applyProStatus() {
     // In demo mode features remain usable but PDF pages beyond the first
     // will include a DEMO watermark. We simply update the button style
@@ -904,7 +820,6 @@ loadSettings().then(async (cfg) => {
     licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
     applyProStatus();
     updateLayoutPreview();
-    await checkScanAvailable();
 });
 
 if (window.safari) {

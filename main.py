@@ -50,8 +50,6 @@ DEFAULT_SETTINGS = {
     "arrangement": "auto",
     "scale_mode": "fit",
     "scale_percent": 100,
-    "brightness": 100,
-    "contrast": 100,
     "port": 8000,
     "license_key": "",
     "license_name": "",
@@ -94,13 +92,10 @@ def load_settings():
         merged.update(base)
         env_key = os.getenv("DOCROPPER_LICENSE_KEY")
         env_name = os.getenv("DOCROPPER_LICENSE_NAME")
-        google_id = os.getenv("DOCROPPER_GOOGLE_CLIENT_ID")
         if env_key:
             merged["license_key"] = env_key
         if env_name:
             merged["license_name"] = env_name
-        if google_id:
-            merged["google_client_id"] = google_id
         return merged
     except Exception:
         return DEFAULT_SETTINGS.copy()
@@ -223,60 +218,13 @@ async def google_login(token: str = Body(...)):
         return JSONResponse(status_code=400, content={"message": "Invalid token"})
 
 
-@app.get("/scan/available")
-async def scan_available():
-    """Return whether scanning support is installed."""
-    try:
-        import pyinsane2  # noqa: F401
-        return {"available": True}
-    except ModuleNotFoundError:
-        return {"available": False}
-
-
-@app.post("/scan/")
-async def scan_document():
-    """Acquire a single image from the first available scanner."""
-    try:
-        import pyinsane2
-    except ModuleNotFoundError:
-        return JSONResponse(status_code=501, content={"message": "Scanning module not installed"})
-    try:
-        pyinsane2.init()
-        devices = pyinsane2.get_devices()
-        if not devices:
-            pyinsane2.exit()
-            return JSONResponse(status_code=404, content={"message": "No scanner found"})
-        scanner = devices[0]
-        scan_session = scanner.scan(multiple=False)
-        while True:
-            try:
-                scan_session.scan.read()
-            except EOFError:
-                break
-        img = scan_session.images[-1]
-        pyinsane2.exit()
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
-        return {"image": img_b64}
-    except Exception as e:
-        try:
-            pyinsane2.exit()
-        except Exception:
-            pass
-        logger.exception("Scanning failed")
-        return JSONResponse(status_code=500, content={"message": str(e)})
-
-
 @app.post("/process-image/")
 async def process_image(
     request: Request,
     image_file: UploadFile = File(...),
     points: str = Form(...), # JSON string of points: "[x1,y1,x2,y2,x3,y3,x4,y4]"
     original_width: int = Form(...),
-    original_height: int = Form(...),
-    brightness: int = Form(100),
-    contrast: int = Form(100)
+    original_height: int = Form(...)
 ):
     logger.info(f"Received image: {image_file.filename}, original_width: {original_width}, original_height: {original_height}")
     logger.info(f"Received points string (raw form data): {points}")
@@ -384,16 +332,8 @@ async def process_image(
         logger.info(f"Image sharpened successfully. Sharpened shape: {sharpened_image.shape}")
 
 
-        # Adjust brightness and contrast
-        alpha = max(0.0, contrast / 100.0)
-        beta = brightness - 100
-        adjusted_image = cv2.convertScaleAbs(sharpened_image, alpha=alpha, beta=beta)
-        logger.info(
-            f"Applied brightness {brightness} and contrast {contrast} (alpha={alpha}, beta={beta})"
-        )
-
-        # Encode processed image to base64
-        success, img_encoded_buffer = cv2.imencode(".png", adjusted_image)
+        # Encode processed image (now the sharpened one) to base64 to send to frontend
+        success, img_encoded_buffer = cv2.imencode(".png", sharpened_image) # Use sharpened_image
         if not success:
             logger.error("Failed to encode sharpened image to PNG.")
             return JSONResponse(status_code=500, content={"message": "Failed to encode processed image."})

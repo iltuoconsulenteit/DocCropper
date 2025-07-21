@@ -1,12 +1,9 @@
 #!/bin/bash
 set -e
-LOG_FILE="${DOCROPPER_LOG_FILE:-/tmp/DocCropper_install.log}"
-echo "Logging to $LOG_FILE"
-exec > >(tee -a "$LOG_FILE") 2>&1
 
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"
-DEV_BRANCH="${DOCROPPER_DEV_BRANCH:-codex/move-version-number-to-bottom-right}"
+DEV_BRANCH="${DOCROPPER_BRANCH:-dgwo4q-codex/add-features-from-doccropper-project}"
 
 DEFAULT_DIR="/Applications/DocCropper"
 read -r -p "Installation directory [$DEFAULT_DIR]: " TARGET_DIR
@@ -29,23 +26,12 @@ read -r -p "🔑 Enter license key (leave blank for demo) [${DEFAULT_KEY}]: " LI
 [ -z "$LIC_KEY" ] && LIC_KEY="$DEFAULT_KEY"
 UPPER_KEY=$(echo "$LIC_KEY" | tr '[:lower:]' '[:upper:]')
 DEV_UPPER=$(echo "$DEV_KEY" | tr '[:lower:]' '[:upper:]')
-
-if [ -z "$DOCROPPER_BRANCH" ]; then
-  echo
-  echo "Choose branch to install:"
-  echo " 1) main"
-  echo " 2) $DEV_BRANCH"
-  read -r -p "Selection [1]: " ans
-  if [ "$ans" = "2" ]; then
-    BRANCH="$DEV_BRANCH"
-  else
-    BRANCH="main"
-  fi
-else
-  BRANCH="$DOCROPPER_BRANCH"
+BRANCH="main"
+if [ "$UPPER_KEY" = "$DEV_UPPER" ]; then
+  BRANCH="$DEV_BRANCH"
 fi
 
-echo "Using branch: $BRANCH"
+# Determine branch from license if not specified
 
 printf '\xF0\x9F\x94\xA7 Verifica pacchetti richiesti...\n'
 for cmd in git python3 pip3; do
@@ -60,9 +46,7 @@ if [ -d "$TARGET_DIR/.git" ]; then
   read -r -p "🔄 Vuoi aggiornare il repository da GitHub? [s/N] " ans
   if [[ "$ans" =~ ^[sS]$ ]]; then
     echo "📥 Aggiornamento repository..."
-    git -C "$TARGET_DIR" fetch origin "$BRANCH"
-    git -C "$TARGET_DIR" reset --hard "origin/$BRANCH"
-    git -C "$TARGET_DIR" clean -fd
+    git -C "$TARGET_DIR" pull --rebase --autostash origin "$BRANCH"
   fi
 else
   echo "📥 Clonazione repository in $TARGET_DIR..."
@@ -110,8 +94,7 @@ PY
       echo "🔀 Switching to developer branch $DEV_BRANCH"
       git -C "$TARGET_DIR" fetch origin "$DEV_BRANCH"
       git -C "$TARGET_DIR" checkout "$DEV_BRANCH"
-      git -C "$TARGET_DIR" reset --hard "origin/$DEV_BRANCH"
-      git -C "$TARGET_DIR" clean -fd
+      git -C "$TARGET_DIR" pull --rebase --autostash origin "$DEV_BRANCH"
     fi
   else
     echo "❌ License key invalid. Continuing in demo mode."
