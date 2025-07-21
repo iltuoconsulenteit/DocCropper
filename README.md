@@ -25,7 +25,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 This project uses [Interact.JS](https://github.com/taye/interact.js) for managing draggable corner points.
 
 The frontend allows the user to:
-- Upload one or more images (on mobile devices the file picker can use the camera directly)
+- Upload one or more images (on mobile devices the file picker lets you choose existing photos or take a new picture)
 - Manually adjust the four corners of each image
 - Submit data (image, coordinates, size) to the backend
 - Export all processed images to PDF

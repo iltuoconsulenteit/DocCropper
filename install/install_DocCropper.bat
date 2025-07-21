@@ -199,10 +199,10 @@ if /I "!RUN_APP!" NEQ "n" if /I "!RUN_APP!" NEQ "N" (
     pushd "!APP_DIR!" >nul
     where pythonw >nul 2>&1 && (
         call :log "Launching tray icon"
-        start "" pythonw doccropper_tray.py --auto-start >>"%LOG_FILE%" 2>&1
+        start "" pythonw doccropper_tray.py --auto-start
     ) || (
         call :log "Launching tray icon"
-        start "" python doccropper_tray.py --auto-start >>"%LOG_FILE%" 2>&1
+        start "" python doccropper_tray.py --auto-start
     )
     popd >nul
 )
