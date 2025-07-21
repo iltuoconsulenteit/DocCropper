@@ -57,9 +57,8 @@ set "BACKUP_FILE=settings.local.json.bak"
 if not exist "%APP_DIR%" (
     mkdir "%APP_DIR%" >nul 2>&1
     if errorlevel 1 (
-        call :log "Unable to create %APP_DIR%. Falling back to %~dp0DocCropper"
-        set "APP_DIR=%~dp0DocCropper"
-        if not exist "%APP_DIR%" mkdir "%APP_DIR%"
+        call :log "Unable to create %APP_DIR%. Run this script as Administrator."
+        exit /b 1
     )
 )
 
