@@ -7,8 +7,17 @@ if not defined DOCROPPER_BRANCH set DOCROPPER_BRANCH=codex/move-version-number-t
 set TARGET_DIR=
 set /p TARGET_DIR=Installation directory [%%ProgramFiles%%\DocCropper]:
 if "%TARGET_DIR%"=="" set TARGET_DIR=%ProgramFiles%\DocCropper
-if not exist "%TARGET_DIR%" mkdir "%TARGET_DIR%"
+if not exist "%TARGET_DIR%" (
+  mkdir "%TARGET_DIR%" 2>nul
+  if errorlevel 1 (
+    echo Cannot create %TARGET_DIR%. Run as Administrator or choose another path.
+    pause
+    exit /b 1
+  )
+)
 echo Installing to: %TARGET_DIR%
+set LOG_FILE=%TARGET_DIR%\install.log
+echo Logging to %LOG_FILE%
 
 set DEFAULT_KEY=
 if exist "%TARGET_DIR%\settings.json" (
@@ -23,16 +32,28 @@ PY
 )
 set /p LIC_KEY=Enter license key (leave blank for demo) [%DEFAULT_KEY%]:
 if "%LIC_KEY%"=="" set LIC_KEY=%DEFAULT_KEY%
-set BRANCH=main
-if /I "%LIC_KEY%"=="%DOCROPPER_DEV_LICENSE%" set BRANCH=%DOCROPPER_BRANCH%
+
+echo Choose branch to install:
+echo 1^) main
+echo 2^) %DOCROPPER_BRANCH%
+set /p CHOICE=Selection [2]:
+if "%CHOICE%"=="1" (
+  set BRANCH=main
+) else if "%CHOICE%"=="" (
+  set BRANCH=%DOCROPPER_BRANCH%
+) else (
+  set BRANCH=%DOCROPPER_BRANCH%
+)
 
 
 
 echo Checking required tools...
+echo Checking required tools...>>"%LOG_FILE%"
 for %%C in (git python pip) do (
   where %%C >nul 2>&1
   if errorlevel 1 (
     echo %%C not found. Please install it first.
+    echo %%C not found.>>"%LOG_FILE%"
     pause
     exit /b 1
   )
@@ -40,17 +61,31 @@ for %%C in (git python pip) do (
 
 if exist "%TARGET_DIR%\.git" (
   echo Repository already present at %TARGET_DIR%
+  echo Repository present in %TARGET_DIR%>>"%LOG_FILE%"
   set /p UPD=Update the repository from GitHub? [s/N]
   if /I "%UPD%"=="s" (
     echo Updating repository...
-    git -C "%TARGET_DIR%" pull --rebase --autostash origin %BRANCH%
+    echo Updating repository...>>"%LOG_FILE%"
+    git -C "%TARGET_DIR%" pull --rebase --autostash origin %BRANCH%>>"%LOG_FILE%" 2>>&1
+    if errorlevel 1 (
+      echo Git update failed.>>"%LOG_FILE%"
+      echo Git update failed.
+    )
   )
 ) else (
   echo Cloning repository in %TARGET_DIR%...
-  git clone --branch %BRANCH% "%REPO_URL%" "%TARGET_DIR%"
+  echo Cloning repository in %TARGET_DIR%...>>"%LOG_FILE%"
+  git clone --branch %BRANCH% "%REPO_URL%" "%TARGET_DIR%" >>"%LOG_FILE%" 2>>&1
+  if errorlevel 1 (
+    echo Clone failed. Check your network connection and permissions.>>"%LOG_FILE%"
+    echo Clone failed. Check your network connection and permissions.
+    pause
+    exit /b 1
+  )
 )
 
 echo Done.
+echo Installation complete.>>"%LOG_FILE%"
 set SETTINGS_FILE=%TARGET_DIR%\settings.json
 if not exist "%SETTINGS_FILE%" (
   echo { "language": "en", "layout": 1, "orientation": "portrait", "arrangement": "auto", "scale_mode": "fit", "scale_percent": 100, "port": 8000, "license_key": "", "license_name": "" } > "%SETTINGS_FILE%"
@@ -101,5 +136,6 @@ if /I "%RUN_APP%" NEQ "n" if /I "%RUN_APP%" NEQ "N" (
   popd
 )
 endlocal
+echo Log saved to %LOG_FILE%
 pause
 
