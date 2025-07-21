@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0"
 
 :: Ensure we have administrator rights
 net session >nul 2>&1
@@ -206,4 +207,6 @@ if /I "!RUN_APP!" NEQ "n" if /I "!RUN_APP!" NEQ "N" (
     popd >nul
 )
 call :log "Log saved to !LOG_FILE!"
+echo Installation complete. See !LOG_FILE! for details.
+pause
 exit /b
