@@ -102,13 +102,17 @@ You may also launch `doccropper_tray.py` (or `.pyw`) to manage the server with a
 
 ### Tray icon usage
 
-The tray helper works on Windows, macOS and most Linux desktops. If no graphical
-environment is available, run it with the `--no-tray` option to start the server
-without showing an icon:
+The tray helper works on Windows, macOS and most Linux desktops. It loads the
+application logo and shows a green or red dot indicating whether the server is
+running. Use the menu to start, stop or update DocCropper, or open the site in
+your browser. If no graphical environment is available, run it with the
+`--no-tray` option to start the server without showing an icon:
 
 ```bash
 python doccropper_tray.py --no-tray
 ```
+Use the `--auto-start` flag to start the server automatically when launching the
+tray helper.
 If the tray cannot be shown, the script automatically launches the server
 without it.
 
