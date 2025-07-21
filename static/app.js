@@ -67,6 +67,19 @@ let translations = {};
 let currentLang = 'en';
 let currentSettings = {};
 
+async function checkScanAvailable() {
+    if (!scanBtn) return;
+    try {
+        const resp = await fetch('/scan/available');
+        const data = await resp.json();
+        if (!data.available) {
+            scanBtn.style.display = 'none';
+        }
+    } catch (e) {
+        scanBtn.style.display = 'none';
+    }
+}
+
 async function loadSettings() {
     const url = userInfo ? '/user-settings/' : '/settings/';
     try {
@@ -891,6 +904,7 @@ loadSettings().then(async (cfg) => {
     licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
     applyProStatus();
     updateLayoutPreview();
+    await checkScanAvailable();
 });
 
 if (window.safari) {

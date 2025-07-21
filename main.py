@@ -223,6 +223,16 @@ async def google_login(token: str = Body(...)):
         return JSONResponse(status_code=400, content={"message": "Invalid token"})
 
 
+@app.get("/scan/available")
+async def scan_available():
+    """Return whether scanning support is installed."""
+    try:
+        import pyinsane2  # noqa: F401
+        return {"available": True}
+    except ModuleNotFoundError:
+        return {"available": False}
+
+
 @app.post("/scan/")
 async def scan_document():
     """Acquire a single image from the first available scanner."""

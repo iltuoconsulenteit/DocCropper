@@ -17,7 +17,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🧭 Touchscreen-friendly interface
 - 🌐 Works offline or over LAN (no internet required)
 - 👤 Multi-user environment support (optional)
-- 📠 Acquire images directly from a connected scanner (requires `pyinsane2`)
+- 📠 Optional scanning support to acquire images directly from a connected scanner
 
 ---
 
@@ -132,13 +132,20 @@ without it.
 You can use the `--auto-start` flag to start the server immediately and still
 show the tray icon.
 
-### Scanning documents
+### Optional scanning support
 
-If a compatible scanner is connected, press the **Scan Document** button in the
-web interface to acquire an image directly. DocCropper uses
-[`pyinsane2`](https://github.com/openpaperwork/pyinsane2), which relies on WIA
-on Windows and SANE on Linux/macOS. Ensure the appropriate drivers are
-installed for your device.
+DocCropper can acquire images directly from a connected scanner using
+[`pyinsane2`](https://github.com/openpaperwork/pyinsane2). Because this package
+requires additional system dependencies, it is **not installed by default**.
+Run `install/install_scanning_addon.bat` on Windows or
+`install/install_scanning_addon.sh` on Linux/macOS to enable scanning. The
+front-end automatically hides the *Scan Document* button when scanning support
+is missing.
+
+If a compatible scanner is connected after installing the add-on, press the
+**Scan Document** button in the web interface to acquire an image directly.
+DocCropper relies on WIA on Windows and SANE on Linux/macOS, so ensure the
+appropriate drivers are installed for your device.
 
 On Windows the `pyinsane2` installation may fail with a message like
 `Microsoft Visual C++ 14.0 or greater is required`. In that case download the
@@ -146,11 +153,12 @@ On Windows the `pyinsane2` installation may fail with a message like
 and install the **Desktop development with C++** workload, then rerun the
 installer. A helper script is provided at
 `install\install_scanner_tools.bat` which automates this installation on
-Windows.
+Windows. After installing the build tools, run the scanning add-on installer
+again.
 
-If `pyinsane2` or other optional packages fail to build, the start scripts
-continue and DocCropper launches without scanning support. Check the
-installation log (`%TEMP%\DocCropper_install.log` on Windows or
+If `pyinsane2` fails to build, you can still use DocCropper without scanning.
+The start scripts continue and you may rerun the add-on installer later.
+Check the installation log (`%TEMP%\DocCropper_install.log` on Windows or
 `/tmp/DocCropper_install.log` on Linux/macOS) for details.
 
 ### Google Sign-In
