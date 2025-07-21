@@ -39,4 +39,8 @@
   "version": "Version",
   "brightness": "Brightness",
   "contrast": "Contrast"
+,
+  "instructionsTitle": "Usage",
+  "instructionsComing": "Detailed guide coming soon.",
+  "openWiki": "Open Wiki"
 }
