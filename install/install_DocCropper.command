@@ -1,5 +1,8 @@
 #!/bin/bash
 set -e
+LOG_FILE="${DOCROPPER_LOG_FILE:-/tmp/DocCropper_install.log}"
+echo "Logging to $LOG_FILE"
+exec > >(tee -a "$LOG_FILE") 2>&1
 
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"

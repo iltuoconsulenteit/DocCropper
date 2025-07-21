@@ -94,6 +94,7 @@ Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh
 - Let you choose the branch to install (type `1` for `main` or `2` for the developer branch)
 - The default developer branch is `codex/move-version-number-to-bottom-right` but you can override it with the `DOCROPPER_DEV_BRANCH` environment variable
 - Start the tray icon which launches the server
+- Installer output is saved to `install.log` in the installation directory
 - Prompt to launch DocCropper immediately at the end of installation
 - Place small wrapper scripts (start and stop) in the installation folder
   which call the real scripts under `scripts/`
