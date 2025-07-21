@@ -183,6 +183,14 @@ if exist requirements.txt (
     echo File requirements.txt non trovato!
 )
 
-echo Avvio DocCropper...
-start "DocCropper" "%APP_DIR%\scripts\start_DocCropper.bat"
+set /p RUN_APP=Launch DocCropper with tray icon now? [Y/n]
+if /I "%RUN_APP%" NEQ "n" if /I "%RUN_APP%" NEQ "N" (
+    pushd "%APP_DIR%" >nul
+    where pythonw >nul 2>&1 && (
+        start "" pythonw doccropper_tray.py --auto-start
+    ) || (
+        start "" python doccropper_tray.py --auto-start
+    )
+    popd >nul
+)
 exit /b
