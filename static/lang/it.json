@@ -36,5 +36,7 @@
   "loggedInAs": "Connesso come",
   "signInFailed": "Accesso fallito",
   "loginDisabled": "Accesso non configurato",
-  "version": "Versione"
+  "version": "Versione",
+  "brightness": "Luminosità",
+  "contrast": "Contrasto"
 }

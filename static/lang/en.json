@@ -36,5 +36,7 @@
   "loggedInAs": "Logged in as",
   "signInFailed": "Login failed",
   "loginDisabled": "Login not configured",
-  "version": "Version"
+  "version": "Version",
+  "brightness": "Brightness",
+  "contrast": "Contrast"
 }

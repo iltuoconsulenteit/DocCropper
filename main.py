@@ -50,6 +50,8 @@ DEFAULT_SETTINGS = {
     "arrangement": "auto",
     "scale_mode": "fit",
     "scale_percent": 100,
+    "brightness": 100,
+    "contrast": 100,
     "port": 8000,
     "license_key": "",
     "license_name": "",
@@ -227,7 +229,9 @@ async def process_image(
     image_file: UploadFile = File(...),
     points: str = Form(...), # JSON string of points: "[x1,y1,x2,y2,x3,y3,x4,y4]"
     original_width: int = Form(...),
-    original_height: int = Form(...)
+    original_height: int = Form(...),
+    brightness: int = Form(100),
+    contrast: int = Form(100)
 ):
     logger.info(f"Received image: {image_file.filename}, original_width: {original_width}, original_height: {original_height}")
     logger.info(f"Received points string (raw form data): {points}")
@@ -334,11 +338,15 @@ async def process_image(
         sharpened_image = cv2.filter2D(warped_image, -1, kernel)
         logger.info(f"Image sharpened successfully. Sharpened shape: {sharpened_image.shape}")
 
+        b_factor = max(0, brightness) / 100.0
+        c_factor = max(0, contrast) / 100.0
+        adjusted = cv2.convertScaleAbs(sharpened_image, alpha=c_factor, beta=int((b_factor - 1) * 255))
 
-        # Encode processed image (now the sharpened one) to base64 to send to frontend
-        success, img_encoded_buffer = cv2.imencode(".png", sharpened_image) # Use sharpened_image
+
+        # Encode processed image with brightness/contrast adjustments
+        success, img_encoded_buffer = cv2.imencode(".png", adjusted)
         if not success:
-            logger.error("Failed to encode sharpened image to PNG.")
+            logger.error("Failed to encode processed image to PNG.")
             return JSONResponse(status_code=500, content={"message": "Failed to encode processed image."})
 
         img_base64 = base64.b64encode(img_encoded_buffer).decode("utf-8")

@@ -34,6 +34,9 @@ const paymentBox = document.getElementById('paymentBox');
 const loginArea = document.getElementById('loginArea');
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
+const adjustControls = document.getElementById('adjustControls');
+const brightnessRange = document.getElementById('brightnessRange');
+const contrastRange = document.getElementById('contrastRange');
 
 let isLicensed = false;
 let licenseName = '';
@@ -426,6 +429,7 @@ function setupImage(imageUrl) {
             console.error("Image natural dimensions are zero. Image might be invalid or not loaded.");
             statusMessageElement.textContent = "Error: Image data is invalid or not fully loaded.";
             wrapperElement.style.display = 'none';
+            adjustControls.style.display = 'none';
             return;
         }
 
@@ -485,7 +489,11 @@ function setupImage(imageUrl) {
             
             initializeDraggablePoints(actualDisplayedWidth, actualDisplayedHeight);
             statusMessageElement.textContent = 'Image loaded. Adjust points.';
-        }, 50); 
+            brightnessRange.value = 100;
+            contrastRange.value = 100;
+            imageElement.style.filter = 'brightness(100%) contrast(100%)';
+            adjustControls.style.display = 'block';
+        }, 50);
 
     };
 
@@ -493,6 +501,7 @@ function setupImage(imageUrl) {
         console.error("Error loading image source.");
         statusMessageElement.textContent = "Error: Could not load the selected image file.";
         wrapperElement.style.display = 'none';
+        adjustControls.style.display = 'none';
     };
 }
 
@@ -572,6 +581,8 @@ submitBtn.addEventListener('click', () => {
     formData.append('points', JSON.stringify(pointsForBackend));
     formData.append('original_width', Math.round(origW));
     formData.append('original_height', Math.round(origH));
+    formData.append('brightness', brightnessRange.value);
+    formData.append('contrast', contrastRange.value);
 
     fetch('/process-image/', {
         method: 'POST',
@@ -594,6 +605,7 @@ submitBtn.addEventListener('click', () => {
                 editingIndex = null;
                 statusMessageElement.textContent = 'Image reprocessed.';
                 wrapperElement.style.display = 'none';
+                adjustControls.style.display = 'none';
                 exportPdfBtn.style.display = 'inline-block';
                 layoutControls.style.display = 'block';
                 updateLayoutPreview();
@@ -612,6 +624,7 @@ submitBtn.addEventListener('click', () => {
                 } else {
                     statusMessageElement.textContent = 'All images processed.';
                     wrapperElement.style.display = 'none';
+                    adjustControls.style.display = 'none';
                     exportPdfBtn.style.display = 'inline-block';
                     layoutControls.style.display = 'block';
                     updateLayoutPreview();
@@ -698,6 +711,20 @@ scaleMode.addEventListener('change', () => {
 scalePercent.addEventListener('change', () => {
     saveSettings({ scale_percent: parseInt(scalePercent.value || '100') });
 });
+
+brightnessRange.addEventListener('input', () => {
+    updateImageFilters();
+});
+
+contrastRange.addEventListener('input', () => {
+    updateImageFilters();
+});
+
+function updateImageFilters() {
+    const b = brightnessRange.value;
+    const c = contrastRange.value;
+    imageElement.style.filter = `brightness(${b}%) contrast(${c}%)`;
+}
 
 function applyProStatus() {
     // In demo mode features remain usable but PDF pages beyond the first

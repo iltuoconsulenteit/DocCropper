@@ -11,6 +11,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - ✅ Multi-image upload and batch processing
 - 🔄 Automatic or manual perspective correction
 - 🖼️ Interactive cropping and preview
+- 🎚️ Adjust brightness and contrast with live preview
 - 📄 One-click PDF export
 - 🗂️ Persistent user settings
 - 🧭 Touchscreen-friendly interface
