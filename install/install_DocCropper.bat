@@ -1,4 +1,18 @@
 @echo off
+
+rem Start a PowerShell transcript so we capture all output even when the user
+rem launches this script from another location. We rerun the batch file inside
+rem PowerShell to keep prompts visible while logging.
+if "%~1" neq "inner" (
+    set "LOG_FILE=%TEMP%\DocCropper_install.log"
+    echo Logging to %LOG_FILE%
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Transcript -Path '%LOG_FILE%' -Append; cmd /c \"\"%~f0\" inner\"; Stop-Transcript"
+    if exist "%LOG_FILE%" echo Log saved to %LOG_FILE%
+    pause
+    exit /b
+)
+
+shift
 setlocal EnableDelayedExpansion
 
 rem Default installation directory
@@ -34,30 +48,19 @@ if not defined DOCROPPER_BRANCH (
 )
 set "CONFIG_FILE=settings.json"
 set "BACKUP_FILE=settings.local.json.bak"
-set "LOG_FILE=%APP_DIR%\install.log"
 
 if not exist "%APP_DIR%" (
     mkdir "%APP_DIR%" >nul 2>&1
     if errorlevel 1 (
         echo Unable to create %APP_DIR%. Falling back to "%~dp0DocCropper"
         set "APP_DIR=%~dp0DocCropper"
-        set "LOG_FILE=%APP_DIR%\install.log"
         if not exist "%APP_DIR%" mkdir "%APP_DIR%"
     )
 )
 
-echo Logging to %LOG_FILE%
-where powershell >nul 2>&1 && set "PWSH=powershell"
-if defined PWSH (
-    %PWSH% -NoProfile -Command "Start-Transcript -Path '%LOG_FILE%' -Append" >nul
-)
 call :main
-if defined PWSH (
-    %PWSH% -NoProfile -Command "Stop-Transcript" >nul
-)
-if exist "%LOG_FILE%" echo Log saved to %LOG_FILE%
+
 endlocal
-pause
 exit /b
 
 :main
@@ -178,5 +181,4 @@ if exist requirements.txt (
 
 echo Avvio DocCropper...
 start "DocCropper" "%APP_DIR%\scripts\start_DocCropper.bat"
-
 exit /b

@@ -94,7 +94,8 @@ Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh
 - Let you choose the branch to install (type `1` for `main` or `2` for the developer branch)
 - You can override the developer branch by setting the `DOCROPPER_DEV_BRANCH` environment variable
 - Start the tray icon which launches the server
-- Write a log to `install.log` in the install folder while still showing prompts
+- Write a log to `%TEMP%\DocCropper_install.log` on Windows (or
+  `/tmp/DocCropper_install.log` on Linux/macOS) while still showing prompts
 - By default they install to `%ProgramFiles%\DocCropper` on Windows,
   `/opt/DocCropper` on Linux and `/Applications/DocCropper` on macOS. If the
   Windows installer cannot create the default directory (for example when not
