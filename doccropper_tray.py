@@ -103,14 +103,15 @@ def refresh_menu(icon):
 
 
 def start_app(icon=None):
-    run_script(START_SCRIPTS, folder=SCRIPTS_DIR)
+    # Use the wrapper scripts in the installation root so path detection works
+    run_script(START_SCRIPTS, folder=BASE_DIR)
     port = get_port()
     threading.Timer(2.0, lambda: webbrowser.open(f"http://127.0.0.1:{port}")).start()
     if icon:
         refresh_menu(icon)
 
 def stop_app(icon=None):
-    run_script(STOP_SCRIPTS, folder=SCRIPTS_DIR)
+    run_script(STOP_SCRIPTS, folder=BASE_DIR)
     if icon:
         refresh_menu(icon)
 
