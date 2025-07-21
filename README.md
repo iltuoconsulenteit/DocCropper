@@ -118,6 +118,13 @@ tray helper.
 If the tray cannot be shown, the script automatically launches the server
 without it.
 
+### Built-in Wiki
+
+An offline copy of the documentation is included under the `/wiki` path. The
+web interface displays this wiki in a sidebar on the right. You can also open it
+in a new tab at [http://localhost:8000/wiki/](http://localhost:8000/wiki/) or
+view the online version on GitHub.
+
 ### Google Sign-In
 
 To enable optional Google authentication, set `google_client_id` in

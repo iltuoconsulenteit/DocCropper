@@ -151,8 +151,9 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# Mount static files directory
+# Mount static files directory and local wiki
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/wiki", StaticFiles(directory="wiki", html=True), name="wiki")
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
