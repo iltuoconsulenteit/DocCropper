@@ -105,8 +105,14 @@ if not exist "%APP_DIR%\.git" (
     dir /b "%APP_DIR%" | findstr . >nul 2>&1
     if not errorlevel 1 (
         echo Destination %APP_DIR% exists and is not empty.
-        echo Please choose an empty directory or remove its contents.
-        exit /b 1
+        set /p wipe_choice=Delete contents and continue? [y/N] 
+        if /I "!wipe_choice!"=="y" (
+            echo Removing old files...
+            rmdir /S /Q "%APP_DIR%" && mkdir "%APP_DIR%"
+        ) else (
+            echo Please choose another directory.
+            exit /b 1
+        )
     )
     echo Cloning repository...
     git clone --branch %BRANCH% %REPO_URL% "%APP_DIR%"
