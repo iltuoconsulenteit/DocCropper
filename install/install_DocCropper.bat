@@ -1,141 +1,209 @@
 @echo off
-setlocal
-set REPO_URL=https://github.com/iltuoconsulenteit/DocCropper
-if not defined DOCROPPER_DEV_LICENSE set DOCROPPER_DEV_LICENSE=ILTUOCONSULENTEIT-DEV
-if not defined DOCROPPER_BRANCH set DOCROPPER_BRANCH=codex/move-version-number-to-bottom-right
 
-set TARGET_DIR=
-set /p TARGET_DIR=Installation directory [%%ProgramFiles%%\DocCropper]:
-if "%TARGET_DIR%"=="" set TARGET_DIR=%ProgramFiles%\DocCropper
-if not exist "%TARGET_DIR%" (
-  mkdir "%TARGET_DIR%" 2>nul
-  if errorlevel 1 (
-    echo Cannot create %TARGET_DIR%. Run as Administrator or choose another path.
-    pause
-    exit /b 1
-  )
+:: Ensure we have administrator rights
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Elevating privileges...
+    powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
+    exit /b
 )
-echo Installing to: %TARGET_DIR%
-set LOG_FILE=%TARGET_DIR%\install.log
+
+setlocal EnableDelayedExpansion
+
+rem Set up logging
+if defined TEMP (
+    set "LOG_FILE=%TEMP%\DocCropper_install.log"
+) else (
+    set "LOG_FILE=%~dp0install.log"
+)
 echo Logging to %LOG_FILE%
+echo DocCropper installer log - %DATE% %TIME% > "%LOG_FILE%"
 
-set DEFAULT_KEY=
-if exist "%TARGET_DIR%\settings.json" (
-  for /f "usebackq" %%K in (`python - <<PY
-import json,sys
-try:
-    print(json.load(open(sys.argv[1])).get('license_key',''))
-except Exception:
-    pass
-PY
- "%TARGET_DIR%\settings.json"`) do set DEFAULT_KEY=%%K
-)
-set /p LIC_KEY=Enter license key (leave blank for demo) [%DEFAULT_KEY%]:
-if "%LIC_KEY%"=="" set LIC_KEY=%DEFAULT_KEY%
-
-echo Choose branch to install:
-echo 1^) main
-echo 2^) %DOCROPPER_BRANCH%
-set /p CHOICE=Selection [2]:
-if "%CHOICE%"=="1" (
-  set BRANCH=main
-) else if "%CHOICE%"=="" (
-  set BRANCH=%DOCROPPER_BRANCH%
+rem Default installation directory
+if defined DOCROPPER_HOME (
+    set "APP_DIR=%DOCROPPER_HOME%"
 ) else (
-  set BRANCH=%DOCROPPER_BRANCH%
+    set "APP_DIR=%ProgramFiles%\DocCropper"
+)
+set /p TARGET_DIR=Installation directory [%APP_DIR%]:
+if not "!TARGET_DIR!"=="" set "APP_DIR=!TARGET_DIR!"
+call :log "Installation directory: !APP_DIR!"
+set "REPO_URL=https://github.com/iltuoconsulenteit/DocCropper.git"
+
+rem Default developer branch
+if defined DOCROPPER_DEV_BRANCH (
+    set "DEV_BRANCH=%DOCROPPER_DEV_BRANCH%"
+) else (
+    set "DEV_BRANCH=codex/move-version-number-to-bottom-right"
 )
 
-
-
-echo Checking required tools...
-echo Checking required tools...>>"%LOG_FILE%"
-for %%C in (git python pip) do (
-  where %%C >nul 2>&1
-  if errorlevel 1 (
-    echo %%C not found. Please install it first.
-    echo %%C not found.>>"%LOG_FILE%"
-    pause
-    exit /b 1
-  )
+if not defined DOCROPPER_BRANCH (
+    echo.
+    echo Choose branch to install:
+    echo  1^) main
+    echo  2^) !DEV_BRANCH!
+    set /p BSEL=Selection [1]:
+    if "!BSEL!"=="2" (
+        set "BRANCH=!DEV_BRANCH!"
+    ) else (
+        set "BRANCH=main"
+    )
+) else (
+    set "BRANCH=%DOCROPPER_BRANCH%"
 )
+call :log "Using branch: !BRANCH!"
 
-if exist "%TARGET_DIR%\.git" (
-  echo Repository already present at %TARGET_DIR%
-  echo Repository present in %TARGET_DIR%>>"%LOG_FILE%"
-  set /p UPD=Update the repository from GitHub? [s/N]
-  if /I "%UPD%"=="s" (
-    echo Updating repository...
-    echo Updating repository...>>"%LOG_FILE%"
-    git -C "%TARGET_DIR%" pull --rebase --autostash origin %BRANCH%>>"%LOG_FILE%" 2>>&1
+set "CONFIG_FILE=settings.json"
+set "BACKUP_FILE=settings.local.json.bak"
+
+if not exist "!APP_DIR!" (
+    mkdir "!APP_DIR!" >nul 2>&1
     if errorlevel 1 (
-      echo Git update failed.>>"%LOG_FILE%"
-      echo Git update failed.
+        call :log "Unable to create !APP_DIR!. Run this script as Administrator."
+        exit /b 1
     )
-  )
-) else (
-  echo Cloning repository in %TARGET_DIR%...
-  echo Cloning repository in %TARGET_DIR%...>>"%LOG_FILE%"
-  git clone --branch %BRANCH% "%REPO_URL%" "%TARGET_DIR%" >>"%LOG_FILE%" 2>>&1
-  if errorlevel 1 (
-    echo Clone failed. Check your network connection and permissions.>>"%LOG_FILE%"
-    echo Clone failed. Check your network connection and permissions.
-    pause
-    exit /b 1
-  )
 )
 
-echo Done.
-echo Installation complete.>>"%LOG_FILE%"
-set SETTINGS_FILE=%TARGET_DIR%\settings.json
-if not exist "%SETTINGS_FILE%" (
-  echo { "language": "en", "layout": 1, "orientation": "portrait", "arrangement": "auto", "scale_mode": "fit", "scale_percent": 100, "port": 8000, "license_key": "", "license_name": "" } > "%SETTINGS_FILE%"
-)
-
-rem License key already read above
-if not "%LIC_KEY%"=="" (
-  >"%TEMP%\checklic.py" echo import os,sys
-  >>"%TEMP%\checklic.py" echo key=sys.argv[1].strip().upper()
-  >>"%TEMP%\checklic.py" echo dev=os.environ.get('DOCROPPER_DEV_LICENSE','ILTUOCONSULENTEIT-DEV').upper()
-  >>"%TEMP%\checklic.py" echo print('OK' if key in ('VALID',dev) else 'NO')
-  for /f %%r in ('python "%TEMP%\checklic.py" "%LIC_KEY%"') do set VALID=%%r
-  del "%TEMP%\checklic.py"
-  if /I "%VALID%"=="OK" (
-    set /p LIC_NAME=Licensed to:
-    set "SF=%SETTINGS_FILE%"
-    set "KY=%LIC_KEY%"
-    set "NM=%LIC_NAME%"
-    >"%TEMP%\updlic.py" echo import json, os
-    >>"%TEMP%\updlic.py" echo f=os.environ['SF']
-    >>"%TEMP%\updlic.py" echo data=json.load(open(f))
-    >>"%TEMP%\updlic.py" echo data['license_key']=os.environ['KY']
-    >>"%TEMP%\updlic.py" echo data['license_name']=os.environ['NM']
-    >>"%TEMP%\updlic.py" echo json.dump(data,open(f,'w'))
-    python "%TEMP%\updlic.py"
-    del "%TEMP%\updlic.py"
-    echo License saved
-    if /I "%LIC_KEY%"=="%DOCROPPER_DEV_LICENSE%" (
-      echo Switching to developer branch %DOCROPPER_BRANCH%
-      git -C "%TARGET_DIR%" fetch origin %DOCROPPER_BRANCH%
-      git -C "%TARGET_DIR%" checkout %DOCROPPER_BRANCH%
-      git -C "%TARGET_DIR%" pull --rebase --autostash origin %DOCROPPER_BRANCH%
-    )
-  ) else (
-    echo License key invalid. Continuing in demo mode.
-  )
-) else (
-  echo Demo mode enabled
-)
-set /p RUN_APP=Launch DocCropper with tray icon now? [Y/n]
-if /I "%RUN_APP%" NEQ "n" if /I "%RUN_APP%" NEQ "N" (
-  pushd "%TARGET_DIR%"
-  where pythonw >nul 2>&1 && (
-    start "" pythonw doccropper_tray.py
-  ) || (
-    start "" python doccropper_tray.py
-  )
-  popd
-)
+call :main
 endlocal
-echo Log saved to %LOG_FILE%
-pause
+exit /b
 
+:log
+set MSG=%*
+echo %MSG%
+echo %MSG%>>"%LOG_FILE%"
+exit /b
+
+:main
+where git >nul 2>&1
+if errorlevel 1 (
+    rem Git may be installed but not in PATH - check common locations
+    if exist "%ProgramFiles%\Git\cmd\git.exe" (
+        set "PATH=%ProgramFiles%\Git\cmd;%PATH%"
+    ) else if exist "%ProgramFiles(x86)%\Git\cmd\git.exe" (
+        set "PATH=%ProgramFiles(x86)%\Git\cmd;%PATH%"
+    )
+)
+where git >nul 2>&1
+if errorlevel 1 (
+    call :log "Git not found. Trying to install..."
+    where winget >nul 2>&1
+    if not errorlevel 1 (
+        winget install --id Git.Git -e --source winget >>"%LOG_FILE%" 2>&1
+    ) else (
+        call :log "winget not available. Downloading Git installer..."
+        if defined PROCESSOR_ARCHITEW6432 (
+            set "GIT_URL=https://github.com/git-for-windows/git/releases/latest/download/Git-2.44.0-64-bit.exe"
+        ) else (
+            set "GIT_URL=https://github.com/git-for-windows/git/releases/latest/download/Git-2.44.0-32-bit.exe"
+        )
+        powershell -NoProfile -Command "Invoke-WebRequest -Uri '%GIT_URL%' -OutFile '%TEMP%\git_installer.exe'" >>"%LOG_FILE%" 2>&1
+        if exist "%TEMP%\git_installer.exe" (
+            start /wait "" "%TEMP%\git_installer.exe" /VERYSILENT /NORESTART >>"%LOG_FILE%" 2>&1
+            del "%TEMP%\git_installer.exe" >>"%LOG_FILE%" 2>&1
+        ) else (
+            call :log "Failed to download Git installer. Install Git manually."
+            exit /b 1
+        )
+    )
+    where git >nul 2>&1 || (
+        call :log "Git installation failed. Install Git manually."
+        exit /b 1
+    )
+)
+
+if not exist "!APP_DIR!\.git" (
+    dir /b "!APP_DIR!" | findstr . >nul 2>&1
+    if not errorlevel 1 (
+        call :log "Destination !APP_DIR! exists and is not empty."
+        set /p wipe_choice=Delete contents and continue? [y/N] 
+        if /I "!wipe_choice!"=="y" (
+            call :log "Removing old files..."
+            rmdir /S /Q "!APP_DIR!" >>"%LOG_FILE%" 2>&1
+            mkdir "!APP_DIR!" >>"%LOG_FILE%" 2>&1
+        ) else (
+            call :log "Please choose another directory."
+            exit /b 1
+        )
+    )
+    call :log "Cloning repository..."
+    git clone --branch !BRANCH! %REPO_URL% "!APP_DIR!" >>"%LOG_FILE%" 2>&1
+    if errorlevel 1 (
+        call :log "Clone failed. Check your network connection, permissions, and that !APP_DIR! is empty."
+        exit /b 1
+    )
+) else (
+    call :log "Repository present in !APP_DIR!"
+    set /p update_choice=Vuoi aggiornare il repository da GitHub? [s/N] 
+    if /I "!update_choice!"=="s" (
+        cd /d "!APP_DIR!"
+        if exist "!CONFIG_FILE!" (
+            git status --porcelain | findstr "!CONFIG_FILE!" >nul && (
+                call :log "Backup di !CONFIG_FILE! in !BACKUP_FILE!..."
+                copy /Y "!CONFIG_FILE!" "!BACKUP_FILE!" >>"%LOG_FILE%" 2>&1
+                git restore "!CONFIG_FILE!"
+            )
+        )
+        call :log "Updating repository..."
+        git checkout !BRANCH! >>"%LOG_FILE%" 2>&1
+        git fetch origin !BRANCH! >>"%LOG_FILE%" 2>&1
+        git reset --hard origin/!BRANCH! >>"%LOG_FILE%" 2>&1
+        git clean -fd >>"%LOG_FILE%" 2>&1
+        git pull --ff-only >>"%LOG_FILE%" 2>&1
+        if exist "!BACKUP_FILE!" (
+            call :log "Merge !BACKUP_FILE! in !CONFIG_FILE! (manual merge suggested)"
+            del "!BACKUP_FILE!" >>"%LOG_FILE%" 2>&1
+        )
+        cd /d "%~dp0"
+    )
+)
+
+cd /d "!APP_DIR!"
+
+call :log "Ultimi 10 commit:"
+git log -n 10 --pretty=format:"%%h | %%ad | %%s" --date=short >>"%LOG_FILE%" 2>&1
+
+echo.
+set /p commit_hash=Vuoi ripristinare un commit specifico? (lascia vuoto per continuare): 
+if not "!commit_hash!"=="" (
+    call :log "Checkout del commit !commit_hash!..."
+    git checkout !commit_hash! >>"%LOG_FILE%" 2>&1
+)
+
+if not exist "venv\Scripts\activate.bat" (
+    call :log "Creazione ambiente virtuale..."
+    rmdir /S /Q venv 2>>"%LOG_FILE%" 1>&2
+    python -m venv venv >>"%LOG_FILE%" 2>&1 || (
+        call :log "Errore durante la creazione del venv"
+        exit /b 1
+    )
+)
+
+call venv\Scripts\activate.bat
+
+if exist requirements.txt (
+    call :log "Installazione pacchetti Python..."
+    python -m pip install --upgrade pip >>"%LOG_FILE%" 2>&1
+    pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
+) else (
+    call :log "File requirements.txt non trovato!"
+)
+
+call :log "Aggiornamento script di avvio..."
+copy /Y "!APP_DIR!\scripts\start_DocCropper.bat" "!APP_DIR!\start_DocCropper.bat" >>"%LOG_FILE%" 2>&1
+copy /Y "!APP_DIR!\scripts\stop_DocCropper.bat" "!APP_DIR!\stop_DocCropper.bat" >>"%LOG_FILE%" 2>&1
+
+set /p RUN_APP=Launch DocCropper with tray icon now? [Y/n] 
+if /I "!RUN_APP!" NEQ "n" if /I "!RUN_APP!" NEQ "N" (
+    pushd "!APP_DIR!" >nul
+    where pythonw >nul 2>&1 && (
+        call :log "Launching tray icon"
+        start "" pythonw doccropper_tray.py --auto-start >>"%LOG_FILE%" 2>&1
+    ) || (
+        call :log "Launching tray icon"
+        start "" python doccropper_tray.py --auto-start >>"%LOG_FILE%" 2>&1
+    )
+    popd >nul
+)
+call :log "Log saved to !LOG_FILE!"
+exit /b

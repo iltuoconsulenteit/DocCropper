@@ -83,8 +83,10 @@ Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh
 - Offer a numbered menu to choose `main` or the developer branch (default `codex/move-version-number-to-bottom-right`)
 - Set up the environment
 - Ask for an optional license key
-- Write `install.log` in the chosen folder
-- Launch the server or tray icon
+- Write a log file to `%TEMP%` (Windows) or `/tmp` (Linux/macOS)
+- Launch the server via the tray icon when finished
+You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer
+branch or `DOCROPPER_BRANCH` to force a specific branch.
 
 You can pre-populate `settings.json` or override values using `.env` files in the `env/` folder.
 
