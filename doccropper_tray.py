@@ -4,10 +4,12 @@ import subprocess
 import logging
 from pathlib import Path
 from pystray import Icon, Menu, MenuItem
+import threading
 from PIL import Image, ImageDraw
 import webbrowser
 from urllib.request import urlopen
 import json
+import time
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -154,7 +156,9 @@ def main():
 
     if args.auto_start and not running:
         start_app()
-        running = True
+        # give the server a moment to start
+        time.sleep(1)
+        running = is_running()
 
     if args.no_tray:
         logging.info("--no-tray specified, launching server directly")
@@ -176,6 +180,15 @@ def main():
     menu_items.append(MenuItem('Quit', quit_app))
 
     icon = Icon('DocCropper', create_image(running), 'DocCropper', menu=Menu(*menu_items))
+
+    def poll():
+        while True:
+            state = is_running()
+            icon.icon = create_image(state)
+            time.sleep(5)
+
+    thread = threading.Thread(target=poll, daemon=True)
+    thread.start()
 
     try:
         icon.run()
