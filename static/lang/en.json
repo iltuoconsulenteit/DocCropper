@@ -45,4 +45,10 @@
   "instructionsTitle": "Usage",
   "instructionsComing": "Browse the wiki below.",
   "openWiki": "Open Wiki"
+  ,"inputModeLabel": "Source:",
+  "modeUpload": "Upload File",
+  "modeScanner": "Scanner",
+  "modeCamera": "Camera",
+  "scanDoc": "Scan Document",
+  "capturePhoto": "Capture"
 }

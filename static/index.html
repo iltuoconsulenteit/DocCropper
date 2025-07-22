@@ -26,9 +26,24 @@
         <a href="/wiki/index.html" target="_blank" data-i18n="openWiki">Open Wiki</a>
     </div>
 
-    <div>
-        <label for="imageUpload" data-i18n="uploadLabel">Upload Document Image(s):</label>
-        <input type="file" id="imageUpload" accept="image/*" multiple>
+    <div id="inputControls">
+        <label for="inputMode" data-i18n="inputModeLabel">Source:</label>
+        <select id="inputMode">
+            <option value="upload" data-i18n="modeUpload">Upload File</option>
+            <option value="scanner" data-i18n="modeScanner">Scanner</option>
+            <option value="camera" data-i18n="modeCamera">Camera</option>
+        </select>
+        <div id="fileInputArea">
+            <label for="imageUpload" data-i18n="uploadLabel">Upload Document Image(s):</label>
+            <input type="file" id="imageUpload" accept="image/*" multiple>
+        </div>
+        <div id="scanControls" style="display:none;">
+            <button id="scanBtn" data-i18n="scanDoc">Scan Document</button>
+        </div>
+        <div id="cameraControls" style="display:none;">
+            <video id="cameraPreview" autoplay playsinline></video>
+            <button id="captureBtn" data-i18n="capturePhoto">Capture</button>
+        </div>
     </div>
 
     <div id="wrapper">

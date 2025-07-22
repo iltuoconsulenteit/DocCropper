@@ -39,6 +39,13 @@ const brightnessRange = document.getElementById('brightnessRange');
 const contrastRange = document.getElementById('contrastRange');
 const ocrBtn = document.getElementById('ocrBtn');
 const ocrOutput = document.getElementById('ocrOutput');
+const inputMode = document.getElementById('inputMode');
+const fileInputArea = document.getElementById('fileInputArea');
+const scanControls = document.getElementById('scanControls');
+const scanBtn = document.getElementById('scanBtn');
+const cameraControls = document.getElementById('cameraControls');
+const cameraPreview = document.getElementById('cameraPreview');
+const captureBtn = document.getElementById('captureBtn');
 
 let isLicensed = false;
 let licenseName = '';
@@ -52,10 +59,92 @@ let currentFileIndex = 0;
 let processedImages = [];
 let processedFiles = [];
 let editingIndex = null;
+let cameraStream = null;
 
 let translations = {};
 let currentLang = 'en';
 let currentSettings = {};
+
+function updateInputMode() {
+    const mode = inputMode.value;
+    fileInputArea.style.display = mode === 'upload' ? 'block' : 'none';
+    scanControls.style.display = mode === 'scanner' ? 'block' : 'none';
+    cameraControls.style.display = mode === 'camera' ? 'block' : 'none';
+    if (mode === 'camera') {
+        startCamera();
+    } else {
+        stopCamera();
+    }
+}
+
+async function scanDocument() {
+    try {
+        statusMessageElement.textContent = 'Scanning...';
+        const resp = await fetch('/scan/');
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data.image) {
+                files = [data.image];
+                currentFileIndex = 0;
+                const reader = new FileReader();
+                reader.onload = (e) => setupImage(e.target.result);
+                reader.readAsDataURL(dataURItoBlob(data.image));
+            } else {
+                statusMessageElement.textContent = 'No image returned';
+            }
+        } else {
+            statusMessageElement.textContent = 'Scan not available';
+        }
+    } catch (e) {
+        console.error('Scan failed', e);
+        statusMessageElement.textContent = 'Scan failed';
+    }
+}
+
+function startCamera() {
+    if (cameraStream) return;
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+        cameraStream = stream;
+        cameraPreview.srcObject = stream;
+    }).catch(err => {
+        console.error('Camera error', err);
+        statusMessageElement.textContent = 'Camera not available';
+        inputMode.value = 'upload';
+        updateInputMode();
+    });
+}
+
+function stopCamera() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+        cameraPreview.srcObject = null;
+    }
+}
+
+function capturePhoto() {
+    if (!cameraStream) return;
+    const video = cameraPreview;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    const dataUrl = canvas.toDataURL('image/png');
+    files = [dataUrl];
+    currentFileIndex = 0;
+    setupImage(dataUrl);
+}
+
+function dataURItoBlob(dataURI) {
+    const byteString = atob(dataURI.split(',')[1]);
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: 'image/png' });
+}
 
 async function loadSettings() {
     const url = userInfo ? '/user-settings/' : '/settings/';
@@ -730,6 +819,10 @@ ocrBtn.addEventListener('click', () => {
     });
 });
 
+inputMode.addEventListener('change', updateInputMode);
+scanBtn.addEventListener('click', scanDocument);
+captureBtn.addEventListener('click', capturePhoto);
+
 langSelect.addEventListener('change', async () => {
     currentLang = langSelect.value;
     await loadTranslations(currentLang);
@@ -897,6 +990,7 @@ loadSettings().then(async (cfg) => {
     licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
     applyProStatus();
     updateLayoutPreview();
+    updateInputMode();
 });
 
 if (window.safari) {
