@@ -162,6 +162,16 @@ DocCropper can extract text from processed images using [Tesseract OCR](https://
 
 Use the **Extract Text** button after processing images to retrieve the recognized text.
 
+### Optional Scanner Support
+
+Scanning documents requires the `pyinsane2` library. Because this package needs
+native build tools on Windows, it is not installed by default. Run
+`install/install_scanner_addon.sh` on Linux or macOS to enable scanning.
+Windows users can run `install/install_scanner_tools.bat` followed by
+`install/install_scanner_addon.bat` if they wish to compile the dependency.
+When the add-on is missing, the **Scan Document** button is hidden and the `/scan/`
+endpoint returns `501`.
+
 
 ## Credits
 

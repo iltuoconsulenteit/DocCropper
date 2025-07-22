@@ -65,6 +65,21 @@ let translations = {};
 let currentLang = 'en';
 let currentSettings = {};
 
+async function checkScanAvailability() {
+    try {
+        const resp = await fetch('/scan/available');
+        if (resp.ok) {
+            const data = await resp.json();
+            if (!data.available) {
+                const opt = inputMode.querySelector('option[value="scanner"]');
+                if (opt) opt.remove();
+            }
+        }
+    } catch (e) {
+        console.error('Scanner check failed', e);
+    }
+}
+
 function updateInputMode() {
     const mode = inputMode.value;
     fileInputArea.style.display = mode === 'upload' ? 'block' : 'none';
@@ -990,6 +1005,7 @@ loadSettings().then(async (cfg) => {
     licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
     applyProStatus();
     updateLayoutPreview();
+    await checkScanAvailability();
     updateInputMode();
 });
 
