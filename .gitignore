@@ -6,3 +6,5 @@ sessions/
 users/**
 !users/.gitkeep
 doccropper.pid
+.env
+google-credentials.json

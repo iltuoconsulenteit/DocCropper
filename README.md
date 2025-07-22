@@ -155,3 +155,17 @@ For inquiries: **doccropper@iltuoconsulenteit.it**
 
 This project is originally based on [varna9000/image-perspective-crop](https://github.com/varna9000/image-perspective-crop). Significant modifications and new features were added for broader usability.
 
+
+### Node OAuth Example
+
+For a minimal demonstration using **express-session** and Passport, run the Node server:
+
+```bash
+npm install
+npm start
+```
+
+Create a `.env` file based on `.env.example` with your Google `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` (e.g. `http://localhost:8000/auth/google/callback`).
+
+Visit [http://localhost:8000](http://localhost:8000) and click **Login with Google**. After authenticating you'll be redirected to `/dashboard` which shows your name and email.
+
