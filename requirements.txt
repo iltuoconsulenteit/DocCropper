@@ -8,3 +8,5 @@ google-auth
 
 pystray
 python-dotenv
+pyhanko
+pytesseract

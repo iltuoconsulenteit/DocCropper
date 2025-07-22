@@ -15,14 +15,37 @@
                 <option value="it" data-i18n="italian">Italiano</option>
             </select>
         </div>
-        <div id="loginArea"></div>
+        <div id="loginArea"><a href="/auth/google" id="loginBtn">Login with Google</a></div>
         <div id="licenseInfo"></div>
         <div id="brandBox"></div>
+        <button id="helpBtn" data-i18n="showHelp">Help</button>
     </header>
+    <div id="instructionsBox">
+        <strong data-i18n="instructionsTitle">Instructions</strong><br>
+        <span data-i18n="instructionsComing">Browse the wiki below.</span>
+        <iframe id="wikiFrame" src="/wiki/index.html"></iframe>
+        <a href="/wiki/index.html" target="_blank" data-i18n="openWiki">Open Wiki</a>
+    </div>
 
-    <div>
-        <label for="imageUpload" data-i18n="uploadLabel">Upload Document Image(s):</label>
-        <input type="file" id="imageUpload" accept="image/*" capture="environment" multiple>
+    <div id="inputControls">
+        <label for="inputMode" data-i18n="inputModeLabel">Source:</label>
+        <select id="inputMode">
+            <option value="upload" data-i18n="modeUpload">Upload File</option>
+            <option value="scanner" data-i18n="modeScanner">Scanner</option>
+            <option value="camera" data-i18n="modeCamera">Camera</option>
+        </select>
+        <div id="fileInputArea">
+            <label for="imageUpload" data-i18n="uploadLabel">Upload Document Image(s):</label>
+            <input type="file" id="imageUpload" accept="image/*" multiple>
+        </div>
+        <div id="scanControls" style="display:none;">
+            <button id="scanBtn" data-i18n="scanDoc">Scan Document</button>
+        </div>
+        <div id="cameraControls" style="display:none;">
+            <video id="cameraPreview" autoplay playsinline></video>
+            <button id="captureBtn" data-i18n="capturePhoto">Capture</button>
+            <input type="file" id="cameraFileInput" accept="image/*" capture="environment" style="display:none;">
+        </div>
     </div>
 
     <div id="wrapper">
@@ -37,9 +60,17 @@
             <path id="fogPath" fill-rule="evenodd" fill="rgba(0,0,0,0.5)" stroke="red" stroke-width="1"/>
         </svg>
     </div>
+    <div id="adjustControls" style="display:none;">
+        <label for="brightnessRange" data-i18n="brightness">Brightness:</label>
+        <input type="range" id="brightnessRange" min="0" max="200" value="100">
+        <label for="contrastRange" data-i18n="contrast">Contrast:</label>
+        <input type="range" id="contrastRange" min="0" max="200" value="100">
+    </div>
 
     <button id="submitBtn" data-i18n="processImage">Process Image</button>
     <button id="exportPdfBtn" style="display:none;" data-i18n="exportPdf">Export PDF</button>
+    <button id="ocrBtn" style="display:none;" data-i18n="extractText">Extract Text</button>
+    <textarea id="ocrOutput" readonly style="display:none;width:100%;height:150px;"></textarea>
     <div id="layoutControls" style="display:none;">
         <label for="layoutSelect" data-i18n="imagesPerPage">Images per page:</label>
         <select id="layoutSelect">

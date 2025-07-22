@@ -4,8 +4,12 @@ import subprocess
 import logging
 from pathlib import Path
 from pystray import Icon, Menu, MenuItem
+import threading
 from PIL import Image, ImageDraw
+import webbrowser
+from urllib.request import urlopen
 import json
+import time
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -51,19 +55,25 @@ def is_developer():
         return False
 
 def run_script(name, env=None, folder=INSTALL_DIR):
+    """Run a helper script while logging output.
+
+    The log file is opened only for the duration of the spawn so we don't keep
+    the handle locked after starting the child process.
+    """
     script = folder / name
     logging.info("Running %s", script)
-    stdout = open(LOG_FILE, 'a')
     if SYSTEM == 'Windows':
         flags = 0
         if hasattr(subprocess, 'CREATE_NO_WINDOW'):
             flags = subprocess.CREATE_NO_WINDOW
-        subprocess.Popen(['cmd', '/c', str(script)], env=env,
-                         stdout=stdout, stderr=subprocess.STDOUT,
-                         creationflags=flags)
+        with open(LOG_FILE, 'a') as stdout:
+            subprocess.Popen(['cmd', '/c', str(script)], env=env,
+                             stdout=stdout, stderr=subprocess.STDOUT,
+                             creationflags=flags)
     else:
-        subprocess.Popen(['bash', str(script)], env=env,
-                         stdout=stdout, stderr=subprocess.STDOUT)
+        with open(LOG_FILE, 'a') as stdout:
+            subprocess.Popen(['bash', str(script)], env=env,
+                             stdout=stdout, stderr=subprocess.STDOUT)
 
 
 def start_app():
@@ -83,16 +93,49 @@ def update_branch():
     env['BRANCH'] = branch
     run_script(INSTALL_SCRIPTS, env)
 
+def open_browser():
+    port = get_port()
+    webbrowser.open(f'http://127.0.0.1:{port}/')
+
+def get_port():
+    try:
+        with open(BASE_DIR / 'settings.json') as fh:
+            data = json.load(fh)
+        return int(data.get('port', 8000))
+    except Exception:
+        return 8000
+
+def is_running():
+    port = get_port()
+    try:
+        urlopen(f'http://127.0.0.1:{port}/', timeout=1)
+        return True
+    except Exception:
+        return False
+
+BASE_IMAGE = None
+
+def load_base_image():
+    global BASE_IMAGE
+    path = BASE_DIR / 'static' / 'logos' / 'header_logo.png'
+    if path.exists():
+        BASE_IMAGE = Image.open(path).convert('RGBA').resize((64, 64))
+    else:
+        BASE_IMAGE = Image.new('RGBA', (64, 64), 'white')
+
+def status_image(running):
+    img = BASE_IMAGE.copy()
+    draw = ImageDraw.Draw(img)
+    color = 'green' if running else 'red'
+    draw.ellipse((48, 48, 60, 60), fill=color)
+    return img
+
 def quit_app(icon, item):
     icon.stop()
 
 
-def create_image():
-    image = Image.new('RGB', (64, 64), 'white')
-    draw = ImageDraw.Draw(image)
-    draw.rectangle((8, 8, 56, 56), fill='black')
-    draw.text((16, 20), 'DC', fill='white')
-    return image
+def create_image(running):
+    return status_image(running)
 
 
 def main():
@@ -101,26 +144,52 @@ def main():
     parser = argparse.ArgumentParser(description="DocCropper tray helper")
     parser.add_argument("--no-tray", action="store_true",
                         help="Run without showing a system tray icon")
+    parser.add_argument("--auto-start", action="store_true",
+                        help="Start server immediately")
     args = parser.parse_args()
 
     developer = os.environ.get('DOCROPPER_DEVELOPER') == '1' or is_developer()
     logging.info("Tray icon started (developer=%s)", developer)
 
+    load_base_image()
+    running = is_running()
+
+    if args.auto_start and not running:
+        start_app()
+        # give the server a moment to start
+        time.sleep(1)
+        running = is_running()
+
     if args.no_tray:
         logging.info("--no-tray specified, launching server directly")
-        start_app()
+        if not running:
+            start_app()
         return
 
+    def update(state):
+        icon.icon = create_image(state)
+
     menu_items = [
-        MenuItem('Start DocCropper', lambda icon, item: start_app()),
-        MenuItem('Stop DocCropper', lambda icon, item: stop_app()),
+        MenuItem('Open DocCropper', lambda icon, item: open_browser()),
+        MenuItem('Start DocCropper', lambda icon, item: [start_app(), update(True)]),
+        MenuItem('Stop DocCropper', lambda icon, item: [stop_app(), update(False)]),
         MenuItem('Update from main', lambda icon, item: update_main())
     ]
     if developer:
         menu_items.append(MenuItem('Update from branch', lambda icon, item: update_branch()))
     menu_items.append(MenuItem('Quit', quit_app))
 
-    icon = Icon('DocCropper', create_image(), 'DocCropper', menu=Menu(*menu_items))
+    icon = Icon('DocCropper', create_image(running), 'DocCropper', menu=Menu(*menu_items))
+
+    def poll():
+        while True:
+            state = is_running()
+            icon.icon = create_image(state)
+            time.sleep(5)
+
+    thread = threading.Thread(target=poll, daemon=True)
+    thread.start()
+
     try:
         icon.run()
     except Exception as e:

@@ -11,7 +11,10 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - ✅ Multi-image upload and batch processing
 - 🔄 Automatic or manual perspective correction
 - 🖼️ Interactive cropping and preview
+- 🎚️ Adjust brightness and contrast with live preview
 - 📄 One-click PDF export
+- 🔏 Optional digital signature on exported PDFs
+- 🔍 Extract text via OCR using the selected language
 - 🗂️ Persistent user settings
 - 🧭 Touchscreen-friendly interface
 - 🌐 Works offline or over LAN (no internet required)
@@ -24,7 +27,8 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 This project uses [Interact.JS](https://github.com/taye/interact.js) for managing draggable corner points.
 
 The frontend allows the user to:
-- Upload one or more images (on mobile devices the file picker can use the camera directly)
+- Upload one or more images (on mobile devices the file picker lets you choose existing photos or take a new picture)
+- Add more images later without losing previously processed ones
 - Manually adjust the four corners of each image
 - Submit data (image, coordinates, size) to the backend
 - Export all processed images to PDF
@@ -80,9 +84,13 @@ pip install -r requirements.txt
 
 Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh` (Linux/macOS). These scripts:
 - Clone the repo
+- Offer a numbered menu to choose `main` or the developer branch (default `codex/move-version-number-to-bottom-right`)
 - Set up the environment
-- Ask for optional license key
-- Launch the server or tray icon
+- Ask for an optional license key
+- Write a log file named `install.log` in the installation folder (falling back to `%TEMP%` on Windows or `/tmp` on Linux/macOS)
+- Launch the server via the tray icon when finished (the tray runs `start_DocCropper.bat` for you)
+You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer
+branch or `DOCROPPER_BRANCH` to force a specific branch.
 
 You can pre-populate `settings.json` or override values using `.env` files in the `env/` folder.
 
@@ -98,22 +106,34 @@ You may also launch `doccropper_tray.py` (or `.pyw`) to manage the server with a
 
 ### Tray icon usage
 
-The tray helper works on Windows, macOS and most Linux desktops. If no graphical
-environment is available, run it with the `--no-tray` option to start the server
-without showing an icon:
+The tray helper works on Windows, macOS and most Linux desktops. It loads the
+application logo and shows a green or red dot indicating whether the server is
+running. Use the menu to start, stop or update DocCropper, or open the site in
+your browser. If no graphical environment is available, run it with the
+`--no-tray` option to start the server without showing an icon:
 
 ```bash
 python doccropper_tray.py --no-tray
 ```
+Use the `--auto-start` flag to start the server automatically when launching the
+tray helper.
 If the tray cannot be shown, the script automatically launches the server
 without it.
+
+### Built-in Wiki
+
+An offline copy of the documentation is included under the `/wiki` path. The
+web interface displays this wiki in a sidebar on the right. You can also open it
+in a new tab at [http://localhost:8000/wiki/](http://localhost:8000/wiki/) or
+view the online version on GitHub.
 
 ### Google Sign-In
 
 To enable optional Google authentication, set `google_client_id` in
 `settings.json` or provide it via the environment variable
 `DOCROPPER_GOOGLE_CLIENT_ID`. When configured, a sign-in button will appear in
-the web interface and tokens will be verified by the backend.
+the web interface and tokens will be verified by the backend. Google login is
+only used to identify users and is not tied to licensing.
 
 ---
 
@@ -123,7 +143,7 @@ DocCropper is released under the [MIT](LICENSE.txt) license. Without a license k
 
 **PRO Features:**
 - Removal of watermark
-- OCR module and network folder support (in development)
+- Network folder support (in development)
 - Authenticated LAN access
 
 To activate:
@@ -132,8 +152,42 @@ To activate:
 
 For inquiries: **doccropper@iltuoconsulenteit.it**
 
+### Optional PDF Signing
+
+Set `DOCROPPER_SIGN_CERT` to the path of a PKCS#12 certificate and `DOCROPPER_SIGN_PASSWORD` to sign exported PDFs. If no certificate is provided, PDFs are left unsigned.
+
+### Optional OCR
+
+DocCropper can extract text from processed images using [Tesseract OCR](https://github.com/tesseract-ocr/tesseract). Install Tesseract separately and ensure it is on your system path. The OCR step uses the interface language selected in DocCropper.
+
+Use the **Extract Text** button after processing images to retrieve the recognized text.
+
+### Optional Scanner Support
+
+Scanning documents requires the `pyinsane2` library. Because this package needs
+native build tools on Windows, it is not installed by default. Run
+`install/install_scanner_addon.sh` on Linux or macOS to enable scanning.
+Windows users can run `install/install_scanner_tools.bat` followed by
+`install/install_scanner_addon.bat` if they wish to compile the dependency.
+When the add-on is missing, the **Scan Document** button is hidden and the `/scan/`
+endpoint returns `501`.
+
 
 ## Credits
 
 This project is originally based on [varna9000/image-perspective-crop](https://github.com/varna9000/image-perspective-crop). Significant modifications and new features were added for broader usability.
+
+
+### Node OAuth Example
+
+For a minimal demonstration using **express-session** and Passport, run the Node server:
+
+```bash
+npm install
+npm start
+```
+
+Create a `.env` file based on `.env.example` with your Google `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` (e.g. `http://localhost:8000/auth/google/callback`). Optionally set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` to sign PDFs automatically.
+
+Visit [http://localhost:8000](http://localhost:8000) and click **Login with Google**. After authenticating you'll be redirected to `/dashboard` which shows your name and email.
 

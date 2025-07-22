@@ -36,5 +36,20 @@
   "loggedInAs": "Connesso come",
   "signInFailed": "Accesso fallito",
   "loginDisabled": "Accesso non configurato",
-  "version": "Versione"
+  "version": "Versione",
+  "brightness": "Luminosità",
+  "contrast": "Contrasto",
+  "extractText": "Estrai Testo",
+  "ocrResult": "Testo riconosciuto:",
+  "ocrNoSupport": "OCR non disponibile",
+  "instructionsTitle": "Istruzioni",
+  "instructionsComing": "Consulta la wiki qui sotto.",
+  "openWiki": "Apri Wiki",
+  "showHelp": "Guida",
+  "inputModeLabel": "Sorgente:",
+  "modeUpload": "Carica file",
+  "modeScanner": "Scanner",
+  "modeCamera": "Fotocamera",
+  "scanDoc": "Scansiona documento",
+  "capturePhoto": "Acquisisci"
 }

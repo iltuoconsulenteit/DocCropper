@@ -36,5 +36,20 @@
   "loggedInAs": "Logged in as",
   "signInFailed": "Login failed",
   "loginDisabled": "Login not configured",
-  "version": "Version"
+  "version": "Version",
+  "brightness": "Brightness",
+  "contrast": "Contrast",
+  "extractText": "Extract Text",
+  "ocrResult": "Recognized Text:",
+  "ocrNoSupport": "OCR not available",
+  "instructionsTitle": "Usage",
+  "instructionsComing": "Browse the wiki below.",
+  "openWiki": "Open Wiki",
+  "showHelp": "Help",
+  "inputModeLabel": "Source:",
+  "modeUpload": "Upload File",
+  "modeScanner": "Scanner",
+  "modeCamera": "Camera",
+  "scanDoc": "Scan Document",
+  "capturePhoto": "Capture"
 }

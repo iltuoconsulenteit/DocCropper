@@ -34,6 +34,21 @@ const paymentBox = document.getElementById('paymentBox');
 const loginArea = document.getElementById('loginArea');
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
+const instructionsBox = document.getElementById('instructionsBox');
+const helpBtn = document.getElementById('helpBtn');
+const adjustControls = document.getElementById('adjustControls');
+const brightnessRange = document.getElementById('brightnessRange');
+const contrastRange = document.getElementById('contrastRange');
+const ocrBtn = document.getElementById('ocrBtn');
+const ocrOutput = document.getElementById('ocrOutput');
+const inputMode = document.getElementById('inputMode');
+const fileInputArea = document.getElementById('fileInputArea');
+const scanControls = document.getElementById('scanControls');
+const scanBtn = document.getElementById('scanBtn');
+const cameraControls = document.getElementById('cameraControls');
+const cameraPreview = document.getElementById('cameraPreview');
+const captureBtn = document.getElementById('captureBtn');
+const cameraFileInput = document.getElementById('cameraFileInput');
 
 let isLicensed = false;
 let licenseName = '';
@@ -47,10 +62,112 @@ let currentFileIndex = 0;
 let processedImages = [];
 let processedFiles = [];
 let editingIndex = null;
+let cameraStream = null;
 
 let translations = {};
 let currentLang = 'en';
 let currentSettings = {};
+
+async function checkScanAvailability() {
+    try {
+        const resp = await fetch('/scan/available');
+        if (resp.ok) {
+            const data = await resp.json();
+            if (!data.available) {
+                const opt = inputMode.querySelector('option[value="scanner"]');
+                if (opt) opt.remove();
+            }
+        }
+    } catch (e) {
+        console.error('Scanner check failed', e);
+    }
+}
+
+function updateInputMode() {
+    const mode = inputMode.value;
+    fileInputArea.style.display = mode === 'upload' ? 'block' : 'none';
+    scanControls.style.display = mode === 'scanner' ? 'block' : 'none';
+    cameraControls.style.display = mode === 'camera' ? 'block' : 'none';
+    if (mode === 'camera') {
+        startCamera();
+    } else {
+        stopCamera();
+    }
+}
+
+async function scanDocument() {
+    try {
+        statusMessageElement.textContent = 'Scanning...';
+        const resp = await fetch('/scan/');
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data.image) {
+                files = [data.image];
+                currentFileIndex = 0;
+                const reader = new FileReader();
+                reader.onload = (e) => setupImage(e.target.result);
+                reader.readAsDataURL(dataURItoBlob(data.image));
+            } else {
+                statusMessageElement.textContent = 'No image returned';
+            }
+        } else {
+            statusMessageElement.textContent = 'Scan not available';
+        }
+    } catch (e) {
+        console.error('Scan failed', e);
+        statusMessageElement.textContent = 'Scan failed';
+    }
+}
+
+function startCamera() {
+    if (cameraStream) return;
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+        cameraStream = stream;
+        cameraPreview.srcObject = stream;
+    }).catch(err => {
+        console.error('Camera error', err);
+        const fallback = cameraFileInput;
+        if (fallback) {
+            fallback.click();
+        } else {
+            statusMessageElement.textContent = 'Camera not available';
+            inputMode.value = 'upload';
+            updateInputMode();
+        }
+    });
+}
+
+function stopCamera() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+        cameraPreview.srcObject = null;
+    }
+}
+
+function capturePhoto() {
+    if (!cameraStream) return;
+    const video = cameraPreview;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    const dataUrl = canvas.toDataURL('image/png');
+    files = [dataUrl];
+    currentFileIndex = 0;
+    setupImage(dataUrl);
+}
+
+function dataURItoBlob(dataURI) {
+    const byteString = atob(dataURI.split(',')[1]);
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: 'image/png' });
+}
 
 async function loadSettings() {
     const url = userInfo ? '/user-settings/' : '/settings/';
@@ -245,6 +362,8 @@ function deleteImage(index) {
     processedGallery.removeChild(processedGallery.children[index]);
     if (processedImages.length === 0) {
         exportPdfBtn.style.display = 'none';
+        ocrBtn.style.display = 'none';
+        ocrOutput.style.display = 'none';
         layoutControls.style.display = 'none';
     }
 }
@@ -258,6 +377,8 @@ function editImage(index) {
     };
     reader.readAsDataURL(file);
     exportPdfBtn.style.display = 'none';
+    ocrBtn.style.display = 'none';
+    ocrOutput.style.display = 'none';
     layoutControls.style.display = 'none';
     statusMessageElement.textContent = 'Edit image and press Process Image to save.';
 }
@@ -426,6 +547,7 @@ function setupImage(imageUrl) {
             console.error("Image natural dimensions are zero. Image might be invalid or not loaded.");
             statusMessageElement.textContent = "Error: Image data is invalid or not fully loaded.";
             wrapperElement.style.display = 'none';
+            adjustControls.style.display = 'none';
             return;
         }
 
@@ -485,7 +607,11 @@ function setupImage(imageUrl) {
             
             initializeDraggablePoints(actualDisplayedWidth, actualDisplayedHeight);
             statusMessageElement.textContent = 'Image loaded. Adjust points.';
-        }, 50); 
+            brightnessRange.value = 100;
+            contrastRange.value = 100;
+            imageElement.style.filter = 'brightness(100%) contrast(100%)';
+            adjustControls.style.display = 'block';
+        }, 50);
 
     };
 
@@ -493,25 +619,41 @@ function setupImage(imageUrl) {
         console.error("Error loading image source.");
         statusMessageElement.textContent = "Error: Could not load the selected image file.";
         wrapperElement.style.display = 'none';
+        adjustControls.style.display = 'none';
     };
 }
 
 
 imageUploadElement.addEventListener('change', (event) => {
-    files = Array.from(event.target.files);
-    currentFileIndex = 0;
-    processedImages = [];
-    processedFiles = [];
-    editingIndex = null;
-    processedGallery.innerHTML = '';
-    exportPdfBtn.style.display = 'none';
-    layoutControls.style.display = 'none';
-    if (files.length > 0) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            setupImage(e.target.result);
-        };
-        reader.readAsDataURL(files[0]);
+    const newFiles = Array.from(event.target.files);
+    if (files.length === 0 && processedImages.length === 0) {
+        // first batch of files
+        files = newFiles;
+        currentFileIndex = 0;
+        processedImages = [];
+        processedFiles = [];
+        editingIndex = null;
+        processedGallery.innerHTML = '';
+        exportPdfBtn.style.display = 'none';
+        layoutControls.style.display = 'none';
+        if (files.length > 0) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setupImage(e.target.result);
+            };
+            reader.readAsDataURL(files[0]);
+        }
+    } else {
+        // add new files to existing queue
+        const startProcessing = currentFileIndex >= files.length;
+        files = files.concat(newFiles);
+        if (startProcessing && newFiles.length > 0) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setupImage(e.target.result);
+            };
+            reader.readAsDataURL(files[currentFileIndex]);
+        }
     }
 });
 
@@ -572,6 +714,8 @@ submitBtn.addEventListener('click', () => {
     formData.append('points', JSON.stringify(pointsForBackend));
     formData.append('original_width', Math.round(origW));
     formData.append('original_height', Math.round(origH));
+    formData.append('brightness', brightnessRange.value);
+    formData.append('contrast', contrastRange.value);
 
     fetch('/process-image/', {
         method: 'POST',
@@ -594,7 +738,9 @@ submitBtn.addEventListener('click', () => {
                 editingIndex = null;
                 statusMessageElement.textContent = 'Image reprocessed.';
                 wrapperElement.style.display = 'none';
+                adjustControls.style.display = 'none';
                 exportPdfBtn.style.display = 'inline-block';
+                ocrBtn.style.display = 'inline-block';
                 layoutControls.style.display = 'block';
                 updateLayoutPreview();
             } else {
@@ -612,7 +758,9 @@ submitBtn.addEventListener('click', () => {
                 } else {
                     statusMessageElement.textContent = 'All images processed.';
                     wrapperElement.style.display = 'none';
+                    adjustControls.style.display = 'none';
                     exportPdfBtn.style.display = 'inline-block';
+                    ocrBtn.style.display = 'inline-block';
                     layoutControls.style.display = 'block';
                     updateLayoutPreview();
                 }
@@ -667,6 +815,51 @@ exportPdfBtn.addEventListener('click', () => {
     });
 });
 
+ocrBtn.addEventListener('click', () => {
+    if (processedImages.length === 0) {
+        statusMessageElement.textContent = 'No images for OCR.';
+        return;
+    }
+    statusMessageElement.textContent = 'Extracting text...';
+    fetch('/ocr/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: processedImages })
+    })
+    .then(resp => resp.json())
+    .then(data => {
+        if (data.text) {
+            ocrOutput.style.display = 'block';
+            ocrOutput.value = data.text;
+            statusMessageElement.textContent = translations['ocrResult'] ? translations['ocrResult'] : 'Recognized Text:';
+        } else {
+            statusMessageElement.textContent = data.message || (translations['ocrNoSupport'] || 'OCR not available');
+        }
+    })
+    .catch(err => {
+        statusMessageElement.textContent = 'OCR error';
+        console.error('OCR error', err);
+    });
+});
+
+inputMode.addEventListener('change', updateInputMode);
+scanBtn.addEventListener('click', scanDocument);
+captureBtn.addEventListener('click', capturePhoto);
+helpBtn.addEventListener('click', () => {
+    instructionsBox.classList.toggle('visible');
+});
+cameraFileInput.addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        files = [ev.target.result];
+        currentFileIndex = 0;
+        setupImage(ev.target.result);
+    };
+    reader.readAsDataURL(f);
+});
+
 langSelect.addEventListener('change', async () => {
     currentLang = langSelect.value;
     await loadTranslations(currentLang);
@@ -698,6 +891,20 @@ scaleMode.addEventListener('change', () => {
 scalePercent.addEventListener('change', () => {
     saveSettings({ scale_percent: parseInt(scalePercent.value || '100') });
 });
+
+brightnessRange.addEventListener('input', () => {
+    updateImageFilters();
+});
+
+contrastRange.addEventListener('input', () => {
+    updateImageFilters();
+});
+
+function updateImageFilters() {
+    const b = brightnessRange.value;
+    const c = contrastRange.value;
+    imageElement.style.filter = `brightness(${b}%) contrast(${c}%)`;
+}
 
 function applyProStatus() {
     // In demo mode features remain usable but PDF pages beyond the first
@@ -820,6 +1027,8 @@ loadSettings().then(async (cfg) => {
     licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
     applyProStatus();
     updateLayoutPreview();
+    await checkScanAvailability();
+    updateInputMode();
 });
 
 if (window.safari) {

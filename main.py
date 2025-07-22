@@ -18,6 +18,21 @@ from fastapi.staticfiles import StaticFiles
 import subprocess
 from dotenv import load_dotenv
 
+try:
+    from pyhanko.sign import signers
+except Exception:
+    signers = None
+
+try:
+    import pytesseract
+except Exception:
+    pytesseract = None
+
+try:
+    import pyinsane2
+except Exception:
+    pyinsane2 = None
+
 SETTINGS_FILE = "settings.json"
 # Load environment variables from any .env files in env/
 ENV_DIR = "env"
@@ -50,6 +65,8 @@ DEFAULT_SETTINGS = {
     "arrangement": "auto",
     "scale_mode": "fit",
     "scale_percent": 100,
+    "brightness": 100,
+    "contrast": 100,
     "port": 8000,
     "license_key": "",
     "license_name": "",
@@ -149,8 +166,9 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# Mount static files directory
+# Mount static files directory and local wiki
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/wiki", StaticFiles(directory="wiki", html=True), name="wiki")
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
@@ -221,13 +239,51 @@ async def google_login(token: str = Body(...)):
         return JSONResponse(status_code=400, content={"message": "Invalid token"})
 
 
+@app.get("/scan/available")
+async def scan_available():
+    return {"available": pyinsane2 is not None}
+
+
+@app.get("/scan/")
+async def scan_document():
+    if pyinsane2 is None:
+        return JSONResponse(status_code=501, content={"message": "Scanning not available"})
+    try:
+        pyinsane2.init()
+        devices = pyinsane2.get_devices()
+        if not devices:
+            return JSONResponse(status_code=404, content={"message": "No scanner found"})
+        scanner = devices[0]
+        session = scanner.scan(multiple=False)
+        while True:
+            try:
+                session.scan.read()
+            except pyinsane2.PyinsaneException:
+                break
+        img = session.images[0].convert("RGB")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        data = base64.b64encode(buf.getvalue()).decode()
+        return {"image": "data:image/png;base64," + data}
+    except Exception as e:
+        logger.exception("Scanning failed")
+        return JSONResponse(status_code=500, content={"message": f"Scan failed: {str(e)}"})
+    finally:
+        try:
+            pyinsane2.exit()
+        except Exception:
+            pass
+
+
 @app.post("/process-image/")
 async def process_image(
     request: Request,
     image_file: UploadFile = File(...),
     points: str = Form(...), # JSON string of points: "[x1,y1,x2,y2,x3,y3,x4,y4]"
     original_width: int = Form(...),
-    original_height: int = Form(...)
+    original_height: int = Form(...),
+    brightness: int = Form(100),
+    contrast: int = Form(100)
 ):
     logger.info(f"Received image: {image_file.filename}, original_width: {original_width}, original_height: {original_height}")
     logger.info(f"Received points string (raw form data): {points}")
@@ -334,11 +390,15 @@ async def process_image(
         sharpened_image = cv2.filter2D(warped_image, -1, kernel)
         logger.info(f"Image sharpened successfully. Sharpened shape: {sharpened_image.shape}")
 
+        b_factor = max(0, brightness) / 100.0
+        c_factor = max(0, contrast) / 100.0
+        adjusted = cv2.convertScaleAbs(sharpened_image, alpha=c_factor, beta=int((b_factor - 1) * 255))
 
-        # Encode processed image (now the sharpened one) to base64 to send to frontend
-        success, img_encoded_buffer = cv2.imencode(".png", sharpened_image) # Use sharpened_image
+
+        # Encode processed image with brightness/contrast adjustments
+        success, img_encoded_buffer = cv2.imencode(".png", adjusted)
         if not success:
-            logger.error("Failed to encode sharpened image to PNG.")
+            logger.error("Failed to encode processed image to PNG.")
             return JSONResponse(status_code=500, content={"message": "Failed to encode processed image."})
 
         img_base64 = base64.b64encode(img_encoded_buffer).decode("utf-8")
@@ -499,12 +559,50 @@ async def create_pdf(
         pdf_bytes_io = io.BytesIO()
         pages[0].save(pdf_bytes_io, format="PDF", save_all=True, append_images=pages[1:])
         pdf_bytes = pdf_bytes_io.getvalue()
+
+        cert_path = os.environ.get("DOCROPPER_SIGN_CERT")
+        cert_password = os.environ.get("DOCROPPER_SIGN_PASSWORD")
+        if cert_path and signers:
+            try:
+                signer = signers.SimpleSigner.load_pkcs12(cert_path, cert_password.encode() if cert_password else None)
+                pdf_signer = signers.PdfSigner(signers.PdfSignatureMetadata(field_name="DocCropperSig"), signer=signer)
+                signed_io = io.BytesIO()
+                pdf_signer.sign_pdf(io.BytesIO(pdf_bytes), signed_io)
+                pdf_bytes = signed_io.getvalue()
+            except Exception:
+                logger.exception("PDF signing failed")
         pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
         # Do not delete the session immediately so the user can re-export if needed
         return JSONResponse(content={"pdf": "data:application/pdf;base64," + pdf_base64})
     except Exception as e:
         logger.exception("Failed to create PDF")
         return JSONResponse(status_code=500, content={"message": f"Could not create PDF: {str(e)}"})
+
+
+@app.post("/ocr/")
+async def extract_text(request: Request, images: list[str] = Body(...)):
+    if pytesseract is None:
+        return JSONResponse(status_code=503, content={"message": "OCR not available"})
+    try:
+        settings = load_settings()
+        lang = settings.get("language", "en")
+        text_parts = []
+        for img_b64 in images:
+            if img_b64.startswith('data:'):
+                img_b64 = img_b64.split(',', 1)[1]
+            img_bytes = base64.b64decode(img_b64)
+            nparr = np.frombuffer(img_bytes, np.uint8)
+            img_cv = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
+            if img_cv is None:
+                continue
+            try:
+                text_parts.append(pytesseract.image_to_string(img_cv, lang=lang))
+            except Exception:
+                logger.exception("OCR failed for one image")
+        return {"text": "\n".join(text_parts)}
+    except Exception as e:
+        logger.exception("OCR extraction error")
+        return JSONResponse(status_code=500, content={"message": f"OCR failed: {str(e)}"})
 
 
 @app.post("/shutdown/")
