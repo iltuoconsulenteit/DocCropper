@@ -18,6 +18,11 @@ from fastapi.staticfiles import StaticFiles
 import subprocess
 from dotenv import load_dotenv
 
+try:
+    from pyhanko.sign import signers
+except Exception:
+    signers = None
+
 SETTINGS_FILE = "settings.json"
 # Load environment variables from any .env files in env/
 ENV_DIR = "env"
@@ -508,6 +513,18 @@ async def create_pdf(
         pdf_bytes_io = io.BytesIO()
         pages[0].save(pdf_bytes_io, format="PDF", save_all=True, append_images=pages[1:])
         pdf_bytes = pdf_bytes_io.getvalue()
+
+        cert_path = os.environ.get("DOCROPPER_SIGN_CERT")
+        cert_password = os.environ.get("DOCROPPER_SIGN_PASSWORD")
+        if cert_path and signers:
+            try:
+                signer = signers.SimpleSigner.load_pkcs12(cert_path, cert_password.encode() if cert_password else None)
+                pdf_signer = signers.PdfSigner(signers.PdfSignatureMetadata(field_name="DocCropperSig"), signer=signer)
+                signed_io = io.BytesIO()
+                pdf_signer.sign_pdf(io.BytesIO(pdf_bytes), signed_io)
+                pdf_bytes = signed_io.getvalue()
+            except Exception:
+                logger.exception("PDF signing failed")
         pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
         # Do not delete the session immediately so the user can re-export if needed
         return JSONResponse(content={"pdf": "data:application/pdf;base64," + pdf_base64})

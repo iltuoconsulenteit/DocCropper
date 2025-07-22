@@ -8,3 +8,4 @@ users/**
 doccropper.pid
 .env
 google-credentials.json
+*.p12

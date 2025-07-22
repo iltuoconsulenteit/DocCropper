@@ -13,6 +13,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🖼️ Interactive cropping and preview
 - 🎚️ Adjust brightness and contrast with live preview
 - 📄 One-click PDF export
+- 🔏 Optional digital signature on exported PDFs
 - 🗂️ Persistent user settings
 - 🧭 Touchscreen-friendly interface
 - 🌐 Works offline or over LAN (no internet required)
@@ -150,6 +151,10 @@ To activate:
 
 For inquiries: **doccropper@iltuoconsulenteit.it**
 
+### Optional PDF Signing
+
+Set `DOCROPPER_SIGN_CERT` to the path of a PKCS#12 certificate and `DOCROPPER_SIGN_PASSWORD` to sign exported PDFs. If no certificate is provided, PDFs are left unsigned.
+
 
 ## Credits
 
@@ -165,7 +170,7 @@ npm install
 npm start
 ```
 
-Create a `.env` file based on `.env.example` with your Google `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` (e.g. `http://localhost:8000/auth/google/callback`).
+Create a `.env` file based on `.env.example` with your Google `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` (e.g. `http://localhost:8000/auth/google/callback`). Optionally set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` to sign PDFs automatically.
 
 Visit [http://localhost:8000](http://localhost:8000) and click **Login with Google**. After authenticating you'll be redirected to `/dashboard` which shows your name and email.
 
