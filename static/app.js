@@ -34,6 +34,8 @@ const paymentBox = document.getElementById('paymentBox');
 const loginArea = document.getElementById('loginArea');
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
+const instructionsBox = document.getElementById('instructionsBox');
+const helpBtn = document.getElementById('helpBtn');
 const adjustControls = document.getElementById('adjustControls');
 const brightnessRange = document.getElementById('brightnessRange');
 const contrastRange = document.getElementById('contrastRange');
@@ -46,6 +48,7 @@ const scanBtn = document.getElementById('scanBtn');
 const cameraControls = document.getElementById('cameraControls');
 const cameraPreview = document.getElementById('cameraPreview');
 const captureBtn = document.getElementById('captureBtn');
+const cameraFileInput = document.getElementById('cameraFileInput');
 
 let isLicensed = false;
 let licenseName = '';
@@ -123,9 +126,14 @@ function startCamera() {
         cameraPreview.srcObject = stream;
     }).catch(err => {
         console.error('Camera error', err);
-        statusMessageElement.textContent = 'Camera not available';
-        inputMode.value = 'upload';
-        updateInputMode();
+        const fallback = cameraFileInput;
+        if (fallback) {
+            fallback.click();
+        } else {
+            statusMessageElement.textContent = 'Camera not available';
+            inputMode.value = 'upload';
+            updateInputMode();
+        }
     });
 }
 
@@ -837,6 +845,20 @@ ocrBtn.addEventListener('click', () => {
 inputMode.addEventListener('change', updateInputMode);
 scanBtn.addEventListener('click', scanDocument);
 captureBtn.addEventListener('click', capturePhoto);
+helpBtn.addEventListener('click', () => {
+    instructionsBox.classList.toggle('visible');
+});
+cameraFileInput.addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        files = [ev.target.result];
+        currentFileIndex = 0;
+        setupImage(ev.target.result);
+    };
+    reader.readAsDataURL(f);
+});
 
 langSelect.addEventListener('change', async () => {
     currentLang = langSelect.value;

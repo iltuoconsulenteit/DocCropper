@@ -44,8 +44,9 @@
   "ocrNoSupport": "OCR not available",
   "instructionsTitle": "Usage",
   "instructionsComing": "Browse the wiki below.",
-  "openWiki": "Open Wiki"
-  ,"inputModeLabel": "Source:",
+  "openWiki": "Open Wiki",
+  "showHelp": "Help",
+  "inputModeLabel": "Source:",
   "modeUpload": "Upload File",
   "modeScanner": "Scanner",
   "modeCamera": "Camera",

@@ -42,6 +42,9 @@ h1, h2 {
 #loginArea button {
     margin-left: 5px;
 }
+#helpBtn {
+    margin: 5px;
+}
 
 #pageFooter {
     text-align: center;
@@ -272,6 +275,7 @@ button:hover {
 }
 
 #instructionsBox {
+    display: none;
     position: fixed;
     top: 80px;
     right: 10px;
@@ -281,6 +285,10 @@ button:hover {
     padding: 8px;
     z-index: 1000;
     font-size: 0.9em;
+}
+
+#instructionsBox.visible {
+    display: block;
 }
 
 #cameraPreview {
