@@ -38,8 +38,10 @@
   "loginDisabled": "Accesso non configurato",
   "version": "Versione",
   "brightness": "Luminosità",
-  "contrast": "Contrasto"
-,
+  "contrast": "Contrasto",
+  "extractText": "Estrai Testo",
+  "ocrResult": "Testo riconosciuto:",
+  "ocrNoSupport": "OCR non disponibile",
   "instructionsTitle": "Istruzioni",
   "instructionsComing": "Consulta la wiki qui sotto.",
   "openWiki": "Apri Wiki"

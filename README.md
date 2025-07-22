@@ -14,6 +14,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🎚️ Adjust brightness and contrast with live preview
 - 📄 One-click PDF export
 - 🔏 Optional digital signature on exported PDFs
+- 🔍 Extract text via OCR using the selected language
 - 🗂️ Persistent user settings
 - 🧭 Touchscreen-friendly interface
 - 🌐 Works offline or over LAN (no internet required)
@@ -142,7 +143,7 @@ DocCropper is released under the [MIT](LICENSE.txt) license. Without a license k
 
 **PRO Features:**
 - Removal of watermark
-- OCR module and network folder support (in development)
+- Network folder support (in development)
 - Authenticated LAN access
 
 To activate:
@@ -154,6 +155,12 @@ For inquiries: **doccropper@iltuoconsulenteit.it**
 ### Optional PDF Signing
 
 Set `DOCROPPER_SIGN_CERT` to the path of a PKCS#12 certificate and `DOCROPPER_SIGN_PASSWORD` to sign exported PDFs. If no certificate is provided, PDFs are left unsigned.
+
+### Optional OCR
+
+DocCropper can extract text from processed images using [Tesseract OCR](https://github.com/tesseract-ocr/tesseract). Install Tesseract separately and ensure it is on your system path. The OCR step uses the interface language selected in DocCropper.
+
+Use the **Extract Text** button after processing images to retrieve the recognized text.
 
 
 ## Credits

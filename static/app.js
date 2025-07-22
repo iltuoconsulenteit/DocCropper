@@ -37,6 +37,8 @@ const versionBox = document.getElementById('versionBox');
 const adjustControls = document.getElementById('adjustControls');
 const brightnessRange = document.getElementById('brightnessRange');
 const contrastRange = document.getElementById('contrastRange');
+const ocrBtn = document.getElementById('ocrBtn');
+const ocrOutput = document.getElementById('ocrOutput');
 
 let isLicensed = false;
 let licenseName = '';
@@ -248,6 +250,8 @@ function deleteImage(index) {
     processedGallery.removeChild(processedGallery.children[index]);
     if (processedImages.length === 0) {
         exportPdfBtn.style.display = 'none';
+        ocrBtn.style.display = 'none';
+        ocrOutput.style.display = 'none';
         layoutControls.style.display = 'none';
     }
 }
@@ -261,6 +265,8 @@ function editImage(index) {
     };
     reader.readAsDataURL(file);
     exportPdfBtn.style.display = 'none';
+    ocrBtn.style.display = 'none';
+    ocrOutput.style.display = 'none';
     layoutControls.style.display = 'none';
     statusMessageElement.textContent = 'Edit image and press Process Image to save.';
 }
@@ -622,6 +628,7 @@ submitBtn.addEventListener('click', () => {
                 wrapperElement.style.display = 'none';
                 adjustControls.style.display = 'none';
                 exportPdfBtn.style.display = 'inline-block';
+                ocrBtn.style.display = 'inline-block';
                 layoutControls.style.display = 'block';
                 updateLayoutPreview();
             } else {
@@ -641,6 +648,7 @@ submitBtn.addEventListener('click', () => {
                     wrapperElement.style.display = 'none';
                     adjustControls.style.display = 'none';
                     exportPdfBtn.style.display = 'inline-block';
+                    ocrBtn.style.display = 'inline-block';
                     layoutControls.style.display = 'block';
                     updateLayoutPreview();
                 }
@@ -692,6 +700,33 @@ exportPdfBtn.addEventListener('click', () => {
     .catch(error => {
         console.error('Error creating PDF:', error);
         statusMessageElement.textContent = `Error: ${error.message}`;
+    });
+});
+
+ocrBtn.addEventListener('click', () => {
+    if (processedImages.length === 0) {
+        statusMessageElement.textContent = 'No images for OCR.';
+        return;
+    }
+    statusMessageElement.textContent = 'Extracting text...';
+    fetch('/ocr/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: processedImages })
+    })
+    .then(resp => resp.json())
+    .then(data => {
+        if (data.text) {
+            ocrOutput.style.display = 'block';
+            ocrOutput.value = data.text;
+            statusMessageElement.textContent = translations['ocrResult'] ? translations['ocrResult'] : 'Recognized Text:';
+        } else {
+            statusMessageElement.textContent = data.message || (translations['ocrNoSupport'] || 'OCR not available');
+        }
+    })
+    .catch(err => {
+        statusMessageElement.textContent = 'OCR error';
+        console.error('OCR error', err);
     });
 });
 

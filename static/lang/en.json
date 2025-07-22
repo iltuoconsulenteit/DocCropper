@@ -38,8 +38,10 @@
   "loginDisabled": "Login not configured",
   "version": "Version",
   "brightness": "Brightness",
-  "contrast": "Contrast"
-,
+  "contrast": "Contrast",
+  "extractText": "Extract Text",
+  "ocrResult": "Recognized Text:",
+  "ocrNoSupport": "OCR not available",
   "instructionsTitle": "Usage",
   "instructionsComing": "Browse the wiki below.",
   "openWiki": "Open Wiki"

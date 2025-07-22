@@ -23,6 +23,11 @@ try:
 except Exception:
     signers = None
 
+try:
+    import pytesseract
+except Exception:
+    pytesseract = None
+
 SETTINGS_FILE = "settings.json"
 # Load environment variables from any .env files in env/
 ENV_DIR = "env"
@@ -531,6 +536,32 @@ async def create_pdf(
     except Exception as e:
         logger.exception("Failed to create PDF")
         return JSONResponse(status_code=500, content={"message": f"Could not create PDF: {str(e)}"})
+
+
+@app.post("/ocr/")
+async def extract_text(request: Request, images: list[str] = Body(...)):
+    if pytesseract is None:
+        return JSONResponse(status_code=503, content={"message": "OCR not available"})
+    try:
+        settings = load_settings()
+        lang = settings.get("language", "en")
+        text_parts = []
+        for img_b64 in images:
+            if img_b64.startswith('data:'):
+                img_b64 = img_b64.split(',', 1)[1]
+            img_bytes = base64.b64decode(img_b64)
+            nparr = np.frombuffer(img_bytes, np.uint8)
+            img_cv = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
+            if img_cv is None:
+                continue
+            try:
+                text_parts.append(pytesseract.image_to_string(img_cv, lang=lang))
+            except Exception:
+                logger.exception("OCR failed for one image")
+        return {"text": "\n".join(text_parts)}
+    except Exception as e:
+        logger.exception("OCR extraction error")
+        return JSONResponse(status_code=500, content={"message": f"OCR failed: {str(e)}"})
 
 
 @app.post("/shutdown/")
