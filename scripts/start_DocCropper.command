@@ -27,4 +27,6 @@ pip install --upgrade pip >/dev/null
 pip install -r requirements.txt >/dev/null
 
 echo "Starting DocCropper on port $PORT..."
-python3 main.py --host 0.0.0.0 --port "$PORT"
+python3 main.py --host 0.0.0.0 --port "$PORT" &
+sleep 2
+open "http://127.0.0.1:$PORT/"
