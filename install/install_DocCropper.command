@@ -3,7 +3,7 @@ set -e
 
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"
-DEV_BRANCH="${DOCROPPER_DEV_BRANCH:-codex/remove-shortcut-installation-and-scanner-capture}"
+DEV_BRANCH="${DOCROPPER_DEV_BRANCH:-workinprogress}"
 
 DEFAULT_DIR="/Applications/DocCropper"
 read -r -p "Installation directory [$DEFAULT_DIR]: " TARGET_DIR
@@ -109,5 +109,16 @@ PY
   fi
 else
   echo "ℹ️  Demo mode enabled"
+fi
+
+read -r -p "🚀 Launch DocCropper with tray icon now? [Y/n] " RUN_APP
+if [[ ! "$RUN_APP" =~ ^[Nn]$ ]]; then
+  pushd "$TARGET_DIR" >/dev/null
+  if command -v pythonw >/dev/null 2>&1; then
+    (pythonw doccropper_tray.py --auto-start &)
+  else
+    (python3 doccropper_tray.py --auto-start &)
+  fi
+  popd >/dev/null
 fi
 

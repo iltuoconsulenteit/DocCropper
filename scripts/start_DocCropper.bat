@@ -22,8 +22,10 @@ pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
 
 echo Starting DocCropper on port %PORT%...
 where pythonw >nul 2>&1 && (
-    pythonw main.py --host 0.0.0.0 --port %PORT% >>"%LOG_FILE%" 2>&1
+    start "" pythonw main.py --host 0.0.0.0 --port %PORT% >>"%LOG_FILE%" 2>&1
 ) || (
-    python main.py --host 0.0.0.0 --port %PORT% >>"%LOG_FILE%" 2>&1
+    start "" python main.py --host 0.0.0.0 --port %PORT% >>"%LOG_FILE%" 2>&1
 )
+timeout /t 2 >nul
+start "" http://127.0.0.1:%PORT%/
 endlocal

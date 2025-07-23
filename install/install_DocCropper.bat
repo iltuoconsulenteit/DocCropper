@@ -35,7 +35,7 @@ rem Default developer branch
 if defined DOCROPPER_DEV_BRANCH (
     set "DEV_BRANCH=%DOCROPPER_DEV_BRANCH%"
 ) else (
-    set "DEV_BRANCH=codex/remove-shortcut-installation-and-scanner-capture"
+    set "DEV_BRANCH=workinprogress"
 )
 
 if not defined DOCROPPER_BRANCH (
@@ -196,6 +196,19 @@ if exist requirements.txt (
 call :log "Aggiornamento script di avvio..."
 copy /Y "!APP_DIR!\scripts\start_DocCropper.bat" "!APP_DIR!\start_DocCropper.bat" >>"%LOG_FILE%" 2>&1
 copy /Y "!APP_DIR!\scripts\stop_DocCropper.bat" "!APP_DIR!\stop_DocCropper.bat" >>"%LOG_FILE%" 2>&1
+
+set /p RUN_APP=Launch DocCropper with tray icon now? [Y/n]
+if /I "!RUN_APP!" NEQ "n" if /I "!RUN_APP!" NEQ "N" (
+    pushd "!APP_DIR!" >nul
+    where pythonw >nul 2>&1 && (
+        call :log "Launching tray icon"
+        start "" pythonw doccropper_tray.py --auto-start
+    ) || (
+        call :log "Launching tray icon"
+        start "" python doccropper_tray.py --auto-start
+    )
+    popd >nul
+)
 
 call :log "Log saved to !LOG_FILE!"
 echo Installation complete. See !LOG_FILE! for details.

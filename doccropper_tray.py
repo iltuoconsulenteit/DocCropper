@@ -117,9 +117,11 @@ BASE_IMAGE = None
 
 def load_base_image():
     global BASE_IMAGE
-    path = BASE_DIR / 'static' / 'logos' / 'header_logo.png'
-    if path.exists():
-        BASE_IMAGE = Image.open(path).convert('RGBA').resize((64, 64))
+    for name in ('app_logo.png', 'header_logo.png'):
+        path = BASE_DIR / 'static' / 'logos' / name
+        if path.exists():
+            BASE_IMAGE = Image.open(path).convert('RGBA').resize((64, 64))
+            break
     else:
         BASE_IMAGE = Image.new('RGBA', (64, 64), 'white')
 
