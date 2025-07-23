@@ -47,6 +47,9 @@ if errorlevel 1 (
     exit /b
 )
 
+:: Stop any running instance
+python main.py --stop >> "!LOG_FILE!" 2>&1
+
 :: Launch application
 echo [INFO] Avvio DocCropper sulla porta %PORT% >> "!LOG_FILE!"
 start /b python main.py --port %PORT% >> "!LOG_FILE!" 2>&1

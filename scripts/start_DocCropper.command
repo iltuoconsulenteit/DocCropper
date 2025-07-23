@@ -29,6 +29,9 @@ source venv/bin/activate
 pip install --upgrade pip >/dev/null
 pip install -r requirements.txt >/dev/null
 
+# Stop any running instance
+python3 main.py --stop >/dev/null 2>&1 || true
+
 echo "Starting DocCropper on port $PORT..."
 python3 main.py --host 0.0.0.0 --port "$PORT" &
 sleep 2

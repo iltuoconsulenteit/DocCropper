@@ -3,6 +3,7 @@ import platform
 import subprocess
 import logging
 from pathlib import Path
+import tempfile
 from pystray import Icon, Menu, MenuItem
 import threading
 from PIL import Image, ImageDraw
@@ -16,7 +17,7 @@ BASE_DIR = Path(__file__).resolve().parent
 INSTALL_DIR = BASE_DIR / 'install'
 SCRIPTS_DIR = BASE_DIR / 'scripts'
 
-LOG_FILE = BASE_DIR / 'doccropper_tray.log'
+LOG_FILE = Path(tempfile.gettempdir()) / 'doccropper_tray.log'
 logging.basicConfig(
     filename=LOG_FILE,
     level=logging.INFO,

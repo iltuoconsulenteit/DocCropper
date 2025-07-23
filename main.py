@@ -16,6 +16,7 @@ from PIL import Image
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import subprocess
+import tempfile
 from dotenv import load_dotenv
 
 try:
@@ -47,12 +48,13 @@ try:
     VERSION = subprocess.check_output(
         ["git", "rev-parse", "--short", "HEAD"],
         cwd=os.path.dirname(__file__),
+        stderr=subprocess.DEVNULL,
     ).decode().strip()
 except Exception:
     VERSION = "unknown"
 
 SESSIONS_ROOT = "sessions"
-PID_FILE = "doccropper.pid"
+PID_FILE = os.path.join(tempfile.gettempdir(), "doccropper.pid")
 
 DEFAULT_SETTINGS = {
     "language": "en",
