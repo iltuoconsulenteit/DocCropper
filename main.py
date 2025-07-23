@@ -517,7 +517,11 @@ async def create_pdf(
                     fy = page_h - fl.height - margin
                     text = "by IlTuoConsulenteIT"
                     font = ImageFont.load_default()
-                    tw, th = draw.textsize(text, font=font)
+                    if hasattr(draw, "textbbox"):
+                        bbox = draw.textbbox((0, 0), text, font=font)
+                        tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+                    else:
+                        tw, th = font.getsize(text)
                     tx = fx - tw - 5
                     ty = fy + (fl.height - th) // 2
                     draw.text((tx, ty), text, fill="black", font=font)
