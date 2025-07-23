@@ -3,8 +3,12 @@ setlocal EnableDelayedExpansion
 set "SCRIPT_DIR=%~dp0"
 if exist "!SCRIPT_DIR!main.py" (
     set "APP_DIR=!SCRIPT_DIR!"
-) else (
+) else if exist "!SCRIPT_DIR!..\main.py" (
     set "APP_DIR=!SCRIPT_DIR!..\"
+) else (
+    echo [ERROR] DocCropper directory not found relative to !SCRIPT_DIR!
+    pause
+    exit /b 1
 )
 cd /d "!APP_DIR!"
 if defined TEMP (

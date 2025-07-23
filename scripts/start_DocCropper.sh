@@ -3,8 +3,11 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$SCRIPT_DIR/main.py" ]; then
   APP_DIR="$SCRIPT_DIR"
-else
+elif [ -f "$SCRIPT_DIR/../main.py" ]; then
   APP_DIR="$(dirname "$SCRIPT_DIR")"
+else
+  echo "Unable to locate DocCropper directory relative to $SCRIPT_DIR" >&2
+  exit 1
 fi
 cd "$APP_DIR"
 
