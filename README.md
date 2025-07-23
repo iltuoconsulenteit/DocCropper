@@ -14,7 +14,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🎚️ Adjust brightness and contrast with live preview
 - 📄 One-click PDF export
 - 🔏 Optional digital signature on exported PDFs
-- <!-- Extract text via OCR using the selected language (Pro only) -->
+- 📝 Extract text via OCR (future Pro feature)
 - 🗂️ Persistent user settings
 - 🧭 Touchscreen-friendly interface
 - 🌐 Works offline or over LAN (no internet required)
@@ -49,7 +49,7 @@ JavaScript logic is contained in `static/app.js`.
 
 Images are processed and displayed as thumbnails with **Rotate**, **Edit**, and **Delete** buttons. Preview and layout configuration options are also provided before export.
 
-Logos and branding can be customized via `static/logos/`, `settings.json`, and `brand_html`. The footer displays the current Git commit hash.
+Logos and branding can be customized via `static/logos/`, `settings.json`, and `brand_html`. The header shows a language-specific slogan image (e.g. `DocCropper_slogan_en.png`), and the footer displays the current Git commit hash.
 
 User preferences are stored in the `users/` folder based on their email address. Anonymous users fallback to global settings in `settings.json`. The system supports optional Google sign-in and a configurable payment box (donation or subscription). Developer keys allow full access and can be defined in `settings.json` or `.env`.
 

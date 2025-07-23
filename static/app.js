@@ -36,6 +36,7 @@ const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
 const instructionsBox = document.getElementById('instructionsBox');
 const helpBtn = document.getElementById('helpBtn');
+const sloganImg = document.getElementById('sloganImg');
 const adjustControls = document.getElementById('adjustControls');
 const brightnessRange = document.getElementById('brightnessRange');
 const contrastRange = document.getElementById('contrastRange');
@@ -266,6 +267,9 @@ function applyTranslations() {
     });
     if (versionBox && appVersion) {
         versionBox.textContent = translations['version'] ? `${translations['version']} ${appVersion}` : `Version ${appVersion}`;
+    }
+    if (sloganImg) {
+        sloganImg.src = `/static/logos/DocCropper_slogan_${currentLang}.png`;
     }
 }
 
