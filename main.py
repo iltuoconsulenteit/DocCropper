@@ -503,7 +503,7 @@ async def create_pdf(
                 offset_x = col * cell_w + margin + (inner_w - new_w) // 2
                 offset_y = row * cell_h + margin + (inner_h - new_h) // 2
                 page.paste(temp, (offset_x, offset_y))
-            if not licensed and page_index > 0:
+            if not licensed:
                 if header_logo:
                     target_w = page_w // 2
                     ratio = target_w / header_logo.width

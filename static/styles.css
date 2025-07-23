@@ -146,7 +146,7 @@ button:hover {
     position: absolute;
     right: 10px;
     bottom: 10px;
-    max-height: 180px;
+    max-height: 150px;
     z-index: 10;
 }
 
@@ -155,7 +155,7 @@ button:hover {
         position: static;
         display: block;
         margin: 10px auto;
-        max-height: 120px;
+        max-height: 110px;
     }
 }
 
