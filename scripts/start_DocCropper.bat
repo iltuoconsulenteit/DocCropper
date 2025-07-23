@@ -28,11 +28,11 @@ if not exist venv (
 )
 
 call :log "Activating virtual environment"
-call venv\Scripts\activate.bat
+call "venv\Scripts\activate.bat"
 
 call :log "Installing dependencies..."
-pip install --upgrade pip >>"%LOG_FILE%" 2>&1
-pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
+"%APP_DIR%venv\Scripts\python.exe" -m pip install --upgrade pip >>"%LOG_FILE%" 2>&1
+"%APP_DIR%venv\Scripts\python.exe" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
 
 call :log "Launching DocCropper on port %PORT%"
 set "PYW=%APP_DIR%venv\Scripts\pythonw.exe"
@@ -47,6 +47,7 @@ timeout /t 2 >nul
 start "" http://127.0.0.1:%PORT%/
 
 call :log "Start script completed"
+pause
 endlocal
 exit /b
 
