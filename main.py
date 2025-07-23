@@ -293,30 +293,25 @@ async def process_image(
         max_width = max(int(width_a), int(width_b))
 
 
-        # Let's calculate height based on the selected left/right edges first,
-        # then decide if we override it with a fixed aspect ratio.
+        # Calculate height based on the selected left/right edges of the
+        # document. We no longer force an A4 portrait ratio so horizontal
+        # documents maintain their original orientation.
         height_from_selection_a = np.sqrt(((tr[0] - br[0])**2) + ((tr[1] - br[1])**2)) # Length of right edge
         height_from_selection_b = np.sqrt(((tl[0] - bl[0])**2) + ((tl[1] - bl[1])**2)) # Length of left edge
-        max_height_from_selection = max(int(height_from_selection_a), int(height_from_selection_b))
-
-
-        # For this example, let's enforce a portrait A4-like aspect ratio.
-        # If the calculated max_width is likely the shorter dimension of the paper:
-        A4_PORTRAIT_RATIO_H_W = math.sqrt(2)
-        max_height = int(max_width * A4_PORTRAIT_RATIO_H_W)
+        max_height = max(int(height_from_selection_a), int(height_from_selection_b))
 
         logger.info(f"Max width from selection: {max_width}")
-        logger.info(f"Max height from selection (before aspect ratio adjustment): {max_height_from_selection}")
-        logger.info(f"Target max height (after A4 portrait aspect ratio adjustment): {max_height}")
+        logger.info(f"Max height from selection: {max_height}")
 
 
-        if max_width <= 0 or max_height <=0: # Check adjusted max_height
-            logger.error(f"Calculated max_width or max_height is zero or negative. Width: {max_width}, Adjusted Height: {max_height}. Points: {src_pts.tolist()}")
-            # Fallback to selection height if adjusted height is problematic
-            max_height = max_height_from_selection
-            if max_height <=0:
-                 return JSONResponse(status_code=400, content={"message": "Invalid points leading to zero/negative output dimensions even after fallback."})
-            logger.warning(f"Falling back to max_height_from_selection: {max_height}")
+        if max_width <= 0 or max_height <= 0:
+            logger.error(
+                f"Calculated max_width or max_height is invalid. Width: {max_width}, Height: {max_height}. Points: {src_pts.tolist()}"
+            )
+            return JSONResponse(
+                status_code=400,
+                content={"message": "Invalid points leading to zero/negative output dimensions."},
+            )
 
 
         # Define the 4 corners of the output rectangle using the potentially adjusted max_height
@@ -504,19 +499,28 @@ async def create_pdf(
                 offset_y = row * cell_h + margin + (inner_h - new_h) // 2
                 page.paste(temp, (offset_x, offset_y))
             if not licensed:
+                target_h = page_h // 20
+                hl = None
+                fl = None
                 if header_logo:
-                    target_w = page_w // 2
-                    ratio = target_w / header_logo.width
-                    size = (int(header_logo.width * ratio), int(header_logo.height * ratio))
+                    ratio = target_h / header_logo.height
+                    size = (int(header_logo.width * ratio), target_h)
                     hl = header_logo.resize(size, Image.LANCZOS)
-                    hx = (page_w - hl.width) // 2
-                    hy = page_h - hl.height - margin * 3
-                    page.paste(hl, (hx, hy), hl)
                 if footer_logo:
-                    target_w = page_w // 4
-                    ratio = target_w / footer_logo.width
-                    size = (int(footer_logo.width * ratio), int(footer_logo.height * ratio))
+                    ratio = target_h / footer_logo.height
+                    size = (int(footer_logo.width * ratio), target_h)
                     fl = footer_logo.resize(size, Image.LANCZOS)
+                if hl and fl:
+                    total_w = hl.width + fl.width + margin // 2
+                    start_x = max(margin, (page_w - total_w) // 2)
+                    hy = page_h - target_h - margin
+                    page.paste(hl, (start_x, hy), hl)
+                    page.paste(fl, (start_x + hl.width + margin // 2, hy), fl)
+                elif hl:
+                    hx = (page_w - hl.width) // 2
+                    hy = page_h - hl.height - margin
+                    page.paste(hl, (hx, hy), hl)
+                elif fl:
                     fx = (page_w - fl.width) // 2
                     fy = page_h - fl.height - margin
                     page.paste(fl, (fx, fy), fl)
