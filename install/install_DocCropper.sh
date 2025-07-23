@@ -4,7 +4,7 @@ set -e
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"
 if [ -z "$DOCROPPER_DEV_BRANCH" ]; then
-  DEV_BRANCH="workinprogress"
+  DEV_BRANCH="codex/remove-shortcut-installation-and-scanner-capture"
 else
   DEV_BRANCH="$DOCROPPER_DEV_BRANCH"
 fi
