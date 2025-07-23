@@ -13,6 +13,12 @@ DEFAULT_DIR="$HOME/DocCropper"
 read -r -p "Installation directory [$DEFAULT_DIR]: " TARGET_DIR
 TARGET_DIR=${TARGET_DIR:-$DEFAULT_DIR}
 mkdir -p "$TARGET_DIR" 2>/dev/null || { echo "Cannot create $TARGET_DIR. Use a writable path or run with sudo." >&2; exit 1; }
+if ! touch "$TARGET_DIR/.write_test" >/dev/null 2>&1; then
+  echo "Cannot write to $TARGET_DIR. Choose another directory or adjust permissions." >&2
+  exit 1
+else
+  rm -f "$TARGET_DIR/.write_test"
+fi
 echo "Installing to: $TARGET_DIR"
 
 DEFAULT_KEY=""
@@ -80,8 +86,8 @@ cd - >/dev/null
 # Ask for license key and name
 SETTINGS_FILE="$TARGET_DIR/settings.json"
 if [ ! -f "$SETTINGS_FILE" ]; then
-  cat > "$SETTINGS_FILE" <<'EOF'
-{
+  if ! cat > "$SETTINGS_FILE" <<'EOF'
+{ 
   "language": "en",
   "layout": 1,
   "orientation": "portrait",
@@ -93,6 +99,10 @@ if [ ! -f "$SETTINGS_FILE" ]; then
   "license_name": ""
 }
 EOF
+  then
+    echo "Cannot create $SETTINGS_FILE. Check permissions." >&2
+    exit 1
+  fi
 fi
 
 if [ -n "$LIC_KEY" ]; then
