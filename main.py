@@ -65,7 +65,7 @@ DEFAULT_SETTINGS = {
     "scale_percent": 100,
     "brightness": 100,
     "contrast": 100,
-    "port": 8000,
+    "port": 8765,
     "license_key": "",
     "license_name": "",
     "payment_mode": "donation",
@@ -599,7 +599,7 @@ if __name__ == "__main__":
         raise SystemExit
 
     settings = load_settings()
-    port = args.port if args.port is not None else int(settings.get("port", 8000))
+    port = args.port if args.port is not None else int(settings.get("port", 8765))
 
     config = uvicorn.Config(app, host=args.host, port=port)
     server = uvicorn.Server(config)

@@ -78,7 +78,7 @@ if [ ! -f "$SETTINGS_FILE" ]; then
   "arrangement": "auto",
   "scale_mode": "fit",
   "scale_percent": 100,
-  "port": 8000,
+  "port": 8765,
   "license_key": "",
   "license_name": ""
 }

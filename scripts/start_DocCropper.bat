@@ -26,9 +26,9 @@ echo [INFO] Directory script: !SCRIPT_DIR! >> "!LOG_FILE!"
 echo [INFO] Directory app: !APP_DIR! >> "!LOG_FILE!"
 
 :: Default port
-set "PORT=8000"
+set "PORT=8765"
 if exist settings.json (
-    for /f "delims=" %%p in ('python -c "import json,sys;print(json.load(open('settings.json')).get('port', 8000))" 2^>nul') do set "PORT=%%p"
+    for /f "delims=" %%p in ('python -c "import json,sys;print(json.load(open('settings.json')).get('port', 8765))" 2^>nul') do set "PORT=%%p"
 )
 echo [INFO] Porta usata: %PORT% >> "!LOG_FILE!"
 

@@ -102,9 +102,9 @@ def get_port():
     try:
         with open(BASE_DIR / 'settings.json') as fh:
             data = json.load(fh)
-        return int(data.get('port', 8000))
+        return int(data.get('port', 8765))
     except Exception:
-        return 8000
+        return 8765
 
 def is_running():
     port = get_port()

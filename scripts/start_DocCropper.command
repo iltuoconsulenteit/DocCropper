@@ -16,9 +16,9 @@ import json
 try:
     with open('settings.json') as f:
         d=json.load(f)
-    print(d.get('port',8000))
+    print(d.get('port',8765))
 except Exception:
-    print(8000)
+    print(8765)
 PY
 )
 
