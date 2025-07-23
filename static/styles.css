@@ -144,8 +144,9 @@ button:hover {
 #sloganImg {
     position: absolute;
     right: 10px;
-    bottom: 35px;
-    max-height: 80px;
+    bottom: 45px;
+    max-height: 150px;
+    z-index: 10;
 }
 
 #statusMessage {
