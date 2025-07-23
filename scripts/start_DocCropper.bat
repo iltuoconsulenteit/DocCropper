@@ -7,7 +7,11 @@ if exist "!SCRIPT_DIR!main.py" (
     set "APP_DIR=!SCRIPT_DIR!..\"
 )
 cd /d "!APP_DIR!"
-set "LOG_FILE=!APP_DIR!doccropper.log"
+if defined TEMP (
+    set "LOG_FILE=%TEMP%\DocCropper_start.log"
+) else (
+    set "LOG_FILE=!APP_DIR!doccropper.log"
+)
 call :log "DocCropper start script"
 
 for /f "delims=" %%p in ('python -c "import json,sys;\
