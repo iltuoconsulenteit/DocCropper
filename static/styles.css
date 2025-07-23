@@ -167,13 +167,15 @@ button:hover {
     flex-wrap: wrap;
     align-items: flex-start;
     gap: 10px;
+    position: relative; /* allow absolute positioning */
 }
 
 #sloganImg {
     max-height: 200px;
     max-width: 60%;
-    margin-left: auto; /* keep slogan on the right */
-    align-self: flex-start;
+    position: absolute;
+    top: 0; /* keep banner at the very top */
+    right: 0;
 }
 
 @media (max-width: 600px) {
@@ -184,6 +186,8 @@ button:hover {
     #sloganImg {
         max-height: 140px;
         max-width: 90%;
+        right: 0;
+        top: 0;
     }
 }
 
