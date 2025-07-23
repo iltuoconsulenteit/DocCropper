@@ -96,7 +96,7 @@ You can pre-populate `settings.json` or override values using `.env` files in th
 
 ## ▶️ Running DocCropper
 
-Use the included start scripts from the `scripts/` directory. They handle virtualenv creation and dependency install.
+Use the included start scripts from the `scripts/` directory. They handle virtualenv creation and dependency install. On Windows, `start_DocCropper.bat` writes details to `doccropper.log` so you can troubleshoot launch problems.
 
 To stop the server, run the matching stop script or send a POST to `/shutdown/`.
 
