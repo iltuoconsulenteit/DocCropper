@@ -51,6 +51,8 @@ h1, h2 {
     align-items: center;
     gap: 10px;
     margin-top: 10px;
+    margin-left: auto; /* keep to the right of header */
+    order: 100; /* appear after help button */
 }
 
 #brandArea img {
@@ -61,6 +63,7 @@ h1, h2 {
 }
 #helpBtn {
     margin: 5px;
+    order: 99; /* appear before brandArea */
 }
 
 #pageFooter {
@@ -169,6 +172,8 @@ button:hover {
 #sloganImg {
     max-height: 200px;
     max-width: 60%;
+    margin-left: auto; /* keep slogan on the right */
+    align-self: flex-start;
 }
 
 @media (max-width: 600px) {
@@ -197,6 +202,7 @@ button:hover {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    flex-grow: 1; /* allow gallery to take remaining width */
 }
 
 .thumbContainer {
@@ -316,20 +322,23 @@ button:hover {
 }
 
 #instructionsBox {
-    display: none;
     position: fixed;
     top: 80px;
-    right: 10px;
-    width: 200px;
+    right: 0;
+    width: 250px;
     background: #fff;
     border: 1px solid #888;
     padding: 8px;
     z-index: 1000;
     font-size: 0.9em;
+    transform: translateX(100%); /* hidden off-canvas */
+    transition: transform 0.3s ease;
+    pointer-events: none;
 }
 
 #instructionsBox.visible {
-    display: block;
+    transform: translateX(0); /* slide into view */
+    pointer-events: auto;
 }
 
 #cameraPreview {
