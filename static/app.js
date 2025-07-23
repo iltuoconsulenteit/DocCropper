@@ -369,6 +369,27 @@ function editImage(index) {
     statusMessageElement.textContent = 'Edit image and press Process Image to save.';
 }
 
+async function shareImage(index) {
+    if (!isLicensed) return;
+    const dataUrl = processedImages[index];
+    if (!dataUrl) return;
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const file = new File([blob], `doccropper_${index + 1}.png`, {type: blob.type});
+    if (navigator.share && navigator.canShare && navigator.canShare({files: [file]})) {
+        try {
+            await navigator.share({files: [file], title: 'DocCropper'});
+        } catch (e) {
+            console.warn('Share cancelled', e);
+        }
+    } else {
+        const wa = `https://wa.me/?text=${encodeURIComponent('DocCropper image:\n')}`;
+        const email = `mailto:?subject=DocCropper&body=`;
+        window.open(wa, '_blank');
+        window.open(email, '_blank');
+    }
+}
+
 function addThumbnail(src, index) {
     const container = document.createElement('div');
     container.className = 'thumbContainer';
@@ -413,6 +434,22 @@ function addThumbnail(src, index) {
         deleteImage(idx);
     });
     btns.appendChild(delBtn);
+
+    const shareBtn = document.createElement('button');
+    shareBtn.dataset.key = 'share';
+    shareBtn.className = 'shareBtn';
+    shareBtn.textContent = t('share');
+    shareBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = Array.from(processedGallery.children).indexOf(container);
+        shareImage(idx);
+    });
+    if (isLicensed) {
+        btns.appendChild(shareBtn);
+    } else {
+        shareBtn.style.display = 'none';
+        btns.appendChild(shareBtn);
+    }
 
     container.appendChild(btns);
     processedGallery.appendChild(container);
@@ -907,9 +944,11 @@ function applyProStatus() {
     if (!isLicensed) {
         exportPdfBtn.classList.remove('pro-disabled');
         imageUploadElement.multiple = true;
+        document.querySelectorAll('.shareBtn').forEach(btn => btn.style.display = 'none');
     } else {
         exportPdfBtn.classList.remove('pro-disabled');
         imageUploadElement.multiple = true;
+        document.querySelectorAll('.shareBtn').forEach(btn => btn.style.display = 'inline-block');
     }
 }
 

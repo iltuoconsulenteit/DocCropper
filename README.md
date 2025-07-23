@@ -14,6 +14,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🎚️ Adjust brightness and contrast with live preview
 - 📄 One-click PDF export
 - 🔏 Optional digital signature on exported PDFs
+- 📤 Share processed images via WhatsApp or Email (Pro)
 - 📝 Extract text via OCR (future Pro feature)
 - 🗂️ Persistent user settings
 - 🧭 Touchscreen-friendly interface
@@ -143,6 +144,7 @@ DocCropper is released under the [MIT](LICENSE.txt) license. Without a license k
 - Removal of watermark
 - Network folder support (in development)
 - Authenticated LAN access
+- Share images directly via WhatsApp or Email
 
 To activate:
 - Use a valid license key in `settings.json` or `.env`

@@ -52,6 +52,7 @@ h1, h2 {
     color: #555;
     font-size: 0.9em;
     position: relative; /* allow absolute positioning inside */
+    min-height: 200px;
 }
 
 #versionBox {
@@ -144,9 +145,18 @@ button:hover {
 #sloganImg {
     position: absolute;
     right: 10px;
-    bottom: 45px;
-    max-height: 150px;
+    bottom: 10px;
+    max-height: 180px;
     z-index: 10;
+}
+
+@media (max-width: 600px) {
+    #sloganImg {
+        position: static;
+        display: block;
+        margin: 10px auto;
+        max-height: 120px;
+    }
 }
 
 #statusMessage {
