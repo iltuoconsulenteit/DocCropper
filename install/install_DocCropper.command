@@ -3,7 +3,7 @@ set -e
 
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"
-DEV_BRANCH="${DOCROPPER_DEV_BRANCH:-workinprogress}"
+DEV_BRANCH="${DOCROPPER_DEV_BRANCH:-codex/remove-shortcut-installation-and-scanner-capture}"
 
 DEFAULT_DIR="/Applications/DocCropper"
 read -r -p "Installation directory [$DEFAULT_DIR]: " TARGET_DIR

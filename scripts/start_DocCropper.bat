@@ -1,8 +1,12 @@
 @echo off
 setlocal
 set SCRIPT_DIR=%~dp0
-set APP_DIR=%SCRIPT_DIR%..\
-cd /d %APP_DIR%
+if exist "%SCRIPT_DIR%main.py" (
+    set "APP_DIR=%SCRIPT_DIR%"
+) else (
+    set "APP_DIR=%SCRIPT_DIR%..\"
+)
+cd /d "%APP_DIR%"
 set "LOG_FILE=%APP_DIR%doccropper.log"
 
 for /f "delims=" %%p in ('python -c "import json,sys;\

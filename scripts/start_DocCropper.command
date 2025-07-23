@@ -1,7 +1,11 @@
 #!/bin/bash
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-APP_DIR="$(dirname "$SCRIPT_DIR")"
+if [ -f "$SCRIPT_DIR/main.py" ]; then
+  APP_DIR="$SCRIPT_DIR"
+else
+  APP_DIR="$(dirname "$SCRIPT_DIR")"
+fi
 cd "$APP_DIR"
 
 PORT=$(python3 - <<'PY'
