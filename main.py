@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, Body, Request
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import subprocess
@@ -499,30 +499,28 @@ async def create_pdf(
                 offset_y = row * cell_h + margin + (inner_h - new_h) // 2
                 page.paste(temp, (offset_x, offset_y))
             if not licensed:
-                target_h = page_h // 20
-                hl = None
-                fl = None
+                target_h = page_h // 25
+                hl = fl = None
                 if header_logo:
                     ratio = target_h / header_logo.height
-                    size = (int(header_logo.width * ratio), target_h)
-                    hl = header_logo.resize(size, Image.LANCZOS)
+                    hl = header_logo.resize((int(header_logo.width * ratio), target_h), Image.LANCZOS)
                 if footer_logo:
                     ratio = target_h / footer_logo.height
-                    size = (int(footer_logo.width * ratio), target_h)
-                    fl = footer_logo.resize(size, Image.LANCZOS)
-                if hl and fl:
-                    total_w = hl.width + fl.width + margin // 2
-                    start_x = max(margin, (page_w - total_w) // 2)
-                    hy = page_h - target_h - margin
-                    page.paste(hl, (start_x, hy), hl)
-                    page.paste(fl, (start_x + hl.width + margin // 2, hy), fl)
-                elif hl:
-                    hx = (page_w - hl.width) // 2
+                    fl = footer_logo.resize((int(footer_logo.width * ratio), target_h), Image.LANCZOS)
+                draw = ImageDraw.Draw(page)
+                if hl:
+                    hx = margin
                     hy = page_h - hl.height - margin
                     page.paste(hl, (hx, hy), hl)
-                elif fl:
-                    fx = (page_w - fl.width) // 2
+                if fl:
+                    fx = page_w - fl.width - margin
                     fy = page_h - fl.height - margin
+                    text = "by IlTuoConsulenteIT"
+                    font = ImageFont.load_default()
+                    tw, th = draw.textsize(text, font=font)
+                    tx = fx - tw - 5
+                    ty = fy + (fl.height - th) // 2
+                    draw.text((tx, ty), text, fill="black", font=font)
                     page.paste(fl, (fx, fy), fl)
             pages.append(page)
 

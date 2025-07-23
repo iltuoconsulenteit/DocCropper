@@ -97,7 +97,7 @@ You can pre-populate `settings.json` or override values using `.env` files in th
 
 ## ▶️ Running DocCropper
 
-Use the included start scripts from the `scripts/` directory. They handle virtualenv creation and dependency install. On Windows, `start_DocCropper.bat` writes details to `%TEMP%\DocCropper_start.log` so you can troubleshoot launch problems. The script stops any running instance first and pauses before closing so errors remain visible. DocCropper stores its PID file in the system temp folder so it can be managed without admin rights.
+Use the included start scripts from the `scripts/` directory. They handle virtualenv creation and dependency install. On Windows, `start_DocCropper.bat` writes details to `%TEMP%\DocCropper_start.log` so you can troubleshoot launch problems. The script stops any running instance first and pauses before closing so errors remain visible. DocCropper stores its PID file in the system temp folder so it can be managed without admin rights. By default the server listens on **port 8765** unless you override it in `settings.json` or with `--port`.
 
 To stop the server, run the matching stop script or send a POST to `/shutdown/`.
 
@@ -105,7 +105,8 @@ You may also launch `doccropper_tray.py` (or `.pyw`) to manage the server with a
 
 ### Tray icon usage
 
-The tray helper works on Windows, macOS and most Linux desktops. It loads the
+The tray helper works on Windows and most Linux desktops. macOS support is
+experimental and not yet thoroughly tested. It loads the
 application logo and shows a green or red dot indicating whether the server is
 running. Use the menu to start, stop or update DocCropper, or open the site in
 your browser. If no graphical environment is available, run it with the
