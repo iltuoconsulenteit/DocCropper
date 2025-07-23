@@ -839,15 +839,8 @@ helpBtn.addEventListener('click', () => {
     instructionsBox.classList.toggle('visible');
 });
 cameraFileInput.addEventListener('change', (e) => {
-    const f = e.target.files && e.target.files[0];
-    if (!f) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-        files = [ev.target.result];
-        currentFileIndex = 0;
-        setupImage(ev.target.result);
-    };
-    reader.readAsDataURL(f);
+    if (!e.target.files || e.target.files.length === 0) return;
+    addFiles(e.target.files);
 });
 
 langSelect.addEventListener('change', async () => {
