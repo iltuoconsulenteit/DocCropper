@@ -41,6 +41,11 @@ const brightnessRange = document.getElementById('brightnessRange');
 const contrastRange = document.getElementById('contrastRange');
 const ocrBtn = document.getElementById('ocrBtn');
 const ocrOutput = document.getElementById('ocrOutput');
+const OCR_ENABLED = false;
+if (!OCR_ENABLED) {
+    if (ocrBtn) ocrBtn.style.display = 'none';
+    if (ocrOutput) ocrOutput.style.display = 'none';
+}
 const inputMode = document.getElementById('inputMode');
 const fileInputArea = document.getElementById('fileInputArea');
 const cameraControls = document.getElementById('cameraControls');
@@ -731,7 +736,7 @@ submitBtn.addEventListener('click', () => {
                 wrapperElement.style.display = 'none';
                 adjustControls.style.display = 'none';
                 exportPdfBtn.style.display = 'inline-block';
-                ocrBtn.style.display = 'inline-block';
+                if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                 layoutControls.style.display = 'block';
                 updateLayoutPreview();
             } else {
@@ -751,7 +756,7 @@ submitBtn.addEventListener('click', () => {
                     wrapperElement.style.display = 'none';
                     adjustControls.style.display = 'none';
                     exportPdfBtn.style.display = 'inline-block';
-                    ocrBtn.style.display = 'inline-block';
+                    if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                     layoutControls.style.display = 'block';
                     updateLayoutPreview();
                 }
@@ -806,32 +811,34 @@ exportPdfBtn.addEventListener('click', () => {
     });
 });
 
-ocrBtn.addEventListener('click', () => {
-    if (processedImages.length === 0) {
-        statusMessageElement.textContent = 'No images for OCR.';
-        return;
-    }
-    statusMessageElement.textContent = 'Extracting text...';
-    fetch('/ocr/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images: processedImages })
-    })
-    .then(resp => resp.json())
-    .then(data => {
-        if (data.text) {
-            ocrOutput.style.display = 'block';
-            ocrOutput.value = data.text;
-            statusMessageElement.textContent = translations['ocrResult'] ? translations['ocrResult'] : 'Recognized Text:';
-        } else {
-            statusMessageElement.textContent = data.message || (translations['ocrNoSupport'] || 'OCR not available');
+if (OCR_ENABLED) {
+    ocrBtn.addEventListener('click', () => {
+        if (processedImages.length === 0) {
+            statusMessageElement.textContent = 'No images for OCR.';
+            return;
         }
-    })
-    .catch(err => {
-        statusMessageElement.textContent = 'OCR error';
-        console.error('OCR error', err);
+        statusMessageElement.textContent = 'Extracting text...';
+        fetch('/ocr/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ images: processedImages })
+        })
+        .then(resp => resp.json())
+        .then(data => {
+            if (data.text) {
+                ocrOutput.style.display = 'block';
+                ocrOutput.value = data.text;
+                statusMessageElement.textContent = translations['ocrResult'] ? translations['ocrResult'] : 'Recognized Text:';
+            } else {
+                statusMessageElement.textContent = data.message || (translations['ocrNoSupport'] || 'OCR not available');
+            }
+        })
+        .catch(err => {
+            statusMessageElement.textContent = 'OCR error';
+            console.error('OCR error', err);
+        });
     });
-});
+}
 
 inputMode.addEventListener('change', updateInputMode);
 captureBtn.addEventListener('click', capturePhoto);
