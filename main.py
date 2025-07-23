@@ -74,6 +74,10 @@ DEFAULT_SETTINGS = {
     "bank_info": "",
     "google_client_id": "",
     "brand_html": "",
+    "client_logo": "",
+    "sponsor_logo": "",
+    "sponsor_scale": 100,
+    "sponsor_bottom": 80,
 }
 
 def get_session_dir(session_id: str) -> str:
@@ -499,7 +503,7 @@ async def create_pdf(
                 offset_y = row * cell_h + margin + (inner_h - new_h) // 2
                 page.paste(temp, (offset_x, offset_y))
             if not licensed:
-                target_h = page_h // 25
+                target_h = page_h // 35
                 hl = fl = None
                 if header_logo:
                     ratio = target_h / header_logo.height
@@ -516,7 +520,11 @@ async def create_pdf(
                     fx = page_w - fl.width - margin
                     fy = page_h - fl.height - margin
                     text = "by IlTuoConsulenteIT"
-                    font = ImageFont.load_default()
+                    font_size = max(10, fl.height // 2)
+                    try:
+                        font = ImageFont.truetype("DejaVuSans.ttf", font_size)
+                    except Exception:
+                        font = ImageFont.load_default()
                     if hasattr(draw, "textbbox"):
                         bbox = draw.textbbox((0, 0), text, font=font)
                         tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]

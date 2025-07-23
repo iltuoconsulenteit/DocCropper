@@ -13,5 +13,9 @@
   "stripe_link": "",
   "bank_info": "",
   "google_client_id": ""
-  , "brand_html": ""
+  , "brand_html": "",
+  "client_logo": "",
+  "sponsor_logo": "",
+  "sponsor_scale": 100,
+  "sponsor_bottom": 80
 }

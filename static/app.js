@@ -37,6 +37,8 @@ const versionBox = document.getElementById('versionBox');
 const instructionsBox = document.getElementById('instructionsBox');
 const helpBtn = document.getElementById('helpBtn');
 const sloganImg = document.getElementById('sloganImg');
+const clientLogo = document.getElementById('clientLogo');
+const sponsorLogo = document.getElementById('sponsorLogo');
 const adjustControls = document.getElementById('adjustControls');
 const brightnessRange = document.getElementById('brightnessRange');
 const contrastRange = document.getElementById('contrastRange');
@@ -208,6 +210,27 @@ function applySettings(cfg) {
     }
     if (brandBox) {
         brandBox.innerHTML = cfg.brand_html || '';
+    }
+    if (clientLogo) {
+        if (cfg.client_logo) {
+            clientLogo.src = `/static/logos/${cfg.client_logo}`;
+            clientLogo.style.display = 'block';
+        } else {
+            clientLogo.style.display = 'none';
+        }
+    }
+    if (sponsorLogo) {
+        if (cfg.sponsor_logo) {
+            sponsorLogo.src = `/static/logos/${cfg.sponsor_logo}`;
+            sponsorLogo.style.display = 'block';
+        } else {
+            sponsorLogo.style.display = 'none';
+        }
+    }
+    if (sloganImg) {
+        const scale = parseFloat(cfg.sponsor_scale || 100) / 100;
+        sloganImg.style.maxHeight = (200 * scale) + 'px';
+        sloganImg.style.bottom = (cfg.sponsor_bottom || 80) + 'px';
     }
     if (cfg.version) {
         appVersion = cfg.version;
