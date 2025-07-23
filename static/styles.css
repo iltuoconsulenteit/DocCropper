@@ -310,7 +310,6 @@ button:hover {
     margin-bottom: 10px;
 }
 
-#cameraControls button,
-#scanControls button {
+#cameraControls button {
     margin-top: 10px;
 }

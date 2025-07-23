@@ -88,7 +88,6 @@ Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh
 - Set up the environment
 - Ask for an optional license key
 - Write a log file named `install.log` in the installation folder (falling back to `%TEMP%` on Windows or `/tmp` on Linux/macOS)
-- Launch the server via the tray icon when finished (the tray runs `start_DocCropper.bat` for you)
 You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer
 branch or `DOCROPPER_BRANCH` to force a specific branch.
 
@@ -161,16 +160,6 @@ Set `DOCROPPER_SIGN_CERT` to the path of a PKCS#12 certificate and `DOCROPPER_SI
 DocCropper can extract text from processed images using [Tesseract OCR](https://github.com/tesseract-ocr/tesseract). Install Tesseract separately and ensure it is on your system path. The OCR step uses the interface language selected in DocCropper.
 
 Use the **Extract Text** button after processing images to retrieve the recognized text.
-
-### Optional Scanner Support
-
-Scanning documents requires the `pyinsane2` library. Because this package needs
-native build tools on Windows, it is not installed by default. Run
-`install/install_scanner_addon.sh` on Linux or macOS to enable scanning.
-Windows users can run `install/install_scanner_tools.bat` followed by
-`install/install_scanner_addon.bat` if they wish to compile the dependency.
-When the add-on is missing, the **Scan Document** button is hidden and the `/scan/`
-endpoint returns `501`.
 
 
 ## Credits

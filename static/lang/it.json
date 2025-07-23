@@ -48,8 +48,6 @@
   "showHelp": "Guida",
   "inputModeLabel": "Sorgente:",
   "modeUpload": "Carica file",
-  "modeScanner": "Scanner",
   "modeCamera": "Fotocamera",
-  "scanDoc": "Scansiona documento",
   "capturePhoto": "Acquisisci"
 }

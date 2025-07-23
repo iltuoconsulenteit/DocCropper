@@ -48,8 +48,6 @@
   "showHelp": "Help",
   "inputModeLabel": "Source:",
   "modeUpload": "Upload File",
-  "modeScanner": "Scanner",
   "modeCamera": "Camera",
-  "scanDoc": "Scan Document",
   "capturePhoto": "Capture"
 }

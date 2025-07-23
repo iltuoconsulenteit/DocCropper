@@ -28,10 +28,6 @@ try:
 except Exception:
     pytesseract = None
 
-try:
-    import pyinsane2
-except Exception:
-    pyinsane2 = None
 
 SETTINGS_FILE = "settings.json"
 # Load environment variables from any .env files in env/
@@ -237,43 +233,6 @@ async def google_login(token: str = Body(...)):
     except Exception as e:
         logger.exception("Google token verification failed")
         return JSONResponse(status_code=400, content={"message": "Invalid token"})
-
-
-@app.get("/scan/available")
-async def scan_available():
-    return {"available": pyinsane2 is not None}
-
-
-@app.get("/scan/")
-async def scan_document():
-    if pyinsane2 is None:
-        return JSONResponse(status_code=501, content={"message": "Scanning not available"})
-    try:
-        pyinsane2.init()
-        devices = pyinsane2.get_devices()
-        if not devices:
-            return JSONResponse(status_code=404, content={"message": "No scanner found"})
-        scanner = devices[0]
-        session = scanner.scan(multiple=False)
-        while True:
-            try:
-                session.scan.read()
-            except pyinsane2.PyinsaneException:
-                break
-        img = session.images[0].convert("RGB")
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        data = base64.b64encode(buf.getvalue()).decode()
-        return {"image": "data:image/png;base64," + data}
-    except Exception as e:
-        logger.exception("Scanning failed")
-        return JSONResponse(status_code=500, content={"message": f"Scan failed: {str(e)}"})
-    finally:
-        try:
-            pyinsane2.exit()
-        except Exception:
-            pass
-
 
 @app.post("/process-image/")
 async def process_image(

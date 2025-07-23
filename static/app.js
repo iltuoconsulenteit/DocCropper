@@ -43,11 +43,10 @@ const ocrBtn = document.getElementById('ocrBtn');
 const ocrOutput = document.getElementById('ocrOutput');
 const inputMode = document.getElementById('inputMode');
 const fileInputArea = document.getElementById('fileInputArea');
-const scanControls = document.getElementById('scanControls');
-const scanBtn = document.getElementById('scanBtn');
 const cameraControls = document.getElementById('cameraControls');
 const cameraPreview = document.getElementById('cameraPreview');
 const captureBtn = document.getElementById('captureBtn');
+const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 const cameraFileInput = document.getElementById('cameraFileInput');
 
 let isLicensed = false;
@@ -68,25 +67,26 @@ let translations = {};
 let currentLang = 'en';
 let currentSettings = {};
 
-async function checkScanAvailability() {
-    try {
-        const resp = await fetch('/scan/available');
-        if (resp.ok) {
-            const data = await resp.json();
-            if (!data.available) {
-                const opt = inputMode.querySelector('option[value="scanner"]');
-                if (opt) opt.remove();
-            }
+function setupDeviceMode() {
+    if (isMobile) {
+        inputMode.style.display = 'inline-block';
+        if (!Array.from(inputMode.options).some(o => o.value === 'camera')) {
+            const opt = document.createElement('option');
+            opt.value = 'camera';
+            opt.textContent = t('modeCamera');
+            inputMode.appendChild(opt);
         }
-    } catch (e) {
-        console.error('Scanner check failed', e);
+        inputMode.value = 'camera';
+    } else {
+        inputMode.style.display = 'none';
+        inputMode.value = 'upload';
     }
 }
+
 
 function updateInputMode() {
     const mode = inputMode.value;
     fileInputArea.style.display = mode === 'upload' ? 'block' : 'none';
-    scanControls.style.display = mode === 'scanner' ? 'block' : 'none';
     cameraControls.style.display = mode === 'camera' ? 'block' : 'none';
     if (mode === 'camera') {
         startCamera();
@@ -95,29 +95,6 @@ function updateInputMode() {
     }
 }
 
-async function scanDocument() {
-    try {
-        statusMessageElement.textContent = 'Scanning...';
-        const resp = await fetch('/scan/');
-        if (resp.ok) {
-            const data = await resp.json();
-            if (data.image) {
-                files = [data.image];
-                currentFileIndex = 0;
-                const reader = new FileReader();
-                reader.onload = (e) => setupImage(e.target.result);
-                reader.readAsDataURL(dataURItoBlob(data.image));
-            } else {
-                statusMessageElement.textContent = 'No image returned';
-            }
-        } else {
-            statusMessageElement.textContent = 'Scan not available';
-        }
-    } catch (e) {
-        console.error('Scan failed', e);
-        statusMessageElement.textContent = 'Scan failed';
-    }
-}
 
 function startCamera() {
     if (cameraStream) return;
@@ -154,8 +131,8 @@ function capturePhoto() {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0);
     const dataUrl = canvas.toDataURL('image/png');
-    files = [dataUrl];
-    currentFileIndex = 0;
+    files.push(dataURItoBlob(dataUrl));
+    currentFileIndex = files.length - 1;
     setupImage(dataUrl);
 }
 
@@ -624,11 +601,10 @@ function setupImage(imageUrl) {
 }
 
 
-imageUploadElement.addEventListener('change', (event) => {
-    const newFiles = Array.from(event.target.files);
+function addFiles(newFiles) {
     if (files.length === 0 && processedImages.length === 0) {
         // first batch of files
-        files = newFiles;
+        files = Array.from(newFiles);
         currentFileIndex = 0;
         processedImages = [];
         processedFiles = [];
@@ -646,7 +622,7 @@ imageUploadElement.addEventListener('change', (event) => {
     } else {
         // add new files to existing queue
         const startProcessing = currentFileIndex >= files.length;
-        files = files.concat(newFiles);
+        files = files.concat(Array.from(newFiles));
         if (startProcessing && newFiles.length > 0) {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -655,7 +631,22 @@ imageUploadElement.addEventListener('change', (event) => {
             reader.readAsDataURL(files[currentFileIndex]);
         }
     }
+
+}
+
+imageUploadElement.addEventListener('change', (event) => {
+    addFiles(event.target.files);
 });
+
+function handleDrop(event) {
+    event.preventDefault();
+    if (event.dataTransfer && event.dataTransfer.files) {
+        addFiles(event.dataTransfer.files);
+    }
+}
+
+document.addEventListener('dragover', (e) => e.preventDefault());
+document.addEventListener('drop', handleDrop);
 
 interact('.draggable').draggable({
     modifiers: [
@@ -843,7 +834,6 @@ ocrBtn.addEventListener('click', () => {
 });
 
 inputMode.addEventListener('change', updateInputMode);
-scanBtn.addEventListener('click', scanDocument);
 captureBtn.addEventListener('click', capturePhoto);
 helpBtn.addEventListener('click', () => {
     instructionsBox.classList.toggle('visible');
@@ -1027,7 +1017,7 @@ loadSettings().then(async (cfg) => {
     licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
     applyProStatus();
     updateLayoutPreview();
-    await checkScanAvailability();
+    setupDeviceMode();
     updateInputMode();
 });
 
