@@ -85,10 +85,10 @@ pip install -r requirements.txt
 
 - Clone the repo
 - Offer a numbered menu to choose `main` or the developer branch (default `codex/remove-shortcut-installation-and-scanner-capture`)
-- Set up the environment
+- Set up the environment and install Python dependencies in a virtualenv
 - Ask for an optional license key
 - Write a log file named `install.log` in the installation folder (falling back to `%TEMP%` on Windows or `/tmp` on Linux/macOS)
-- On Linux the script installs under `$HOME/DocCropper` by default so no root permissions are required
+- On Linux the script installs under `$HOME/DocCropper` by default so no root permissions are required and dependencies are installed automatically
 You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer
 branch or `DOCROPPER_BRANCH` to force a specific branch.
 
