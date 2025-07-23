@@ -9,10 +9,10 @@ else
   DEV_BRANCH="$DOCROPPER_DEV_BRANCH"
 fi
 
-DEFAULT_DIR="/opt/DocCropper"
+DEFAULT_DIR="$HOME/DocCropper"
 read -r -p "Installation directory [$DEFAULT_DIR]: " TARGET_DIR
 TARGET_DIR=${TARGET_DIR:-$DEFAULT_DIR}
-mkdir -p "$TARGET_DIR"
+mkdir -p "$TARGET_DIR" 2>/dev/null || { echo "Cannot create $TARGET_DIR. Use a writable path or run with sudo." >&2; exit 1; }
 echo "Installing to: $TARGET_DIR"
 
 DEFAULT_KEY=""
