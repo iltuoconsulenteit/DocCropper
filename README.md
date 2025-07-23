@@ -138,7 +138,7 @@ only used to identify users and is not tied to licensing.
 
 ## 🔓 Licensing and PRO Features
 
-DocCropper is released under the [MIT](LICENSE.txt) license. Without a license key, the app runs in **DEMO mode** (watermark after first PDF page).
+DocCropper is released under the [MIT](LICENSE.txt) license. Without a license key, the app runs in **DEMO mode** (the second and later PDF pages show DocCropper and IlTuoConsulenteIT logos).
 
 **PRO Features:**
 - Removal of watermark

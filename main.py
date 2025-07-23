@@ -460,6 +460,19 @@ async def create_pdf(
         inner_w = max(1, cell_w - margin * 2)
         inner_h = max(1, cell_h - margin * 2)
 
+        header_logo = None
+        footer_logo = None
+        if not licensed:
+            logos_dir = os.path.join(os.path.dirname(__file__), "static", "logos")
+            try:
+                header_logo = Image.open(os.path.join(logos_dir, "header_logo.png")).convert("RGBA")
+            except Exception:
+                header_logo = None
+            try:
+                footer_logo = Image.open(os.path.join(logos_dir, "footer_logo.png")).convert("RGBA")
+            except Exception:
+                footer_logo = None
+
         pages = []
         TARGET_DPI = 300
         for i in range(0, len(pil_images), layout):
@@ -491,30 +504,22 @@ async def create_pdf(
                 offset_y = row * cell_h + margin + (inner_h - new_h) // 2
                 page.paste(temp, (offset_x, offset_y))
             if not licensed and page_index > 0:
-                from PIL import ImageDraw, ImageFont
-                draw = ImageDraw.Draw(page)
-                text = "DEMO"
-                try:
-                    font_size = min(page_w, page_h) // 8
-                    font = ImageFont.truetype("DejaVuSans.ttf", font_size)
-                except Exception:
-                    font = ImageFont.load_default()
-                bbox_method = getattr(draw, "textbbox", None)
-                if callable(bbox_method):
-                    bbox = bbox_method((0, 0), text, font=font)
-                    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-                else:
-                    size_method = getattr(draw, "textsize", None)
-                    if callable(size_method):
-                        tw, th = size_method(text, font=font)
-                    else:
-                        tw, th = font.getsize(text)
-                draw.text(
-                    ((page_w - tw) / 2, (page_h - th) / 2),
-                    text,
-                    fill=(255, 0, 0),
-                    font=font,
-                )
+                if header_logo:
+                    target_w = page_w // 2
+                    ratio = target_w / header_logo.width
+                    size = (int(header_logo.width * ratio), int(header_logo.height * ratio))
+                    hl = header_logo.resize(size, Image.LANCZOS)
+                    hx = (page_w - hl.width) // 2
+                    hy = page_h - hl.height - margin * 3
+                    page.paste(hl, (hx, hy), hl)
+                if footer_logo:
+                    target_w = page_w // 4
+                    ratio = target_w / footer_logo.width
+                    size = (int(footer_logo.width * ratio), int(footer_logo.height * ratio))
+                    fl = footer_logo.resize(size, Image.LANCZOS)
+                    fx = (page_w - fl.width) // 2
+                    fy = page_h - fl.height - margin
+                    page.paste(fl, (fx, fy), fl)
             pages.append(page)
 
         pdf_bytes_io = io.BytesIO()
