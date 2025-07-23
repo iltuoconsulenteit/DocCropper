@@ -35,7 +35,11 @@ rem Default developer branch
 if defined DOCROPPER_DEV_BRANCH (
     set "DEV_BRANCH=%DOCROPPER_DEV_BRANCH%"
 ) else (
-    set "DEV_BRANCH=workinprogress"
+    for /f "usebackq tokens=2" %%b in (`git ls-remote --sort=-committerdate --heads %REPO_URL%`) do (
+        if not defined DEV_BRANCH set "DEV_BRANCH=%%b"
+    )
+    set "DEV_BRANCH=!DEV_BRANCH:refs/heads/=!"
+    if not defined DEV_BRANCH set "DEV_BRANCH=workinprogress"
 )
 
 if not defined DOCROPPER_BRANCH (

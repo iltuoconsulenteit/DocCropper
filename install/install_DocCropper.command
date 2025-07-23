@@ -3,7 +3,12 @@ set -e
 
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"
-DEV_BRANCH="${DOCROPPER_DEV_BRANCH:-workinprogress}"
+if [ -z "$DOCROPPER_DEV_BRANCH" ]; then
+  LATEST=$(git ls-remote --sort=-committerdate --heads "$REPO_URL" | head -n 1 | awk '{sub("refs/heads/", "", $2); print $2}')
+  DEV_BRANCH="${LATEST:-workinprogress}"
+else
+  DEV_BRANCH="$DOCROPPER_DEV_BRANCH"
+fi
 
 DEFAULT_DIR="/Applications/DocCropper"
 read -r -p "Installation directory [$DEFAULT_DIR]: " TARGET_DIR
