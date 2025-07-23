@@ -52,5 +52,11 @@
   "inputModeLabel": "Sorgente:",
   "modeUpload": "Carica file",
   "modeCamera": "Fotocamera",
-  "capturePhoto": "Acquisisci"
+  "capturePhoto": "Acquisisci",
+  "openApp": "Apri DocCropper",
+  "startApp": "Avvia DocCropper",
+  "stopApp": "Ferma DocCropper",
+  "updateMain": "Aggiorna da main",
+  "updateBranch": "Aggiorna da branch",
+  "quit": "Esci"
 }

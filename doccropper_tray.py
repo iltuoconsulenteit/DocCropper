@@ -13,6 +13,9 @@ import json
 import time
 from dotenv import load_dotenv
 
+LANG = 'en'
+TRANSLATIONS = {}
+
 BASE_DIR = Path(__file__).resolve().parent
 INSTALL_DIR = BASE_DIR / 'install'
 SCRIPTS_DIR = BASE_DIR / 'scripts'
@@ -29,6 +32,25 @@ ENV_DIR = BASE_DIR / 'env'
 if ENV_DIR.is_dir():
     for env_file in ENV_DIR.glob('*.env'):
         load_dotenv(env_file, override=False)
+
+def load_language():
+    global LANG, TRANSLATIONS
+    try:
+        with open(BASE_DIR / 'settings.json') as fh:
+            data = json.load(fh)
+        LANG = data.get('language', 'en')
+    except Exception:
+        LANG = 'en'
+    try:
+        with open(BASE_DIR / 'static' / 'lang' / f'{LANG}.json') as fh:
+            TRANSLATIONS = json.load(fh)
+    except Exception:
+        TRANSLATIONS = {}
+
+def tr(key):
+    return TRANSLATIONS.get(key, key)
+
+load_language()
 
 SYSTEM = platform.system()
 START_SCRIPTS = {
@@ -173,14 +195,14 @@ def main():
         icon.icon = create_image(state)
 
     menu_items = [
-        MenuItem('Open DocCropper', lambda icon, item: open_browser()),
-        MenuItem('Start DocCropper', lambda icon, item: [start_app(), update(True)]),
-        MenuItem('Stop DocCropper', lambda icon, item: [stop_app(), update(False)]),
-        MenuItem('Update from main', lambda icon, item: update_main())
+        MenuItem(tr('openApp'), lambda icon, item: open_browser()),
+        MenuItem(tr('startApp'), lambda icon, item: [start_app(), update(True)]),
+        MenuItem(tr('stopApp'), lambda icon, item: [stop_app(), update(False)]),
+        MenuItem(tr('updateMain'), lambda icon, item: update_main())
     ]
     if developer:
-        menu_items.append(MenuItem('Update from branch', lambda icon, item: update_branch()))
-    menu_items.append(MenuItem('Quit', quit_app))
+        menu_items.append(MenuItem(tr('updateBranch'), lambda icon, item: update_branch()))
+    menu_items.append(MenuItem(tr('quit'), quit_app))
 
     icon = Icon('DocCropper', create_image(running), 'DocCropper', menu=Menu(*menu_items))
 

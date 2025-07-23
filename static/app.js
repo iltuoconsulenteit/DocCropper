@@ -230,7 +230,6 @@ function applySettings(cfg) {
     if (sloganImg) {
         const scale = parseFloat(cfg.sponsor_scale || 100) / 100;
         sloganImg.style.maxHeight = (200 * scale) + 'px';
-        sloganImg.style.bottom = (cfg.sponsor_bottom || 80) + 'px';
     }
     if (cfg.version) {
         appVersion = cfg.version;

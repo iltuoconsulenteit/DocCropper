@@ -101,7 +101,10 @@
     <div id="layoutPreview" style="display:none;"></div>
 
     <h2 data-i18n="processedImages">Processed Images:</h2>
-    <div id="processedGallery"></div>
+    <div id="galleryWrapper">
+        <div id="processedGallery"></div>
+        <img id="sloganImg" src="/static/logos/DocCropper_slogan_en.png" alt="DocCropper slogan">
+    </div>
     <img id="processedImage" src="#" alt="Processed Document" style="display:none; max-width: 100%;">
     <div id="imageModal" class="modal" style="display:none;">
         <span id="closeModal" class="close">&times;</span>
@@ -114,7 +117,6 @@
     <footer id="pageFooter">
         <span data-i18n="realizzato">Powered by IlTuoConsulenteIT</span>
         <span id="versionBox"></span>
-        <img id="sloganImg" src="/static/logos/DocCropper_slogan_en.png" alt="DocCropper slogan">
         <img id="footerLogo" src="/static/logos/footer_logo.png" onerror="this.onerror=null;this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO3RqqEAAAAASUVORK5CYII='" alt="IlTuoConsulenteIT logo">
     </footer>
 
