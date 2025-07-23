@@ -14,9 +14,10 @@ if defined TEMP (
 )
 call :log "DocCropper start script"
 
-for /f "delims=" %%p in ('python -c "import json,sys;\
-try: d=json.load(open('settings.json')); print(d.get('port',8000))\
-except Exception: print(8000)"') do set PORT=%%p
+set "PORT=8000"
+if exist settings.json (
+    for /f "delims=" %%p in ('python -c "import json,sys;print(json.load(open(^"settings.json^")).get(^"port^",8000))" 2^>nul') do set PORT=%%p
+)
 
 if not exist venv (
     call :log "Creating virtual environment..."
