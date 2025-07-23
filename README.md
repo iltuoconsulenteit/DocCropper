@@ -82,9 +82,8 @@ pip install -r requirements.txt
 
 ### 🛠 Installer Scripts
 
-Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh` (Linux/macOS). These scripts:
 - Clone the repo
-- Offer a numbered menu to choose `main` or the developer branch (default `codex/move-version-number-to-bottom-right`)
+- Offer a numbered menu to choose `main` or the developer branch (default `workinprogress`)
 - Set up the environment
 - Ask for an optional license key
 - Write a log file named `install.log` in the installation folder (falling back to `%TEMP%` on Windows or `/tmp` on Linux/macOS)

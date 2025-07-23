@@ -35,7 +35,7 @@ rem Default developer branch
 if defined DOCROPPER_DEV_BRANCH (
     set "DEV_BRANCH=%DOCROPPER_DEV_BRANCH%"
 ) else (
-    set "DEV_BRANCH=codex/move-version-number-to-bottom-right"
+    set "DEV_BRANCH=workinprogress"
 )
 
 if not defined DOCROPPER_BRANCH (
