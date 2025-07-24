@@ -70,6 +70,7 @@ let processedImages = [];
 let processedFiles = [];
 let editingIndex = null;
 let cameraStream = null;
+let cameraAvailable = false;
 
 let translations = {};
 let currentLang = 'en';
@@ -105,20 +106,17 @@ function updateInputMode() {
 
 
 function startCamera() {
-    if (cameraStream) return;
+    if (cameraStream || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        cameraAvailable = false;
+        return;
+    }
     navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
         cameraStream = stream;
+        cameraAvailable = true;
         cameraPreview.srcObject = stream;
     }).catch(err => {
-        console.error('Camera error', err);
-        const fallback = cameraFileInput;
-        if (fallback) {
-            fallback.click();
-        } else {
-            statusMessageElement.textContent = 'Camera not available';
-            inputMode.value = 'upload';
-            updateInputMode();
-        }
+        console.warn('Camera unavailable, using file input', err);
+        cameraAvailable = false;
     });
 }
 
@@ -128,10 +126,14 @@ function stopCamera() {
         cameraStream = null;
         cameraPreview.srcObject = null;
     }
+    cameraAvailable = false;
 }
 
 function capturePhoto() {
-    if (!cameraStream) return;
+    if (!cameraStream || !cameraAvailable) {
+        cameraFileInput.click();
+        return;
+    }
     const video = cameraPreview;
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;

@@ -167,27 +167,34 @@ button:hover {
     flex-wrap: wrap;
     align-items: flex-start;
     gap: 10px;
-    position: relative; /* allow absolute positioning */
+}
+
+#processedGallery {
+    order: 1;
+    flex-grow: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 #sloganImg {
+    order: 2;
+    align-self: flex-start;
+    margin-left: auto;
     max-height: 200px;
     max-width: 60%;
-    position: absolute;
-    top: 0; /* keep banner at the very top */
-    right: 0;
 }
 
 @media (max-width: 600px) {
     #galleryWrapper {
         flex-direction: column;
-        align-items: center;
     }
     #sloganImg {
+        order: 0;
+        align-self: center;
+        margin-left: 0;
         max-height: 140px;
         max-width: 90%;
-        right: 0;
-        top: 0;
     }
 }
 
@@ -200,13 +207,6 @@ button:hover {
     margin-top:10px;
     border: 1px solid #ddd;
     background-color: #fff;
-}
-
-#processedGallery {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    flex-grow: 1; /* allow gallery to take remaining width */
 }
 
 .thumbContainer {
