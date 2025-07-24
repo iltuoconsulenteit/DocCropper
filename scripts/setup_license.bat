@@ -1,0 +1,25 @@
+@echo off
+setlocal EnableDelayedExpansion
+
+:: Determine application directory (where main.py resides)
+set "SCRIPT_DIR=%~dp0"
+if exist "!SCRIPT_DIR!main.py" (
+    set "APP_DIR=!SCRIPT_DIR!"
+) else (
+    set "APP_DIR=!SCRIPT_DIR!\.."
+)
+cd /d "!APP_DIR!"
+
+if not exist env mkdir env
+
+set /p LICENSE_KEY=Enter license key:
+set /p LICENSE_NAME=Enter license name:
+
+set "ENVFILE=env\developer.env"
+echo DOCROPPER_LICENSE_KEY=!LICENSE_KEY!> "!ENVFILE!"
+echo DOCROPPER_LICENSE_NAME=!LICENSE_NAME!>> "!ENVFILE!"
+echo DOCROPPER_DEV_LICENSE=!LICENSE_KEY!>> "!ENVFILE!"
+
+echo Developer license saved to !ENVFILE!
+pause
+endlocal

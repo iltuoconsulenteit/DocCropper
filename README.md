@@ -97,6 +97,11 @@ You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer bran
 
 You can pre-populate `settings.json` or override values using `.env` files in the `env/` folder.
 The `.env` files may also define `LICENSE_CHECK=true` to enforce license validation via a remote server.
+To quickly create an environment file for testing you can run one of the
+`scripts/setup_license` helpers. The script for your platform (`.bat`, `.sh` or
+`.command`) asks for your license key and name then writes `env/developer.env`
+with `DOCROPPER_LICENSE_KEY`, `DOCROPPER_LICENSE_NAME` and
+`DOCROPPER_DEV_LICENSE` so all features are unlocked.
 
 ---
 
@@ -156,6 +161,8 @@ DocCropper itself is released under the [MIT](LICENSE.txt) license. See [Terms o
 To activate Pro or Full editions:
 - Provide a valid license key in `settings.json` or `.env`
 - Developer keys unlock all features for testing when `DOCROPPER_DEV_LICENSE` matches your `license_key`
+- You can generate a suitable `.env` by running `scripts/setup_license.bat` (or
+  `.sh` / `.command`) and entering your details
 - Set `LICENSE_CHECK=true` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
 
 For inquiries: **doccropper@iltuoconsulenteit.it**
