@@ -53,6 +53,7 @@ h1, h2 {
     margin-top: 10px;
     margin-left: auto; /* keep to the right of header */
     order: 101; /* after banner */
+    flex-basis: 100%; /* occupy full row so Help button sits below */
 }
 
 #brandArea img {
@@ -64,7 +65,8 @@ h1, h2 {
 #helpBtn {
     margin: 5px;
     order: 102; /* below banner */
-    flex-basis: 100%;
+    flex-basis: auto;
+    align-self: center;
     margin-top: 10px;
 }
 
