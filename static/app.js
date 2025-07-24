@@ -31,12 +31,14 @@ const langSelect = document.getElementById('langSelect');
 const layoutPreview = document.getElementById('layoutPreview');
 const licenseInfo = document.getElementById('licenseInfo');
 const purchaseBox = document.getElementById('purchaseBox');
+const licenseBox = document.getElementById('licenseBox');
 const loginArea = document.getElementById('loginArea');
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
 const instructionsBox = document.getElementById('instructionsBox');
 const helpBtn = document.getElementById('helpBtn');
 const purchaseBtn = document.getElementById('purchaseBtn');
+const licenseBtn = document.getElementById('licenseBtn');
 const bannerBox = document.getElementById('bannerBox');
 const closeBanner = document.getElementById('closeBanner');
 const sloganImg = document.getElementById('sloganImg');
@@ -73,6 +75,8 @@ let appVersion = '';
 const DEV_KEY = 'ILTUOCONSULENTEIT-DEV';
 const DEV_KEY_UPPER = DEV_KEY.toUpperCase();
 let userInfo = null;
+let currentLicenseLevel = 'free';
+const MAX_IMAGES_FREE = 5;
 
 let files = [];
 let currentFileIndex = 0;
@@ -235,6 +239,11 @@ function applySettings(cfg) {
     }
     if (cfg.scale_percent !== undefined) {
         scalePercent.value = cfg.scale_percent;
+    }
+    if (cfg.license_level) {
+        currentLicenseLevel = cfg.license_level.toLowerCase();
+    } else {
+        currentLicenseLevel = 'free';
     }
     isLicensed = false;
     licenseName = '';
@@ -741,6 +750,14 @@ function setupImage(imageUrl) {
 
 
 async function addFiles(newFiles) {
+    if (currentLicenseLevel === 'free') {
+        const allowed = MAX_IMAGES_FREE - files.length;
+        if (allowed <= 0) {
+            statusMessageElement.textContent = t('maxImagesFree');
+            return;
+        }
+        newFiles = Array.from(newFiles).slice(0, allowed);
+    }
     const compressed = [];
     for (const f of Array.from(newFiles)) {
         try {
@@ -995,6 +1012,11 @@ purchaseBtn.addEventListener('click', () => {
     purchaseBox.style.top = (rect.bottom + window.scrollY) + 'px';
     purchaseBox.classList.toggle('visible');
 });
+licenseBtn.addEventListener('click', () => {
+    const rect = licenseBtn.getBoundingClientRect();
+    licenseBox.style.top = (rect.bottom + window.scrollY) + 'px';
+    licenseBox.classList.toggle('visible');
+});
 if (closeBanner) {
     closeBanner.addEventListener('click', () => {
         bannerBox.style.display = 'none';
@@ -1010,6 +1032,7 @@ langSelect.addEventListener('change', async () => {
     await loadTranslations(currentLang);
     applyTranslations();
     renderPaymentBox(currentSettings);
+    renderLicenseBox();
     saveSettings({ language: currentLang });
 });
 
@@ -1105,6 +1128,17 @@ function renderPaymentBox(cfg) {
     purchaseBox.innerHTML = html;
 }
 
+function renderLicenseBox() {
+    const html = `
+    <h3>${t('licenseOptions')}</h3>
+    <ul>
+        <li><strong>${t('freeEdition')}</strong> - ${t('freeFeatures')}</li>
+        <li><strong>${t('proEdition')}</strong> - ${t('proFeatures')}</li>
+        <li><strong>${t('fullEdition')}</strong> - ${t('fullFeatures')}</li>
+    </ul>`;
+    licenseBox.innerHTML = html;
+}
+
 function renderLogin(cfg) {
     if (!cfg || !cfg.google_client_id) {
         loginArea.style.display = 'block';
@@ -1170,6 +1204,7 @@ loadSettings().then(async (cfg) => {
     await loadTranslations(currentLang);
     applyTranslations();
     renderPaymentBox(cfg);
+    renderLicenseBox();
     renderLogin(cfg);
     licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
     applyProStatus();

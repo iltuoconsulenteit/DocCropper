@@ -61,5 +61,14 @@
   "stopApp": "Ferma DocCropper",
   "updateMain": "Aggiorna da main",
   "updateBranch": "Aggiorna da branch",
-  "quit": "Esci"
+  "quit": "Esci",
+  "licenses": "Licenze",
+  "licenseOptions": "Opzioni di licenza",
+  "freeEdition": "Edizione Free",
+  "proEdition": "Edizione Pro",
+  "fullEdition": "Edizione Full",
+  "freeFeatures": "Watermark, massimo 5 immagini, niente accesso LAN",
+  "proFeatures": "Nessun watermark, immagini illimitate, niente accesso LAN",
+  "fullFeatures": "Tutte le funzionalità con accesso LAN",
+  "maxImagesFree": "La versione free permette solo 5 immagini"
 }

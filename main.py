@@ -76,6 +76,7 @@ DEFAULT_SETTINGS = {
     "bank_info": "",
     "google_client_id": "",
     "license_check": False,
+    "license_level": "free",
     "brand_html": "",
     "client_logo": "",
     "sponsor_logo": "",
@@ -127,6 +128,7 @@ def load_settings():
         env_name = os.getenv("DOCROPPER_LICENSE_NAME")
         google_id = os.getenv("DOCROPPER_GOOGLE_CLIENT_ID")
         env_check = os.getenv("LICENSE_CHECK")
+        env_level = os.getenv("DOCROPPER_LICENSE_LEVEL")
         if env_key:
             merged["license_key"] = env_key
         if env_name:
@@ -135,6 +137,8 @@ def load_settings():
             merged["google_client_id"] = google_id
         if env_check is not None:
             merged["license_check"] = env_check.lower() == "true"
+        if env_level:
+            merged["license_level"] = env_level.lower()
         return merged
     except Exception:
         return DEFAULT_SETTINGS.copy()
@@ -645,8 +649,11 @@ if __name__ == "__main__":
 
     settings = load_settings()
     port = args.port if args.port is not None else int(settings.get("port", 8765))
+    host = args.host
+    if settings.get("license_level", "free").lower() != "full":
+        host = "127.0.0.1"
 
-    config = uvicorn.Config(app, host=args.host, port=port)
+    config = uvicorn.Config(app, host=host, port=port)
     server = uvicorn.Server(config)
     app.state.server = server
     with open(PID_FILE, "w") as fh:

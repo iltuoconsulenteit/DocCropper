@@ -142,21 +142,20 @@ only used to identify users and is not tied to licensing.
 
 ---
 
-## 🔓 Licensing and PRO Features
+## 🔓 Licensing
 
-DocCropper is released under the [MIT](LICENSE.txt) license. Without a license key, the app runs in **DEMO mode** (every PDF page shows DocCropper and IlTuoConsulenteIT logos).
-See [Terms of Use](TERMS_OF_USE.md) for conditions.
+DocCropper ships with three editions. A new **Licenses** button in the header opens a panel explaining these options.
 
-**PRO Features:**
-- Removal of watermark
-- Network folder support (in development)
-- Authenticated LAN access
-- Share images directly via WhatsApp or Email
+- **Free** – Watermark applied, up to five images per project, LAN access disabled
+- **Pro** – No watermark and unlimited images, but still restricted to local access
+- **Full** – Unlocks LAN access so DocCropper can run on an office server
 
-To activate:
-- Use a valid license key in `settings.json` or `.env`
-- Developer keys unlock full functionality for testing
-- Set `LICENSE_CHECK=true` to enforce server validation of the key. When `LICENSE_CHECK=false` (default) all features are enabled without contacting the license server.
+DocCropper itself is released under the [MIT](LICENSE.txt) license. See [Terms of Use](TERMS_OF_USE.md) for additional conditions.
+
+To activate Pro or Full editions:
+- Provide a valid license key in `settings.json` or `.env`
+- Developer keys unlock all features for testing
+- Set `LICENSE_CHECK=true` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
 
 For inquiries: **doccropper@iltuoconsulenteit.it**
 

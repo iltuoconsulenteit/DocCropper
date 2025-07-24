@@ -19,5 +19,6 @@
   "sponsor_scale": 100,
   "sponsor_bottom": 80,
   "license_check": false,
+  "license_level": "free",
   "banner_images": ["DocCropper_slogan_{{lang}}.png"]
 }
