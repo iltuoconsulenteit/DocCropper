@@ -247,6 +247,15 @@ button:hover {
     margin-top: 5px;
 }
 
+#signatureExtra {
+    margin-top: 5px;
+}
+#signatureExtra select,
+#signatureExtra input[type="range"] {
+    margin-left: 4px;
+    margin-right: 4px;
+}
+
 #signatureHint {
     font-size: 0.9em;
     text-align: center;

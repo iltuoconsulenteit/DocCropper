@@ -13,7 +13,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🖼️ Interactive cropping and preview
 - 🎚️ Adjust brightness and contrast with live preview
 - 📄 Create PDFs ready for download or sharing
-- 🔏 Optional digital signature on exported PDFs with draggable positioning
+- 🔏 Optional digital signature on exported PDFs. Drag and add multiple stamps per page before export
 - 📤 Share PDFs via WhatsApp or Email, with prompts for contact details (Pro)
 - 🖼️ Closable banner can rotate multiple promotional images
 - 📝 Extract text via OCR (future Pro feature)
@@ -181,7 +181,8 @@ For inquiries: **doccropper@iltuoconsulenteit.it**
 DocCropper can apply a personal signature in two ways:
 
 1. **Image Stamp** – Upload a signature image during PDF export. White backgrounds are automatically removed.
-   Drag the previewed signature to the desired spot on the page before exporting.
+   Drag the previewed signature on a page canvas, adjust its scale, and press **Add** to place it.
+   You may add multiple signatures to any page before exporting the final PDF.
 2. **Remote Digital Signing** – Set `DOCROPPER_REMOTE_SIGN_CMD` to an external signing command (e.g. an Aruba Sign script). When enabled via the checkbox, the generated PDF is passed to this command for signing.
 
 Alternatively, you may set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` to automatically apply a local PKCS#12 certificate.

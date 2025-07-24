@@ -430,8 +430,7 @@ async def create_pdf(
     scale_mode: str = Body("fit"),
     scale_percent: int = Body(100),
     signature_image: str | None = Body(None),
-    signature_x: float = Body(0.85),
-    signature_y: float = Body(0.85),
+    signatures: list[dict] = Body(default_factory=list),
     remote_sign: bool = Body(False)
 ):
     try:
@@ -535,13 +534,6 @@ async def create_pdf(
             except Exception:
                 footer_logo = None
 
-        sig_stamp = None
-        if sig_img:
-            try:
-                ratio = (page_h // 10) / sig_img.height
-                sig_stamp = sig_img.resize((int(sig_img.width * ratio), int(sig_img.height * ratio)), Image.LANCZOS)
-            except Exception:
-                logger.exception("Signature resize failed")
 
         pages = []
         TARGET_DPI = 300
@@ -605,19 +597,28 @@ async def create_pdf(
                     ty = fy + (fl.height - th) // 2
                     draw.text((tx, ty), text, fill="black", font=font)
                     page.paste(fl, (fx, fy), fl)
-            if sig_stamp:
+            if sig_img and signatures:
                 footer_h = fl.height if (not licensed and fl) else 0
-                sx = int(signature_x * page_w) - sig_stamp.width // 2
-                sy = int(signature_y * page_h) - sig_stamp.height // 2 - footer_h
-                if sx < margin:
-                    sx = margin
-                if sy < margin:
-                    sy = margin
-                if sx + sig_stamp.width > page_w - margin:
-                    sx = page_w - margin - sig_stamp.width
-                if sy + sig_stamp.height > page_h - margin - footer_h:
-                    sy = page_h - margin - footer_h - sig_stamp.height
-                page.paste(sig_stamp, (sx, sy), sig_stamp)
+                base_ratio = (page_h // 10) / sig_img.height
+                for sig in [s for s in signatures if s.get('page') == page_index]:
+                    try:
+                        scale = float(sig.get('scale', 1.0))
+                    except Exception:
+                        scale = 1.0
+                    w = int(sig_img.width * base_ratio * scale)
+                    h = int(sig_img.height * base_ratio * scale)
+                    stamp = sig_img.resize((w, h), Image.LANCZOS)
+                    sx = int(float(sig.get('x', 0.5)) * page_w) - w // 2
+                    sy = int(float(sig.get('y', 0.5)) * page_h) - h // 2 - footer_h
+                    if sx < margin:
+                        sx = margin
+                    if sy < margin:
+                        sy = margin
+                    if sx + w > page_w - margin:
+                        sx = page_w - margin - w
+                    if sy + h > page_h - margin - footer_h:
+                        sy = page_h - margin - footer_h - h
+                    page.paste(stamp, (sx, sy), stamp)
             pages.append(page)
 
         pdf_bytes_io = io.BytesIO()

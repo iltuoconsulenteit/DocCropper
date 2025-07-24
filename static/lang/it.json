@@ -78,5 +78,8 @@
   "maxImagesFree": "La versione free permette solo 5 immagini",
   "signatureFile": "Immagine firma:",
   "useRemoteSign": "Usa firma digitale remota",
+  "selectPage": "Pagina:",
+  "sigScale": "Scala:",
+  "addSignature": "Aggiungi",
   "dragSignature": "Trascina la firma per posizionarla"
 }
