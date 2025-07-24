@@ -241,6 +241,18 @@ button:hover {
     display: none;
 }
 
+#signaturePreview {
+    border: 1px dashed #666;
+    max-width: 100%;
+    margin-top: 5px;
+}
+
+#signatureHint {
+    font-size: 0.9em;
+    text-align: center;
+    margin-top: 4px;
+}
+
 #scalePercent {
     width: 60px;
     margin-left: 5px;

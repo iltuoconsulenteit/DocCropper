@@ -83,6 +83,7 @@ DEFAULT_SETTINGS = {
     "sponsor_scale": 100,
     "sponsor_bottom": 80,
     "banner_images": ["DocCropper_slogan_{{lang}}.png"],
+    "developer_watermark": False,
 }
 
 def verify_license_server(key: str) -> bool:
@@ -129,6 +130,7 @@ def load_settings():
         google_id = os.getenv("DOCROPPER_GOOGLE_CLIENT_ID")
         env_check = os.getenv("LICENSE_CHECK")
         env_level = os.getenv("DOCROPPER_LICENSE_LEVEL")
+        dev_wm_env = os.getenv("DOCROPPER_DEV_WATERMARK")
         if env_key:
             merged["license_key"] = env_key
         if env_name:
@@ -139,6 +141,8 @@ def load_settings():
             merged["license_check"] = env_check.lower() == "true"
         if env_level:
             merged["license_level"] = env_level.lower()
+        if dev_wm_env is not None:
+            merged["developer_watermark"] = dev_wm_env.lower() == "true"
 
         dev_env = DEV_LICENSE_KEY_UPPER
         if dev_env and merged.get("license_key", "").strip().upper() == dev_env:
@@ -426,21 +430,26 @@ async def create_pdf(
     scale_mode: str = Body("fit"),
     scale_percent: int = Body(100),
     signature_image: str | None = Body(None),
+    signature_x: float = Body(0.85),
+    signature_y: float = Body(0.85),
     remote_sign: bool = Body(False)
 ):
     try:
         settings = load_settings()
         key = settings.get("license_key", "").strip().upper()
         license_check = settings.get("license_check", False)
-        if not license_check:
-            licensed = True
-        else:
+        dev_env = DEV_LICENSE_KEY_UPPER
+        dev_key_valid = dev_env and key == dev_env
+        if license_check:
             licensed = False
-            dev_env = DEV_LICENSE_KEY_UPPER
-            if dev_env and key == dev_env:
+            if dev_key_valid:
                 licensed = True
             elif key:
                 licensed = verify_license_server(key)
+        else:
+            licensed = True
+            if dev_key_valid and settings.get("developer_watermark", False):
+                licensed = False
         session_id = request.cookies.get("session_id")
         session_dir = get_session_dir(session_id)
         pil_images = []
@@ -598,8 +607,16 @@ async def create_pdf(
                     page.paste(fl, (fx, fy), fl)
             if sig_stamp:
                 footer_h = fl.height if (not licensed and fl) else 0
-                sx = page_w - sig_stamp.width - margin
-                sy = page_h - sig_stamp.height - margin - footer_h
+                sx = int(signature_x * page_w) - sig_stamp.width // 2
+                sy = int(signature_y * page_h) - sig_stamp.height // 2 - footer_h
+                if sx < margin:
+                    sx = margin
+                if sy < margin:
+                    sy = margin
+                if sx + sig_stamp.width > page_w - margin:
+                    sx = page_w - margin - sig_stamp.width
+                if sy + sig_stamp.height > page_h - margin - footer_h:
+                    sy = page_h - margin - footer_h - sig_stamp.height
                 page.paste(sig_stamp, (sx, sy), sig_stamp)
             pages.append(page)
 

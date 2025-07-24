@@ -77,5 +77,6 @@
   "fullFeatures": "All features with LAN access",
   "maxImagesFree": "Free edition allows only 5 images",
   "signatureFile": "Signature image:",
-  "useRemoteSign": "Use remote signing"
+  "useRemoteSign": "Use remote signing",
+  "dragSignature": "Drag the signature to position"
 }

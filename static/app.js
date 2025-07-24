@@ -58,7 +58,12 @@ const ocrOutput = document.getElementById('ocrOutput');
 const signatureControls = document.getElementById('signatureControls');
 const signatureUpload = document.getElementById('signatureUpload');
 const remoteSignCheckbox = document.getElementById('remoteSign');
+const signaturePreview = document.getElementById('signaturePreview');
+const signatureHint = document.getElementById('signatureHint');
 let signatureImageData = null;
+let signatureImg = null;
+let signaturePosition = { x: 0.85, y: 0.85 };
+let draggingSig = false;
 const OCR_ENABLED = false;
 let bannerImages = [];
 let bannerIndex = 0;
@@ -465,6 +470,8 @@ function deleteImage(index) {
         ocrOutput.style.display = 'none';
         layoutControls.style.display = 'none';
         signatureControls.style.display = 'none';
+        signaturePreview.style.display = 'none';
+        signatureHint.style.display = 'none';
     }
 }
 
@@ -920,6 +927,11 @@ submitBtn.addEventListener('click', () => {
                     if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                     layoutControls.style.display = 'block';
                     signatureControls.style.display = 'block';
+                    if (signatureImg) {
+                        signaturePreview.style.display = 'block';
+                        signatureHint.style.display = 'block';
+                        renderSignaturePreview();
+                    }
                     updateLayoutPreview();
                 }
             }
@@ -945,7 +957,7 @@ exportPdfBtn.addEventListener('click', () => {
     const scale_mode = scaleMode.value || 'fit';
     const scale_percent = parseInt(scalePercent.value || '100');
     const remote_sign = remoteSignCheckbox && remoteSignCheckbox.checked;
-    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, signature_image: signatureImageData, remote_sign };
+    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, signature_image: signatureImageData, signature_x: signaturePosition.x, signature_y: signaturePosition.y, remote_sign };
     fetch('/create-pdf/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1066,7 +1078,7 @@ cameraFileInput.addEventListener('change', (e) => {
 if (signatureUpload) {
     signatureUpload.addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0];
-        if (!file) { signatureImageData = null; return; }
+        if (!file) { signatureImageData = null; signatureImg = null; signaturePreview.style.display = 'none'; signatureHint.style.display = 'none'; return; }
         const reader = new FileReader();
         reader.onload = (ev) => {
             const img = new Image();
@@ -1084,11 +1096,30 @@ if (signatureUpload) {
                 }
                 ctx.putImageData(data, 0, 0);
                 signatureImageData = canvas.toDataURL('image/png');
+                signatureImg = new Image();
+                signatureImg.onload = renderSignaturePreview;
+                signatureImg.src = signatureImageData;
+                if (processedImages.length > 0) {
+                    signaturePreview.style.display = 'block';
+                    signatureHint.style.display = 'block';
+                    renderSignaturePreview();
+                }
             };
             img.src = ev.target.result;
         };
         reader.readAsDataURL(file);
     });
+}
+
+if (signaturePreview) {
+    signaturePreview.addEventListener('mousedown', (e) => {
+        draggingSig = true;
+        updateSigPosition(e);
+    });
+    signaturePreview.addEventListener('mousemove', (e) => {
+        if (draggingSig) updateSigPosition(e);
+    });
+    document.addEventListener('mouseup', () => { draggingSig = false; });
 }
 
 langSelect.addEventListener('change', async () => {
@@ -1136,6 +1167,34 @@ function updateImageFilters() {
     const b = brightnessRange.value;
     const c = contrastRange.value;
     imageElement.style.filter = `brightness(${b}%) contrast(${c}%)`;
+}
+
+function renderSignaturePreview() {
+    if (!signaturePreview || !signatureImg || processedImages.length === 0) return;
+    const ctx = signaturePreview.getContext('2d');
+    const baseImg = new Image();
+    baseImg.onload = () => {
+        const cw = signaturePreview.width;
+        const ch = signaturePreview.height;
+        ctx.clearRect(0, 0, cw, ch);
+        ctx.drawImage(baseImg, 0, 0, cw, ch);
+        const scale = (ch / 10) / signatureImg.height;
+        const w = signatureImg.width * scale;
+        const h = signatureImg.height * scale;
+        const x = signaturePosition.x * cw - w / 2;
+        const y = signaturePosition.y * ch - h / 2;
+        ctx.drawImage(signatureImg, x, y, w, h);
+    };
+    baseImg.src = processedImages[0];
+}
+
+function updateSigPosition(evt) {
+    const rect = signaturePreview.getBoundingClientRect();
+    const x = (evt.clientX - rect.left) / signaturePreview.width;
+    const y = (evt.clientY - rect.top) / signaturePreview.height;
+    signaturePosition.x = Math.max(0, Math.min(1, x));
+    signaturePosition.y = Math.max(0, Math.min(1, y));
+    renderSignaturePreview();
 }
 
 function applyProStatus() {

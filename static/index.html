@@ -120,6 +120,8 @@
         <label for="signatureUpload" data-i18n="signatureFile">Signature image:</label>
         <input type="file" id="signatureUpload" accept="image/*">
         <label><input type="checkbox" id="remoteSign"> <span data-i18n="useRemoteSign">Use remote signing</span></label>
+        <canvas id="signaturePreview" width="420" height="595" style="display:none;"></canvas>
+        <div id="signatureHint" data-i18n="dragSignature" style="display:none;"></div>
     </div>
 
     <h2 data-i18n="processedImages">Processed Images:</h2>

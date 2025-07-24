@@ -77,5 +77,6 @@
   "fullFeatures": "Tutte le funzionalità con accesso LAN",
   "maxImagesFree": "La versione free permette solo 5 immagini",
   "signatureFile": "Immagine firma:",
-  "useRemoteSign": "Usa firma digitale remota"
+  "useRemoteSign": "Usa firma digitale remota",
+  "dragSignature": "Trascina la firma per posizionarla"
 }

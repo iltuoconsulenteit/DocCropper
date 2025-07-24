@@ -13,7 +13,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🖼️ Interactive cropping and preview
 - 🎚️ Adjust brightness and contrast with live preview
 - 📄 Create PDFs ready for download or sharing
-- 🔏 Optional digital signature on exported PDFs
+- 🔏 Optional digital signature on exported PDFs with draggable positioning
 - 📤 Share PDFs via WhatsApp or Email, with prompts for contact details (Pro)
 - 🖼️ Closable banner can rotate multiple promotional images
 - 📝 Extract text via OCR (future Pro feature)
@@ -101,7 +101,9 @@ To quickly create an environment file for testing you can run one of the
 `scripts/setup_license` helpers. The script for your platform (`.bat`, `.sh` or
 `.command`) asks for your license key and name then writes `env/developer.env`
 with `DOCROPPER_LICENSE_KEY`, `DOCROPPER_LICENSE_NAME` and
-`DOCROPPER_DEV_LICENSE` so all features are unlocked.
+`DOCROPPER_DEV_LICENSE` so all features are unlocked. Set
+`DOCROPPER_DEV_WATERMARK=true` if you want to keep the watermark while
+testing with a developer key.
 If you see **Access denied** when running the script, launch it with administrator
 privileges ("Run as Administrator" on Windows). After writing the
 `env/developer.env` file, restart DocCropper so the new license is applied.
@@ -179,6 +181,7 @@ For inquiries: **doccropper@iltuoconsulenteit.it**
 DocCropper can apply a personal signature in two ways:
 
 1. **Image Stamp** – Upload a signature image during PDF export. White backgrounds are automatically removed.
+   Drag the previewed signature to the desired spot on the page before exporting.
 2. **Remote Digital Signing** – Set `DOCROPPER_REMOTE_SIGN_CMD` to an external signing command (e.g. an Aruba Sign script). When enabled via the checkbox, the generated PDF is passed to this command for signing.
 
 Alternatively, you may set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` to automatically apply a local PKCS#12 certificate.
