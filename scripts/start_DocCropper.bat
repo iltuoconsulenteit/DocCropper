@@ -52,7 +52,7 @@ python main.py --stop >> "!LOG_FILE!" 2>&1
 
 :: Launch application
 echo [INFO] Avvio DocCropper sulla porta %PORT% >> "!LOG_FILE!"
-start /b python main.py --port %PORT% >> "!LOG_FILE!" 2>&1
+start "" /b python main.py --port %PORT% >> "!LOG_FILE!" 2>&1
 
 if errorlevel 1 (
     echo ❌ ERRORE: esecuzione fallita! Vedi log: %LOG_FILE%

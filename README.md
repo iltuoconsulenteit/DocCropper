@@ -102,6 +102,9 @@ To quickly create an environment file for testing you can run one of the
 `.command`) asks for your license key and name then writes `env/developer.env`
 with `DOCROPPER_LICENSE_KEY`, `DOCROPPER_LICENSE_NAME` and
 `DOCROPPER_DEV_LICENSE` so all features are unlocked.
+If you see **Access denied** when running the script, launch it with administrator
+privileges ("Run as Administrator" on Windows). After writing the
+`env/developer.env` file, restart DocCropper so the new license is applied.
 
 ---
 
