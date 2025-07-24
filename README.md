@@ -92,6 +92,7 @@ pip install -r requirements.txt
 - Ask for an optional license key
 - Write a log file named `install.log` in the installation folder (falling back to `%TEMP%` on Windows or `/tmp` on Linux/macOS)
 - On Linux the installer now requests administrative privileges via `sudo` and installs under `/opt/DocCropper` by default. If the directory cannot be created, the script exits with a permissions error.
+- Matching `uninstall_DocCropper` scripts are provided to remove the application later.
 You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer branch or `DOCROPPER_BRANCH` to force a specific branch.
 
 You can pre-populate `settings.json` or override values using `.env` files in the `env/` folder.
@@ -112,6 +113,10 @@ privileges ("Run as Administrator" on Windows). After writing the
 Use the included start scripts from the `scripts/` directory. They handle virtualenv creation and dependency install. On Windows, `start_DocCropper.bat` writes details to `%TEMP%\DocCropper_start.log` so you can troubleshoot launch problems. The script stops any running instance first and pauses before closing so errors remain visible. DocCropper stores its PID file in the system temp folder so it can be managed without admin rights. By default the server listens on **port 8765** unless you override it in `settings.json` or with `--port`.
 
 To stop the server, run the matching stop script or send a POST to `/shutdown/`.
+
+### ❌ Uninstalling
+
+Run the appropriate `uninstall_DocCropper` script from the `install/` folder to completely remove DocCropper. The script stops any running instance and then deletes the installation directory. On Windows it will request administrator privileges if required.
 
 You may also launch `doccropper_tray.py` (or `.pyw`) to manage the server with a system tray icon.
 

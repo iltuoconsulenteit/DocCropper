@@ -65,6 +65,10 @@ INSTALL_SCRIPTS = {
     'Windows': 'install_DocCropper.bat',
     'Darwin': 'install_DocCropper.command',
 }.get(SYSTEM, 'install_DocCropper.sh')
+UNINSTALL_SCRIPTS = {
+    'Windows': 'uninstall_DocCropper.bat',
+    'Darwin': 'uninstall_DocCropper.command',
+}.get(SYSTEM, 'uninstall_DocCropper.sh')
 
 def is_developer():
     settings_file = BASE_DIR / 'settings.json'
@@ -115,6 +119,9 @@ def update_branch():
     branch = env.get('DOCROPPER_BRANCH', 'main')
     env['BRANCH'] = branch
     run_script(INSTALL_SCRIPTS, env)
+
+def uninstall_app():
+    run_script(UNINSTALL_SCRIPTS)
 
 def open_browser():
     port = get_port()
@@ -198,7 +205,8 @@ def main():
         MenuItem(tr('openApp'), lambda icon, item: open_browser()),
         MenuItem(tr('startApp'), lambda icon, item: [start_app(), update(True)]),
         MenuItem(tr('stopApp'), lambda icon, item: [stop_app(), update(False)]),
-        MenuItem(tr('updateMain'), lambda icon, item: update_main())
+        MenuItem(tr('updateMain'), lambda icon, item: update_main()),
+        MenuItem(tr('uninstallApp'), lambda icon, item: uninstall_app())
     ]
     if developer:
         menu_items.append(MenuItem(tr('updateBranch'), lambda icon, item: update_branch()))
