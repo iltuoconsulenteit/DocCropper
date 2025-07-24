@@ -370,6 +370,11 @@ button:hover {
     margin: 5px;
 }
 
+.iconBtn {
+    font-size: 1.5em;
+    padding: 6px 10px;
+}
+
 @media (max-width: 600px) {
     #pageHeader {
         flex-direction: column;

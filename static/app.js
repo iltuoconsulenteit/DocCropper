@@ -17,7 +17,8 @@ const submitBtn = document.getElementById('submitBtn');
 const exportPdfBtn = document.getElementById('exportPdfBtn');
 const exportOptions = document.getElementById('exportOptions');
 const downloadPdfBtn = document.getElementById('downloadPdfBtn');
-const sharePdfBtn = document.getElementById('sharePdfBtn');
+const waShareBtn = document.getElementById('waShareBtn');
+const emailShareBtn = document.getElementById('emailShareBtn');
 const layoutControls = document.getElementById('layoutControls');
 const layoutSelect = document.getElementById('layoutSelect');
 const orientationSelect = document.getElementById('orientationSelect');
@@ -314,6 +315,12 @@ function applyTranslations() {
             el.textContent = translations[k];
         }
     });
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const k = el.getAttribute('data-i18n-title');
+        if (translations[k]) {
+            el.title = translations[k];
+        }
+    });
     // also update dynamic option labels
     orientationSelect.querySelectorAll('option').forEach(opt => {
         const k = opt.getAttribute('data-i18n');
@@ -478,13 +485,24 @@ function editImage(index) {
 }
 
 
-async function sharePdf() {
+async function shareWhatsApp() {
     if (!currentPdfBlob) return;
     const url = URL.createObjectURL(currentPdfBlob);
-    const wa = `https://wa.me/?text=${encodeURIComponent(url)}`;
-    const email = `https://mail.google.com/mail/?view=cm&fs=1&su=DocCropper&body=${encodeURIComponent(url)}`;
+    let phone = prompt(translations['enterPhone'] || 'Enter phone number (optional)');
+    phone = phone ? phone.replace(/[^0-9]/g, '') : '';
+    const wa = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(url)}` : `https://wa.me/?text=${encodeURIComponent(url)}`;
     window.open(wa, '_blank');
-    window.open(email, '_blank');
+}
+
+async function shareEmail() {
+    if (!currentPdfBlob) return;
+    const url = URL.createObjectURL(currentPdfBlob);
+    let email = prompt(translations['enterEmail'] || 'Enter email address (optional)');
+    email = email ? encodeURIComponent(email) : '';
+    const subject = encodeURIComponent('DocCropper PDF');
+    const body = encodeURIComponent(url);
+    const mailto = `mailto:${email}?subject=${subject}&body=${body}`;
+    window.open(mailto, '_blank');
 }
 
 function addThumbnail(src, index) {
@@ -1027,9 +1045,16 @@ if (downloadPdfBtn) {
     });
 }
 
-if (sharePdfBtn) {
-    sharePdfBtn.addEventListener('click', async () => {
-        await sharePdf();
+if (waShareBtn) {
+    waShareBtn.addEventListener('click', async () => {
+        await shareWhatsApp();
+        exportOptions.style.display = 'none';
+    });
+}
+
+if (emailShareBtn) {
+    emailShareBtn.addEventListener('click', async () => {
+        await shareEmail();
         exportOptions.style.display = 'none';
     });
 }

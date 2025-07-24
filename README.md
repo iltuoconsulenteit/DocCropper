@@ -12,9 +12,9 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🔄 Automatic or manual perspective correction
 - 🖼️ Interactive cropping and preview
 - 🎚️ Adjust brightness and contrast with live preview
-- 📄 One-click PDF export
+- 📄 Create PDFs ready for download or sharing
 - 🔏 Optional digital signature on exported PDFs
-- 📤 Share exported PDFs via WhatsApp or Email web links (Pro)
+- 📤 Share PDFs via WhatsApp or Email, with prompts for contact details (Pro)
 - 🖼️ Closable banner can rotate multiple promotional images
 - 📝 Extract text via OCR (future Pro feature)
 - 🗂️ Persistent user settings

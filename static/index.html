@@ -79,10 +79,11 @@
     </div>
 
     <button id="submitBtn" data-i18n="processImage">Process Image</button>
-    <button id="exportPdfBtn" style="display:none;" data-i18n="exportPdf">Export PDF</button>
+    <button id="exportPdfBtn" style="display:none;" data-i18n="exportPdf">Create PDF</button>
     <div id="exportOptions" style="display:none;">
-        <button id="downloadPdfBtn" data-i18n="downloadPdf">Download PDF</button>
-        <button id="sharePdfBtn" data-i18n="sharePdf">Share PDF</button>
+        <button id="downloadPdfBtn" class="iconBtn" data-i18n-title="downloadPdf" title="PDF">📥</button>
+        <button id="waShareBtn" class="iconBtn" data-i18n-title="shareWhatsapp" title="WhatsApp">🟢</button>
+        <button id="emailShareBtn" class="iconBtn" data-i18n-title="shareEmail" title="Email">✉️</button>
     </div>
     <button id="ocrBtn" style="display:none;" data-i18n="extractText">Extract Text</button>
     <textarea id="ocrOutput" readonly style="display:none;width:100%;height:150px;"></textarea>
