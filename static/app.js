@@ -538,20 +538,39 @@ function editImage(index) {
 
 async function shareWhatsApp() {
     if (!currentPdfBlob) return;
-    const url = URL.createObjectURL(currentPdfBlob);
+    const file = new File([currentPdfBlob], 'DocCropper.pdf', { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+            await navigator.share({ files: [file], title: 'DocCropper PDF' });
+            return;
+        } catch (e) {
+            console.error('Web Share failed', e);
+        }
+    }
     let phone = prompt(translations['enterPhone'] || 'Enter phone number (optional)');
     phone = phone ? phone.replace(/[^0-9]/g, '') : '';
-    const wa = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(url)}` : `https://wa.me/?text=${encodeURIComponent(url)}`;
-    window.open(wa, '_blank');
+    const encoded = encodeURIComponent(translations['shareText'] || 'See attached document.');
+    const url = phone ?
+        `https://web.whatsapp.com/send?phone=${phone}&text=${encoded}` :
+        `https://web.whatsapp.com/send?text=${encoded}`;
+    window.open(url, '_blank');
 }
 
 async function shareEmail() {
     if (!currentPdfBlob) return;
-    const url = URL.createObjectURL(currentPdfBlob);
+    const file = new File([currentPdfBlob], 'DocCropper.pdf', { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+            await navigator.share({ files: [file], title: 'DocCropper PDF' });
+            return;
+        } catch (e) {
+            console.error('Web Share failed', e);
+        }
+    }
     let email = prompt(translations['enterEmail'] || 'Enter email address (optional)');
     email = email ? encodeURIComponent(email) : '';
     const subject = encodeURIComponent('DocCropper PDF');
-    const body = encodeURIComponent(url);
+    const body = encodeURIComponent(translations['shareText'] || 'See attached document.');
     const mailto = `mailto:${email}?subject=${subject}&body=${body}`;
     window.open(mailto, '_blank');
 }
