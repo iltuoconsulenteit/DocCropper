@@ -15,6 +15,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 📄 Create PDFs ready for download or sharing
 - 🔏 Optional digital signature on exported PDFs. Drag and add multiple stamps per page before export
 - 📤 Share PDFs via WhatsApp or Email, with prompts for contact details (Pro)
+- 🗂️ Drag thumbnails to reorder images before exporting (Pro)
 - 🖼️ Closable banner can rotate multiple promotional images
 - 📝 Extract text via OCR (future Pro feature)
 - 🗂️ Persistent user settings

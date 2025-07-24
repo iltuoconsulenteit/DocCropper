@@ -82,5 +82,6 @@
   "selectPage": "Page:",
   "sigScale": "Scale:",
   "addSignature": "Add",
-  "dragSignature": "Drag the signature to position"
+  "dragSignature": "Drag the signature to position",
+  "reorderHint": "Drag images to reorder before export"
 }

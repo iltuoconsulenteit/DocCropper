@@ -82,5 +82,6 @@
   "selectPage": "Pagina:",
   "sigScale": "Scala:",
   "addSignature": "Aggiungi",
-  "dragSignature": "Trascina la firma per posizionarla"
+  "dragSignature": "Trascina la firma per posizionarla",
+  "reorderHint": "Trascina le immagini per riordinarle prima dell'esportazione"
 }

@@ -28,6 +28,7 @@ const scalePercent = document.getElementById('scalePercent');
 const processedImageElement = document.getElementById('processedImage');
 const processedGallery = document.getElementById('processedGallery');
 const statusMessageElement = document.getElementById('statusMessage');
+const reorderHint = document.getElementById('reorderHint');
 const imageModal = document.getElementById('imageModal');
 const modalImage = document.getElementById('modalImage');
 const closeModal = document.getElementById('closeModal');
@@ -104,6 +105,7 @@ let editingIndex = null;
 let cameraStream = null;
 let cameraAvailable = false;
 let currentPdfBlob = null;
+let sortable = null;
 
 let translations = {};
 let currentLang = 'en';
@@ -497,6 +499,7 @@ function deleteImage(index) {
     processedImages.splice(index, 1);
     processedFiles.splice(index, 1);
     processedGallery.removeChild(processedGallery.children[index]);
+    refreshThumbnailIndexes();
     if (processedImages.length === 0) {
         exportPdfBtn.style.display = 'none';
         ocrBtn.style.display = 'none';
@@ -548,6 +551,7 @@ async function shareEmail() {
 function addThumbnail(src, index) {
     const container = document.createElement('div');
     container.className = 'thumbContainer';
+    container.dataset.index = index;
 
     const imgEl = document.createElement('img');
     imgEl.src = src;
@@ -594,6 +598,25 @@ function addThumbnail(src, index) {
 
     container.appendChild(btns);
     processedGallery.appendChild(container);
+}
+
+function refreshThumbnailIndexes() {
+    Array.from(processedGallery.children).forEach((c, i) => {
+        c.dataset.index = i;
+    });
+}
+
+function updateProcessedArrays() {
+    const newImages = [];
+    const newFiles = [];
+    Array.from(processedGallery.children).forEach(c => {
+        const idx = parseInt(c.dataset.index);
+        newImages.push(processedImages[idx]);
+        newFiles.push(processedFiles[idx]);
+    });
+    processedImages = newImages;
+    processedFiles = newFiles;
+    refreshThumbnailIndexes();
 }
 
 closeModal.addEventListener('click', () => {
@@ -1286,10 +1309,16 @@ function applyProStatus() {
         exportPdfBtn.classList.remove('pro-disabled');
         imageUploadElement.multiple = true;
         document.querySelectorAll('.shareBtn').forEach(btn => btn.style.display = 'none');
+        if (sortable) { sortable.destroy(); sortable = null; }
+        if (reorderHint) reorderHint.style.display = 'none';
     } else {
         exportPdfBtn.classList.remove('pro-disabled');
         imageUploadElement.multiple = true;
         document.querySelectorAll('.shareBtn').forEach(btn => btn.style.display = 'inline-block');
+        if (!sortable && typeof Sortable !== 'undefined') {
+            sortable = Sortable.create(processedGallery, { animation: 150, onEnd: updateProcessedArrays });
+        }
+        if (reorderHint) reorderHint.style.display = 'block';
     }
 }
 

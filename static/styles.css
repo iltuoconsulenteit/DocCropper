@@ -202,6 +202,12 @@ button:hover {
     font-weight: bold;
 }
 
+#reorderHint {
+    font-size: 0.9em;
+    margin-bottom: 5px;
+    color: #555;
+}
+
 #processedImage {
     margin-top:10px;
     border: 1px solid #ddd;
