@@ -580,6 +580,7 @@ async def create_pdf(
         for i in range(0, len(pil_images), layout):
             page_index = i // layout
             page = Image.new("RGB", (page_w, page_h), "white")
+            placements: list[tuple[int, int, int, int]] = []
             for j, img in enumerate(pil_images[i:i+layout]):
                 col = j % cols
                 row = j // cols
@@ -605,6 +606,7 @@ async def create_pdf(
                 offset_x = col * cell_w + margin + (inner_w - new_w) // 2
                 offset_y = row * cell_h + margin + (inner_h - new_h) // 2
                 page.paste(temp, (offset_x, offset_y))
+                placements.append((offset_x, offset_y, new_w, new_h))
             if not licensed:
                 target_h = page_h // 35
                 hl = fl = None
@@ -637,9 +639,10 @@ async def create_pdf(
                     ty = fy + (fl.height - th) // 2
                     draw.text((tx, ty), text, fill="black", font=font)
                     page.paste(fl, (fx, fy), fl)
-            if sig_img and signatures:
+            if sig_img and signatures and placements:
                 footer_h = fl.height if (not licensed and fl) else 0
-                base_ratio = (page_h // 10) / sig_img.height
+                img_off_x, img_off_y, img_w, img_h = placements[0]
+                base_ratio = (img_h // 10) / sig_img.height
                 for sig in [s for s in signatures if s.get('page') == page_index]:
                     try:
                         scale = float(sig.get('scale', 1.0))
@@ -648,8 +651,8 @@ async def create_pdf(
                     w = int(sig_img.width * base_ratio * scale)
                     h = int(sig_img.height * base_ratio * scale)
                     stamp = sig_img.resize((w, h), Image.LANCZOS)
-                    sx = int(float(sig.get('x', 0.5)) * page_w) - w // 2
-                    sy = int(float(sig.get('y', 0.5)) * page_h) - h // 2 - footer_h
+                    sx = int(img_off_x + float(sig.get('x', 0.5)) * img_w - w / 2)
+                    sy = int(img_off_y + float(sig.get('y', 0.5)) * img_h - h / 2)
                     if sx < margin:
                         sx = margin
                     if sy < margin:
