@@ -64,6 +64,8 @@ h1, h2 {
 #helpBtn {
     margin: 5px;
     order: 102; /* below banner */
+    flex-basis: 100%;
+    margin-top: 10px;
 }
 
 #pageFooter {
@@ -308,7 +310,7 @@ button:hover {
 
 #instructionsBox {
     position: fixed;
-    top: 150px;
+    top: 0;
     right: 0;
     width: 250px;
     background: #fff;

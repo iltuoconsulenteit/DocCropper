@@ -948,6 +948,8 @@ if (OCR_ENABLED) {
 inputMode.addEventListener('change', updateInputMode);
 captureBtn.addEventListener('click', capturePhoto);
 helpBtn.addEventListener('click', () => {
+    const rect = helpBtn.getBoundingClientRect();
+    instructionsBox.style.top = (rect.bottom + window.scrollY) + 'px';
     instructionsBox.classList.toggle('visible');
 });
 if (closeBanner) {
