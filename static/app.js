@@ -30,12 +30,13 @@ const closeModal = document.getElementById('closeModal');
 const langSelect = document.getElementById('langSelect');
 const layoutPreview = document.getElementById('layoutPreview');
 const licenseInfo = document.getElementById('licenseInfo');
-const paymentBox = document.getElementById('paymentBox');
+const purchaseBox = document.getElementById('purchaseBox');
 const loginArea = document.getElementById('loginArea');
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
 const instructionsBox = document.getElementById('instructionsBox');
 const helpBtn = document.getElementById('helpBtn');
+const purchaseBtn = document.getElementById('purchaseBtn');
 const bannerBox = document.getElementById('bannerBox');
 const closeBanner = document.getElementById('closeBanner');
 const sloganImg = document.getElementById('sloganImg');
@@ -952,6 +953,11 @@ helpBtn.addEventListener('click', () => {
     instructionsBox.style.top = (rect.bottom + window.scrollY) + 'px';
     instructionsBox.classList.toggle('visible');
 });
+purchaseBtn.addEventListener('click', () => {
+    const rect = purchaseBtn.getBoundingClientRect();
+    purchaseBox.style.top = (rect.bottom + window.scrollY) + 'px';
+    purchaseBox.classList.toggle('visible');
+});
 if (closeBanner) {
     closeBanner.addEventListener('click', () => {
         bannerBox.style.display = 'none';
@@ -1025,16 +1031,16 @@ function applyProStatus() {
 
 function renderPaymentBox(cfg) {
     if (!cfg || !cfg.payment_mode) {
-        paymentBox.style.display = 'none';
+        purchaseBox.style.display = 'none';
         return;
     }
     const mode = cfg.payment_mode.toLowerCase();
     if (mode === 'none') {
-        paymentBox.style.display = 'none';
+        purchaseBox.style.display = 'none';
         return;
     }
-    paymentBox.style.display = 'block';
-    let html = `<h3>${t('support')}</h3><ul>`;
+    purchaseBox.style.display = 'block';
+    let html = `<h3>${t('purchaseInfo')}</h3><ul>`;
     let hasItem = false;
     if (mode === 'donation') {
         if (cfg.paypal_link) {
@@ -1059,7 +1065,7 @@ function renderPaymentBox(cfg) {
         html += `<li>${t('noPaymentInfo')}</li>`;
     }
     html += '</ul>';
-    paymentBox.innerHTML = html;
+    purchaseBox.innerHTML = html;
 }
 
 function renderLogin(cfg) {

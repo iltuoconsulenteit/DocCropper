@@ -70,6 +70,11 @@ h1, h2 {
     margin-top: 10px;
     margin-left: auto; /* keep button on right side */
 }
+#purchaseBtn {
+    margin: 5px;
+    order: 103;
+    align-self: center;
+}
 
 #pageFooter {
     display: flex;
@@ -82,6 +87,12 @@ h1, h2 {
     color: #555;
     font-size: 0.9em;
     padding: 10px 5px;
+}
+
+#footerBrand {
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
 #versionBox {
@@ -287,21 +298,32 @@ button:hover {
     pointer-events: none;
 }
 
-#paymentBox {
-    border: 1px solid #888;
-    padding: 10px;
-    margin: 20px auto;
-    max-width: 400px;
+#purchaseBox {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 250px;
     background: #fff;
-    text-align: center;
+    border: 1px solid #888;
+    padding: 8px;
+    z-index: 1000;
+    font-size: 0.9em;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    pointer-events: none;
 }
 
-#paymentBox ul {
+#purchaseBox.visible {
+    transform: translateX(0);
+    pointer-events: auto;
+}
+
+#purchaseBox ul {
     list-style: none;
     padding: 0;
 }
 
-#paymentBox li {
+#purchaseBox li {
     margin: 5px 0;
 }
 
