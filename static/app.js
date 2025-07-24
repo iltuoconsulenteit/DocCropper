@@ -477,43 +477,14 @@ function editImage(index) {
     statusMessageElement.textContent = 'Edit image and press Process Image to save.';
 }
 
-async function shareImage(index) {
-    if (!isLicensed) return;
-    const dataUrl = processedImages[index];
-    if (!dataUrl) return;
-    const res = await fetch(dataUrl);
-    const blob = await res.blob();
-    const file = new File([blob], `doccropper_${index + 1}.png`, {type: blob.type});
-    if (navigator.share && navigator.canShare && navigator.canShare({files: [file]})) {
-        try {
-            await navigator.share({files: [file], title: 'DocCropper'});
-        } catch (e) {
-            console.warn('Share cancelled', e);
-        }
-    } else {
-        const wa = `https://wa.me/?text=${encodeURIComponent('DocCropper image:\n')}`;
-        const email = `mailto:?subject=DocCropper&body=`;
-        window.open(wa, '_blank');
-        window.open(email, '_blank');
-    }
-}
 
 async function sharePdf() {
     if (!currentPdfBlob) return;
-    const file = new File([currentPdfBlob], 'DocCropper.pdf', {type: 'application/pdf'});
-    if (navigator.share && navigator.canShare && navigator.canShare({files: [file]})) {
-        try {
-            await navigator.share({files: [file], title: 'DocCropper'});
-        } catch (e) {
-            console.warn('Share cancelled', e);
-        }
-    } else {
-        const url = URL.createObjectURL(currentPdfBlob);
-        const wa = `https://wa.me/?text=${encodeURIComponent('DocCropper PDF:\n' + url)}`;
-        const email = `mailto:?subject=DocCropper&body=${encodeURIComponent(url)}`;
-        window.open(wa, '_blank');
-        window.open(email, '_blank');
-    }
+    const url = URL.createObjectURL(currentPdfBlob);
+    const wa = `https://wa.me/?text=${encodeURIComponent(url)}`;
+    const email = `https://mail.google.com/mail/?view=cm&fs=1&su=DocCropper&body=${encodeURIComponent(url)}`;
+    window.open(wa, '_blank');
+    window.open(email, '_blank');
 }
 
 function addThumbnail(src, index) {
@@ -561,21 +532,7 @@ function addThumbnail(src, index) {
     });
     btns.appendChild(delBtn);
 
-    const shareBtn = document.createElement('button');
-    shareBtn.dataset.key = 'share';
-    shareBtn.className = 'shareBtn';
-    shareBtn.textContent = t('share');
-    shareBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const idx = Array.from(processedGallery.children).indexOf(container);
-        shareImage(idx);
-    });
-    if (isLicensed) {
-        btns.appendChild(shareBtn);
-    } else {
-        shareBtn.style.display = 'none';
-        btns.appendChild(shareBtn);
-    }
+    /* Share button removed per feedback */
 
     container.appendChild(btns);
     processedGallery.appendChild(container);
