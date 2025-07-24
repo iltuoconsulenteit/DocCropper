@@ -39,6 +39,8 @@ const helpBtn = document.getElementById('helpBtn');
 const bannerBox = document.getElementById('bannerBox');
 const closeBanner = document.getElementById('closeBanner');
 const sloganImg = document.getElementById('sloganImg');
+const wikiFrame = document.getElementById('wikiFrame');
+const openWikiLink = document.getElementById('openWikiLink');
 const clientLogo = document.getElementById('clientLogo');
 const sponsorLogo = document.getElementById('sponsorLogo');
 const adjustControls = document.getElementById('adjustControls');
@@ -47,6 +49,9 @@ const contrastRange = document.getElementById('contrastRange');
 const ocrBtn = document.getElementById('ocrBtn');
 const ocrOutput = document.getElementById('ocrOutput');
 const OCR_ENABLED = false;
+let bannerImages = [];
+let bannerIndex = 0;
+let bannerTimer;
 if (!OCR_ENABLED) {
     if (ocrBtn) ocrBtn.style.display = 'none';
     if (ocrOutput) ocrOutput.style.display = 'none';
@@ -231,6 +236,13 @@ function applySettings(cfg) {
             sponsorLogo.style.display = 'none';
         }
     }
+    if (Array.isArray(cfg.banner_images)) {
+        bannerImages = cfg.banner_images;
+    } else {
+        bannerImages = ['DocCropper_slogan_{{lang}}.png'];
+    }
+    bannerIndex = 0;
+    startBannerRotation();
     if (sloganImg) {
         const scale = parseFloat(cfg.sponsor_scale || 100) / 100;
         sloganImg.style.maxHeight = (200 * scale) + 'px';
@@ -296,6 +308,32 @@ function applyTranslations() {
     }
     if (sloganImg) {
         sloganImg.src = `/static/logos/DocCropper_slogan_${currentLang}.png`;
+    }
+    updateWikiLinks();
+    startBannerRotation();
+}
+
+function updateWikiLinks() {
+    const url = `/wiki/${currentLang}/index.html`;
+    if (wikiFrame) wikiFrame.src = url;
+    if (openWikiLink) openWikiLink.href = url;
+}
+
+function updateBannerImage() {
+    if (!sloganImg || bannerImages.length === 0) return;
+    let img = bannerImages[bannerIndex % bannerImages.length];
+    img = img.replace('{{lang}}', currentLang);
+    sloganImg.src = `/static/logos/${img}`;
+}
+
+function startBannerRotation() {
+    updateBannerImage();
+    if (bannerTimer) clearInterval(bannerTimer);
+    if (bannerImages.length > 1) {
+        bannerTimer = setInterval(() => {
+            bannerIndex = (bannerIndex + 1) % bannerImages.length;
+            updateBannerImage();
+        }, 5000);
     }
 }
 

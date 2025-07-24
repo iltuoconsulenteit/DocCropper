@@ -78,6 +78,7 @@ DEFAULT_SETTINGS = {
     "sponsor_logo": "",
     "sponsor_scale": 100,
     "sponsor_bottom": 80,
+    "banner_images": ["DocCropper_slogan_{{lang}}.png"],
 }
 
 def get_session_dir(session_id: str) -> str:

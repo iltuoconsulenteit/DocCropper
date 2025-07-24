@@ -14,6 +14,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🎚️ Adjust brightness and contrast with live preview
 - 📄 One-click PDF export
 - 🔏 Optional digital signature on exported PDFs
+- 🖼️ Closable banner can rotate multiple promotional images
 - 📤 Share processed images via WhatsApp or Email (Pro)
 - 📝 Extract text via OCR (future Pro feature)
 - 🗂️ Persistent user settings
@@ -123,9 +124,10 @@ without it.
 ### Built-in Wiki
 
 An offline copy of the documentation is included under the `/wiki` path. The
-web interface displays this wiki in a sidebar on the right. You can also open it
-in a new tab at [http://localhost:8765/wiki/](http://localhost:8765/wiki/) or
-view the online version on GitHub.
+web interface displays this wiki in a sidebar on the right beneath the Help
+button. A language-specific page is loaded based on your selection. You can
+also open it in a new tab at `http://localhost:8765/wiki/&lt;lang&gt;/` or view
+the online version on GitHub.
 
 ### Google Sign-In
 

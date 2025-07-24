@@ -52,7 +52,7 @@ h1, h2 {
     gap: 10px;
     margin-top: 10px;
     margin-left: auto; /* keep to the right of header */
-    order: 100; /* appear after help button */
+    order: 101; /* after banner */
 }
 
 #brandArea img {
@@ -63,7 +63,7 @@ h1, h2 {
 }
 #helpBtn {
     margin: 5px;
-    order: 99; /* appear before brandArea */
+    order: 102; /* below banner */
 }
 
 #pageFooter {
@@ -308,7 +308,7 @@ button:hover {
 
 #instructionsBox {
     position: fixed;
-    top: 80px;
+    top: 150px;
     right: 0;
     width: 250px;
     background: #fff;
@@ -358,7 +358,7 @@ button:hover {
     border: 1px solid #888;
     padding: 4px;
     margin-top: 5px;
-    order: 101; /* after help button */
+    order: 100; /* before help button */
 }
 
 #bannerBox img {
