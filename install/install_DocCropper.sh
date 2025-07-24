@@ -1,6 +1,17 @@
 #!/bin/bash
 set -e
 
+# Require root on Linux
+if [ "$EUID" -ne 0 ]; then
+  if command -v sudo >/dev/null 2>&1; then
+    echo "⚠️  This installer needs administrative privileges. Re-running with sudo..."
+    exec sudo "$0" "$@"
+  else
+    echo "❌ Please run this installer as root." >&2
+    exit 1
+  fi
+fi
+
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"
 if [ -z "$DOCROPPER_DEV_BRANCH" ]; then
@@ -9,7 +20,7 @@ else
   DEV_BRANCH="$DOCROPPER_DEV_BRANCH"
 fi
 
-DEFAULT_DIR="$HOME/DocCropper"
+DEFAULT_DIR="/opt/DocCropper"
 read -r -p "Installation directory [$DEFAULT_DIR]: " TARGET_DIR
 TARGET_DIR=${TARGET_DIR:-$DEFAULT_DIR}
 mkdir -p "$TARGET_DIR" 2>/dev/null || { echo "Cannot create $TARGET_DIR. Use a writable path or run with sudo." >&2; exit 1; }
