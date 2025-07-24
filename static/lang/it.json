@@ -59,6 +59,7 @@
   "modeUpload": "Carica file",
   "modeCamera": "Fotocamera",
   "capturePhoto": "Acquisisci",
+  "cameraSelectLabel": "Fotocamera:",
   "noImage": "Aggiungi prima un'immagine",
   "openApp": "Apri DocCropper",
   "startApp": "Avvia DocCropper",

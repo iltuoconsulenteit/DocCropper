@@ -53,6 +53,8 @@
             <input type="file" id="imageUpload" accept="image/*" multiple>
         </div>
         <div id="cameraControls" style="display:none;">
+            <label for="cameraSelect" data-i18n="cameraSelectLabel">Camera:</label>
+            <select id="cameraSelect"></select>
             <video id="cameraPreview" autoplay playsinline></video>
             <button id="captureBtn" data-i18n="capturePhoto">Capture</button>
             <input type="file" id="cameraFileInput" accept="image/*" capture="environment" multiple style="display:none;">

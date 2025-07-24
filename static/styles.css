@@ -458,6 +458,10 @@ button:hover {
     margin-top: 10px;
 }
 
+#cameraControls select {
+    margin-top: 5px;
+}
+
 #bannerBox {
     display: flex;
     justify-content: center;

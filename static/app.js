@@ -82,6 +82,7 @@ const inputMode = document.getElementById('inputMode');
 const fileInputArea = document.getElementById('fileInputArea');
 const cameraControls = document.getElementById('cameraControls');
 const cameraPreview = document.getElementById('cameraPreview');
+const cameraSelect = document.getElementById('cameraSelect');
 const captureBtn = document.getElementById('captureBtn');
 const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 const cameraFileInput = document.getElementById('cameraFileInput');
@@ -108,6 +109,26 @@ let translations = {};
 let currentLang = 'en';
 let currentSettings = {};
 
+async function enumerateCameras() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        return;
+    }
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cams = devices.filter(d => d.kind === 'videoinput');
+        cameraSelect.innerHTML = '';
+        cams.forEach((c, idx) => {
+            const opt = document.createElement('option');
+            opt.value = c.deviceId;
+            opt.textContent = c.label || `${t('modeCamera')} ${idx + 1}`;
+            cameraSelect.appendChild(opt);
+        });
+        cameraSelect.style.display = cams.length > 1 ? 'block' : 'none';
+    } catch (err) {
+        console.warn('Failed to enumerate cameras', err);
+    }
+}
+
 function setupDeviceMode() {
     if (isMobile) {
         inputMode.style.display = 'inline-block';
@@ -117,7 +138,8 @@ function setupDeviceMode() {
             opt.textContent = t('modeCamera');
             inputMode.appendChild(opt);
         }
-        inputMode.value = 'camera';
+        inputMode.value = 'upload';
+        enumerateCameras();
     } else {
         inputMode.style.display = 'none';
         inputMode.value = 'upload';
@@ -130,6 +152,7 @@ function updateInputMode() {
     fileInputArea.style.display = mode === 'upload' ? 'block' : 'none';
     cameraControls.style.display = mode === 'camera' ? 'block' : 'none';
     if (mode === 'camera') {
+        enumerateCameras();
         startCamera();
     } else {
         stopCamera();
@@ -138,11 +161,15 @@ function updateInputMode() {
 
 
 function startCamera() {
-    if (cameraStream || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         cameraAvailable = false;
         return;
     }
-    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+    if (cameraStream) {
+        stopCamera();
+    }
+    const constraints = { video: { deviceId: cameraSelect.value ? { exact: cameraSelect.value } : undefined } };
+    navigator.mediaDevices.getUserMedia(constraints).then(stream => {
         cameraStream = stream;
         cameraAvailable = true;
         cameraPreview.srcObject = stream;
@@ -1030,6 +1057,11 @@ if (OCR_ENABLED) {
 
 inputMode.addEventListener('change', updateInputMode);
 captureBtn.addEventListener('click', capturePhoto);
+cameraSelect.addEventListener('change', () => {
+    if (inputMode.value === 'camera') {
+        startCamera();
+    }
+});
 helpBtn.addEventListener('click', () => {
     const rect = helpBtn.getBoundingClientRect();
     instructionsBox.style.top = (rect.bottom + window.scrollY) + 'px';
