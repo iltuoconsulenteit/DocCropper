@@ -64,6 +64,8 @@ const cameraPreview = document.getElementById('cameraPreview');
 const captureBtn = document.getElementById('captureBtn');
 const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 const cameraFileInput = document.getElementById('cameraFileInput');
+const CAPTURE_MAX_DIM = 1600;
+const CAPTURE_QUALITY = 0.8;
 
 let isLicensed = false;
 let licenseName = '';
@@ -143,25 +145,51 @@ function capturePhoto() {
         return;
     }
     const video = cameraPreview;
+    let w = video.videoWidth;
+    let h = video.videoHeight;
+    const scale = Math.min(1, CAPTURE_MAX_DIM / Math.max(w, h));
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
-    const dataUrl = canvas.toDataURL('image/png');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', CAPTURE_QUALITY);
     files.push(dataURItoBlob(dataUrl));
     currentFileIndex = files.length - 1;
     setupImage(dataUrl);
 }
 
 function dataURItoBlob(dataURI) {
-    const byteString = atob(dataURI.split(',')[1]);
+    const parts = dataURI.split(',');
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+    const byteString = atob(parts[1]);
     const ab = new ArrayBuffer(byteString.length);
     const ia = new Uint8Array(ab);
     for (let i = 0; i < byteString.length; i++) {
         ia[i] = byteString.charCodeAt(i);
     }
-    return new Blob([ab], { type: 'image/png' });
+    return new Blob([ab], { type: mime });
+}
+
+function compressImageFile(file) {
+    return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+            let w = img.width;
+            let h = img.height;
+            const scale = Math.min(1, CAPTURE_MAX_DIM / Math.max(w, h));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(w * scale);
+            canvas.height = Math.round(h * scale);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(blob => {
+                resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+            }, 'image/jpeg', CAPTURE_QUALITY);
+        };
+        img.src = URL.createObjectURL(file);
+    });
 }
 
 async function loadSettings() {
@@ -712,10 +740,19 @@ function setupImage(imageUrl) {
 }
 
 
-function addFiles(newFiles) {
+async function addFiles(newFiles) {
+    const compressed = [];
+    for (const f of Array.from(newFiles)) {
+        try {
+            compressed.push(await compressImageFile(f));
+        } catch (e) {
+            console.warn('Compress failed', e);
+            compressed.push(f);
+        }
+    }
     if (files.length === 0 && processedImages.length === 0) {
         // first batch of files
-        files = Array.from(newFiles);
+        files = compressed;
         currentFileIndex = 0;
         processedImages = [];
         processedFiles = [];
@@ -733,7 +770,7 @@ function addFiles(newFiles) {
     } else {
         // add new files to existing queue
         const startProcessing = currentFileIndex >= files.length;
-        files = files.concat(Array.from(newFiles));
+        files = files.concat(compressed);
         if (startProcessing && newFiles.length > 0) {
             const reader = new FileReader();
             reader.onload = (e) => {
