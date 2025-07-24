@@ -62,17 +62,16 @@ h1, h2 {
 #loginArea button {
     margin-left: 5px;
 }
-#helpBtn {
-    margin: 5px;
-    order: 102; /* below banner */
-    flex-basis: auto;
+#actionButtons {
+    display: flex;
+    gap: 5px;
+    order: 102;
+    margin-left: auto;
     align-self: center;
-    margin-left: auto; /* keep button on right side */
 }
-#purchaseBtn {
+#actionButtons button {
+    flex: 1 0 auto;
     margin: 5px;
-    order: 103;
-    align-self: center;
 }
 
 #pageFooter {
@@ -333,6 +332,19 @@ button:hover {
 @media (max-width: 600px) {
     #pageHeader {
         flex-direction: column;
+    }
+    #actionButtons {
+        justify-content: center;
+        margin-left: 0;
+        width: 100%;
+    }
+    #footerBrand {
+        flex-direction: column;
+    }
+    #versionBox {
+        margin-left: 0;
+        width: 100%;
+        text-align: center;
     }
 }
 

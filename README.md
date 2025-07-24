@@ -41,6 +41,8 @@ The frontend allows the user to:
 - A small margin is applied around each image so nothing touches the page edges
 - Change the interface language (Italian translation included)
 - The layout is responsive so DocCropper works well on smartphones and tablets
+- Mobile view keeps the Help and Purchase buttons on one line and centers the
+  footer branding
 
 JavaScript logic is contained in `static/app.js`.
 
