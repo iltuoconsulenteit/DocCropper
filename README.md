@@ -11,6 +11,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - ✅ Multi-image upload and batch processing
 - 🔄 Automatic or manual perspective correction
 - 🖼️ Interactive cropping and preview
+- 🖱️ Double click or tap to auto-detect page edges
 - 🎚️ Adjust brightness and contrast with live preview
 - 📄 Create PDFs ready for download or sharing
 - 🔏 Optional digital signature on exported PDFs. Drag and add multiple stamps per page before export
@@ -33,6 +34,7 @@ The frontend allows the user to:
 - Upload images with the file picker. On mobile devices the file picker is shown by default but you can switch to the camera mode and choose which camera to use. Desktop users may also drag and drop files
 - Add more images later without losing previously processed ones
 - Manually adjust the four corners of each image
+- Double click/tap an image to auto-detect its edges
 - Submit data (image, coordinates, size) to the backend
 - Export all processed images to PDF
 - Choose how many processed images appear on each PDF page

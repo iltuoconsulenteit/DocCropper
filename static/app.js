@@ -51,6 +51,7 @@ const wikiFrame = document.getElementById('wikiFrame');
 const openWikiLink = document.getElementById('openWikiLink');
 const clientLogo = document.getElementById('clientLogo');
 const sponsorLogo = document.getElementById('sponsorLogo');
+const autoDetectHint = document.getElementById('autoDetectHint');
 const adjustControls = document.getElementById('adjustControls');
 const brightnessRange = document.getElementById('brightnessRange');
 const contrastRange = document.getElementById('contrastRange');
@@ -106,6 +107,7 @@ let cameraStream = null;
 let cameraAvailable = false;
 let currentPdfBlob = null;
 let sortable = null;
+let currentFile = null;
 
 let translations = {};
 let currentLang = 'en';
@@ -205,8 +207,10 @@ function capturePhoto() {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL('image/jpeg', CAPTURE_QUALITY);
-    files.push(dataURItoBlob(dataUrl));
+    const blob = dataURItoBlob(dataUrl);
+    files.push(blob);
     currentFileIndex = files.length - 1;
+    currentFile = blob;
     setupImage(dataUrl);
 }
 
@@ -398,6 +402,9 @@ function applyTranslations() {
     if (sloganImg) {
         sloganImg.src = `/static/logos/DocCropper_slogan_${currentLang}.png`;
     }
+    if (autoDetectHint) {
+        autoDetectHint.textContent = translations['autoHint'] || 'Double click to auto-detect';
+    }
     updateWikiLinks();
     startBannerRotation();
 }
@@ -514,6 +521,7 @@ function deleteImage(index) {
 function editImage(index) {
     editingIndex = index;
     const file = processedFiles[index];
+    currentFile = file;
     const reader = new FileReader();
     reader.onload = (e) => {
         setupImage(e.target.result);
@@ -719,10 +727,25 @@ function initializeDraggablePoints(imgDisplayWidth, imgDisplayHeight) {
     updatePolygonAndPoints();
 }
 
+function setDraggablePoints(displayPoints) {
+    ['p1','p2','p3','p4'].forEach((id, idx) => {
+        const el = draggableElements[id];
+        const x = displayPoints[idx * 2];
+        const y = displayPoints[idx * 2 + 1];
+        el.style.transform = 'translate(0px, 0px)';
+        el.setAttribute('data-x', '0');
+        el.setAttribute('data-y', '0');
+        el.style.left = `${x - el.offsetWidth / 2}px`;
+        el.style.top = `${y - el.offsetHeight / 2}px`;
+    });
+    updatePolygonAndPoints();
+}
+
 function setupImage(imageUrl) {
     imageElement.src = imageUrl;
     imageElement.style.display = 'block';
     wrapperElement.style.display = 'block';
+    if (autoDetectHint) autoDetectHint.style.display = 'block';
     processedImageElement.style.display = 'none';
     statusMessageElement.textContent = 'Loading image...';
 
@@ -734,6 +757,7 @@ function setupImage(imageUrl) {
             console.error("Image natural dimensions are zero. Image might be invalid or not loaded.");
             statusMessageElement.textContent = "Error: Image data is invalid or not fully loaded.";
             wrapperElement.style.display = 'none';
+            if (autoDetectHint) autoDetectHint.style.display = 'none';
             adjustControls.style.display = 'none';
             return;
         }
@@ -806,6 +830,7 @@ function setupImage(imageUrl) {
         console.error("Error loading image source.");
         statusMessageElement.textContent = "Error: Could not load the selected image file.";
         wrapperElement.style.display = 'none';
+        if (autoDetectHint) autoDetectHint.style.display = 'none';
         adjustControls.style.display = 'none';
     };
 }
@@ -841,6 +866,7 @@ async function addFiles(newFiles) {
         layoutControls.style.display = 'none';
         signatureControls.style.display = 'none';
         if (files.length > 0) {
+            currentFile = files[0];
             const reader = new FileReader();
             reader.onload = (e) => {
                 setupImage(e.target.result);
@@ -852,6 +878,7 @@ async function addFiles(newFiles) {
         const startProcessing = currentFileIndex >= files.length;
         files = files.concat(compressed);
         if (startProcessing && newFiles.length > 0) {
+            currentFile = files[currentFileIndex];
             const reader = new FileReader();
             reader.onload = (e) => {
                 setupImage(e.target.result);
@@ -957,6 +984,7 @@ submitBtn.addEventListener('click', () => {
                 editingIndex = null;
                 statusMessageElement.textContent = 'Image reprocessed.';
                 wrapperElement.style.display = 'none';
+                if (autoDetectHint) autoDetectHint.style.display = 'none';
                 adjustControls.style.display = 'none';
                 exportPdfBtn.style.display = 'inline-block';
                 if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
@@ -974,10 +1002,12 @@ submitBtn.addEventListener('click', () => {
                     reader.onload = (e) => {
                         setupImage(e.target.result);
                     };
-                    reader.readAsDataURL(files[currentFileIndex]);
+                    currentFile = files[currentFileIndex];
+                    reader.readAsDataURL(currentFile);
                 } else {
                     statusMessageElement.textContent = 'All images processed.';
                     wrapperElement.style.display = 'none';
+                    if (autoDetectHint) autoDetectHint.style.display = 'none';
                     adjustControls.style.display = 'none';
                     exportPdfBtn.style.display = 'inline-block';
                     if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
@@ -1084,6 +1114,16 @@ cameraSelect.addEventListener('change', () => {
     if (inputMode.value === 'camera') {
         startCamera();
     }
+});
+let lastTap = 0;
+imageElement.addEventListener('dblclick', autoDetectCorners);
+imageElement.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTap < 300) {
+        e.preventDefault();
+        autoDetectCorners();
+    }
+    lastTap = now;
 });
 helpBtn.addEventListener('click', () => {
     const rect = helpBtn.getBoundingClientRect();
@@ -1289,6 +1329,28 @@ function updateSigPosition(evt) {
     signaturePosition.x = Math.max(0, Math.min(1, x));
     signaturePosition.y = Math.max(0, Math.min(1, y));
     renderSignaturePreview();
+}
+
+function autoDetectCorners() {
+    if (!currentFile) return;
+    statusMessageElement.textContent = translations['detectingEdges'] || 'Detecting edges...';
+    const formData = new FormData();
+    formData.append('image_file', currentFile);
+    fetch('/detect-corners/', { method: 'POST', body: formData })
+        .then(resp => resp.json())
+        .then(data => {
+            if (data.points && data.points.length === 8) {
+                const disp = data.points.map((v,i)=> v / (i%2===0 ? scaling_factor_w : scaling_factor_h));
+                setDraggablePoints(disp);
+                statusMessageElement.textContent = 'Image loaded. Adjust points.';
+            } else {
+                statusMessageElement.textContent = data.message || (translations['detectFail'] || 'Detection failed');
+            }
+        })
+        .catch(err => {
+            console.error('Detect error', err);
+            statusMessageElement.textContent = translations['detectFail'] || 'Detection failed';
+        });
 }
 
 function populateSignaturePages() {

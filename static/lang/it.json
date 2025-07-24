@@ -83,5 +83,8 @@
   "sigScale": "Scala:",
   "addSignature": "Aggiungi",
   "dragSignature": "Trascina la firma per posizionarla",
-  "reorderHint": "Trascina le immagini per riordinarle prima dell'esportazione"
+  "reorderHint": "Trascina le immagini per riordinarle prima dell'esportazione",
+  "autoHint": "Doppio clic o doppio tocco per rilevare i bordi",
+  "detectFail": "Impossibile individuare i bordi del documento",
+  "detectingEdges": "Rilevamento bordi..."
 }

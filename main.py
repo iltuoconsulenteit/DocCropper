@@ -115,6 +115,29 @@ def cleanup_old_sessions(max_age: int = 3600):
         except Exception:
             pass
 
+def order_points(pts: np.ndarray) -> np.ndarray:
+    rect = np.zeros((4, 2), dtype="float32")
+    s = pts.sum(axis=1)
+    rect[0] = pts[np.argmin(s)]
+    rect[2] = pts[np.argmax(s)]
+    diff = np.diff(pts, axis=1)
+    rect[1] = pts[np.argmin(diff)]
+    rect[3] = pts[np.argmax(diff)]
+    return rect
+
+def detect_document_corners(img: np.ndarray) -> np.ndarray | None:
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.GaussianBlur(gray, (5, 5), 0)
+    edged = cv2.Canny(gray, 50, 200)
+    cnts, _ = cv2.findContours(edged, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
+    for c in cnts:
+        peri = cv2.arcLength(c, True)
+        approx = cv2.approxPolyDP(c, 0.02 * peri, True)
+        if len(approx) == 4:
+            return order_points(approx.reshape(4, 2))
+    return None
+
 def load_settings():
     if not os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "w") as fh:
@@ -275,6 +298,23 @@ async def google_login(token: str = Body(...)):
     except Exception as e:
         logger.exception("Google token verification failed")
         return JSONResponse(status_code=400, content={"message": "Invalid token"})
+
+@app.post("/detect-corners/")
+async def detect_corners(image_file: UploadFile = File(...)):
+    try:
+        contents = await image_file.read()
+        nparr = np.frombuffer(contents, np.uint8)
+        img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img_cv is None:
+            return JSONResponse(status_code=400, content={"message": "Invalid image"})
+        corners = detect_document_corners(img_cv)
+        if corners is None:
+            return JSONResponse(status_code=400, content={"message": "Edges not found"})
+        pts = corners.reshape(8).tolist()
+        return {"points": pts}
+    except Exception:
+        logger.exception("Corner detection failed")
+        return JSONResponse(status_code=500, content={"message": "Detection error"})
 
 @app.post("/process-image/")
 async def process_image(

@@ -83,5 +83,8 @@
   "sigScale": "Scale:",
   "addSignature": "Add",
   "dragSignature": "Drag the signature to position",
-  "reorderHint": "Drag images to reorder before export"
+  "reorderHint": "Drag images to reorder before export",
+  "autoHint": "Double click or tap to auto-detect edges",
+  "detectFail": "Could not detect document edges",
+  "detectingEdges": "Detecting edges..."
 }
