@@ -1285,6 +1285,12 @@ if (addSignatureBtn) {
     addSignatureBtn.addEventListener('click', () => {
         const page = parseInt(signaturePage.value || '0');
         signatures.push({ page, x: signaturePosition.x, y: signaturePosition.y, scale: signatureScale });
+        // offset next signature preview so added stamps do not overlap by default
+        const OFFSET = 0.05;
+        signaturePosition.x += OFFSET;
+        if (signaturePosition.x > 0.95) signaturePosition.x = OFFSET;
+        signaturePosition.y += OFFSET;
+        if (signaturePosition.y > 0.95) signaturePosition.y = OFFSET;
         renderSignaturePreview();
     });
 }
