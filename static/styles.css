@@ -165,12 +165,10 @@ button:hover {
 #galleryWrapper {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-start;
     gap: 10px;
 }
 
 #processedGallery {
-    order: 1;
     flex-grow: 1;
     display: flex;
     flex-wrap: wrap;
@@ -178,24 +176,7 @@ button:hover {
 }
 
 #sloganImg {
-    order: 2;
-    align-self: flex-start;
-    margin-left: auto;
-    max-height: 200px;
-    max-width: 60%;
-}
-
-@media (max-width: 600px) {
-    #galleryWrapper {
-        flex-direction: column;
-    }
-    #sloganImg {
-        order: 0;
-        align-self: center;
-        margin-left: 0;
-        max-height: 140px;
-        max-width: 90%;
-    }
+    max-height: 150px;
 }
 
 #statusMessage {
@@ -366,4 +347,29 @@ button:hover {
 
 #cameraControls button {
     margin-top: 10px;
+}
+
+#bannerBox {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: #fff;
+    border: 1px solid #888;
+    padding: 4px;
+    z-index: 1100;
+}
+
+#bannerBox img {
+    display: block;
+    max-height: 150px;
+}
+
+#bannerBox .close {
+    position: absolute;
+    top: 0;
+    right: 2px;
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
 }

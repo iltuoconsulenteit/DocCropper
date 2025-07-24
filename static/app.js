@@ -36,6 +36,8 @@ const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
 const instructionsBox = document.getElementById('instructionsBox');
 const helpBtn = document.getElementById('helpBtn');
+const bannerBox = document.getElementById('bannerBox');
+const closeBanner = document.getElementById('closeBanner');
 const sloganImg = document.getElementById('sloganImg');
 const clientLogo = document.getElementById('clientLogo');
 const sponsorLogo = document.getElementById('sponsorLogo');
@@ -743,8 +745,8 @@ interact('.draggable').draggable({
 
 
 submitBtn.addEventListener('click', () => {
-    if (!imageUploadElement.files || imageUploadElement.files.length === 0) {
-        statusMessageElement.textContent = 'Please upload an image first.';
+    if (files.length === 0) {
+        statusMessageElement.textContent = t('noImage');
         return;
     }
     if (currentPointsOnDisplayedImage.length !== 8) {
@@ -910,6 +912,11 @@ captureBtn.addEventListener('click', capturePhoto);
 helpBtn.addEventListener('click', () => {
     instructionsBox.classList.toggle('visible');
 });
+if (closeBanner) {
+    closeBanner.addEventListener('click', () => {
+        bannerBox.style.display = 'none';
+    });
+}
 cameraFileInput.addEventListener('change', (e) => {
     if (!e.target.files || e.target.files.length === 0) return;
     addFiles(e.target.files);

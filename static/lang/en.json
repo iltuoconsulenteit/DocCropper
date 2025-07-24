@@ -53,6 +53,7 @@
   "modeUpload": "Upload File",
   "modeCamera": "Camera",
   "capturePhoto": "Capture",
+  "noImage": "Please add an image first",
   "openApp": "Open DocCropper",
   "startApp": "Start DocCropper",
   "stopApp": "Stop DocCropper",
