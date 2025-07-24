@@ -236,6 +236,11 @@ button:hover {
     margin-bottom: 10px;
 }
 
+#signatureControls {
+    margin-bottom: 10px;
+    display: none;
+}
+
 #scalePercent {
     width: 60px;
     margin-left: 5px;

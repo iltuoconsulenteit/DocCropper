@@ -416,7 +416,9 @@ async def create_pdf(
     orientation: str = Body("portrait"),
     arrangement: str = Body("auto"),
     scale_mode: str = Body("fit"),
-    scale_percent: int = Body(100)
+    scale_percent: int = Body(100),
+    signature_image: str | None = Body(None),
+    remote_sign: bool = Body(False)
 ):
     try:
         settings = load_settings()
@@ -439,6 +441,19 @@ async def create_pdf(
             img_bytes = base64.b64decode(img_b64)
             pil_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
             pil_images.append(pil_img)
+
+        sig_img = None
+        if signature_image:
+            try:
+                sig_b64 = signature_image.split(',', 1)[1] if signature_image.startswith('data:') else signature_image
+                sig_bytes = base64.b64decode(sig_b64)
+                sig_img = Image.open(io.BytesIO(sig_bytes)).convert('RGBA')
+                arr = np.array(sig_img)
+                white = (arr[:, :, :3] > 240).all(axis=2)
+                arr[white, 3] = 0
+                sig_img = Image.fromarray(arr)
+            except Exception:
+                logger.exception('Failed to decode signature image')
 
         if not pil_images:
             return JSONResponse(status_code=400, content={"message": "No images provided"})
@@ -502,6 +517,14 @@ async def create_pdf(
             except Exception:
                 footer_logo = None
 
+        sig_stamp = None
+        if sig_img:
+            try:
+                ratio = (page_h // 10) / sig_img.height
+                sig_stamp = sig_img.resize((int(sig_img.width * ratio), int(sig_img.height * ratio)), Image.LANCZOS)
+            except Exception:
+                logger.exception("Signature resize failed")
+
         pages = []
         TARGET_DPI = 300
         for i in range(0, len(pil_images), layout):
@@ -564,6 +587,11 @@ async def create_pdf(
                     ty = fy + (fl.height - th) // 2
                     draw.text((tx, ty), text, fill="black", font=font)
                     page.paste(fl, (fx, fy), fl)
+            if sig_stamp:
+                footer_h = fl.height if (not licensed and fl) else 0
+                sx = page_w - sig_stamp.width - margin
+                sy = page_h - sig_stamp.height - margin - footer_h
+                page.paste(sig_stamp, (sx, sy), sig_stamp)
             pages.append(page)
 
         pdf_bytes_io = io.BytesIO()
@@ -581,6 +609,25 @@ async def create_pdf(
                 pdf_bytes = signed_io.getvalue()
             except Exception:
                 logger.exception("PDF signing failed")
+
+        remote_cmd = os.environ.get("DOCROPPER_REMOTE_SIGN_CMD")
+        if remote_sign and remote_cmd:
+            try:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_in:
+                    tmp_in.write(pdf_bytes)
+                    in_path = tmp_in.name
+                out_path = in_path.replace(".pdf", "_signed.pdf")
+                subprocess.run([remote_cmd, in_path, out_path], check=True)
+                with open(out_path, "rb") as fh:
+                    pdf_bytes = fh.read()
+            except Exception:
+                logger.exception("Remote signing failed")
+            finally:
+                for p in (in_path, out_path):
+                    try:
+                        os.unlink(p)
+                    except Exception:
+                        pass
         pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
         # Do not delete the session immediately so the user can re-export if needed
         return JSONResponse(content={"pdf": "data:application/pdf;base64," + pdf_base64})

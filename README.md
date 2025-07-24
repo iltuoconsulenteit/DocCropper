@@ -161,7 +161,12 @@ For inquiries: **doccropper@iltuoconsulenteit.it**
 
 ### Optional PDF Signing
 
-Set `DOCROPPER_SIGN_CERT` to the path of a PKCS#12 certificate and `DOCROPPER_SIGN_PASSWORD` to sign exported PDFs. If no certificate is provided, PDFs are left unsigned.
+DocCropper can apply a personal signature in two ways:
+
+1. **Image Stamp** – Upload a signature image during PDF export. White backgrounds are automatically removed.
+2. **Remote Digital Signing** – Set `DOCROPPER_REMOTE_SIGN_CMD` to an external signing command (e.g. an Aruba Sign script). When enabled via the checkbox, the generated PDF is passed to this command for signing.
+
+Alternatively, you may set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` to automatically apply a local PKCS#12 certificate.
 
 ### Pro OCR (coming soon)
 

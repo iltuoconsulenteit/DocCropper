@@ -51,6 +51,10 @@ const brightnessRange = document.getElementById('brightnessRange');
 const contrastRange = document.getElementById('contrastRange');
 const ocrBtn = document.getElementById('ocrBtn');
 const ocrOutput = document.getElementById('ocrOutput');
+const signatureControls = document.getElementById('signatureControls');
+const signatureUpload = document.getElementById('signatureUpload');
+const remoteSignCheckbox = document.getElementById('remoteSign');
+let signatureImageData = null;
 const OCR_ENABLED = false;
 let bannerImages = [];
 let bannerIndex = 0;
@@ -453,6 +457,7 @@ function deleteImage(index) {
         ocrBtn.style.display = 'none';
         ocrOutput.style.display = 'none';
         layoutControls.style.display = 'none';
+        signatureControls.style.display = 'none';
     }
 }
 
@@ -468,6 +473,7 @@ function editImage(index) {
     ocrBtn.style.display = 'none';
     ocrOutput.style.display = 'none';
     layoutControls.style.display = 'none';
+    signatureControls.style.display = 'none';
     statusMessageElement.textContent = 'Edit image and press Process Image to save.';
 }
 
@@ -777,6 +783,7 @@ async function addFiles(newFiles) {
         processedGallery.innerHTML = '';
         exportPdfBtn.style.display = 'none';
         layoutControls.style.display = 'none';
+        signatureControls.style.display = 'none';
         if (files.length > 0) {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -898,6 +905,7 @@ submitBtn.addEventListener('click', () => {
                 exportPdfBtn.style.display = 'inline-block';
                 if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                 layoutControls.style.display = 'block';
+                signatureControls.style.display = 'block';
                 updateLayoutPreview();
             } else {
                 processedImages.push(data.processed_image);
@@ -918,6 +926,7 @@ submitBtn.addEventListener('click', () => {
                     exportPdfBtn.style.display = 'inline-block';
                     if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                     layoutControls.style.display = 'block';
+                    signatureControls.style.display = 'block';
                     updateLayoutPreview();
                 }
             }
@@ -942,7 +951,8 @@ exportPdfBtn.addEventListener('click', () => {
     const arrangement = arrangeSelect.value || 'auto';
     const scale_mode = scaleMode.value || 'fit';
     const scale_percent = parseInt(scalePercent.value || '100');
-    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent };
+    const remote_sign = remoteSignCheckbox && remoteSignCheckbox.checked;
+    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, signature_image: signatureImageData, remote_sign };
     fetch('/create-pdf/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1026,6 +1036,34 @@ cameraFileInput.addEventListener('change', (e) => {
     if (!e.target.files || e.target.files.length === 0) return;
     addFiles(e.target.files);
 });
+
+if (signatureUpload) {
+    signatureUpload.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) { signatureImageData = null; return; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                for (let i = 0; i < data.data.length; i += 4) {
+                    if (data.data[i] > 240 && data.data[i+1] > 240 && data.data[i+2] > 240) {
+                        data.data[i+3] = 0;
+                    }
+                }
+                ctx.putImageData(data, 0, 0);
+                signatureImageData = canvas.toDataURL('image/png');
+            };
+            img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
 
 langSelect.addEventListener('change', async () => {
     currentLang = langSelect.value;
