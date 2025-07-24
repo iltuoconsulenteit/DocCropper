@@ -43,7 +43,7 @@ if os.path.isdir(ENV_DIR):
 USERS_DIR = "users"
 
 # Developer license key for demonstration (case-insensitive)
-DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "ILTUOCONSULENTEIT-DEV")
+DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "")
 DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
 
 try:
@@ -139,6 +139,13 @@ def load_settings():
             merged["license_check"] = env_check.lower() == "true"
         if env_level:
             merged["license_level"] = env_level.lower()
+
+        dev_env = DEV_LICENSE_KEY_UPPER
+        if dev_env and merged.get("license_key", "").strip().upper() == dev_env:
+            merged["license_level"] = "full"
+            if not merged.get("license_name"):
+                merged["license_name"] = "Developer"
+
         return merged
     except Exception:
         return DEFAULT_SETTINGS.copy()
@@ -428,7 +435,8 @@ async def create_pdf(
             licensed = True
         else:
             licensed = False
-            if key == DEV_LICENSE_KEY_UPPER:
+            dev_env = DEV_LICENSE_KEY_UPPER
+            if dev_env and key == dev_env:
                 licensed = True
             elif key:
                 licensed = verify_license_server(key)
@@ -698,7 +706,10 @@ if __name__ == "__main__":
     port = args.port if args.port is not None else int(settings.get("port", 8765))
     host = args.host
     if settings.get("license_level", "free").lower() != "full":
-        host = "127.0.0.1"
+        dev_env = DEV_LICENSE_KEY_UPPER
+        key = settings.get("license_key", "").strip().upper()
+        if not (dev_env and key == dev_env):
+            host = "127.0.0.1"
 
     config = uvicorn.Config(app, host=host, port=port)
     server = uvicorn.Server(config)

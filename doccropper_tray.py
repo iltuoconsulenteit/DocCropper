@@ -72,8 +72,8 @@ def is_developer():
         with open(settings_file) as fh:
             data = json.load(fh)
         key = data.get('license_key', '').strip().upper()
-        dev = os.environ.get('DOCROPPER_DEV_LICENSE', 'ILTUOCONSULENTEIT-DEV').upper()
-        return key == dev
+        dev = os.environ.get('DOCROPPER_DEV_LICENSE', '').upper()
+        return bool(dev) and key == dev
     except Exception:
         return False
 

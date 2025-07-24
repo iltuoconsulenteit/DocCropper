@@ -76,8 +76,6 @@ const CAPTURE_QUALITY = 0.8;
 let isLicensed = false;
 let licenseName = '';
 let appVersion = '';
-const DEV_KEY = 'ILTUOCONSULENTEIT-DEV';
-const DEV_KEY_UPPER = DEV_KEY.toUpperCase();
 let userInfo = null;
 let currentLicenseLevel = 'free';
 const MAX_IMAGES_FREE = 5;
@@ -254,9 +252,7 @@ function applySettings(cfg) {
     if (cfg.license_key && cfg.license_key.trim()) {
         isLicensed = true;
     }
-    if ((cfg.license_key || '').toUpperCase() === DEV_KEY_UPPER) {
-        licenseName = 'Developer';
-    } else if (cfg.license_name) {
+    if (cfg.license_name) {
         licenseName = cfg.license_name;
     }
     if (brandBox) {

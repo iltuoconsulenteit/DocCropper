@@ -13,7 +13,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
-DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"
+DEV_KEY="${DOCROPPER_DEV_LICENSE:-}"
 if [ -z "$DOCROPPER_DEV_BRANCH" ]; then
   DEV_BRANCH="codex/remove-shortcut-installation-and-scanner-capture"
 else
@@ -118,7 +118,7 @@ fi
 
 if [ -n "$LIC_KEY" ]; then
   UPPER_KEY="$(echo "$LIC_KEY" | tr '[:lower:]' '[:upper:]')"
-  DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"
+  DEV_KEY="${DOCROPPER_DEV_LICENSE:-}"
   DEV_KEY_UPPER="$(echo "$DEV_KEY" | tr '[:lower:]' '[:upper:]')"
   if [ "$UPPER_KEY" = "VALID" ] || [ "$UPPER_KEY" = "$DEV_KEY_UPPER" ]; then
     read -r -p "👤 Licensed to: " LIC_NAME
