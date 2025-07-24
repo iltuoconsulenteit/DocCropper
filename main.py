@@ -18,6 +18,8 @@ from fastapi.staticfiles import StaticFiles
 import subprocess
 import tempfile
 from dotenv import load_dotenv
+import urllib.request
+import urllib.parse
 
 try:
     from pyhanko.sign import signers
@@ -73,6 +75,7 @@ DEFAULT_SETTINGS = {
     "stripe_link": "",
     "bank_info": "",
     "google_client_id": "",
+    "license_check": False,
     "brand_html": "",
     "client_logo": "",
     "sponsor_logo": "",
@@ -80,6 +83,16 @@ DEFAULT_SETTINGS = {
     "sponsor_bottom": 80,
     "banner_images": ["DocCropper_slogan_{{lang}}.png"],
 }
+
+def verify_license_server(key: str) -> bool:
+    url = os.getenv("LICENSE_SERVER", "https://license.doccropper.it/verify")
+    try:
+        with urllib.request.urlopen(f"{url}?key={urllib.parse.quote(key)}") as resp:
+            data = json.loads(resp.read().decode())
+            return bool(data.get("valid"))
+    except Exception:
+        logger.exception("License check failed")
+        return False
 
 def get_session_dir(session_id: str) -> str:
     if not session_id:
@@ -113,12 +126,15 @@ def load_settings():
         env_key = os.getenv("DOCROPPER_LICENSE_KEY")
         env_name = os.getenv("DOCROPPER_LICENSE_NAME")
         google_id = os.getenv("DOCROPPER_GOOGLE_CLIENT_ID")
+        env_check = os.getenv("LICENSE_CHECK")
         if env_key:
             merged["license_key"] = env_key
         if env_name:
             merged["license_name"] = env_name
         if google_id:
             merged["google_client_id"] = google_id
+        if env_check is not None:
+            merged["license_check"] = env_check.lower() == "true"
         return merged
     except Exception:
         return DEFAULT_SETTINGS.copy()
@@ -194,6 +210,9 @@ async def read_root(request: Request):
 @app.get("/settings/")
 async def get_settings():
     data = load_settings()
+    if not data.get("license_check") and not data.get("license_key"):
+        data["license_key"] = "FREE"
+        data["license_name"] = "Free Edition"
     data["version"] = VERSION
     return data
 
@@ -398,9 +417,15 @@ async def create_pdf(
     try:
         settings = load_settings()
         key = settings.get("license_key", "").strip().upper()
-        licensed = bool(key)
-        if key == DEV_LICENSE_KEY_UPPER:
+        license_check = settings.get("license_check", False)
+        if not license_check:
             licensed = True
+        else:
+            licensed = False
+            if key == DEV_LICENSE_KEY_UPPER:
+                licensed = True
+            elif key:
+                licensed = verify_license_server(key)
         session_id = request.cookies.get("session_id")
         session_dir = get_session_dir(session_id)
         pil_images = []

@@ -93,6 +93,7 @@ pip install -r requirements.txt
 You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer branch or `DOCROPPER_BRANCH` to force a specific branch.
 
 You can pre-populate `settings.json` or override values using `.env` files in the `env/` folder.
+The `.env` files may also define `LICENSE_CHECK=true` to enforce license validation via a remote server.
 
 ---
 
@@ -142,6 +143,7 @@ only used to identify users and is not tied to licensing.
 ## 🔓 Licensing and PRO Features
 
 DocCropper is released under the [MIT](LICENSE.txt) license. Without a license key, the app runs in **DEMO mode** (every PDF page shows DocCropper and IlTuoConsulenteIT logos).
+See [Terms of Use](TERMS_OF_USE.md) for conditions.
 
 **PRO Features:**
 - Removal of watermark
@@ -152,6 +154,7 @@ DocCropper is released under the [MIT](LICENSE.txt) license. Without a license k
 To activate:
 - Use a valid license key in `settings.json` or `.env`
 - Developer keys unlock full functionality for testing
+- Set `LICENSE_CHECK=true` to enforce server validation of the key. When `LICENSE_CHECK=false` (default) all features are enabled without contacting the license server.
 
 For inquiries: **doccropper@iltuoconsulenteit.it**
 
