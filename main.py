@@ -208,7 +208,8 @@ async def read_root(request: Request):
         session_id = uuid.uuid4().hex
     get_session_dir(session_id)
     try:
-        with open("static/index.html") as f:
+        index_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
+        with open(index_path, "r", encoding="utf-8") as f:
             content = f.read()
     except FileNotFoundError:
         logger.error("static/index.html not found")
