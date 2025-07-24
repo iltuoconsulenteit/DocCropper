@@ -38,6 +38,8 @@
   "loginDisabled": "Login not configured",
   "share": "Share",
   "shareWhatsApp": "Share via WhatsApp",
+  "downloadPdf": "Download PDF",
+  "sharePdf": "Share PDF",
   "purchase": "Purchase",
   "purchaseInfo": "Purchase / Subscription",
   "shareEmail": "Share via Email",

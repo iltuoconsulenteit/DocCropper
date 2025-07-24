@@ -15,6 +15,9 @@ const fogPathElement = document.getElementById('fogPath');
 const imageUploadElement = document.getElementById('imageUpload');
 const submitBtn = document.getElementById('submitBtn');
 const exportPdfBtn = document.getElementById('exportPdfBtn');
+const exportOptions = document.getElementById('exportOptions');
+const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+const sharePdfBtn = document.getElementById('sharePdfBtn');
 const layoutControls = document.getElementById('layoutControls');
 const layoutSelect = document.getElementById('layoutSelect');
 const orientationSelect = document.getElementById('orientationSelect');
@@ -87,6 +90,7 @@ let processedFiles = [];
 let editingIndex = null;
 let cameraStream = null;
 let cameraAvailable = false;
+let currentPdfBlob = null;
 
 let translations = {};
 let currentLang = 'en';
@@ -489,6 +493,24 @@ async function shareImage(index) {
     } else {
         const wa = `https://wa.me/?text=${encodeURIComponent('DocCropper image:\n')}`;
         const email = `mailto:?subject=DocCropper&body=`;
+        window.open(wa, '_blank');
+        window.open(email, '_blank');
+    }
+}
+
+async function sharePdf() {
+    if (!currentPdfBlob) return;
+    const file = new File([currentPdfBlob], 'DocCropper.pdf', {type: 'application/pdf'});
+    if (navigator.share && navigator.canShare && navigator.canShare({files: [file]})) {
+        try {
+            await navigator.share({files: [file], title: 'DocCropper'});
+        } catch (e) {
+            console.warn('Share cancelled', e);
+        }
+    } else {
+        const url = URL.createObjectURL(currentPdfBlob);
+        const wa = `https://wa.me/?text=${encodeURIComponent('DocCropper PDF:\n' + url)}`;
+        const email = `mailto:?subject=DocCropper&body=${encodeURIComponent(url)}`;
         window.open(wa, '_blank');
         window.open(email, '_blank');
     }
@@ -962,11 +984,16 @@ exportPdfBtn.addEventListener('click', () => {
     })
     .then(data => {
         if (data.pdf) {
-            const link = document.createElement('a');
-            link.href = data.pdf;
-            link.download = 'documents.pdf';
-            link.click();
-            statusMessageElement.textContent = 'PDF generated.';
+            const base64 = data.pdf.split(',')[1];
+            const byteChars = atob(base64);
+            const byteNumbers = new Array(byteChars.length);
+            for (let i = 0; i < byteChars.length; i++) {
+                byteNumbers[i] = byteChars.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            currentPdfBlob = new Blob([byteArray], {type: 'application/pdf'});
+            exportOptions.style.display = 'block';
+            statusMessageElement.textContent = 'PDF ready.';
         } else {
             statusMessageElement.textContent = data.message || 'Failed to create PDF.';
         }
@@ -1020,12 +1047,33 @@ purchaseBtn.addEventListener('click', () => {
 });
 licenseBtn.addEventListener('click', () => {
     const rect = licenseBtn.getBoundingClientRect();
+    licenseBox.style.display = 'block';
     licenseBox.style.top = (rect.bottom + window.scrollY) + 'px';
     licenseBox.classList.toggle('visible');
 });
 if (closeBanner) {
     closeBanner.addEventListener('click', () => {
         bannerBox.style.display = 'none';
+    });
+}
+
+if (downloadPdfBtn) {
+    downloadPdfBtn.addEventListener('click', () => {
+        if (!currentPdfBlob) return;
+        const url = URL.createObjectURL(currentPdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'documents.pdf';
+        link.click();
+        URL.revokeObjectURL(url);
+        exportOptions.style.display = 'none';
+    });
+}
+
+if (sharePdfBtn) {
+    sharePdfBtn.addEventListener('click', async () => {
+        await sharePdf();
+        exportOptions.style.display = 'none';
     });
 }
 cameraFileInput.addEventListener('change', (e) => {
@@ -1171,6 +1219,7 @@ function renderLicenseBox() {
         <li><strong>${t('fullEdition')}</strong> - ${t('fullFeatures')}</li>
     </ul>`;
     licenseBox.innerHTML = html;
+    licenseBox.style.display = 'block';
 }
 
 function renderLogin(cfg) {
