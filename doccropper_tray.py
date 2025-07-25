@@ -214,6 +214,9 @@ def main():
 
     icon = Icon('DocCropper', create_image(running), 'DocCropper', menu=Menu(*menu_items))
 
+    def setup(icon):
+        icon.visible = True
+
     def poll():
         while True:
             state = is_running()
@@ -224,7 +227,7 @@ def main():
     thread.start()
 
     try:
-        icon.run()
+        icon.run(setup=setup)
     except Exception as e:
         logging.exception("Tray icon error: %s", e)
         logging.info("Falling back to running without tray")
