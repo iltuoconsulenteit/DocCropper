@@ -10,3 +10,4 @@ pystray
 python-dotenv
 pyhanko
 pytesseract
+PyMuPDF

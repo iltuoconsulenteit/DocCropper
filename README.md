@@ -9,6 +9,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 ## ✨ Key Features
 
 - ✅ Multi-image upload and batch processing
+- 📥 Import PDF files and turn each page into an editable image
 - 🔄 Automatic or manual perspective correction
 - 🖼️ Interactive cropping and preview
 - 🖱️ Double click or tap to auto-detect page edges
@@ -31,7 +32,8 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 This project uses [Interact.JS](https://github.com/taye/interact.js) for managing draggable corner points.
 
 The frontend allows the user to:
-- Upload images with the file picker. On mobile devices the file picker is shown by default but you can switch to the camera mode and choose which camera to use. Desktop users may also drag and drop files
+ - Upload images with the file picker. On mobile devices the file picker is shown by default but you can switch to the camera mode and choose which camera to use. Desktop users may also drag and drop files
+ - Import PDF documents which are converted to images for editing
 - Add more images later without losing previously processed ones
 - Manually adjust the four corners of each image
 - Double click/tap an image to auto-detect its edges

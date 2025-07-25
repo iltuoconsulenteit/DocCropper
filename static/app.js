@@ -247,6 +247,24 @@ function compressImageFile(file) {
     });
 }
 
+async function convertPdfToImages(file) {
+    const form = new FormData();
+    form.append('pdf_file', file, file.name);
+    const resp = await fetch('/pdf-to-images/', { method: 'POST', body: form });
+    if (!resp.ok) {
+        throw new Error('PDF conversion failed');
+    }
+    const data = await resp.json();
+    const out = [];
+    if (Array.isArray(data.images)) {
+        data.images.forEach((dataUrl, idx) => {
+            const blob = dataURItoBlob(dataUrl);
+            out.push(new File([blob], `${file.name.replace(/\.pdf$/i,'')}_${idx+1}.png`, {type: 'image/png'}));
+        });
+    }
+    return out;
+}
+
 async function loadSettings() {
     const url = userInfo ? '/user-settings/' : '/settings/';
     try {
@@ -908,14 +926,42 @@ async function addFiles(newFiles) {
 
 }
 
-imageUploadElement.addEventListener('change', (event) => {
-    addFiles(event.target.files);
+imageUploadElement.addEventListener('change', async (event) => {
+    const list = Array.from(event.target.files);
+    const gathered = [];
+    for (const f of list) {
+        if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
+            try {
+                const imgs = await convertPdfToImages(f);
+                gathered.push(...imgs);
+            } catch (e) {
+                console.error('PDF conversion failed', e);
+            }
+        } else {
+            gathered.push(f);
+        }
+    }
+    if (gathered.length) addFiles(gathered);
 });
 
-function handleDrop(event) {
+async function handleDrop(event) {
     event.preventDefault();
     if (event.dataTransfer && event.dataTransfer.files) {
-        addFiles(event.dataTransfer.files);
+        const list = Array.from(event.dataTransfer.files);
+        const gathered = [];
+        for (const f of list) {
+            if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
+                try {
+                    const imgs = await convertPdfToImages(f);
+                    gathered.push(...imgs);
+                } catch (e) {
+                    console.error('PDF conversion failed', e);
+                }
+            } else {
+                gathered.push(f);
+            }
+        }
+        if (gathered.length) addFiles(gathered);
     }
 }
 

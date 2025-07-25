@@ -10,6 +10,7 @@ import uuid
 
 import cv2
 import numpy as np
+import fitz
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, Body, Request
 from PIL import Image, ImageDraw, ImageFont
@@ -458,6 +459,24 @@ async def process_image(
     except Exception as e:
         logger.exception("An error occurred during image processing.")
         return JSONResponse(status_code=500, content={"message": f"An internal error occurred: {str(e)}"})
+
+
+@app.post("/pdf-to-images/")
+async def pdf_to_images(pdf_file: UploadFile = File(...)):
+    """Convert PDF pages to base64 PNG images."""
+    try:
+        pdf_bytes = await pdf_file.read()
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        images_b64: list[str] = []
+        for page in doc:
+            pix = page.get_pixmap()
+            img_bytes = pix.tobytes("png")
+            b64 = base64.b64encode(img_bytes).decode("utf-8")
+            images_b64.append("data:image/png;base64," + b64)
+        return {"images": images_b64}
+    except Exception as e:
+        logger.exception("Failed to convert PDF")
+        return JSONResponse(status_code=500, content={"message": f"PDF conversion failed: {str(e)}"})
 
 
 @app.post("/create-pdf/")
