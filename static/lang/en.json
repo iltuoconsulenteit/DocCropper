@@ -78,6 +78,7 @@
   "proFeatures": "No watermark, unlimited images, no LAN access",
   "fullFeatures": "All features with LAN access",
   "maxImagesFree": "Free edition allows only 5 images",
+  "pdfImportPro": "PDF import requires the Pro edition",
   "signatureFile": "Signature image:",
   "useRemoteSign": "Use remote signing",
   "selectPage": "Page:",

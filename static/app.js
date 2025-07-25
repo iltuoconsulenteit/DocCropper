@@ -274,16 +274,12 @@ async function convertPdfToImages(file) {
 }
 
 async function importPdfPages(file) {
+    if (currentLicenseLevel === 'free') {
+        statusMessageElement.textContent = t('pdfImportPro');
+        return;
+    }
     const pages = await convertPdfToImages(file);
     let toAdd = pages;
-    if (currentLicenseLevel === 'free') {
-        const allowed = MAX_IMAGES_FREE - processedImages.length;
-        if (allowed <= 0) {
-            statusMessageElement.textContent = t('maxImagesFree');
-            return;
-        }
-        toAdd = pages.slice(0, allowed);
-    }
     for (const p of toAdd) {
         let imgFile = p;
         try {
@@ -978,10 +974,14 @@ imageUploadElement.addEventListener('change', async (event) => {
     const toProcess = [];
     for (const f of list) {
         if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
-            try {
-                await importPdfPages(f);
-            } catch (e) {
-                console.error('PDF conversion failed', e);
+            if (currentLicenseLevel === 'free') {
+                statusMessageElement.textContent = t('pdfImportPro');
+            } else {
+                try {
+                    await importPdfPages(f);
+                } catch (e) {
+                    console.error('PDF conversion failed', e);
+                }
             }
         } else {
             toProcess.push(f);
@@ -997,10 +997,14 @@ async function handleDrop(event) {
         const toProcess = [];
         for (const f of list) {
             if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
-                try {
-                    await importPdfPages(f);
-                } catch (e) {
-                    console.error('PDF conversion failed', e);
+                if (currentLicenseLevel === 'free') {
+                    statusMessageElement.textContent = t('pdfImportPro');
+                } else {
+                    try {
+                        await importPdfPages(f);
+                    } catch (e) {
+                        console.error('PDF conversion failed', e);
+                    }
                 }
             } else {
                 toProcess.push(f);
@@ -1483,15 +1487,17 @@ function applyProStatus() {
     // In demo mode features remain usable but PDF pages beyond the first
     // will include a DEMO watermark. We simply update the button style
     // to reflect the license status without disabling functionality.
-    if (!isLicensed) {
+    if (!isLicensed || currentLicenseLevel === 'free') {
         exportPdfBtn.classList.remove('pro-disabled');
         imageUploadElement.multiple = true;
+        imageUploadElement.accept = 'image/*';
         document.querySelectorAll('.shareBtn').forEach(btn => btn.style.display = 'none');
         if (sortable) { sortable.destroy(); sortable = null; }
         if (reorderHint) reorderHint.style.display = 'none';
     } else {
         exportPdfBtn.classList.remove('pro-disabled');
         imageUploadElement.multiple = true;
+        imageUploadElement.accept = 'image/*,application/pdf';
         document.querySelectorAll('.shareBtn').forEach(btn => btn.style.display = 'inline-block');
         if (!sortable && typeof Sortable !== 'undefined') {
             sortable = Sortable.create(processedGallery, { animation: 150, onEnd: updateProcessedArrays });

@@ -464,6 +464,9 @@ async def process_image(
 @app.post("/pdf-to-images/")
 async def pdf_to_images(pdf_file: UploadFile = File(...)):
     """Convert PDF pages to base64 PNG images."""
+    settings = load_settings()
+    if settings.get("license_level", "free").lower() == "free":
+        return JSONResponse(status_code=403, content={"message": "PDF import requires Pro license"})
     try:
         pdf_bytes = await pdf_file.read()
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
