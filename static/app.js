@@ -1506,9 +1506,10 @@ if (saveSignatureBtn) {
             canvas.height = base.height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(base, 0, 0);
+            const baseRatio = (canvas.height / 10) / signatureImg.height;
             const drawOne = sig => {
-                const w = signatureImg.width * sig.scale;
-                const h = signatureImg.height * sig.scale;
+                const w = signatureImg.width * baseRatio * sig.scale;
+                const h = signatureImg.height * baseRatio * sig.scale;
                 const x = sig.x * canvas.width - w / 2;
                 const y = sig.y * canvas.height - h / 2;
                 ctx.drawImage(signatureImg, x, y, w, h);
@@ -1542,18 +1543,34 @@ function renderSignaturePreview() {
     const ctx = signaturePreview.getContext('2d');
     const baseImg = new Image();
     baseImg.onload = () => {
-        const cw = signaturePreview.width;
-        const ch = signaturePreview.height;
+        let maxDim = 600;
+        let w = baseImg.width;
+        let h = baseImg.height;
+        if (w > h) {
+            if (w > maxDim) {
+                h = h * (maxDim / w);
+                w = maxDim;
+            }
+        } else {
+            if (h > maxDim) {
+                w = w * (maxDim / h);
+                h = maxDim;
+            }
+        }
+        signaturePreview.width = w;
+        signaturePreview.height = h;
+        const cw = w;
+        const ch = h;
         ctx.clearRect(0, 0, cw, ch);
         ctx.drawImage(baseImg, 0, 0, cw, ch);
         if (signatureImg) {
             const drawOne = (sig) => {
                 const scale = (ch / 10) * sig.scale / signatureImg.height;
-                const w = signatureImg.width * scale;
-                const h = signatureImg.height * scale;
-                const x = sig.x * cw - w / 2;
-                const y = sig.y * ch - h / 2;
-                ctx.drawImage(signatureImg, x, y, w, h);
+                const sw = signatureImg.width * scale;
+                const sh = signatureImg.height * scale;
+                const x = sig.x * cw - sw / 2;
+                const y = sig.y * ch - sh / 2;
+                ctx.drawImage(signatureImg, x, y, sw, sh);
             };
             signatures.filter(s => s.page === pageIdx).forEach(drawOne);
             // current editing signature
