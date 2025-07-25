@@ -29,8 +29,10 @@ const colorModeSelect = document.getElementById('colorModeSelect');
 const colorModeLabel = document.querySelector("label[for='colorModeSelect']");
 const blankThresholdInput = document.getElementById('blankThreshold');
 const blankThresholdLabel = document.querySelector("label[for='blankThreshold']");
+const skipBlankCheckbox = document.getElementById('skipBlank');
 let globalColorMode = 'color';
 let blankThreshold = 95;
+let skipBlank = true;
 const processedImageElement = document.getElementById('processedImage');
 const processedGallery = document.getElementById('processedGallery');
 const statusMessageElement = document.getElementById('statusMessage');
@@ -267,6 +269,7 @@ async function convertPdfToImages(file) {
     const form = new FormData();
     form.append('pdf_file', file, file.name);
     form.append('threshold', blankThreshold);
+    form.append('skip_blank', skipBlank ? '1' : '0');
     const resp = await fetch('/pdf-to-images/', { method: 'POST', body: form });
     if (!resp.ok) {
         throw new Error('PDF conversion failed');
@@ -368,6 +371,10 @@ function applySettings(cfg) {
     if (cfg.blank_threshold !== undefined) {
         blankThreshold = parseInt(cfg.blank_threshold);
         if (blankThresholdInput) blankThresholdInput.value = blankThreshold;
+    }
+    if (cfg.skip_blank !== undefined) {
+        skipBlank = !!cfg.skip_blank;
+        if (skipBlankCheckbox) skipBlankCheckbox.checked = skipBlank;
     }
     if (cfg.license_level) {
         currentLicenseLevel = cfg.license_level.toLowerCase();
@@ -1483,6 +1490,12 @@ if (blankThresholdInput) {
         saveSettings({ blank_threshold: blankThreshold });
     });
 }
+if (skipBlankCheckbox) {
+    skipBlankCheckbox.addEventListener('change', () => {
+        skipBlank = skipBlankCheckbox.checked;
+        saveSettings({ skip_blank: skipBlank });
+    });
+}
 
 brightnessRange.addEventListener('input', () => {
     updateImageFilters();
@@ -1679,6 +1692,7 @@ function applyProStatus() {
         if (colorModeLabel) colorModeLabel.style.display = 'none';
         if (blankThresholdInput) blankThresholdInput.style.display = 'none';
         if (blankThresholdLabel) blankThresholdLabel.style.display = 'none';
+        if (skipBlankCheckbox) skipBlankCheckbox.style.display = 'none';
     } else {
         exportPdfBtn.classList.remove('pro-disabled');
         imageUploadElement.multiple = true;
@@ -1692,6 +1706,7 @@ function applyProStatus() {
         if (colorModeLabel) colorModeLabel.style.display = 'inline-block';
         if (blankThresholdInput) blankThresholdInput.style.display = 'inline-block';
         if (blankThresholdLabel) blankThresholdLabel.style.display = 'inline-block';
+        if (skipBlankCheckbox) skipBlankCheckbox.style.display = 'inline-block';
     }
 }
 

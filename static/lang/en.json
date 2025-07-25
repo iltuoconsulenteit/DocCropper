@@ -104,4 +104,5 @@
   "gray": "Grayscale",
   "bw": "Black & white",
   "blankThreshold": "Blank page threshold:",
+  "skipBlank": "Skip blank pages",
 }

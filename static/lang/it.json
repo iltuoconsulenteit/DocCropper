@@ -104,5 +104,6 @@
   "gray": "Scala di grigi",
   "bw": "Bianco e nero",
   "blankThreshold": "Soglia pagina bianca:",
+  "skipBlank": "Salta pagine bianche",
 }
 
