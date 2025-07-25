@@ -65,7 +65,6 @@ const ocrBtn = document.getElementById('ocrBtn');
 const ocrOutput = document.getElementById('ocrOutput');
 const signatureControls = document.getElementById('signatureControls');
 const signatureUpload = document.getElementById('signatureUpload');
-const remoteSignCheckbox = document.getElementById('remoteSign');
 const signaturePreview = document.getElementById('signaturePreview');
 const signatureHint = document.getElementById('signatureHint');
 const signatureExtra = document.getElementById('signatureExtra');
@@ -74,6 +73,7 @@ const signatureScaleInput = document.getElementById('signatureScale');
 const addSignatureBtn = document.getElementById('addSignatureBtn');
 const discardSignatureBtn = document.getElementById('discardSignatureBtn');
 const saveSignatureBtn = document.getElementById('saveSignatureBtn');
+const remoteSignBtn = document.getElementById('remoteSignBtn');
 let signatureImageData = null;
 let signatureImg = null;
 let signaturePosition = { x: 0.85, y: 0.85 };
@@ -631,8 +631,8 @@ function deleteImage(index) {
 }
 
 function openSignatureForPage(idx) {
-    signaturePage.value = idx;
     populateSignaturePages();
+    signaturePage.value = idx;
     signatureControls.style.display = 'block';
     signatureExtra.style.display = 'block';
     if (signatureImg) {
@@ -1236,8 +1236,7 @@ exportPdfBtn.addEventListener('click', () => {
     const arrangement = arrangeSelect.value || 'auto';
     const scale_mode = scaleMode.value || 'fit';
     const scale_percent = parseInt(scalePercent.value || '100');
-    const remote_sign = remoteSignCheckbox && remoteSignCheckbox.checked;
-    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures, remote_sign };
+    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures };
     fetch('/create-pdf/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1362,6 +1361,29 @@ if (waShareBtn) {
 if (emailShareBtn) {
     emailShareBtn.addEventListener('click', async () => {
         await shareEmail();
+        exportOptions.style.display = 'none';
+    });
+}
+
+if (remoteSignBtn) {
+    remoteSignBtn.addEventListener('click', async () => {
+        if (!currentPdfBlob) return;
+        statusMessageElement.textContent = translations['signingPdf'] || 'Signing PDF...';
+        try {
+            const resp = await fetch('/remote-sign/', { method: 'POST' });
+            const data = await resp.json();
+            if (data.pdf) {
+                const base64 = data.pdf.split(',')[1];
+                const byteArray = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+                currentPdfBlob = new Blob([byteArray], { type: 'application/pdf' });
+                statusMessageElement.textContent = translations['pdfSigned'] || 'PDF signed.';
+            } else {
+                statusMessageElement.textContent = data.message || 'Remote signing failed.';
+            }
+        } catch (e) {
+            console.error('Remote sign error', e);
+            statusMessageElement.textContent = 'Remote signing failed.';
+        }
         exportOptions.style.display = 'none';
     });
 }

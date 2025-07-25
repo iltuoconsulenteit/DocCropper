@@ -87,6 +87,7 @@
         <button id="downloadPdfBtn" class="iconBtn" data-i18n-title="downloadPdf" title="PDF">📥</button>
         <button id="waShareBtn" class="iconBtn" data-i18n-title="shareWhatsapp" title="WhatsApp">🟢</button>
         <button id="emailShareBtn" class="iconBtn" data-i18n-title="shareEmail" title="Email">✉️</button>
+        <button id="remoteSignBtn" class="iconBtn" data-i18n-title="remoteSign" title="Sign">🔏</button>
     </div>
     <button id="ocrBtn" style="display:none;" data-i18n="extractText">Extract Text</button>
     <textarea id="ocrOutput" readonly style="display:none;width:100%;height:150px;"></textarea>
@@ -130,7 +131,6 @@
     <div id="signatureControls" style="display:none;">
         <label for="signatureUpload" data-i18n="signatureFile">Signature image:</label>
         <input type="file" id="signatureUpload" accept="image/*">
-        <label><input type="checkbox" id="remoteSign"> <span data-i18n="useRemoteSign">Use remote signing</span></label>
         <div id="signatureExtra" style="display:none;">
             <label data-i18n="selectPage">Page:</label>
             <select id="signaturePage"></select>

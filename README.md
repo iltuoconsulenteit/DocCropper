@@ -198,7 +198,7 @@ DocCropper can apply a personal signature in two ways:
    to cancel.
    You may add multiple signatures to any page before exporting the final PDF. Each new
    stamp is offset slightly so it doesn’t hide the previous one by default.
-2. **Remote Digital Signing** – Set `DOCROPPER_REMOTE_SIGN_CMD` to an external signing command (e.g. an Aruba Sign script). When enabled via the checkbox, the generated PDF is passed to this command for signing.
+2. **Remote Digital Signing** – Set `DOCROPPER_REMOTE_SIGN_CMD` to an external signing command (e.g. an Aruba Sign script). After creating the PDF, press **Remote Sign** to apply the digital signature to the entire document.
 
 Alternatively, you may set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` to automatically apply a local PKCS#12 certificate.
 

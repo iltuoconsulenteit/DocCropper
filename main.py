@@ -499,8 +499,7 @@ async def create_pdf(
     scale_percent: int = Body(100),
     color_mode: str = Body("color"),
     signature_image: str | None = Body(None),
-    signatures: list[dict] = Body(default_factory=list),
-    remote_sign: bool = Body(False)
+    signatures: list[dict] = Body(default_factory=list)
 ):
     try:
         settings = load_settings()
@@ -720,30 +719,41 @@ async def create_pdf(
             except Exception:
                 logger.exception("PDF signing failed")
 
-        remote_cmd = os.environ.get("DOCROPPER_REMOTE_SIGN_CMD")
-        if remote_sign and remote_cmd:
-            try:
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_in:
-                    tmp_in.write(pdf_bytes)
-                    in_path = tmp_in.name
-                out_path = in_path.replace(".pdf", "_signed.pdf")
-                subprocess.run([remote_cmd, in_path, out_path], check=True)
-                with open(out_path, "rb") as fh:
-                    pdf_bytes = fh.read()
-            except Exception:
-                logger.exception("Remote signing failed")
-            finally:
-                for p in (in_path, out_path):
-                    try:
-                        os.unlink(p)
-                    except Exception:
-                        pass
+        pdf_path = os.path.join(session_dir, "output.pdf")
+        try:
+            with open(pdf_path, "wb") as fh:
+                fh.write(pdf_bytes)
+        except Exception:
+            logger.exception("Failed to save PDF")
         pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
         # Do not delete the session immediately so the user can re-export if needed
         return JSONResponse(content={"pdf": "data:application/pdf;base64," + pdf_base64})
     except Exception as e:
         logger.exception("Failed to create PDF")
         return JSONResponse(status_code=500, content={"message": f"Could not create PDF: {str(e)}"})
+
+
+@app.post("/remote-sign/")
+async def remote_sign(request: Request):
+    session_id = request.cookies.get("session_id")
+    session_dir = get_session_dir(session_id)
+    pdf_path = os.path.join(session_dir, "output.pdf")
+    if not os.path.exists(pdf_path):
+        return JSONResponse(status_code=404, content={"message": "PDF not found"})
+    remote_cmd = os.environ.get("DOCROPPER_REMOTE_SIGN_CMD")
+    if not remote_cmd:
+        return JSONResponse(status_code=400, content={"message": "Remote signing not configured"})
+    try:
+        out_path = pdf_path.replace(".pdf", "_signed.pdf")
+        subprocess.run([remote_cmd, pdf_path, out_path], check=True)
+        with open(out_path, "rb") as fh:
+            pdf_bytes = fh.read()
+        os.replace(out_path, pdf_path)
+        pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
+        return {"pdf": "data:application/pdf;base64," + pdf_base64}
+    except Exception:
+        logger.exception("Remote signing failed")
+        return JSONResponse(status_code=500, content={"message": "Remote signing failed"})
 
 
 @app.post("/ocr/")
