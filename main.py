@@ -83,6 +83,7 @@ DEFAULT_SETTINGS = {
     "sponsor_logo": "",
     "sponsor_scale": 100,
     "sponsor_bottom": 80,
+    "blank_threshold": 95,
     "banner_images": ["DocCropper_slogan_{{lang}}.png"],
     "developer_watermark": False,
 }
@@ -462,7 +463,7 @@ async def process_image(
 
 
 @app.post("/pdf-to-images/")
-async def pdf_to_images(pdf_file: UploadFile = File(...)):
+async def pdf_to_images(pdf_file: UploadFile = File(...), threshold: int = Form(95)):
     """Convert PDF pages to base64 PNG images."""
     settings = load_settings()
     if settings.get("license_level", "free").lower() == "free":
@@ -470,9 +471,14 @@ async def pdf_to_images(pdf_file: UploadFile = File(...)):
     try:
         pdf_bytes = await pdf_file.read()
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        thr = max(0, min(100, int(threshold))) / 100.0
         images_b64: list[str] = []
         for page in doc:
             pix = page.get_pixmap()
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            gray = np.array(img.convert("L"))
+            if np.mean(gray > 240) >= thr:
+                continue
             img_bytes = pix.tobytes("png")
             b64 = base64.b64encode(img_bytes).decode("utf-8")
             images_b64.append("data:image/png;base64," + b64)

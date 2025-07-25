@@ -27,7 +27,10 @@ const scaleMode = document.getElementById('scaleMode');
 const scalePercent = document.getElementById('scalePercent');
 const colorModeSelect = document.getElementById('colorModeSelect');
 const colorModeLabel = document.querySelector("label[for='colorModeSelect']");
+const blankThresholdInput = document.getElementById('blankThreshold');
+const blankThresholdLabel = document.querySelector("label[for='blankThreshold']");
 let globalColorMode = 'color';
+let blankThreshold = 95;
 const processedImageElement = document.getElementById('processedImage');
 const processedGallery = document.getElementById('processedGallery');
 const statusMessageElement = document.getElementById('statusMessage');
@@ -261,6 +264,7 @@ function fileToDataURL(file) {
 async function convertPdfToImages(file) {
     const form = new FormData();
     form.append('pdf_file', file, file.name);
+    form.append('threshold', blankThreshold);
     const resp = await fetch('/pdf-to-images/', { method: 'POST', body: form });
     if (!resp.ok) {
         throw new Error('PDF conversion failed');
@@ -358,6 +362,10 @@ function applySettings(cfg) {
     if (cfg.color_mode) {
         colorModeSelect.value = cfg.color_mode;
         globalColorMode = cfg.color_mode;
+    }
+    if (cfg.blank_threshold !== undefined) {
+        blankThreshold = parseInt(cfg.blank_threshold);
+        if (blankThresholdInput) blankThresholdInput.value = blankThreshold;
     }
     if (cfg.license_level) {
         currentLicenseLevel = cfg.license_level.toLowerCase();
@@ -1440,6 +1448,12 @@ colorModeSelect.addEventListener("change", () => {
     globalColorMode = colorModeSelect.value;
     saveSettings({ color_mode: globalColorMode });
 });
+if (blankThresholdInput) {
+    blankThresholdInput.addEventListener('change', () => {
+        blankThreshold = parseInt(blankThresholdInput.value || '95');
+        saveSettings({ blank_threshold: blankThreshold });
+    });
+}
 
 brightnessRange.addEventListener('input', () => {
     updateImageFilters();
@@ -1563,6 +1577,8 @@ function applyProStatus() {
         if (reorderHint) reorderHint.style.display = 'none';
         if (colorModeSelect) colorModeSelect.style.display = 'none';
         if (colorModeLabel) colorModeLabel.style.display = 'none';
+        if (blankThresholdInput) blankThresholdInput.style.display = 'none';
+        if (blankThresholdLabel) blankThresholdLabel.style.display = 'none';
     } else {
         exportPdfBtn.classList.remove('pro-disabled');
         imageUploadElement.multiple = true;
@@ -1574,6 +1590,8 @@ function applyProStatus() {
         if (reorderHint) reorderHint.style.display = 'block';
         if (colorModeSelect) colorModeSelect.style.display = 'inline-block';
         if (colorModeLabel) colorModeLabel.style.display = 'inline-block';
+        if (blankThresholdInput) blankThresholdInput.style.display = 'inline-block';
+        if (blankThresholdLabel) blankThresholdLabel.style.display = 'inline-block';
     }
 }
 

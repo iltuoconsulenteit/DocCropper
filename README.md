@@ -15,6 +15,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🖱️ Double click or tap to auto-detect page edges
 - 🎚️ Adjust brightness and contrast with live preview
 - 🖌️ Convert images to grayscale or black & white to reduce PDF size (Pro)
+- 🧹 Automatically remove blank pages when importing PDFs with a configurable threshold (Pro)
 - 📄 Create PDFs ready for download or sharing
 - 🔏 Optional digital signature on exported PDFs. Drag and add multiple stamps per page before export
 - 📤 Share PDFs via WhatsApp Web or Email, attaching files via the Web Share API when possible (Pro)
@@ -60,6 +61,8 @@ JavaScript logic is contained in `static/app.js`.
 Images are processed and displayed as thumbnails with **Rotate**, **Edit**, and **Delete** buttons. Preview and layout configuration options are also provided before export.
 
 Logos and branding can be customized via `static/logos/`, `settings.json`, and `brand_html`. A dedicated area in the header can show a client logo (`client_logo`) and an optional sponsor banner (`sponsor_logo`). The `sponsor_scale` and `sponsor_bottom` settings control the banner size and position. The header also shows a language-specific slogan image (e.g. `DocCropper_slogan_en.png`), and the footer displays the current Git commit hash. Licensed users can also convert images to grayscale or black & white using buttons below each thumbnail, and a global color mode option applies to all images before PDF export.
+Blank pages can be skipped during PDF import based on the `blank_threshold` setting (95% by default).
+Pages over this threshold are discarded in the Pro edition.
 
 User preferences are stored in the `users/` folder based on their email address. Anonymous users fallback to global settings in `settings.json`. The system supports optional Google sign-in and a configurable purchase panel (donation or subscription) opened from the **Purchase** button next to the Help button. Developer keys allow full access when the configured `license_key` matches the value of the `DOCROPPER_DEV_LICENSE` environment variable.
 

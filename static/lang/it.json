@@ -94,6 +94,7 @@
   "colorMode": "Modalità colore:",
   "color": "Colore",
   "gray": "Scala di grigi",
-  "bw": "Bianco e nero"
+  "bw": "Bianco e nero",
+  "blankThreshold": "Soglia pagina bianca:",
 }
 

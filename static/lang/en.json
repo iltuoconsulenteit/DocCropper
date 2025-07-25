@@ -94,5 +94,6 @@
   "colorMode": "Color mode:",
   "color": "Color",
   "gray": "Grayscale",
-  "bw": "Black & white"
+  "bw": "Black & white",
+  "blankThreshold": "Blank page threshold:",
 }
