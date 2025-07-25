@@ -72,6 +72,7 @@ const signatureExtra = document.getElementById('signatureExtra');
 const signaturePage = document.getElementById('signaturePage');
 const signatureScaleInput = document.getElementById('signatureScale');
 const addSignatureBtn = document.getElementById('addSignatureBtn');
+const saveSignatureBtn = document.getElementById('saveSignatureBtn');
 let signatureImageData = null;
 let signatureImg = null;
 let signaturePosition = { x: 0.85, y: 0.85 };
@@ -1487,6 +1488,45 @@ if (addSignatureBtn) {
         signaturePosition.y += OFFSET;
         if (signaturePosition.y > 0.95) signaturePosition.y = OFFSET;
         renderSignaturePreview();
+    });
+}
+
+if (saveSignatureBtn) {
+    saveSignatureBtn.addEventListener('click', () => {
+        const pageIdx = parseInt(signaturePage.value || '0');
+        const stamps = signatures.filter(s => s.page === pageIdx);
+        if (!signatureImg || stamps.length === 0) {
+            statusMessageElement.textContent = translations['noSignatures'] || 'No signatures to save';
+            return;
+        }
+        const base = new Image();
+        base.onload = async () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = base.width;
+            canvas.height = base.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(base, 0, 0);
+            const drawOne = sig => {
+                const w = signatureImg.width * sig.scale;
+                const h = signatureImg.height * sig.scale;
+                const x = sig.x * canvas.width - w / 2;
+                const y = sig.y * canvas.height - h / 2;
+                ctx.drawImage(signatureImg, x, y, w, h);
+            };
+            stamps.forEach(drawOne);
+            const url = canvas.toDataURL('image/png');
+            processedImages[pageIdx] = url;
+            const container = processedGallery.children[pageIdx];
+            if (container) container.querySelector('img').src = url;
+            try {
+                const blob = await (await fetch(url)).blob();
+                processedFiles[pageIdx] = new File([blob], processedFiles[pageIdx]?.name || `image_${pageIdx}.png`, { type: 'image/png' });
+            } catch {}
+            signatures = signatures.filter(s => s.page !== pageIdx);
+            renderSignaturePreview();
+            statusMessageElement.textContent = translations['imageSaved'] || 'Image updated';
+        };
+        base.src = processedImages[pageIdx];
     });
 }
 
