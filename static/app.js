@@ -25,6 +25,9 @@ const orientationSelect = document.getElementById('orientationSelect');
 const arrangeSelect = document.getElementById('arrangeSelect');
 const scaleMode = document.getElementById('scaleMode');
 const scalePercent = document.getElementById('scalePercent');
+const colorModeSelect = document.getElementById('colorModeSelect');
+const colorModeLabel = document.querySelector("label[for='colorModeSelect']");
+let globalColorMode = 'color';
 const processedImageElement = document.getElementById('processedImage');
 const processedGallery = document.getElementById('processedGallery');
 const statusMessageElement = document.getElementById('statusMessage');
@@ -352,6 +355,10 @@ function applySettings(cfg) {
     if (cfg.scale_percent !== undefined) {
         scalePercent.value = cfg.scale_percent;
     }
+    if (cfg.color_mode) {
+        colorModeSelect.value = cfg.color_mode;
+        globalColorMode = cfg.color_mode;
+    }
     if (cfg.license_level) {
         currentLicenseLevel = cfg.license_level.toLowerCase();
     } else {
@@ -563,6 +570,40 @@ function rotateImage(index) {
     img.src = processedImages[index];
 }
 
+function convertColor(index, mode) {
+    const img = new Image();
+    img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const d = data.data;
+        for (let i = 0; i < d.length; i += 4) {
+            const r = d[i];
+            const g = d[i+1];
+            const b = d[i+2];
+            const gray = 0.299*r + 0.587*g + 0.114*b;
+            if (mode === 'gray') {
+                d[i] = d[i+1] = d[i+2] = gray;
+            } else if (mode === 'bw') {
+                const bw = gray > 128 ? 255 : 0;
+                d[i] = d[i+1] = d[i+2] = bw;
+            }
+        }
+        ctx.putImageData(data, 0, 0);
+        const out = canvas.toDataURL('image/png');
+        processedImages[index] = out;
+        const container = processedGallery.children[index];
+        container.querySelector('img').src = out;
+        if (imageModal.style.display === 'block') {
+            openModal(out);
+        }
+    };
+    img.src = processedImages[index];
+}
+
 function deleteImage(index) {
     processedImages.splice(index, 1);
     processedFiles.splice(index, 1);
@@ -661,6 +702,28 @@ function addThumbnail(src, index) {
         rotateImage(idx);
     });
     btns.appendChild(rotateBtn);
+
+    if (isLicensed && currentLicenseLevel !== 'free') {
+        const grayBtn = document.createElement('button');
+        grayBtn.dataset.key = 'toGray';
+        grayBtn.textContent = t('toGray');
+        grayBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = Array.from(processedGallery.children).indexOf(container);
+            convertColor(idx, 'gray');
+        });
+        btns.appendChild(grayBtn);
+
+        const bwBtn = document.createElement('button');
+        bwBtn.dataset.key = 'toBW';
+        bwBtn.textContent = t('toBW');
+        bwBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = Array.from(processedGallery.children).indexOf(container);
+            convertColor(idx, 'bw');
+        });
+        btns.appendChild(bwBtn);
+    }
 
     const editBtn = document.createElement('button');
     editBtn.dataset.key = 'edit';
@@ -1159,7 +1222,7 @@ exportPdfBtn.addEventListener('click', () => {
     const scale_mode = scaleMode.value || 'fit';
     const scale_percent = parseInt(scalePercent.value || '100');
     const remote_sign = remoteSignCheckbox && remoteSignCheckbox.checked;
-    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, signature_image: signatureImageData, signatures, remote_sign };
+    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures, remote_sign };
     fetch('/create-pdf/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1373,6 +1436,10 @@ scaleMode.addEventListener('change', () => {
 scalePercent.addEventListener('change', () => {
     saveSettings({ scale_percent: parseInt(scalePercent.value || '100') });
 });
+colorModeSelect.addEventListener("change", () => {
+    globalColorMode = colorModeSelect.value;
+    saveSettings({ color_mode: globalColorMode });
+});
 
 brightnessRange.addEventListener('input', () => {
     updateImageFilters();
@@ -1494,6 +1561,8 @@ function applyProStatus() {
         document.querySelectorAll('.shareBtn').forEach(btn => btn.style.display = 'none');
         if (sortable) { sortable.destroy(); sortable = null; }
         if (reorderHint) reorderHint.style.display = 'none';
+        if (colorModeSelect) colorModeSelect.style.display = 'none';
+        if (colorModeLabel) colorModeLabel.style.display = 'none';
     } else {
         exportPdfBtn.classList.remove('pro-disabled');
         imageUploadElement.multiple = true;
@@ -1503,6 +1572,8 @@ function applyProStatus() {
             sortable = Sortable.create(processedGallery, { animation: 150, onEnd: updateProcessedArrays });
         }
         if (reorderHint) reorderHint.style.display = 'block';
+        if (colorModeSelect) colorModeSelect.style.display = 'inline-block';
+        if (colorModeLabel) colorModeLabel.style.display = 'inline-block';
     }
 }
 

@@ -491,6 +491,7 @@ async def create_pdf(
     arrangement: str = Body("auto"),
     scale_mode: str = Body("fit"),
     scale_percent: int = Body(100),
+    color_mode: str = Body("color"),
     signature_image: str | None = Body(None),
     signatures: list[dict] = Body(default_factory=list),
     remote_sign: bool = Body(False)
@@ -520,6 +521,17 @@ async def create_pdf(
             img_bytes = base64.b64decode(img_b64)
             pil_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
             pil_images.append(pil_img)
+
+        if color_mode.lower() in ("gray", "bw"):
+            converted = []
+            for img in pil_images:
+                gray = img.convert("L")
+                if color_mode.lower() == "bw":
+                    bw = gray.point(lambda x: 0 if x < 128 else 255, "1")
+                    converted.append(bw.convert("RGB"))
+                else:
+                    converted.append(gray.convert("RGB"))
+            pil_images = converted
 
         sig_img = None
         if signature_image:

@@ -19,6 +19,8 @@
   "rotate": "Rotate",
   "edit": "Edit",
   "delete": "Delete",
+  "toGray": "Gray",
+  "toBW": "B/W",
   "realizzato": "Powered by IlTuoConsulenteIT",
   "language": "Language:",
   "english": "English",
@@ -88,5 +90,9 @@
   "reorderHint": "Drag images to reorder before export",
   "autoHint": "Double click or tap to auto-detect edges",
   "detectFail": "Could not detect document edges",
-  "detectingEdges": "Detecting edges..."
+  "detectingEdges": "Detecting edges...",
+  "colorMode": "Color mode:",
+  "color": "Color",
+  "gray": "Grayscale",
+  "bw": "Black & white"
 }

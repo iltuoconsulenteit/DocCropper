@@ -19,11 +19,13 @@
   "rotate": "Ruota",
   "edit": "Modifica",
   "delete": "Elimina",
+  "toGray": "Grigi",
+  "toBW": "B/N",
   "realizzato": "Realizzato da IlTuoConsulenteIT",
   "language": "Lingua:",
   "english": "Inglese",
   "italian": "Italiano",
-  "demoVersion": "DEMO - funzionalit\u00e0 PRO disabilitate",
+  "demoVersion": "DEMO - funzionalità PRO disabilitate",
   "licensedTo": "Licenziato a",
   "support": "Supporto",
   "donatePaypal": "Dona con PayPal",
@@ -88,5 +90,10 @@
   "reorderHint": "Trascina le immagini per riordinarle prima dell'esportazione",
   "autoHint": "Doppio clic o doppio tocco per rilevare i bordi",
   "detectFail": "Impossibile individuare i bordi del documento",
-  "detectingEdges": "Rilevamento bordi..."
+  "detectingEdges": "Rilevamento bordi...",
+  "colorMode": "Modalità colore:",
+  "color": "Colore",
+  "gray": "Scala di grigi",
+  "bw": "Bianco e nero"
 }
+
