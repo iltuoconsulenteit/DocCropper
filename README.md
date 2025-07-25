@@ -1,6 +1,6 @@
 # 📄 DocCropper
 
-**DocCropper** is a web-based application for document image perspective correction, cropping, and PDF export. It is designed to work both locally and in LAN environments, including touchscreen or kiosk-style workstations.
+**DocCropper** is a web-based app for batch document perspective correction, multi-image cropping, mobile signing, and PDF export.
 
 This project is **inspired by [image-perspective-crop](https://github.com/varna9000/image-perspective-crop)**, but has been **significantly rewritten and extended**, with major architectural changes, a redesigned user interface, batch features, user preferences, and many additional capabilities.
 
