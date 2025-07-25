@@ -19,6 +19,9 @@ if [ -z "$DOCROPPER_DEV_BRANCH" ]; then
 else
   DEV_BRANCH="$DOCROPPER_DEV_BRANCH"
 fi
+# configuration file handling
+CONFIG_FILE="settings.json"
+BACKUP_FILE="settings.local.json.bak"
 
 DEFAULT_DIR="/opt/DocCropper"
 read -r -p "Installation directory [$DEFAULT_DIR]: " TARGET_DIR
@@ -33,16 +36,16 @@ fi
 echo "Installing to: $TARGET_DIR"
 
 DEFAULT_KEY=""
-if [ -f "$TARGET_DIR/settings.json" ]; then
-  DEFAULT_KEY=$(python3 - <<PY
+if [ -f "$TARGET_DIR/$CONFIG_FILE" ]; then
+  DEFAULT_KEY=$(python3 - "$TARGET_DIR/$CONFIG_FILE" <<'PY'
 import json,sys
 try:
-    d=json.load(open(sys.argv[1]))
-    print(d.get('license_key',''))
+    with open(sys.argv[1]) as fh:
+        print(json.load(fh).get('license_key',''))
 except Exception:
     pass
 PY
- "$TARGET_DIR/settings.json")
+  )
 fi
 read -r -p "🔑 Enter license key (leave blank for demo) [${DEFAULT_KEY}]: " LIC_KEY
 [ -z "$LIC_KEY" ] && LIC_KEY="$DEFAULT_KEY"
@@ -74,6 +77,11 @@ if [ -d "$TARGET_DIR/.git" ]; then
   echo "📁 Repository già presente in $TARGET_DIR"
   read -r -p "🔄 Vuoi aggiornare il repository da GitHub? [s/N] " ans
   if [[ "$ans" =~ ^[sS]$ ]]; then
+    if [ -f "$TARGET_DIR/$CONFIG_FILE" ]; then
+      echo "🗄  Backup $CONFIG_FILE in $BACKUP_FILE"
+      cp "$TARGET_DIR/$CONFIG_FILE" "$TARGET_DIR/$BACKUP_FILE"
+      git -C "$TARGET_DIR" restore "$CONFIG_FILE" >/dev/null 2>&1 || true
+    fi
     echo "📥 Aggiornamento repository..."
     git -C "$TARGET_DIR" pull --rebase --autostash origin "$BRANCH"
   fi
@@ -83,6 +91,26 @@ else
 fi
 
 printf '\xE2\x9C\x85 Operazione completata.\n'
+
+# merge backed-up settings if present
+if [ -f "$TARGET_DIR/$BACKUP_FILE" ]; then
+  echo "🔀 Merging saved settings..."
+  python3 <<'PY' "$TARGET_DIR/$CONFIG_FILE" "$TARGET_DIR/$BACKUP_FILE"
+import json,sys
+dst,bak = sys.argv[1:3]
+with open(dst) as f:
+    data = json.load(f)
+try:
+    with open(bak) as f:
+        prev = json.load(f)
+    data.update(prev)
+except Exception:
+    pass
+with open(dst, 'w') as f:
+    json.dump(data, f, indent=2)
+PY
+  rm -f "$TARGET_DIR/$BACKUP_FILE"
+fi
 
 # Set up virtual environment and install dependencies
 cd "$TARGET_DIR"
@@ -95,7 +123,7 @@ pip install -r requirements.txt
 cd - >/dev/null
 
 # Ask for license key and name
-SETTINGS_FILE="$TARGET_DIR/settings.json"
+SETTINGS_FILE="$TARGET_DIR/$CONFIG_FILE"
 if [ ! -f "$SETTINGS_FILE" ]; then
   if ! cat <<'EOF' | tee "$SETTINGS_FILE" >/dev/null
 {
