@@ -97,8 +97,8 @@ cd - >/dev/null
 # Ask for license key and name
 SETTINGS_FILE="$TARGET_DIR/settings.json"
 if [ ! -f "$SETTINGS_FILE" ]; then
-  if ! cat > "$SETTINGS_FILE" <<'EOF'
-{ 
+  if ! cat <<'EOF' | tee "$SETTINGS_FILE" >/dev/null
+{
   "language": "en",
   "layout": 1,
   "orientation": "portrait",

@@ -100,7 +100,7 @@ pip install -r requirements.txt
 - Set up the environment and install Python dependencies in a virtualenv
 - Ask for an optional license key
 - Write a log file named `install.log` in the installation folder (falling back to `%TEMP%` on Windows or `/tmp` on Linux/macOS)
-- On Linux the installer now requests administrative privileges via `sudo` and installs under `/opt/DocCropper` by default. If the directory cannot be created, the script exits with a permissions error.
+- On Linux the installer now requests administrative privileges via `sudo` and installs under `/opt/DocCropper` by default. If the directory cannot be created, the script exits with a permissions error. The script uses `tee` to create the initial `settings.json` so root permissions are required when installing to system locations like `/opt`.
 - Matching `uninstall_DocCropper` scripts are provided to remove the application later.
 You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer branch or `DOCROPPER_BRANCH` to force a specific branch.
 
