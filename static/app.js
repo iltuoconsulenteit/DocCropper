@@ -1532,7 +1532,12 @@ if (discardSignatureBtn) {
 if (saveSignatureBtn) {
     saveSignatureBtn.addEventListener('click', () => {
         const pageIdx = parseInt(signaturePage.value || '0');
-        const stamps = signatures.filter(s => s.page === pageIdx);
+        let stamps = signatures.filter(s => s.page === pageIdx);
+        // also include the currently positioned stamp in case the user
+        // did not press Add before saving
+        if (signatureImg) {
+            stamps = stamps.concat([{ page: pageIdx, x: signaturePosition.x, y: signaturePosition.y, scale: signatureScale }]);
+        }
         if (!signatureImg || stamps.length === 0) {
             statusMessageElement.textContent = translations['noSignatures'] || 'No signatures to save';
             return;
