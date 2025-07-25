@@ -17,7 +17,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🖌️ Convert images to grayscale or black & white to reduce PDF size (Pro)
  - 🧹 Skip blank pages when importing PDFs using a configurable threshold (Pro)
 - 📄 Create PDFs ready for download or sharing
-- 🔏 Optional digital signature on exported PDFs. Drag and add multiple stamps per page before export
+- 🔏 Optional digital signature on exported PDFs. Drag and add multiple stamps per page before export (Free - watermark applied)
 - ✍️ Sign from your phone via QR code and save the drawing for later use (Pro)
 - 📤 Share PDFs via WhatsApp Web or Email, attaching files via the Web Share API when possible (Pro)
 - 🗂️ Drag thumbnails to reorder images before exporting (Pro)
@@ -189,6 +189,8 @@ To activate Pro or Full editions:
 For inquiries: **doccropper@iltuoconsulenteit.it**
 
 ### Optional PDF Signing
+
+Simple image or drawn signatures are available in all editions, but the Free edition keeps the watermark on exported PDFs.
 
 DocCropper can apply a personal signature in several ways:
 
