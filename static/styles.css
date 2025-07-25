@@ -251,6 +251,9 @@ button:hover {
 
 #drawArea {
     margin-top: 5px;
+    padding: 5px;
+    border: 1px dashed #888;
+    display: inline-block;
 }
 
 #signatureDrawCanvas {
