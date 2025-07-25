@@ -72,6 +72,11 @@ const signatureHint = document.getElementById('signatureHint');
 const signatureExtra = document.getElementById('signatureExtra');
 const signaturePage = document.getElementById('signaturePage');
 const signatureScaleInput = document.getElementById('signatureScale');
+const drawSignatureBtn = document.getElementById('drawSignatureBtn');
+const drawArea = document.getElementById('drawArea');
+const signatureDrawCanvas = document.getElementById('signatureDrawCanvas');
+const clearDrawBtn = document.getElementById('clearDrawBtn');
+const useDrawBtn = document.getElementById('useDrawBtn');
 const addSignatureBtn = document.getElementById('addSignatureBtn');
 const discardSignatureBtn = document.getElementById('discardSignatureBtn');
 const saveSignatureBtn = document.getElementById('saveSignatureBtn');
@@ -82,6 +87,8 @@ let signaturePosition = { x: 0.85, y: 0.85 };
 let signatureScale = 1;
 let signatures = [];
 let draggingSig = false;
+let drawing = false;
+let lastPoint = null;
 const OCR_ENABLED = false;
 let bannerImages = [];
 let bannerIndex = 0;
@@ -1434,6 +1441,53 @@ if (signatureUpload) {
             img.src = ev.target.result;
         };
         reader.readAsDataURL(file);
+    });
+}
+
+if (drawSignatureBtn && signatureDrawCanvas) {
+    const ctx = signatureDrawCanvas.getContext('2d');
+    const getPos = (e) => {
+        const rect = signatureDrawCanvas.getBoundingClientRect();
+        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+        return { x, y };
+    };
+    const startDraw = (e) => { drawing = true; lastPoint = getPos(e); e.preventDefault(); };
+    const moveDraw = (e) => {
+        if (!drawing) return;
+        const p = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(lastPoint.x, lastPoint.y);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        lastPoint = p;
+        e.preventDefault();
+    };
+    const endDraw = () => { drawing = false; };
+    signatureDrawCanvas.addEventListener('mousedown', startDraw);
+    signatureDrawCanvas.addEventListener('touchstart', startDraw);
+    signatureDrawCanvas.addEventListener('mousemove', moveDraw);
+    signatureDrawCanvas.addEventListener('touchmove', moveDraw);
+    document.addEventListener('mouseup', endDraw);
+    document.addEventListener('touchend', endDraw);
+    clearDrawBtn.addEventListener('click', () => { ctx.clearRect(0,0,signatureDrawCanvas.width,signatureDrawCanvas.height); });
+    useDrawBtn.addEventListener('click', () => {
+        signatureImageData = signatureDrawCanvas.toDataURL('image/png');
+        signatureImg = new Image();
+        signatureImg.onload = () => {
+            drawArea.style.display = 'none';
+            if (processedImages.length > 0) {
+                signaturePreview.style.display = 'block';
+                signatureHint.style.display = 'block';
+                signatureExtra.style.display = 'block';
+                populateSignaturePages();
+                renderSignaturePreview();
+            }
+        };
+        signatureImg.src = signatureImageData;
+    });
+    drawSignatureBtn.addEventListener('click', () => {
+        drawArea.style.display = drawArea.style.display === 'none' ? 'block' : 'none';
     });
 }
 

@@ -105,5 +105,8 @@
   "bw": "Bianco e nero",
   "blankThreshold": "Soglia pagina bianca:",
   "skipBlank": "Salta pagine bianche",
+  "drawSignature": "Disegna firma",
+  "clearSignature": "Pulisci",
+  "useSignature": "Usa disegno"
 }
 

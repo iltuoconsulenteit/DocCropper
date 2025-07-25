@@ -189,15 +189,16 @@ For inquiries: **doccropper@iltuoconsulenteit.it**
 
 ### Optional PDF Signing
 
-DocCropper can apply a personal signature in two ways:
+DocCropper can apply a personal signature in several ways:
 
 1. **Image Stamp** – Use the action menu below each processed page and choose `Sign`
-   to upload and position a signature image. White backgrounds are automatically removed.
+   to upload a signature image. White backgrounds are automatically removed.
+   Alternatively, press **Draw signature** to handwrite your signature with a mouse or
+   touch device. Clear and reuse the drawing until satisfied.
    Drag the previewed stamp on the page canvas, adjust its scale, then press **Add**
    to queue it for that page. Use **Save** to embed the placed stamps or **Discard**
-   to cancel.
-   You may add multiple signatures to any page before exporting the final PDF. Each new
-   stamp is offset slightly so it doesn’t hide the previous one by default.
+   to cancel. You may add multiple signatures to any page before exporting the final PDF.
+   Each new stamp is offset slightly so it doesn’t hide the previous one by default.
 2. **Remote Digital Signing** – Set `DOCROPPER_REMOTE_SIGN_CMD` to an external signing command (e.g. an Aruba Sign script). After creating the PDF, press **Remote Sign** to apply the digital signature to the entire document.
 
 Alternatively, you may set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` to automatically apply a local PKCS#12 certificate.

@@ -249,6 +249,15 @@ button:hover {
     margin-top: 5px;
 }
 
+#drawArea {
+    margin-top: 5px;
+}
+
+#signatureDrawCanvas {
+    border: 1px solid #666;
+    touch-action: none;
+}
+
 #signatureExtra {
     margin-top: 5px;
 }

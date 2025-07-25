@@ -132,6 +132,12 @@
     <div id="signatureControls" style="display:none;">
         <label for="signatureUpload" data-i18n="signatureFile">Signature image:</label>
         <input type="file" id="signatureUpload" accept="image/*">
+        <button id="drawSignatureBtn" data-i18n="drawSignature"></button>
+        <div id="drawArea" style="display:none;">
+            <canvas id="signatureDrawCanvas" width="300" height="150"></canvas>
+            <button id="clearDrawBtn" data-i18n="clearSignature"></button>
+            <button id="useDrawBtn" data-i18n="useSignature"></button>
+        </div>
         <div id="signatureExtra" style="display:none;">
             <label data-i18n="selectPage">Page:</label>
             <select id="signaturePage"></select>

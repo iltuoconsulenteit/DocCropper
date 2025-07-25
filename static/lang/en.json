@@ -105,4 +105,7 @@
   "bw": "Black & white",
   "blankThreshold": "Blank page threshold:",
   "skipBlank": "Skip blank pages",
+  "drawSignature": "Draw signature",
+  "clearSignature": "Clear",
+  "useSignature": "Use drawing",
 }
