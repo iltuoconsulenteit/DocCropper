@@ -81,6 +81,9 @@ const addSignatureBtn = document.getElementById('addSignatureBtn');
 const discardSignatureBtn = document.getElementById('discardSignatureBtn');
 const saveSignatureBtn = document.getElementById('saveSignatureBtn');
 const remoteSignBtn = document.getElementById('remoteSignBtn');
+const signQR = document.getElementById('signQR');
+const signQrImg = document.getElementById('signQrImg');
+const signQrHint = document.getElementById('signQrHint');
 let signatureImageData = null;
 let signatureImg = null;
 let signaturePosition = { x: 0.85, y: 0.85 };
@@ -1381,25 +1384,23 @@ if (emailShareBtn) {
 
 if (remoteSignBtn) {
     remoteSignBtn.addEventListener('click', async () => {
-        if (!currentPdfBlob) return;
-        statusMessageElement.textContent = translations['signingPdf'] || 'Signing PDF...';
         try {
-            const resp = await fetch('/remote-sign/', { method: 'POST' });
+            const resp = await fetch('/start-sign/');
             const data = await resp.json();
-            if (data.pdf) {
-                const base64 = data.pdf.split(',')[1];
-                const byteArray = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-                currentPdfBlob = new Blob([byteArray], { type: 'application/pdf' });
-                statusMessageElement.textContent = translations['pdfSigned'] || 'PDF signed.';
-            } else {
-                statusMessageElement.textContent = data.message || 'Remote signing failed.';
+            if (data.qr) {
+                signQrImg.src = data.qr;
+                signQrHint.textContent = translations['qrScanHint'] || '';
+                signQR.style.display = 'block';
             }
         } catch (e) {
-            console.error('Remote sign error', e);
-            statusMessageElement.textContent = 'Remote signing failed.';
+            console.error('start sign error', e);
         }
         exportOptions.style.display = 'none';
     });
+}
+
+if (signQR) {
+    signQR.addEventListener('click', () => { signQR.style.display = 'none'; });
 }
 cameraFileInput.addEventListener('change', (e) => {
     if (!e.target.files || e.target.files.length === 0) return;

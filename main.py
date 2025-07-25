@@ -21,6 +21,8 @@ import tempfile
 from dotenv import load_dotenv
 import urllib.request
 import urllib.parse
+import socket
+import qrcode
 
 try:
     from pyhanko.sign import signers
@@ -57,6 +59,7 @@ except Exception:
     VERSION = "unknown"
 
 SESSIONS_ROOT = "sessions"
+SIGNATURES_DIR = "signatures"
 PID_FILE = os.path.join(tempfile.gettempdir(), "doccropper.pid")
 
 DEFAULT_SETTINGS = {
@@ -117,6 +120,16 @@ def cleanup_old_sessions(max_age: int = 3600):
                 shutil.rmtree(p, ignore_errors=True)
         except Exception:
             pass
+
+def get_lan_ip() -> str:
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "localhost"
 
 def order_points(pts: np.ndarray) -> np.ndarray:
     rect = np.zeros((4, 2), dtype="float32")
@@ -759,6 +772,74 @@ async def remote_sign(request: Request):
     except Exception:
         logger.exception("Remote signing failed")
         return JSONResponse(status_code=500, content={"message": "Remote signing failed"})
+
+
+@app.get("/start-sign/")
+async def start_sign(request: Request):
+    settings = load_settings()
+    if settings.get("license_level", "free") == "free":
+        return JSONResponse(status_code=403, content={"message": "Pro required"})
+    token = uuid.uuid4().hex
+    port = int(settings.get("port", 8765))
+    host = get_lan_ip()
+    url = f"http://{host}:{port}/sign/{token}"
+    qr_img = qrcode.make(url)
+    buf = io.BytesIO()
+    qr_img.save(buf, format="PNG")
+    b64 = base64.b64encode(buf.getvalue()).decode()
+    return {"token": token, "url": url, "qr": "data:image/png;base64," + b64}
+
+
+@app.get("/sign/{token}", response_class=HTMLResponse)
+async def sign_page(token: str):
+    html = """
+    <html><head>
+    <meta name='viewport' content='width=device-width,initial-scale=1.0'>
+    <script src='https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js'></script>
+    </head><body>
+    <canvas id='pad' style='border:1px solid #000;width:100%;height:200px'></canvas>
+    <button id='clear'>Clear</button>
+    <button id='submit'>Submit</button>
+    <script>
+    const canvas=document.getElementById('pad');
+    function resize(){
+        canvas.width=window.innerWidth*0.9;
+        canvas.height=200;
+    }
+    resize();window.addEventListener('resize',resize);
+    const pad=new SignaturePad(canvas);
+    document.getElementById('clear').onclick=()=>pad.clear();
+    document.getElementById('submit').onclick=async()=>{
+        if(pad.isEmpty())return;
+        const img=pad.toDataURL('image/png');
+        await fetch('/submit-signature/{}', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({image:img})});
+        document.body.innerHTML='<p>Signature saved. You may close this page.</p>';
+    };
+    </script>
+    </body></html>
+    """.format(token)
+    return HTMLResponse(content=html)
+
+
+@app.post("/submit-signature/{token}")
+async def submit_signature(token: str, data: dict = Body(...)):
+    settings = load_settings()
+    if settings.get("license_level", "free") == "free":
+        return JSONResponse(status_code=403, content={"message": "Pro required"})
+    img_b64 = data.get("image")
+    if not img_b64:
+        return JSONResponse(status_code=400, content={"message": "No image"})
+    if img_b64.startswith('data:'):
+        img_b64 = img_b64.split(',',1)[1]
+    try:
+        img_bytes = base64.b64decode(img_b64)
+    except Exception:
+        return JSONResponse(status_code=400, content={"message": "Invalid image"})
+    os.makedirs(SIGNATURES_DIR, exist_ok=True)
+    path = os.path.join(SIGNATURES_DIR, f"signature_{token}.png")
+    with open(path, 'wb') as fh:
+        fh.write(img_bytes)
+    return {"status": "ok"}
 
 
 @app.post("/ocr/")

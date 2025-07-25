@@ -53,6 +53,12 @@ python main.py --stop >> "!LOG_FILE!" 2>&1
 :: Launch application
 echo [INFO] Avvio DocCropper sulla porta %PORT% >> "!LOG_FILE!"
 start "" /b python main.py --port %PORT% >> "!LOG_FILE!" 2>&1
+if "%DOCROPPER_TUNNEL%"=="true" (
+    where cloudflared >nul 2>&1 && (
+        echo Starting Cloudflare Tunnel... >> "!LOG_FILE!"
+        start "tunnel" /b cloudflared tunnel --url http://localhost:%PORT% >> "!LOG_FILE!" 2>&1
+    )
+)
 
 if errorlevel 1 (
     echo ❌ ERRORE: esecuzione fallita! Vedi log: %LOG_FILE%

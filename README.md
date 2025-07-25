@@ -18,6 +18,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
  - 🧹 Skip blank pages when importing PDFs using a configurable threshold (Pro)
 - 📄 Create PDFs ready for download or sharing
 - 🔏 Optional digital signature on exported PDFs. Drag and add multiple stamps per page before export
+- ✍️ Sign from your phone via QR code and save the drawing for later use (Pro)
 - 📤 Share PDFs via WhatsApp Web or Email, attaching files via the Web Share API when possible (Pro)
 - 🗂️ Drag thumbnails to reorder images before exporting (Pro)
 - 🖼️ Closable banner can rotate multiple promotional images
@@ -201,8 +202,17 @@ DocCropper can apply a personal signature in several ways:
    to cancel. You may add multiple signatures to any page before exporting the final PDF.
    Each new stamp is offset slightly so it doesn’t hide the previous one by default.
 2. **Remote Digital Signing** – Set `DOCROPPER_REMOTE_SIGN_CMD` to an external signing command (e.g. an Aruba Sign script). After creating the PDF, press **Remote Sign** to apply the digital signature to the entire document.
+3. **Touch Signature** – Press **Remote Sign** and DocCropper generates a one-time token and LAN link. Scan the QR code with your phone or tablet and sign on the provided page. The drawing is saved under `signatures/signature_<token>.png`.
+
+   - GET `/start-sign/` returns `{token, url, qr}` with a QR code for the LAN link
+   - Visit `/sign/<token>` to draw the signature
+   - POST `/submit-signature/<token>` with `{image: "data:image/png;base64,..."}` to save it
 
 Alternatively, you may set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` to automatically apply a local PKCS#12 certificate.
+
+When `DOCROPPER_TUNNEL=true` and `cloudflared` is installed, the start scripts
+launch a temporary Cloudflare Tunnel so the signing link works from outside your
+LAN. The public URL is written to the log.
 
 ### Pro OCR (coming soon)
 

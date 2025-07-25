@@ -37,4 +37,10 @@ python3 main.py --stop >/dev/null 2>&1 || true
 echo "Starting DocCropper on port $PORT..."
 python3 main.py --host 0.0.0.0 --port "$PORT" &
 sleep 2
-xdg-open "http://127.0.0.1:$PORT/" >/dev/null 2>&1 || true
+if command -v xdg-open >/dev/null; then
+  xdg-open "http://127.0.0.1:$PORT/" >/dev/null 2>&1 || true
+fi
+if [ "${DOCROPPER_TUNNEL}" = "true" ] && command -v cloudflared >/dev/null; then
+  echo "Starting Cloudflare Tunnel..."
+  cloudflared tunnel --url http://localhost:$PORT > "${TMPDIR:-/tmp}/doccropper_tunnel.log" 2>&1 &
+fi

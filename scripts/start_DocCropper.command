@@ -36,3 +36,7 @@ echo "Starting DocCropper on port $PORT..."
 python3 main.py --host 0.0.0.0 --port "$PORT" &
 sleep 2
 open "http://127.0.0.1:$PORT/"
+if [ "$DOCROPPER_TUNNEL" = "true" ] && command -v cloudflared >/dev/null; then
+  echo "Starting Cloudflare Tunnel..."
+  cloudflared tunnel --url http://localhost:$PORT > "$TMPDIR/doccropper_tunnel.log" 2>&1 &
+fi

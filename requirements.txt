@@ -11,3 +11,4 @@ python-dotenv
 pyhanko
 pytesseract
 PyMuPDF
+qrcode
