@@ -1,7 +1,10 @@
 #!/bin/bash
 set -e
 
-# Require root on Linux
+# We'll log installer actions once we know the target directory
+
+
+# Require root on Linux so we can install to system paths
 if [ "$EUID" -ne 0 ]; then
   if command -v sudo >/dev/null 2>&1; then
     echo "⚠️  This installer needs administrative privileges. Re-running with sudo..."
@@ -34,6 +37,15 @@ else
   rm -f "$TARGET_DIR/.write_test"
 fi
 echo "Installing to: $TARGET_DIR"
+
+# Start logging once the installation directory is known
+LOG_FILE="${DOCROPPER_LOG_FILE:-$TARGET_DIR/install.log}"
+if ! touch "$LOG_FILE" >/dev/null 2>&1; then
+  LOG_FILE="/tmp/DocCropper_install.log"
+  echo "Cannot write log to $TARGET_DIR. Using $LOG_FILE"
+fi
+echo "Logging to $LOG_FILE"
+exec > >(tee -a "$LOG_FILE") 2>&1
 
 DEFAULT_KEY=""
 if [ -f "$TARGET_DIR/$CONFIG_FILE" ]; then

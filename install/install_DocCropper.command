@@ -1,6 +1,17 @@
 #!/bin/bash
 set -e
 
+# Require root so we can install under /Applications
+if [ "$(id -u)" -ne 0 ]; then
+  if command -v sudo >/dev/null 2>&1; then
+    echo "⚠️  This installer needs administrative privileges. Re-running with sudo..."
+    exec sudo "$0" "$@"
+  else
+    echo "❌ Please run this installer as root." >&2
+    exit 1
+  fi
+fi
+
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-}"
 if [ -z "$DOCROPPER_DEV_BRANCH" ]; then
@@ -14,6 +25,15 @@ read -r -p "Installation directory [$DEFAULT_DIR]: " TARGET_DIR
 TARGET_DIR=${TARGET_DIR:-$DEFAULT_DIR}
 mkdir -p "$TARGET_DIR"
 echo "Installing to: $TARGET_DIR"
+
+# Start logging after we know the target directory
+LOG_FILE="${DOCROPPER_LOG_FILE:-$TARGET_DIR/install.log}"
+if ! touch "$LOG_FILE" >/dev/null 2>&1; then
+  LOG_FILE="/tmp/DocCropper_install.log"
+  echo "Cannot write log to $TARGET_DIR. Using $LOG_FILE"
+fi
+echo "Logging to $LOG_FILE"
+exec > >(tee -a "$LOG_FILE") 2>&1
 
 DEFAULT_KEY=""
 if [ -f "$TARGET_DIR/settings.json" ]; then
