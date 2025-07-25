@@ -21,6 +21,8 @@
   "delete": "Delete",
   "toGray": "Gray",
   "toBW": "B/W",
+  "sign": "Sign",
+  "discardSignature": "Discard",
   "realizzato": "Powered by IlTuoConsulenteIT",
   "language": "Language:",
   "english": "English",

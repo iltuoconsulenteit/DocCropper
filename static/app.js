@@ -72,6 +72,7 @@ const signatureExtra = document.getElementById('signatureExtra');
 const signaturePage = document.getElementById('signaturePage');
 const signatureScaleInput = document.getElementById('signatureScale');
 const addSignatureBtn = document.getElementById('addSignatureBtn');
+const discardSignatureBtn = document.getElementById('discardSignatureBtn');
 const saveSignatureBtn = document.getElementById('saveSignatureBtn');
 let signatureImageData = null;
 let signatureImg = null;
@@ -629,6 +630,21 @@ function deleteImage(index) {
     }
 }
 
+function openSignatureForPage(idx) {
+    signaturePage.value = idx;
+    populateSignaturePages();
+    signatureControls.style.display = 'block';
+    signatureExtra.style.display = 'block';
+    if (signatureImg) {
+        signaturePreview.style.display = 'block';
+        signatureHint.style.display = 'block';
+    } else {
+        signaturePreview.style.display = 'none';
+        signatureHint.style.display = 'none';
+    }
+    renderSignaturePreview();
+}
+
 function editImage(index) {
     editingIndex = index;
     const file = processedFiles[index];
@@ -733,6 +749,16 @@ function addThumbnail(src, index) {
         });
         btns.appendChild(bwBtn);
     }
+
+    const signBtn = document.createElement('button');
+    signBtn.dataset.key = 'sign';
+    signBtn.textContent = t('sign');
+    signBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = Array.from(processedGallery.children).indexOf(container);
+        openSignatureForPage(idx);
+    });
+    btns.appendChild(signBtn);
 
     const editBtn = document.createElement('button');
     editBtn.dataset.key = 'edit';
@@ -1488,6 +1514,16 @@ if (addSignatureBtn) {
         signaturePosition.y += OFFSET;
         if (signaturePosition.y > 0.95) signaturePosition.y = OFFSET;
         renderSignaturePreview();
+    });
+}
+
+if (discardSignatureBtn) {
+    discardSignatureBtn.addEventListener('click', () => {
+        const pageIdx = parseInt(signaturePage.value || '0');
+        signatures = signatures.filter(s => s.page !== pageIdx);
+        signatureControls.style.display = 'none';
+        signaturePreview.style.display = 'none';
+        signatureHint.style.display = 'none';
     });
 }
 
