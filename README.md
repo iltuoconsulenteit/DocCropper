@@ -191,8 +191,8 @@ For inquiries: **doccropper@iltuoconsulenteit.it**
 
 DocCropper can apply a personal signature in two ways:
 
-1. **Image Stamp** – Use the `Sign` button shown below each processed page to upload
-   and position a signature image. White backgrounds are automatically removed.
+1. **Image Stamp** – Use the action menu below each processed page and choose `Sign`
+   to upload and position a signature image. White backgrounds are automatically removed.
    Drag the previewed stamp on the page canvas, adjust its scale, then press **Add**
    to queue it for that page. Use **Save** to embed the placed stamps or **Discard**
    to cancel.

@@ -468,10 +468,10 @@ function applyTranslations() {
             opt.textContent = translations[k];
         }
     });
-    processedGallery.querySelectorAll('.thumbButtons button').forEach(btn => {
-        const key = btn.dataset.key;
+    processedGallery.querySelectorAll('.thumbMenu option').forEach(opt => {
+        const key = opt.dataset.key;
         if (translations[key]) {
-            btn.textContent = translations[key];
+            opt.textContent = translations[key];
         }
     });
     if (versionBox && appVersion) {
@@ -715,74 +715,54 @@ function addThumbnail(src, index) {
     });
     container.appendChild(imgEl);
 
-    const btns = document.createElement('div');
-    btns.className = 'thumbButtons';
+    const menu = document.createElement('select');
+    menu.className = 'thumbMenu';
 
-    const rotateBtn = document.createElement('button');
-    rotateBtn.dataset.key = 'rotate';
-    rotateBtn.textContent = t('rotate');
-    rotateBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const idx = Array.from(processedGallery.children).indexOf(container);
-        rotateImage(idx);
-    });
-    btns.appendChild(rotateBtn);
-
-    if (isLicensed && currentLicenseLevel !== 'free') {
-        const grayBtn = document.createElement('button');
-        grayBtn.dataset.key = 'toGray';
-        grayBtn.textContent = t('toGray');
-        grayBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const idx = Array.from(processedGallery.children).indexOf(container);
-            convertColor(idx, 'gray');
-        });
-        btns.appendChild(grayBtn);
-
-        const bwBtn = document.createElement('button');
-        bwBtn.dataset.key = 'toBW';
-        bwBtn.textContent = t('toBW');
-        bwBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const idx = Array.from(processedGallery.children).indexOf(container);
-            convertColor(idx, 'bw');
-        });
-        btns.appendChild(bwBtn);
+    function addOption(val, key) {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.dataset.key = key;
+        opt.textContent = t(key);
+        menu.appendChild(opt);
     }
 
-    const signBtn = document.createElement('button');
-    signBtn.dataset.key = 'sign';
-    signBtn.textContent = t('sign');
-    signBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
+    addOption('', 'chooseAction');
+    addOption('rotate', 'rotate');
+    if (isLicensed && currentLicenseLevel !== 'free') {
+        addOption('gray', 'toGray');
+        addOption('bw', 'toBW');
+    }
+    addOption('sign', 'sign');
+    addOption('edit', 'edit');
+    addOption('delete', 'delete');
+
+    menu.addEventListener('change', (e) => {
+        const val = menu.value;
         const idx = Array.from(processedGallery.children).indexOf(container);
-        openSignatureForPage(idx);
+        switch (val) {
+            case 'rotate':
+                rotateImage(idx);
+                break;
+            case 'gray':
+                convertColor(idx, 'gray');
+                break;
+            case 'bw':
+                convertColor(idx, 'bw');
+                break;
+            case 'sign':
+                openSignatureForPage(idx);
+                break;
+            case 'edit':
+                editImage(idx);
+                break;
+            case 'delete':
+                deleteImage(idx);
+                break;
+        }
+        menu.value = '';
     });
-    btns.appendChild(signBtn);
 
-    const editBtn = document.createElement('button');
-    editBtn.dataset.key = 'edit';
-    editBtn.textContent = t('edit');
-    editBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const idx = Array.from(processedGallery.children).indexOf(container);
-        editImage(idx);
-    });
-    btns.appendChild(editBtn);
-
-    const delBtn = document.createElement('button');
-    delBtn.dataset.key = 'delete';
-    delBtn.textContent = t('delete');
-    delBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const idx = Array.from(processedGallery.children).indexOf(container);
-        deleteImage(idx);
-    });
-    btns.appendChild(delBtn);
-
-    /* Share button removed per feedback */
-
-    container.appendChild(btns);
+    container.appendChild(menu);
     processedGallery.appendChild(container);
 }
 
