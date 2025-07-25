@@ -247,6 +247,14 @@ function compressImageFile(file) {
     });
 }
 
+function fileToDataURL(file) {
+    return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.readAsDataURL(file);
+    });
+}
+
 async function convertPdfToImages(file) {
     const form = new FormData();
     form.append('pdf_file', file, file.name);
@@ -263,6 +271,45 @@ async function convertPdfToImages(file) {
         });
     }
     return out;
+}
+
+async function importPdfPages(file) {
+    const pages = await convertPdfToImages(file);
+    let toAdd = pages;
+    if (currentLicenseLevel === 'free') {
+        const allowed = MAX_IMAGES_FREE - processedImages.length;
+        if (allowed <= 0) {
+            statusMessageElement.textContent = t('maxImagesFree');
+            return;
+        }
+        toAdd = pages.slice(0, allowed);
+    }
+    for (const p of toAdd) {
+        let imgFile = p;
+        try {
+            imgFile = await compressImageFile(p);
+        } catch (e) {
+            console.warn('Compress failed', e);
+        }
+        processedFiles.push(imgFile);
+        const dataUrl = await fileToDataURL(imgFile);
+        processedImages.push(dataUrl);
+        addThumbnail(dataUrl, processedImages.length - 1);
+    }
+    if (processedImages.length > 0) {
+        exportPdfBtn.style.display = 'inline-block';
+        if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
+        layoutControls.style.display = 'block';
+        signatureControls.style.display = 'block';
+        if (signatureImg) {
+            signaturePreview.style.display = 'block';
+            signatureHint.style.display = 'block';
+            signatureExtra.style.display = 'block';
+            populateSignaturePages();
+            renderSignaturePreview();
+        }
+        updateLayoutPreview();
+    }
 }
 
 async function loadSettings() {
@@ -928,40 +975,38 @@ async function addFiles(newFiles) {
 
 imageUploadElement.addEventListener('change', async (event) => {
     const list = Array.from(event.target.files);
-    const gathered = [];
+    const toProcess = [];
     for (const f of list) {
         if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
             try {
-                const imgs = await convertPdfToImages(f);
-                gathered.push(...imgs);
+                await importPdfPages(f);
             } catch (e) {
                 console.error('PDF conversion failed', e);
             }
         } else {
-            gathered.push(f);
+            toProcess.push(f);
         }
     }
-    if (gathered.length) addFiles(gathered);
+    if (toProcess.length) addFiles(toProcess);
 });
 
 async function handleDrop(event) {
     event.preventDefault();
     if (event.dataTransfer && event.dataTransfer.files) {
         const list = Array.from(event.dataTransfer.files);
-        const gathered = [];
+        const toProcess = [];
         for (const f of list) {
             if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
                 try {
-                    const imgs = await convertPdfToImages(f);
-                    gathered.push(...imgs);
+                    await importPdfPages(f);
                 } catch (e) {
                     console.error('PDF conversion failed', e);
                 }
             } else {
-                gathered.push(f);
+                toProcess.push(f);
             }
         }
-        if (gathered.length) addFiles(gathered);
+        if (toProcess.length) addFiles(toProcess);
     }
 }
 
