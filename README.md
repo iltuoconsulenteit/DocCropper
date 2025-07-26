@@ -65,7 +65,7 @@ Logos and branding can be customized via `static/logos/`, `settings.json`, and `
 Blank pages can be skipped during PDF import. Enable **Skip blank pages** in the layout controls and adjust the `blank_threshold` percentage (95% by default).
 Pages over this threshold are discarded in the Pro edition.
 
-User preferences are stored in the `users/` folder based on their email address. Anonymous users fallback to global settings in `settings.json`. The system supports optional Google sign-in and a configurable purchase panel (donation or subscription) opened from the **Purchase** button next to the Help button. Developer keys allow full access when the configured `license_key` matches the value of the `DOCROPPER_DEV_LICENSE` environment variable.
+User preferences are stored in the `users/` folder based on their email address. Anonymous users fallback to global settings in `settings.json`. The system supports optional Google sign-in and a configurable purchase panel (donation or subscription) opened from the **Purchase** button next to the Help button. Payment links can be supplied via `settings.json` or through Stripe credentials in `env/stripe.env.example`. Developer keys allow full access when the configured `license_key` matches the value of the `DOCROPPER_DEV_LICENSE` environment variable.
 
 ---
 
@@ -106,7 +106,10 @@ pip install -r requirements.txt
 You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer branch or `DOCROPPER_BRANCH` to force a specific branch.
 
 You can pre-populate `settings.json` or override values using `.env` files in the `env/` folder.
-Use `env/.env.example` as a reference for all supported variables.
+Several example files are included so you can enable features individually:
+`license.env.example`, `google.env.example`, `signing.env.example`,
+`docuseal.env.example` and `stripe.env.example`. The consolidated
+`env/.env.example` lists every supported variable.
 The `.env` files may also define `LICENSE_CHECK=true` to enforce license validation via a remote server.
 To quickly create an environment file for testing you can run one of the
 `scripts/setup_license` helpers. The script for your platform (`.bat`, `.sh` or
@@ -240,7 +243,9 @@ npm install
 npm start
 ```
 
-Create a `.env` file based on `.env.example` with your Google `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` (e.g. `http://localhost:8765/auth/google/callback`). Optionally set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` to sign PDFs automatically. To use Docuseal for remote signatures, also set `DOCUSEAL_API_URL` and `DOCUSEAL_API_KEY`.
+Create a `.env` file based on `.env.example` with your Google `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` (e.g. `http://localhost:8765/auth/google/callback`).
+You may also copy any of the sample files under `env/` if you wish to test
+additional features such as Docuseal or local signing.
 
 Visit [http://localhost:8765](http://localhost:8765) and click **Login with Google**. After authenticating you'll be redirected to `/dashboard` which shows your name and email.
 
