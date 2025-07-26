@@ -10,13 +10,19 @@ import uuid
 
 import cv2
 import numpy as np
+import fitz
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, Body, Request
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import subprocess
+import tempfile
 from dotenv import load_dotenv
+import urllib.request
+import urllib.parse
+import socket
+import qrcode
 
 try:
     from pyhanko.sign import signers
@@ -28,10 +34,6 @@ try:
 except Exception:
     pytesseract = None
 
-try:
-    import pyinsane2
-except Exception:
-    pyinsane2 = None
 
 SETTINGS_FILE = "settings.json"
 # Load environment variables from any .env files in env/
@@ -44,19 +46,21 @@ if os.path.isdir(ENV_DIR):
 USERS_DIR = "users"
 
 # Developer license key for demonstration (case-insensitive)
-DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "ILTUOCONSULENTEIT-DEV")
+DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "")
 DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
 
 try:
     VERSION = subprocess.check_output(
         ["git", "rev-parse", "--short", "HEAD"],
         cwd=os.path.dirname(__file__),
+        stderr=subprocess.DEVNULL,
     ).decode().strip()
 except Exception:
     VERSION = "unknown"
 
 SESSIONS_ROOT = "sessions"
-PID_FILE = "doccropper.pid"
+SIGNATURES_DIR = "signatures"
+PID_FILE = os.path.join(tempfile.gettempdir(), "doccropper.pid")
 
 DEFAULT_SETTINGS = {
     "language": "en",
@@ -67,7 +71,7 @@ DEFAULT_SETTINGS = {
     "scale_percent": 100,
     "brightness": 100,
     "contrast": 100,
-    "port": 8000,
+    "port": 8765,
     "license_key": "",
     "license_name": "",
     "payment_mode": "donation",
@@ -75,8 +79,28 @@ DEFAULT_SETTINGS = {
     "stripe_link": "",
     "bank_info": "",
     "google_client_id": "",
+    "license_check": False,
+    "license_level": "free",
     "brand_html": "",
+    "client_logo": "",
+    "sponsor_logo": "",
+    "sponsor_scale": 100,
+    "sponsor_bottom": 80,
+    "blank_threshold": 95,
+    "skip_blank": True,
+    "banner_images": ["DocCropper_slogan_{{lang}}.png"],
+    "developer_watermark": False,
 }
+
+def verify_license_server(key: str) -> bool:
+    url = os.getenv("LICENSE_SERVER", "https://license.doccropper.it/verify")
+    try:
+        with urllib.request.urlopen(f"{url}?key={urllib.parse.quote(key)}") as resp:
+            data = json.loads(resp.read().decode())
+            return bool(data.get("valid"))
+    except Exception:
+        logger.exception("License check failed")
+        return False
 
 def get_session_dir(session_id: str) -> str:
     if not session_id:
@@ -97,6 +121,39 @@ def cleanup_old_sessions(max_age: int = 3600):
         except Exception:
             pass
 
+def get_lan_ip() -> str:
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "localhost"
+
+def order_points(pts: np.ndarray) -> np.ndarray:
+    rect = np.zeros((4, 2), dtype="float32")
+    s = pts.sum(axis=1)
+    rect[0] = pts[np.argmin(s)]
+    rect[2] = pts[np.argmax(s)]
+    diff = np.diff(pts, axis=1)
+    rect[1] = pts[np.argmin(diff)]
+    rect[3] = pts[np.argmax(diff)]
+    return rect
+
+def detect_document_corners(img: np.ndarray) -> np.ndarray | None:
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.GaussianBlur(gray, (5, 5), 0)
+    edged = cv2.Canny(gray, 50, 200)
+    cnts, _ = cv2.findContours(edged, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
+    for c in cnts:
+        peri = cv2.arcLength(c, True)
+        approx = cv2.approxPolyDP(c, 0.02 * peri, True)
+        if len(approx) == 4:
+            return order_points(approx.reshape(4, 2))
+    return None
+
 def load_settings():
     if not os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "w") as fh:
@@ -110,12 +167,28 @@ def load_settings():
         env_key = os.getenv("DOCROPPER_LICENSE_KEY")
         env_name = os.getenv("DOCROPPER_LICENSE_NAME")
         google_id = os.getenv("DOCROPPER_GOOGLE_CLIENT_ID")
+        env_check = os.getenv("LICENSE_CHECK")
+        env_level = os.getenv("DOCROPPER_LICENSE_LEVEL")
+        dev_wm_env = os.getenv("DOCROPPER_DEV_WATERMARK")
         if env_key:
             merged["license_key"] = env_key
         if env_name:
             merged["license_name"] = env_name
         if google_id:
             merged["google_client_id"] = google_id
+        if env_check is not None:
+            merged["license_check"] = env_check.lower() == "true"
+        if env_level:
+            merged["license_level"] = env_level.lower()
+        if dev_wm_env is not None:
+            merged["developer_watermark"] = dev_wm_env.lower() == "true"
+
+        dev_env = DEV_LICENSE_KEY_UPPER
+        if dev_env and merged.get("license_key", "").strip().upper() == dev_env:
+            merged["license_level"] = "full"
+            if not merged.get("license_name"):
+                merged["license_name"] = "Developer"
+
         return merged
     except Exception:
         return DEFAULT_SETTINGS.copy()
@@ -178,7 +251,8 @@ async def read_root(request: Request):
         session_id = uuid.uuid4().hex
     get_session_dir(session_id)
     try:
-        with open("static/index.html") as f:
+        index_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
+        with open(index_path, "r", encoding="utf-8") as f:
             content = f.read()
     except FileNotFoundError:
         logger.error("static/index.html not found")
@@ -191,6 +265,9 @@ async def read_root(request: Request):
 @app.get("/settings/")
 async def get_settings():
     data = load_settings()
+    if not data.get("license_check") and not data.get("license_key"):
+        data["license_key"] = "FREE"
+        data["license_name"] = "Free Edition"
     data["version"] = VERSION
     return data
 
@@ -238,42 +315,22 @@ async def google_login(token: str = Body(...)):
         logger.exception("Google token verification failed")
         return JSONResponse(status_code=400, content={"message": "Invalid token"})
 
-
-@app.get("/scan/available")
-async def scan_available():
-    return {"available": pyinsane2 is not None}
-
-
-@app.get("/scan/")
-async def scan_document():
-    if pyinsane2 is None:
-        return JSONResponse(status_code=501, content={"message": "Scanning not available"})
+@app.post("/detect-corners/")
+async def detect_corners(image_file: UploadFile = File(...)):
     try:
-        pyinsane2.init()
-        devices = pyinsane2.get_devices()
-        if not devices:
-            return JSONResponse(status_code=404, content={"message": "No scanner found"})
-        scanner = devices[0]
-        session = scanner.scan(multiple=False)
-        while True:
-            try:
-                session.scan.read()
-            except pyinsane2.PyinsaneException:
-                break
-        img = session.images[0].convert("RGB")
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        data = base64.b64encode(buf.getvalue()).decode()
-        return {"image": "data:image/png;base64," + data}
-    except Exception as e:
-        logger.exception("Scanning failed")
-        return JSONResponse(status_code=500, content={"message": f"Scan failed: {str(e)}"})
-    finally:
-        try:
-            pyinsane2.exit()
-        except Exception:
-            pass
-
+        contents = await image_file.read()
+        nparr = np.frombuffer(contents, np.uint8)
+        img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img_cv is None:
+            return JSONResponse(status_code=400, content={"message": "Invalid image"})
+        corners = detect_document_corners(img_cv)
+        if corners is None:
+            return JSONResponse(status_code=400, content={"message": "Edges not found"})
+        pts = corners.reshape(8).tolist()
+        return {"points": pts}
+    except Exception:
+        logger.exception("Corner detection failed")
+        return JSONResponse(status_code=500, content={"message": "Detection error"})
 
 @app.post("/process-image/")
 async def process_image(
@@ -332,30 +389,25 @@ async def process_image(
         max_width = max(int(width_a), int(width_b))
 
 
-        # Let's calculate height based on the selected left/right edges first,
-        # then decide if we override it with a fixed aspect ratio.
+        # Calculate height based on the selected left/right edges of the
+        # document. We no longer force an A4 portrait ratio so horizontal
+        # documents maintain their original orientation.
         height_from_selection_a = np.sqrt(((tr[0] - br[0])**2) + ((tr[1] - br[1])**2)) # Length of right edge
         height_from_selection_b = np.sqrt(((tl[0] - bl[0])**2) + ((tl[1] - bl[1])**2)) # Length of left edge
-        max_height_from_selection = max(int(height_from_selection_a), int(height_from_selection_b))
-
-
-        # For this example, let's enforce a portrait A4-like aspect ratio.
-        # If the calculated max_width is likely the shorter dimension of the paper:
-        A4_PORTRAIT_RATIO_H_W = math.sqrt(2)
-        max_height = int(max_width * A4_PORTRAIT_RATIO_H_W)
+        max_height = max(int(height_from_selection_a), int(height_from_selection_b))
 
         logger.info(f"Max width from selection: {max_width}")
-        logger.info(f"Max height from selection (before aspect ratio adjustment): {max_height_from_selection}")
-        logger.info(f"Target max height (after A4 portrait aspect ratio adjustment): {max_height}")
+        logger.info(f"Max height from selection: {max_height}")
 
 
-        if max_width <= 0 or max_height <=0: # Check adjusted max_height
-            logger.error(f"Calculated max_width or max_height is zero or negative. Width: {max_width}, Adjusted Height: {max_height}. Points: {src_pts.tolist()}")
-            # Fallback to selection height if adjusted height is problematic
-            max_height = max_height_from_selection
-            if max_height <=0:
-                 return JSONResponse(status_code=400, content={"message": "Invalid points leading to zero/negative output dimensions even after fallback."})
-            logger.warning(f"Falling back to max_height_from_selection: {max_height}")
+        if max_width <= 0 or max_height <= 0:
+            logger.error(
+                f"Calculated max_width or max_height is invalid. Width: {max_width}, Height: {max_height}. Points: {src_pts.tolist()}"
+            )
+            return JSONResponse(
+                status_code=400,
+                content={"message": "Invalid points leading to zero/negative output dimensions."},
+            )
 
 
         # Define the 4 corners of the output rectangle using the potentially adjusted max_height
@@ -424,6 +476,36 @@ async def process_image(
         return JSONResponse(status_code=500, content={"message": f"An internal error occurred: {str(e)}"})
 
 
+@app.post("/pdf-to-images/")
+async def pdf_to_images(
+    pdf_file: UploadFile = File(...),
+    threshold: int = Form(95),
+    skip_blank: bool = Form(True)
+):
+    """Convert PDF pages to base64 PNG images."""
+    settings = load_settings()
+    if settings.get("license_level", "free").lower() == "free":
+        return JSONResponse(status_code=403, content={"message": "PDF import requires Pro license"})
+    try:
+        pdf_bytes = await pdf_file.read()
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        thr = max(0, min(100, int(threshold))) / 100.0
+        images_b64: list[str] = []
+        for page in doc:
+            pix = page.get_pixmap()
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            gray = np.array(img.convert("L"))
+            if skip_blank and np.mean(gray > 240) >= thr:
+                continue
+            img_bytes = pix.tobytes("png")
+            b64 = base64.b64encode(img_bytes).decode("utf-8")
+            images_b64.append("data:image/png;base64," + b64)
+        return {"images": images_b64}
+    except Exception as e:
+        logger.exception("Failed to convert PDF")
+        return JSONResponse(status_code=500, content={"message": f"PDF conversion failed: {str(e)}"})
+
+
 @app.post("/create-pdf/")
 async def create_pdf(
     request: Request,
@@ -432,14 +514,27 @@ async def create_pdf(
     orientation: str = Body("portrait"),
     arrangement: str = Body("auto"),
     scale_mode: str = Body("fit"),
-    scale_percent: int = Body(100)
+    scale_percent: int = Body(100),
+    color_mode: str = Body("color"),
+    signature_image: str | None = Body(None),
+    signatures: list[dict] = Body(default_factory=list)
 ):
     try:
         settings = load_settings()
         key = settings.get("license_key", "").strip().upper()
-        licensed = bool(key)
-        if key == DEV_LICENSE_KEY_UPPER:
+        license_check = settings.get("license_check", False)
+        dev_env = DEV_LICENSE_KEY_UPPER
+        dev_key_valid = dev_env and key == dev_env
+        if license_check:
+            licensed = False
+            if dev_key_valid:
+                licensed = True
+            elif key:
+                licensed = verify_license_server(key)
+        else:
             licensed = True
+            if dev_key_valid and settings.get("developer_watermark", False):
+                licensed = False
         session_id = request.cookies.get("session_id")
         session_dir = get_session_dir(session_id)
         pil_images = []
@@ -449,6 +544,30 @@ async def create_pdf(
             img_bytes = base64.b64decode(img_b64)
             pil_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
             pil_images.append(pil_img)
+
+        if color_mode.lower() in ("gray", "bw"):
+            converted = []
+            for img in pil_images:
+                gray = img.convert("L")
+                if color_mode.lower() == "bw":
+                    bw = gray.point(lambda x: 0 if x < 128 else 255, "1")
+                    converted.append(bw.convert("RGB"))
+                else:
+                    converted.append(gray.convert("RGB"))
+            pil_images = converted
+
+        sig_img = None
+        if signature_image:
+            try:
+                sig_b64 = signature_image.split(',', 1)[1] if signature_image.startswith('data:') else signature_image
+                sig_bytes = base64.b64decode(sig_b64)
+                sig_img = Image.open(io.BytesIO(sig_bytes)).convert('RGBA')
+                arr = np.array(sig_img)
+                white = (arr[:, :, :3] > 240).all(axis=2)
+                arr[white, 3] = 0
+                sig_img = Image.fromarray(arr)
+            except Exception:
+                logger.exception('Failed to decode signature image')
 
         if not pil_images:
             return JSONResponse(status_code=400, content={"message": "No images provided"})
@@ -499,11 +618,26 @@ async def create_pdf(
         inner_w = max(1, cell_w - margin * 2)
         inner_h = max(1, cell_h - margin * 2)
 
+        header_logo = None
+        footer_logo = None
+        if not licensed:
+            logos_dir = os.path.join(os.path.dirname(__file__), "static", "logos")
+            try:
+                header_logo = Image.open(os.path.join(logos_dir, "header_logo.png")).convert("RGBA")
+            except Exception:
+                header_logo = None
+            try:
+                footer_logo = Image.open(os.path.join(logos_dir, "footer_logo.png")).convert("RGBA")
+            except Exception:
+                footer_logo = None
+
+
         pages = []
         TARGET_DPI = 300
         for i in range(0, len(pil_images), layout):
             page_index = i // layout
             page = Image.new("RGB", (page_w, page_h), "white")
+            placements: list[tuple[int, int, int, int]] = []
             for j, img in enumerate(pil_images[i:i+layout]):
                 col = j % cols
                 row = j // cols
@@ -529,31 +663,62 @@ async def create_pdf(
                 offset_x = col * cell_w + margin + (inner_w - new_w) // 2
                 offset_y = row * cell_h + margin + (inner_h - new_h) // 2
                 page.paste(temp, (offset_x, offset_y))
-            if not licensed and page_index > 0:
-                from PIL import ImageDraw, ImageFont
+                placements.append((offset_x, offset_y, new_w, new_h))
+            if not licensed:
+                target_h = page_h // 35
+                hl = fl = None
+                if header_logo:
+                    ratio = target_h / header_logo.height
+                    hl = header_logo.resize((int(header_logo.width * ratio), target_h), Image.LANCZOS)
+                if footer_logo:
+                    ratio = target_h / footer_logo.height
+                    fl = footer_logo.resize((int(footer_logo.width * ratio), target_h), Image.LANCZOS)
                 draw = ImageDraw.Draw(page)
-                text = "DEMO"
-                try:
-                    font_size = min(page_w, page_h) // 8
-                    font = ImageFont.truetype("DejaVuSans.ttf", font_size)
-                except Exception:
-                    font = ImageFont.load_default()
-                bbox_method = getattr(draw, "textbbox", None)
-                if callable(bbox_method):
-                    bbox = bbox_method((0, 0), text, font=font)
-                    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-                else:
-                    size_method = getattr(draw, "textsize", None)
-                    if callable(size_method):
-                        tw, th = size_method(text, font=font)
+                if hl:
+                    hx = margin
+                    hy = page_h - hl.height - margin
+                    page.paste(hl, (hx, hy), hl)
+                if fl:
+                    fx = page_w - fl.width - margin
+                    fy = page_h - fl.height - margin
+                    text = "by IlTuoConsulenteIT"
+                    font_size = max(10, fl.height // 2)
+                    try:
+                        font = ImageFont.truetype("DejaVuSans.ttf", font_size)
+                    except Exception:
+                        font = ImageFont.load_default()
+                    if hasattr(draw, "textbbox"):
+                        bbox = draw.textbbox((0, 0), text, font=font)
+                        tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
                     else:
                         tw, th = font.getsize(text)
-                draw.text(
-                    ((page_w - tw) / 2, (page_h - th) / 2),
-                    text,
-                    fill=(255, 0, 0),
-                    font=font,
-                )
+                    tx = fx - tw - 5
+                    ty = fy + (fl.height - th) // 2
+                    draw.text((tx, ty), text, fill="black", font=font)
+                    page.paste(fl, (fx, fy), fl)
+            if sig_img and signatures and placements:
+                footer_h = fl.height if (not licensed and fl) else 0
+                img_off_x, img_off_y, img_w, img_h = placements[0]
+                base_ratio = (img_h // 10) / sig_img.height
+                for sig in [s for s in signatures if s.get('page') == page_index]:
+                    try:
+                        scale = float(sig.get('scale', 1.0))
+                    except Exception:
+                        scale = 1.0
+                    w = int(sig_img.width * base_ratio * scale)
+                    h = int(sig_img.height * base_ratio * scale)
+                    stamp = sig_img.resize((w, h), Image.LANCZOS)
+                    sx = int(img_off_x + float(sig.get('x', 0.5)) * img_w - w / 2)
+                    sy = int(img_off_y + float(sig.get('y', 0.5)) * img_h - h / 2)
+                    if sx < margin:
+                        sx = margin
+                    if sy < margin:
+                        sy = margin
+                    if sx + w > page_w - margin:
+                        sx = page_w - margin - w
+                    if sy + h > page_h - margin - footer_h:
+                        sy = page_h - margin - footer_h - h
+                    page.paste(stamp, (sx, sy), stamp)
             pages.append(page)
 
         pdf_bytes_io = io.BytesIO()
@@ -571,12 +736,110 @@ async def create_pdf(
                 pdf_bytes = signed_io.getvalue()
             except Exception:
                 logger.exception("PDF signing failed")
+
+        pdf_path = os.path.join(session_dir, "output.pdf")
+        try:
+            with open(pdf_path, "wb") as fh:
+                fh.write(pdf_bytes)
+        except Exception:
+            logger.exception("Failed to save PDF")
         pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
         # Do not delete the session immediately so the user can re-export if needed
         return JSONResponse(content={"pdf": "data:application/pdf;base64," + pdf_base64})
     except Exception as e:
         logger.exception("Failed to create PDF")
         return JSONResponse(status_code=500, content={"message": f"Could not create PDF: {str(e)}"})
+
+
+@app.post("/remote-sign/")
+async def remote_sign(request: Request):
+    session_id = request.cookies.get("session_id")
+    session_dir = get_session_dir(session_id)
+    pdf_path = os.path.join(session_dir, "output.pdf")
+    if not os.path.exists(pdf_path):
+        return JSONResponse(status_code=404, content={"message": "PDF not found"})
+    remote_cmd = os.environ.get("DOCROPPER_REMOTE_SIGN_CMD")
+    if not remote_cmd:
+        return JSONResponse(status_code=400, content={"message": "Remote signing not configured"})
+    try:
+        out_path = pdf_path.replace(".pdf", "_signed.pdf")
+        subprocess.run([remote_cmd, pdf_path, out_path], check=True)
+        with open(out_path, "rb") as fh:
+            pdf_bytes = fh.read()
+        os.replace(out_path, pdf_path)
+        pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
+        return {"pdf": "data:application/pdf;base64," + pdf_base64}
+    except Exception:
+        logger.exception("Remote signing failed")
+        return JSONResponse(status_code=500, content={"message": "Remote signing failed"})
+
+
+@app.get("/start-sign/")
+async def start_sign(request: Request):
+    settings = load_settings()
+    if settings.get("license_level", "free") == "free":
+        return JSONResponse(status_code=403, content={"message": "Pro required"})
+    token = uuid.uuid4().hex
+    port = int(settings.get("port", 8765))
+    host = get_lan_ip()
+    url = f"http://{host}:{port}/sign/{token}"
+    qr_img = qrcode.make(url)
+    buf = io.BytesIO()
+    qr_img.save(buf, format="PNG")
+    b64 = base64.b64encode(buf.getvalue()).decode()
+    return {"token": token, "url": url, "qr": "data:image/png;base64," + b64}
+
+
+@app.get("/sign/{token}", response_class=HTMLResponse)
+async def sign_page(token: str):
+    html = """
+    <html><head>
+    <meta name='viewport' content='width=device-width,initial-scale=1.0'>
+    <script src='https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js'></script>
+    </head><body>
+    <canvas id='pad' style='border:1px solid #000;width:100%;height:200px'></canvas>
+    <button id='clear'>Clear</button>
+    <button id='submit'>Submit</button>
+    <script>
+    const canvas=document.getElementById('pad');
+    function resize(){
+        canvas.width=window.innerWidth*0.9;
+        canvas.height=200;
+    }
+    resize();window.addEventListener('resize',resize);
+    const pad=new SignaturePad(canvas);
+    document.getElementById('clear').onclick=()=>pad.clear();
+    document.getElementById('submit').onclick=async()=>{
+        if(pad.isEmpty())return;
+        const img=pad.toDataURL('image/png');
+        await fetch('/submit-signature/{}', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({image:img})});
+        document.body.innerHTML='<p>Signature saved. You may close this page.</p>';
+    };
+    </script>
+    </body></html>
+    """.format(token)
+    return HTMLResponse(content=html)
+
+
+@app.post("/submit-signature/{token}")
+async def submit_signature(token: str, data: dict = Body(...)):
+    settings = load_settings()
+    if settings.get("license_level", "free") == "free":
+        return JSONResponse(status_code=403, content={"message": "Pro required"})
+    img_b64 = data.get("image")
+    if not img_b64:
+        return JSONResponse(status_code=400, content={"message": "No image"})
+    if img_b64.startswith('data:'):
+        img_b64 = img_b64.split(',',1)[1]
+    try:
+        img_bytes = base64.b64decode(img_b64)
+    except Exception:
+        return JSONResponse(status_code=400, content={"message": "Invalid image"})
+    os.makedirs(SIGNATURES_DIR, exist_ok=True)
+    path = os.path.join(SIGNATURES_DIR, f"signature_{token}.png")
+    with open(path, 'wb') as fh:
+        fh.write(img_bytes)
+    return {"status": "ok"}
 
 
 @app.post("/ocr/")
@@ -638,9 +901,15 @@ if __name__ == "__main__":
         raise SystemExit
 
     settings = load_settings()
-    port = args.port if args.port is not None else int(settings.get("port", 8000))
+    port = args.port if args.port is not None else int(settings.get("port", 8765))
+    host = args.host
+    if settings.get("license_level", "free").lower() != "full":
+        dev_env = DEV_LICENSE_KEY_UPPER
+        key = settings.get("license_key", "").strip().upper()
+        if not (dev_env and key == dev_env):
+            host = "127.0.0.1"
 
-    config = uvicorn.Config(app, host=args.host, port=port)
+    config = uvicorn.Config(app, host=host, port=port)
     server = uvicorn.Server(config)
     app.state.server = server
     with open(PID_FILE, "w") as fh:

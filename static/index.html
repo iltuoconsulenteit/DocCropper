@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0">
+    <meta name="description" content="DocCropper is a web-based app for batch document perspective correction, multi-image cropping, mobile signing, and PDF export.">
     <title>DocCropper</title>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
@@ -18,33 +19,46 @@
         <div id="loginArea"><a href="/auth/google" id="loginBtn">Login with Google</a></div>
         <div id="licenseInfo"></div>
         <div id="brandBox"></div>
-        <button id="helpBtn" data-i18n="showHelp">Help</button>
+        <div id="brandArea">
+            <img id="clientLogo" alt="Client logo" style="display:none;">
+            <img id="sponsorLogo" alt="Sponsor logo" style="display:none;">
+        </div>
+        <div id="bannerBox">
+            <button id="closeBanner" class="close">&times;</button>
+            <img id="sloganImg" src="/static/logos/DocCropper_slogan_en.png" alt="DocCropper slogan">
+        </div>
+        <div id="actionButtons">
+            <button id="helpBtn" data-i18n="showHelp">Help</button>
+            <button id="purchaseBtn" data-i18n="purchase">Purchase</button>
+            <button id="licenseBtn" data-i18n="licenses">Licenses</button>
+        </div>
     </header>
     <div id="instructionsBox">
         <strong data-i18n="instructionsTitle">Instructions</strong><br>
         <span data-i18n="instructionsComing">Browse the wiki below.</span>
-        <iframe id="wikiFrame" src="/wiki/index.html"></iframe>
-        <a href="/wiki/index.html" target="_blank" data-i18n="openWiki">Open Wiki</a>
+        <iframe id="wikiFrame" src="/wiki/en/index.html"></iframe>
+        <a id="openWikiLink" href="/wiki/en/index.html" target="_blank" data-i18n="openWiki">Open Wiki</a>
     </div>
+
+    <div id="purchaseBox" style="display:none;"></div>
+    <div id="licenseBox" style="display:none;"></div>
 
     <div id="inputControls">
         <label for="inputMode" data-i18n="inputModeLabel">Source:</label>
         <select id="inputMode">
             <option value="upload" data-i18n="modeUpload">Upload File</option>
-            <option value="scanner" data-i18n="modeScanner">Scanner</option>
             <option value="camera" data-i18n="modeCamera">Camera</option>
         </select>
         <div id="fileInputArea">
-            <label for="imageUpload" data-i18n="uploadLabel">Upload Document Image(s):</label>
-            <input type="file" id="imageUpload" accept="image/*" multiple>
-        </div>
-        <div id="scanControls" style="display:none;">
-            <button id="scanBtn" data-i18n="scanDoc">Scan Document</button>
+            <label for="imageUpload" data-i18n="uploadLabel">Upload Document Image(s) or PDF:</label>
+            <input type="file" id="imageUpload" accept="image/*,application/pdf" multiple>
         </div>
         <div id="cameraControls" style="display:none;">
+            <label for="cameraSelect" data-i18n="cameraSelectLabel">Camera:</label>
+            <select id="cameraSelect"></select>
             <video id="cameraPreview" autoplay playsinline></video>
             <button id="captureBtn" data-i18n="capturePhoto">Capture</button>
-            <input type="file" id="cameraFileInput" accept="image/*" capture="environment" style="display:none;">
+            <input type="file" id="cameraFileInput" accept="image/*" capture="environment" multiple style="display:none;">
         </div>
     </div>
 
@@ -60,6 +74,7 @@
             <path id="fogPath" fill-rule="evenodd" fill="rgba(0,0,0,0.5)" stroke="red" stroke-width="1"/>
         </svg>
     </div>
+    <p id="autoDetectHint" data-i18n="autoHint" style="display:none;"></p>
     <div id="adjustControls" style="display:none;">
         <label for="brightnessRange" data-i18n="brightness">Brightness:</label>
         <input type="range" id="brightnessRange" min="0" max="200" value="100">
@@ -68,7 +83,17 @@
     </div>
 
     <button id="submitBtn" data-i18n="processImage">Process Image</button>
-    <button id="exportPdfBtn" style="display:none;" data-i18n="exportPdf">Export PDF</button>
+    <button id="exportPdfBtn" style="display:none;" data-i18n="exportPdf">Create PDF</button>
+    <div id="exportOptions" style="display:none;">
+        <button id="downloadPdfBtn" class="iconBtn" data-i18n-title="downloadPdf" title="PDF">📥</button>
+        <button id="waShareBtn" class="iconBtn" data-i18n-title="shareWhatsapp" title="WhatsApp">🟢</button>
+        <button id="emailShareBtn" class="iconBtn" data-i18n-title="shareEmail" title="Email">✉️</button>
+        <button id="remoteSignBtn" class="iconTextBtn" data-i18n="remoteSign">🔏</button>
+    </div>
+    <div id="signQR" style="display:none;text-align:center;">
+        <img id="signQrImg" alt="QR" style="max-width:200px;">
+        <p id="signQrHint"></p>
+    </div>
     <button id="ocrBtn" style="display:none;" data-i18n="extractText">Extract Text</button>
     <textarea id="ocrOutput" readonly style="display:none;width:100%;height:150px;"></textarea>
     <div id="layoutControls" style="display:none;">
@@ -97,11 +122,45 @@
             <option value="percent" data-i18n="percent">Scale (%)</option>
         </select>
         <input type="number" id="scalePercent" value="100" min="10" max="300" step="10" style="width:60px; display:none;">
+        <label for="colorModeSelect" data-i18n="colorMode">Color mode:</label>
+        <select id="colorModeSelect">
+            <option value="color" data-i18n="color">Color</option>
+            <option value="gray" data-i18n="gray">Grayscale</option>
+            <option value="bw" data-i18n="bw">B/W</option>
+        </select>
+        <label for="blankThreshold" data-i18n="blankThreshold">Blank page threshold (%):</label>
+        <input type="number" id="blankThreshold" value="95" min="80" max="100" step="1" style="width:60px;">
+        <label><input type="checkbox" id="skipBlank" checked> <span data-i18n="skipBlank"></span></label>
     </div>
     <div id="layoutPreview" style="display:none;"></div>
 
+    <div id="signatureControls" style="display:none;">
+        <label for="signatureUpload" data-i18n="signatureFile">Signature image:</label>
+        <input type="file" id="signatureUpload" accept="image/*">
+        <button id="drawSignatureBtn" data-i18n="drawSignature">Draw</button>
+        <div id="drawArea" style="display:none;">
+            <canvas id="signatureDrawCanvas" width="300" height="150"></canvas>
+            <button id="clearDrawBtn" data-i18n="clearSignature">Clear</button>
+            <button id="useDrawBtn" data-i18n="useSignature">Use drawing</button>
+        </div>
+        <div id="signatureExtra" style="display:none;">
+            <label data-i18n="selectPage">Page:</label>
+            <select id="signaturePage"></select>
+            <label data-i18n="sigScale">Scale:</label>
+            <input type="range" id="signatureScale" min="0.5" max="2" step="0.1" value="1">
+            <button id="addSignatureBtn" data-i18n="addSignature">Add</button>
+            <button id="discardSignatureBtn" data-i18n="discardSignature">Discard</button>
+            <button id="saveSignatureBtn" data-i18n="saveSigned">Save</button>
+        </div>
+        <canvas id="signaturePreview" width="420" height="595" style="display:none;"></canvas>
+        <div id="signatureHint" data-i18n="dragSignature" style="display:none;"></div>
+    </div>
+
     <h2 data-i18n="processedImages">Processed Images:</h2>
-    <div id="processedGallery"></div>
+    <p id="reorderHint" data-i18n="reorderHint" style="display:none;"></p>
+    <div id="galleryWrapper">
+        <div id="processedGallery"></div>
+    </div>
     <img id="processedImage" src="#" alt="Processed Document" style="display:none; max-width: 100%;">
     <div id="imageModal" class="modal" style="display:none;">
         <span id="closeModal" class="close">&times;</span>
@@ -109,15 +168,16 @@
     </div>
     <p id="statusMessage"></p>
 
-    <div id="paymentBox" style="display:none;"></div>
-
     <footer id="pageFooter">
-        <span data-i18n="realizzato">Powered by IlTuoConsulenteIT</span>
+        <div id="footerBrand">
+            <span data-i18n="realizzato">Powered by IlTuoConsulenteIT</span>
+            <img id="footerLogo" src="/static/logos/footer_logo.png" onerror="this.onerror=null;this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO3RqqEAAAAASUVORK5CYII='" alt="IlTuoConsulenteIT logo">
+        </div>
         <span id="versionBox"></span>
-        <img id="footerLogo" src="/static/logos/footer_logo.png" onerror="this.onerror=null;this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO3RqqEAAAAASUVORK5CYII='" alt="IlTuoConsulenteIT logo">
     </footer>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <script type="module" src="/static/app.js"></script>
 </body>
 </html>

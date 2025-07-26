@@ -1,6 +1,6 @@
 # 📄 DocCropper
 
-**DocCropper** is a web-based application for document image perspective correction, cropping, and PDF export. It is designed to work both locally and in LAN environments, including touchscreen or kiosk-style workstations.
+**DocCropper** is a web-based app for batch document perspective correction, multi-image cropping, mobile signing, and PDF export.
 
 This project is **inspired by [image-perspective-crop](https://github.com/varna9000/image-perspective-crop)**, but has been **significantly rewritten and extended**, with major architectural changes, a redesigned user interface, batch features, user preferences, and many additional capabilities.
 
@@ -9,12 +9,20 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 ## ✨ Key Features
 
 - ✅ Multi-image upload and batch processing
+- 📥 Import PDF files and place each page directly in the gallery for later editing (Pro)
 - 🔄 Automatic or manual perspective correction
 - 🖼️ Interactive cropping and preview
+- 🖱️ Double click or tap to auto-detect page edges
 - 🎚️ Adjust brightness and contrast with live preview
-- 📄 One-click PDF export
-- 🔏 Optional digital signature on exported PDFs
-- 🔍 Extract text via OCR using the selected language
+- 🖌️ Convert images to grayscale or black & white to reduce PDF size (Pro)
+ - 🧹 Skip blank pages when importing PDFs using a configurable threshold (Pro)
+- 📄 Create PDFs ready for download or sharing
+- 🔏 Optional digital signature on exported PDFs. Drag and add multiple stamps per page before export (Free - watermark applied)
+- ✍️ Sign from your phone via QR code and save the drawing for later use (Pro)
+- 📤 Share PDFs via WhatsApp Web or Email, attaching files via the Web Share API when possible (Pro)
+- 🗂️ Drag thumbnails to reorder images before exporting (Pro)
+- 🖼️ Closable banner can rotate multiple promotional images
+- 📝 Extract text via OCR (future Pro feature)
 - 🗂️ Persistent user settings
 - 🧭 Touchscreen-friendly interface
 - 🌐 Works offline or over LAN (no internet required)
@@ -27,9 +35,11 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 This project uses [Interact.JS](https://github.com/taye/interact.js) for managing draggable corner points.
 
 The frontend allows the user to:
-- Upload one or more images (on mobile devices the file picker lets you choose existing photos or take a new picture)
+ - Upload images with the file picker. On mobile devices the file picker is shown by default but you can switch to the camera mode and choose which camera to use. Desktop users may also drag and drop files
+ - Import PDF documents which are converted to images and added to the gallery without immediate cropping (Pro)
 - Add more images later without losing previously processed ones
 - Manually adjust the four corners of each image
+- Double click/tap an image to auto-detect its edges
 - Submit data (image, coordinates, size) to the backend
 - Export all processed images to PDF
 - Choose how many processed images appear on each PDF page
@@ -39,6 +49,8 @@ The frontend allows the user to:
 - A small margin is applied around each image so nothing touches the page edges
 - Change the interface language (Italian translation included)
 - The layout is responsive so DocCropper works well on smartphones and tablets
+- Mobile view keeps the Help and Purchase buttons on one line and centers the
+  footer branding
 
 JavaScript logic is contained in `static/app.js`.
 
@@ -49,9 +61,11 @@ JavaScript logic is contained in `static/app.js`.
 
 Images are processed and displayed as thumbnails with **Rotate**, **Edit**, and **Delete** buttons. Preview and layout configuration options are also provided before export.
 
-Logos and branding can be customized via `static/logos/`, `settings.json`, and `brand_html`. The footer displays the current Git commit hash.
+Logos and branding can be customized via `static/logos/`, `settings.json`, and `brand_html`. A dedicated area in the header can show a client logo (`client_logo`) and an optional sponsor banner (`sponsor_logo`). The `sponsor_scale` and `sponsor_bottom` settings control the banner size and position. The header also shows a language-specific slogan image (e.g. `DocCropper_slogan_en.png`), and the footer displays the current Git commit hash. Licensed users can also convert images to grayscale or black & white using buttons below each thumbnail, and a global color mode option applies to all images before PDF export.
+Blank pages can be skipped during PDF import. Enable **Skip blank pages** in the layout controls and adjust the `blank_threshold` percentage (95% by default).
+Pages over this threshold are discarded in the Pro edition.
 
-User preferences are stored in the `users/` folder based on their email address. Anonymous users fallback to global settings in `settings.json`. The system supports optional Google sign-in and a configurable payment box (donation or subscription). Developer keys allow full access and can be defined in `settings.json` or `.env`.
+User preferences are stored in the `users/` folder based on their email address. Anonymous users fallback to global settings in `settings.json`. The system supports optional Google sign-in and a configurable purchase panel (donation or subscription) opened from the **Purchase** button next to the Help button. Developer keys allow full access when the configured `license_key` matches the value of the `DOCROPPER_DEV_LICENSE` environment variable.
 
 ---
 
@@ -82,35 +96,53 @@ pip install -r requirements.txt
 
 ### 🛠 Installer Scripts
 
-Run `install/install_DocCropper.bat` (Windows) or `install/install_DocCropper.sh` (Linux/macOS). These scripts:
 - Clone the repo
-- Offer a numbered menu to choose `main` or the developer branch (default `codex/move-version-number-to-bottom-right`)
-- Set up the environment
+- Offer a numbered menu to choose `main` or the developer branch (default `codex/remove-shortcut-installation-and-scanner-capture`)
+- Set up the environment and install Python dependencies in a virtualenv
 - Ask for an optional license key
 - Write a log file named `install.log` in the installation folder (falling back to `%TEMP%` on Windows or `/tmp` on Linux/macOS)
-- Launch the server via the tray icon when finished (the tray runs `start_DocCropper.bat` for you)
-You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer
-branch or `DOCROPPER_BRANCH` to force a specific branch.
+- On Linux the installer now requests administrative privileges via `sudo` and installs under `/opt/DocCropper` by default. On macOS the script will similarly relaunch with `sudo` if installing to `/Applications`. If the directory cannot be created, the script exits with a permissions error. The script uses `tee` to create the initial `settings.json` so root permissions are required when installing to system locations. Existing `settings.json` files are backed up to `settings.local.json.bak` and merged back after updating so your license and other custom values are preserved.
+- Matching `uninstall_DocCropper` scripts are provided to remove the application later.
+You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer branch or `DOCROPPER_BRANCH` to force a specific branch.
 
 You can pre-populate `settings.json` or override values using `.env` files in the `env/` folder.
+Use `env/.env.example` as a reference for all supported variables.
+The `.env` files may also define `LICENSE_CHECK=true` to enforce license validation via a remote server.
+To quickly create an environment file for testing you can run one of the
+`scripts/setup_license` helpers. The script for your platform (`.bat`, `.sh` or
+`.command`) asks for your license key and name then writes `env/developer.env`
+with `DOCROPPER_LICENSE_KEY`, `DOCROPPER_LICENSE_NAME` and
+`DOCROPPER_DEV_LICENSE` so all features are unlocked. Set
+`DOCROPPER_DEV_WATERMARK=true` if you want to keep the watermark while
+testing with a developer key.
+If you see **Access denied** when running the script, launch it with administrator
+privileges ("Run as Administrator" on Windows). After writing the
+`env/developer.env` file, restart DocCropper so the new license is applied.
 
 ---
 
 ## ▶️ Running DocCropper
 
-Use the included start scripts from the `scripts/` directory. They handle virtualenv creation and dependency install.
+Use the included start scripts from the `scripts/` directory. They handle virtualenv creation and dependency install. On Windows, `start_DocCropper.bat` writes details to `%TEMP%\DocCropper_start.log` so you can troubleshoot launch problems. The script stops any running instance first and pauses before closing so errors remain visible. DocCropper stores its PID file in the system temp folder so it can be managed without admin rights. By default the server listens on **port 8765** unless you override it in `settings.json` or with `--port`.
 
 To stop the server, run the matching stop script or send a POST to `/shutdown/`.
+
+### ❌ Uninstalling
+
+Run the appropriate `uninstall_DocCropper` script from the `install/` folder to completely remove DocCropper. The script stops any running instance and then deletes the installation directory. On Windows it will request administrator privileges if required.
 
 You may also launch `doccropper_tray.py` (or `.pyw`) to manage the server with a system tray icon.
 
 ### Tray icon usage
 
-The tray helper works on Windows, macOS and most Linux desktops. It loads the
+The tray helper works on Windows and most Linux desktops. macOS support is
+experimental and not yet thoroughly tested. It loads the
 application logo and shows a green or red dot indicating whether the server is
 running. Use the menu to start, stop or update DocCropper, or open the site in
-your browser. If no graphical environment is available, run it with the
-`--no-tray` option to start the server without showing an icon:
+your browser. On Linux you may need the `python3-gi` and `libappindicator3`
+packages so the tray menu can display correctly. If no graphical environment is
+available, run it with the `--no-tray` option to start the server without
+showing an icon:
 
 ```bash
 python doccropper_tray.py --no-tray
@@ -123,9 +155,10 @@ without it.
 ### Built-in Wiki
 
 An offline copy of the documentation is included under the `/wiki` path. The
-web interface displays this wiki in a sidebar on the right. You can also open it
-in a new tab at [http://localhost:8000/wiki/](http://localhost:8000/wiki/) or
-view the online version on GitHub.
+web interface displays this wiki in a sidebar on the right beneath the Help
+button. A language-specific page is loaded based on your selection. You can
+also open it in a new tab at `http://localhost:8765/wiki/&lt;lang&gt;/` or view
+the online version on GitHub.
 
 ### Google Sign-In
 
@@ -137,40 +170,56 @@ only used to identify users and is not tied to licensing.
 
 ---
 
-## 🔓 Licensing and PRO Features
+## 🔓 Licensing
 
-DocCropper is released under the [MIT](LICENSE.txt) license. Without a license key, the app runs in **DEMO mode** (watermark after first PDF page).
+DocCropper ships with three editions. A new **Licenses** button in the header opens a panel explaining these options.
 
-**PRO Features:**
-- Removal of watermark
-- Network folder support (in development)
-- Authenticated LAN access
+- **Free** – Watermark applied, up to five images per project, LAN access disabled
+- **Pro** – No watermark and unlimited images, but still restricted to local access
+- **Full** – Unlocks LAN access so DocCropper can run on an office server
 
-To activate:
-- Use a valid license key in `settings.json` or `.env`
-- Developer keys unlock full functionality for testing
+DocCropper itself is released under the [MIT](LICENSE.txt) license. See [Terms of Use](TERMS_OF_USE.md) for additional conditions.
+
+To activate Pro or Full editions:
+- Provide a valid license key in `settings.json` or `.env`
+- Developer keys unlock all features for testing when `DOCROPPER_DEV_LICENSE` matches your `license_key`
+- You can generate a suitable `.env` by running `scripts/setup_license.bat` (or
+  `.sh` / `.command`) and entering your details
+- Set `LICENSE_CHECK=true` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
 
 For inquiries: **doccropper@iltuoconsulenteit.it**
 
 ### Optional PDF Signing
 
-Set `DOCROPPER_SIGN_CERT` to the path of a PKCS#12 certificate and `DOCROPPER_SIGN_PASSWORD` to sign exported PDFs. If no certificate is provided, PDFs are left unsigned.
+Simple image or drawn signatures are available in all editions, but the Free edition keeps the watermark on exported PDFs.
 
-### Optional OCR
+DocCropper can apply a personal signature in several ways:
 
-DocCropper can extract text from processed images using [Tesseract OCR](https://github.com/tesseract-ocr/tesseract). Install Tesseract separately and ensure it is on your system path. The OCR step uses the interface language selected in DocCropper.
+1. **Image Stamp** – Use the action menu below each processed page and choose `Sign`
+   to upload a signature image. White backgrounds are automatically removed.
+   Alternatively, press **Draw signature** to handwrite your signature with a mouse or
+   touch device. A dashed border shows where to draw. Clear and reuse the drawing until
+   satisfied.
+   Drag the previewed stamp on the page canvas, adjust its scale, then press **Add**
+   to queue it for that page. Use **Save** to embed the placed stamps or **Discard**
+   to cancel. You may add multiple signatures to any page before exporting the final PDF.
+   Each new stamp is offset slightly so it doesn’t hide the previous one by default.
+2. **Remote Digital Signing** – Set `DOCROPPER_REMOTE_SIGN_CMD` to an external signing command (e.g. an Aruba Sign script). After creating the PDF, press **Mobile Sign** to apply the digital signature to the entire document.
+3. **Touch Signature** – Press **Mobile Sign** and DocCropper generates a one-time token and LAN link. Scan the QR code with your phone or tablet and sign on the provided page. The drawing is saved under `signatures/signature_<token>.png`. The **Mobile Sign** button becomes available in the export panel once the PDF is ready.
 
-Use the **Extract Text** button after processing images to retrieve the recognized text.
+   - GET `/start-sign/` returns `{token, url, qr}` with a QR code for the LAN link
+   - Visit `/sign/<token>` to draw the signature
+   - POST `/submit-signature/<token>` with `{image: "data:image/png;base64,..."}` to save it
 
-### Optional Scanner Support
+Alternatively, you may set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` to automatically apply a local PKCS#12 certificate.
 
-Scanning documents requires the `pyinsane2` library. Because this package needs
-native build tools on Windows, it is not installed by default. Run
-`install/install_scanner_addon.sh` on Linux or macOS to enable scanning.
-Windows users can run `install/install_scanner_tools.bat` followed by
-`install/install_scanner_addon.bat` if they wish to compile the dependency.
-When the add-on is missing, the **Scan Document** button is hidden and the `/scan/`
-endpoint returns `501`.
+When `DOCROPPER_TUNNEL=true` and `cloudflared` is installed, the start scripts
+launch a temporary Cloudflare Tunnel so the signing link works from outside your
+LAN. The public URL is written to the log.
+
+### Pro OCR (coming soon)
+
+OCR capabilities will be offered in a future licensed edition. The current release hides the **Extract Text** button.
 
 
 ## Credits
