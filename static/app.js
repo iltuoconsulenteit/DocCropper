@@ -1862,8 +1862,12 @@ function renderPaymentBox(cfg) {
             html += `<li><a href="${cfg.paypal_link}" target="_blank">${t('payPaypal')}</a></li>`;
             hasItem = true;
         }
-        if (cfg.stripe_link) {
-            html += `<li><a href="${cfg.stripe_link}" target="_blank">${t('payStripe')}</a></li>`;
+        if (cfg.stripe_price_pro) {
+            html += `<li><button id="stripeProBtn">${t('payStripe')} - ${t('proEdition')}</button></li>`;
+            hasItem = true;
+        }
+        if (cfg.stripe_price_full) {
+            html += `<li><button id="stripeFullBtn">${t('payStripe')} - ${t('fullEdition')}</button></li>`;
             hasItem = true;
         }
         if (cfg.bank_info) {
@@ -1876,6 +1880,42 @@ function renderPaymentBox(cfg) {
     }
     html += '</ul>';
     purchaseBox.innerHTML = html;
+    const proBtn = document.getElementById('stripeProBtn');
+    if (proBtn) {
+        proBtn.addEventListener('click', async () => {
+            const res = await fetch('/stripe-checkout/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({level: 'pro'})
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.session_url) {
+                    window.location.href = data.session_url;
+                }
+            } else {
+                alert('Stripe checkout failed');
+            }
+        });
+    }
+    const fullBtn = document.getElementById('stripeFullBtn');
+    if (fullBtn) {
+        fullBtn.addEventListener('click', async () => {
+            const res = await fetch('/stripe-checkout/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({level: 'full'})
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.session_url) {
+                    window.location.href = data.session_url;
+                }
+            } else {
+                alert('Stripe checkout failed');
+            }
+        });
+    }
 }
 
 function renderLicenseBox() {
