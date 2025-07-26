@@ -148,7 +148,9 @@ showing an icon:
 python doccropper_tray.py --no-tray
 ```
 Use the `--auto-start` flag to start the server automatically when launching the
-tray helper.
+tray helper manually. The provided start scripts already launch the tray helper
+and start the server separately, so they do not use this flag to avoid starting
+multiple instances.
 If the tray cannot be shown, the script automatically launches the server
 without it.
 

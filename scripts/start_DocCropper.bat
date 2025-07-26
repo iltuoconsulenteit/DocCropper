@@ -28,7 +28,7 @@ echo [INFO] Directory app: !APP_DIR! >> "!LOG_FILE!"
 :: Default port
 set "PORT=8765"
 if exist settings.json (
-    for /f "delims=" %%p in ('python -c "import json,sys;print(json.load(open('settings.json')).get('port', 8765))" 2^>nul') do set "PORT=%%p"
+    for /f "delims=" %%p in ('python -c "import json,sys;print(json.load(open(\"settings.json\")).get('port', 8765))" 2^>nul') do set "PORT=%%p"
 )
 echo [INFO] Porta usata: %PORT% >> "!LOG_FILE!"
 
@@ -50,7 +50,7 @@ if exist "!PID_FILE!" (
 
 if "!TRAY_RUNNING!"=="0" (
     echo [INFO] Avvio tray helper >> "!LOG_FILE!"
-    start "" pythonw doccropper_tray.pyw --auto-start >> "!LOG_FILE!" 2>&1
+    start "" pythonw doccropper_tray.pyw >> "!LOG_FILE!" 2>&1
     timeout /t 2 >nul
 )
 

@@ -43,7 +43,7 @@ fi
 
 if [ "$TRAY_RUNNING" -eq 0 ]; then
   echo "Starting tray helper..."
-  python3 doccropper_tray.py --auto-start &
+  python3 doccropper_tray.py &
   sleep 2
   if [ -f "$PID_FILE" ] && ps -p $(cat "$PID_FILE") >/dev/null 2>&1; then
     SERVER_RUNNING=1
