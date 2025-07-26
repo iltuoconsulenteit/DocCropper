@@ -109,6 +109,7 @@ def register(app, utils):
         <script src='https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js'></script>
         </head><body>
         <img src='/static/logos/header_logo.png' style='max-width:150px;margin-top:10px' alt='DocCropper'>
+        <p id='finishMsg' style='display:none;color:green;font-weight:bold'></p>
         <p>Tap the document then draw your signature</p>
         <div id='container'>
             <img id='docImg' src='{img}' alt='doc'>
@@ -154,10 +155,12 @@ def register(app, utils):
             return true;
         }
         document.getElementById('submit').onclick=submitCurrent;
+        const finishMsg=document.getElementById('finishMsg');
         document.getElementById('finish').onclick=async()=>{
             if(!pad.isEmpty()) await submitCurrent();
             await fetch('/finish-signing/{token}',{method:'POST'});
-            document.body.innerHTML='<p>Signature saved. You may close this page.</p>';
+            finishMsg.textContent='Signature sent.';
+            finishMsg.style.display='block';
         };
         </script>
         </body></html>
