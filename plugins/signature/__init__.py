@@ -79,11 +79,16 @@ def register(app, utils):
         html = f"""
         <html><head>
         <meta name='viewport' content='width=device-width,initial-scale=1.0'>
+        <style>body{{text-align:center;font-family:sans-serif;}} img{{max-width:100%;height:auto;}}</style>
         <script src='https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js'></script>
         </head><body>
-        <canvas id='pad' style='border:1px solid #000;width:100%;height:200px'></canvas>
+        <img src='/static/logos/header_logo.png' style='max-width:150px;margin-top:10px' alt='DocCropper'>
+        <p>Sign the document below</p>
+        <canvas id='pad' style='border:1px solid #000;width:100%;height:200px'></canvas><br>
+        <label><input type='checkbox' id='consent'> I consent to sign</label><br>
         <button id='clear'>Clear</button>
         <button id='submit'>Submit</button>
+        <div style='margin-top:20px;'><img src='/static/logos/footer_logo.png' style='max-width:120px' alt='IlTuoConsulenteIT'></div>
         <script>
         const canvas=document.getElementById('pad');
         function resize(){{
