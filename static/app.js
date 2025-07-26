@@ -1,4 +1,5 @@
 import interact from 'https://cdn.interactjs.io/v1.10.11/interactjs/index.js';
+import { initSignaturePlugin } from './plugins/signature.js';
 
 let scaling_factor_w;
 let scaling_factor_h;
@@ -1390,42 +1391,6 @@ if (emailShareBtn) {
     });
 }
 
-if (qrSignBtn) {
-    qrSignBtn.addEventListener('click', async () => {
-        try {
-            const resp = await fetch('/start-sign/');
-            const data = await resp.json();
-            if (data.qr) {
-                signQrImg.src = data.qr;
-                signQrHint.textContent = translations['qrScanHint'] || '';
-                signQR.style.display = 'block';
-            }
-        } catch (e) {
-            console.error('start sign error', e);
-        }
-        exportOptions.style.display = 'none';
-    });
-}
-
-if (qrSignPageBtn) {
-    qrSignPageBtn.addEventListener('click', async () => {
-        try {
-            const resp = await fetch('/start-sign/');
-            const data = await resp.json();
-            if (data.qr) {
-                signQrImg.src = data.qr;
-                signQrHint.textContent = translations['qrScanHint'] || '';
-                signQR.style.display = 'block';
-            }
-        } catch (e) {
-            console.error('start sign error', e);
-        }
-    });
-}
-
-if (signQR) {
-    signQR.addEventListener('click', () => { signQR.style.display = 'none'; });
-}
 cameraFileInput.addEventListener('change', (e) => {
     if (!e.target.files || e.target.files.length === 0) return;
     addFiles(e.target.files);
@@ -1904,6 +1869,7 @@ loadSettings().then(async (cfg) => {
     applySettings(cfg);
     await loadTranslations(currentLang);
     applyTranslations();
+    initSignaturePlugin(translations);
     renderPaymentBox(cfg);
     renderLicenseBox();
     renderLogin(cfg);
