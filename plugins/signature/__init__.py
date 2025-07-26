@@ -103,7 +103,7 @@ def register(app, utils):
         body{ text-align:center;font-family:sans-serif; }
         #container{ position:relative; display:inline-block; }
         #docImg{ max-width:100%; height:auto; display:block; }
-        #overlay{ position:absolute; left:0; top:0; }
+        #overlay{ position:absolute; left:0; top:0; pointer-events:none; }
         #pad{ border:1px solid #000; display:none; margin-top:10px; width:100%; height:200px }
         </style>
         <script src='https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js'></script>

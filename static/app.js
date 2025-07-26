@@ -92,6 +92,7 @@ let signatureImg = null;
 let signaturePosition = { x: 0.85, y: 0.85 };
 let signatureScale = 1;
 let signatures = [];
+let pendingSigPos = null;
 let draggingSig = false;
 let drawing = false;
 let lastPoint = null;
@@ -1492,12 +1493,18 @@ if (drawSignatureBtn && signatureDrawCanvas) {
         signatureImg = new Image();
         signatureImg.onload = () => {
             drawArea.style.display = 'none';
+            if (pendingSigPos) {
+                signaturePosition.x = pendingSigPos.x;
+                signaturePosition.y = pendingSigPos.y;
+                pendingSigPos = null;
+            }
             if (processedImages.length > 0) {
                 signaturePreview.style.display = 'block';
                 signatureHint.style.display = 'block';
                 signatureExtra.style.display = 'block';
                 populateSignaturePages();
                 renderSignaturePreview();
+                addCurrentSignature();
             }
         };
         signatureImg.src = signatureImageData;
@@ -1516,6 +1523,14 @@ if (signaturePreview) {
         if (draggingSig) updateSigPosition(e);
     });
     document.addEventListener('mouseup', () => { draggingSig = false; });
+    signaturePreview.addEventListener('dblclick', (e) => {
+        const rect = signaturePreview.getBoundingClientRect();
+        pendingSigPos = {
+            x: (e.clientX - rect.left) / signaturePreview.width,
+            y: (e.clientY - rect.top) / signaturePreview.height
+        };
+        drawArea.style.display = 'block';
+    });
 }
 
 langSelect.addEventListener('change', async () => {
@@ -1588,18 +1603,19 @@ if (signaturePage) {
     });
 }
 
+function addCurrentSignature() {
+    const page = parseInt(signaturePage.value || '0');
+    signatures.push({ page, x: signaturePosition.x, y: signaturePosition.y, scale: signatureScale });
+    const OFFSET = 0.05;
+    signaturePosition.x += OFFSET;
+    if (signaturePosition.x > 0.95) signaturePosition.x = OFFSET;
+    signaturePosition.y += OFFSET;
+    if (signaturePosition.y > 0.95) signaturePosition.y = OFFSET;
+    renderSignaturePreview();
+}
+
 if (addSignatureBtn) {
-    addSignatureBtn.addEventListener('click', () => {
-        const page = parseInt(signaturePage.value || '0');
-        signatures.push({ page, x: signaturePosition.x, y: signaturePosition.y, scale: signatureScale });
-        // offset next signature preview so added stamps do not overlap by default
-        const OFFSET = 0.05;
-        signaturePosition.x += OFFSET;
-        if (signaturePosition.x > 0.95) signaturePosition.x = OFFSET;
-        signaturePosition.y += OFFSET;
-        if (signaturePosition.y > 0.95) signaturePosition.y = OFFSET;
-        renderSignaturePreview();
-    });
+    addSignatureBtn.addEventListener('click', addCurrentSignature);
 }
 
 if (discardSignatureBtn) {
