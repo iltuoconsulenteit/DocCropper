@@ -97,7 +97,7 @@ pip install -r requirements.txt
 ### 🛠 Installer Scripts
 
 - Clone the repo
- - Offer a numbered menu to choose `main` or the developer branch (default `1kh6hg-codex/remove-shortcut-installation-and-scanner-capture`)
+ - Offer a numbered menu to choose `main` or the developer branch (default `work`)
 - Set up the environment and install Python dependencies in a virtualenv
 - Ask for an optional license key
 - Write a log file named `install.log` in the installation folder (falling back to `%TEMP%` on Windows or `/tmp` on Linux/macOS)
