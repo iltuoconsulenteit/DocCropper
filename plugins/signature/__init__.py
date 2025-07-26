@@ -135,8 +135,8 @@ def register(app, utils):
         const pad=new SignaturePad(padEl);
         docImg.onclick=e=>{ const r=e.target.getBoundingClientRect(); pos={x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}; padEl.style.display='block'; controls.style.display='block'; };
         document.getElementById('clear').onclick=()=>pad.clear();
-        document.getElementById('submit').onclick=async()=>{
-            if(!pos||pad.isEmpty())return;
+        async function submitCurrent(){
+            if(!pos||pad.isEmpty())return false;
             const img=pad.toDataURL('image/png');
             await fetch('/submit-signature/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:img,x:pos.x,y:pos.y})});
             const ctx=overlay.getContext('2d');
@@ -151,8 +151,11 @@ def register(app, utils):
             tmp.src=img;
             pad.clear();
             padEl.style.display='none';
-        };
+            return true;
+        }
+        document.getElementById('submit').onclick=submitCurrent;
         document.getElementById('finish').onclick=async()=>{
+            if(!pad.isEmpty()) await submitCurrent();
             await fetch('/finish-signing/{token}',{method:'POST'});
             document.body.innerHTML='<p>Signature saved. You may close this page.</p>';
         };

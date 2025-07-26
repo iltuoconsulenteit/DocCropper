@@ -56,6 +56,8 @@
   "docusealLink": "Open the Docuseal link to sign",
   "signSaved": "Signature saved.",
   "qrScanHint": "Scan QR code to sign",
+  "copyLink": "Copy link",
+  "shareWhatsapp": "Share via WhatsApp",
   "signingPdf": "Signing PDF...",
   "pdfSigned": "PDF signed.",
   "purchase": "Purchase",

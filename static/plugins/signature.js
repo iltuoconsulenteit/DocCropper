@@ -4,6 +4,9 @@ export function initSignaturePlugin(translations) {
     const signQR = document.getElementById('signQR');
     const signQrImg = document.getElementById('signQrImg');
     const signQrHint = document.getElementById('signQrHint');
+    const signQrLink = document.getElementById('signQrLink');
+    const copySignLink = document.getElementById('copySignLink');
+    const waSignLink = document.getElementById('waSignLink');
     const signaturePage = document.getElementById('signaturePage');
 
     async function pollSignature(token) {
@@ -39,6 +42,10 @@ export function initSignaturePlugin(translations) {
             if (data.qr) {
                 signQrImg.src = data.qr;
                 signQrHint.textContent = translations['qrScanHint'] || '';
+                if (signQrLink) {
+                    signQrLink.textContent = data.url;
+                    signQrLink.href = data.url;
+                }
                 signQR.style.display = 'block';
                 pollSignature(data.token);
             }
@@ -58,5 +65,18 @@ export function initSignaturePlugin(translations) {
     }
     if (signQR) {
         signQR.addEventListener('click', () => { signQR.style.display = 'none'; });
+    }
+    if (copySignLink) {
+        copySignLink.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (signQrLink) navigator.clipboard.writeText(signQrLink.href);
+        });
+    }
+    if (waSignLink) {
+        waSignLink.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const url = signQrLink ? signQrLink.href : '';
+            window.open('https://wa.me/?text=' + encodeURIComponent(url), '_blank');
+        });
     }
 }
