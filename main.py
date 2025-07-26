@@ -91,6 +91,8 @@ DEFAULT_SETTINGS = {
     "skip_blank": True,
     "banner_images": ["DocCropper_slogan_{{lang}}.png"],
     "developer_watermark": False,
+    "docuseal_api_url": "",
+    "docuseal_api_key": "",
 }
 
 def verify_license_server(key: str) -> bool:
@@ -171,6 +173,8 @@ def load_settings():
         env_check = os.getenv("LICENSE_CHECK")
         env_level = os.getenv("DOCROPPER_LICENSE_LEVEL")
         dev_wm_env = os.getenv("DOCROPPER_DEV_WATERMARK")
+        docuseal_url = os.getenv("DOCUSEAL_API_URL")
+        docuseal_key = os.getenv("DOCUSEAL_API_KEY")
         if env_key:
             merged["license_key"] = env_key
         if env_name:
@@ -183,6 +187,10 @@ def load_settings():
             merged["license_level"] = env_level.lower()
         if dev_wm_env is not None:
             merged["developer_watermark"] = dev_wm_env.lower() == "true"
+        if docuseal_url:
+            merged["docuseal_api_url"] = docuseal_url
+        if docuseal_key:
+            merged["docuseal_api_key"] = docuseal_key
 
         dev_env = DEV_LICENSE_KEY_UPPER
         if dev_env and merged.get("license_key", "").strip().upper() == dev_env:

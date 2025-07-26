@@ -131,6 +131,7 @@ let cameraAvailable = false;
 let currentPdfBlob = null;
 let sortable = null;
 let currentFile = null;
+let docusealEnabled = false;
 
 let translations = {};
 let currentLang = 'en';
@@ -207,8 +208,26 @@ function startCamera() {
 }
 
 if (digitalSignBtn) {
-    digitalSignBtn.addEventListener('click', () => {
-        alert(translations['comingSoon'] || 'Coming soon');
+    digitalSignBtn.addEventListener('click', async () => {
+        if (!docusealEnabled) {
+            alert(translations['comingSoon'] || 'Coming soon');
+            return;
+        }
+        statusMessageElement.textContent = translations['signingPdf'] || 'Signing PDF...';
+        try {
+            const resp = await fetch('/docuseal-sign/', {method: 'POST'});
+            const data = await resp.json();
+            if (data.url) {
+                window.open(data.url, '_blank');
+                statusMessageElement.textContent = translations['pdfSigned'] || 'PDF signed.';
+            } else {
+                statusMessageElement.textContent = data.message || 'Error';
+            }
+        } catch (e) {
+            console.error('Docuseal sign error', e);
+            statusMessageElement.textContent = translations['docusealError'] || 'Docuseal request failed';
+        }
+        exportOptions.style.display = 'none';
     });
 }
 
@@ -440,6 +459,10 @@ function applySettings(cfg) {
     }
     if (cfg.version) {
         appVersion = cfg.version;
+    }
+    docusealEnabled = !!cfg.docuseal_api_url;
+    if (digitalSignBtn) {
+        digitalSignBtn.disabled = !docusealEnabled || currentLicenseLevel === 'free';
     }
 }
 

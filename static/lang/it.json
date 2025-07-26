@@ -52,6 +52,8 @@
   "digitalSign": "Firma digitale",
   "mobileSign": "Firma da mobile",
   "comingSoon": "Prossimamente",
+  "docusealError": "Richiesta Docuseal fallita",
+  "docusealLink": "Apri il link Docuseal per firmare",
   "signSaved": "Firma salvata.",
   "qrScanHint": "Scansiona il QR per firmare",
   "signingPdf": "Firma PDF...",

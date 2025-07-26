@@ -52,6 +52,8 @@
   "digitalSign": "Digital Sign",
   "mobileSign": "Mobile Sign",
   "comingSoon": "Coming soon",
+  "docusealError": "Docuseal request failed",
+  "docusealLink": "Open the Docuseal link to sign",
   "signSaved": "Signature saved.",
   "qrScanHint": "Scan QR code to sign",
   "signingPdf": "Signing PDF...",

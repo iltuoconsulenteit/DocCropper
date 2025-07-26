@@ -208,11 +208,12 @@ DocCropper can apply a personal signature in several ways:
    to cancel. You may add multiple signatures to any page before exporting the final PDF.
    Each new stamp is offset slightly so it doesn’t hide the previous one by default.
 2. **Mobile Sign** – Use the **Mobile Sign** button (in the signature panel or export menu) to generate a one-time token and QR code. Scan it with your phone or tablet and draw your signature on the provided page. The drawing is saved under `signatures/signature_<token>.png` and added to the PDF.
-3. **Remote Digital Signing** *(coming soon)* – Set `DOCROPPER_REMOTE_SIGN_CMD` to an external signing command (e.g. an Aruba Sign script). The **Digital Sign** button is shown but disabled until this feature is implemented.
+3. **Remote Digital Signing** – Configure `DOCUSEAL_API_URL` and `DOCUSEAL_API_KEY` to upload the exported PDF to a Docuseal instance. Press **Digital Sign** to receive a link where the document can be signed online. You may still set `DOCROPPER_REMOTE_SIGN_CMD` to run a custom script instead.
 
    - GET `/start-sign/` returns `{token, url, qr}` with a QR code for the LAN link
    - Visit `/sign/<token>` to draw the signature
    - POST `/submit-signature/<token>` with `{image: "data:image/png;base64,..."}` to save it
+   - POST `/docuseal-sign/` uploads the last exported PDF to Docuseal and returns `{url}`
 
 Alternatively, you may set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` to automatically apply a local PKCS#12 certificate.
 
@@ -239,7 +240,7 @@ npm install
 npm start
 ```
 
-Create a `.env` file based on `.env.example` with your Google `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` (e.g. `http://localhost:8765/auth/google/callback`). Optionally set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` to sign PDFs automatically.
+Create a `.env` file based on `.env.example` with your Google `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` (e.g. `http://localhost:8765/auth/google/callback`). Optionally set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` to sign PDFs automatically. To use Docuseal for remote signatures, also set `DOCUSEAL_API_URL` and `DOCUSEAL_API_KEY`.
 
 Visit [http://localhost:8765](http://localhost:8765) and click **Login with Google**. After authenticating you'll be redirected to `/dashboard` which shows your name and email.
 
