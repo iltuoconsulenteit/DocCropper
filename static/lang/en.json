@@ -97,6 +97,7 @@
   "selectPage": "Page:",
   "sigScale": "Scale:",
   "addSignature": "Add",
+  "finishSigning": "Finish",
   "saveSigned": "Save",
   "noSignatures": "No signatures to save",
   "imageSaved": "Image updated",

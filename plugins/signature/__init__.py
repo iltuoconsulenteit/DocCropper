@@ -75,6 +75,7 @@ def register(app, utils):
             'page': page,
             'image': img,
             'signed': False,
+            'signatures': [],
         }
         os.makedirs(signatures_dir, exist_ok=True)
         with open(os.path.join(signatures_dir, f'{token}.json'), 'w') as fh:
@@ -98,34 +99,61 @@ def register(app, utils):
         html = """
         <html><head>
         <meta name='viewport' content='width=device-width,initial-scale=1.0'>
-        <style>body{ text-align:center;font-family:sans-serif; }
-        #docImg{ max-width:100%;height:auto; }
-        #pad{ border:1px solid #000;display:none;margin-top:10px;width:100%;height:200px }
+        <style>
+        body{ text-align:center;font-family:sans-serif; }
+        #container{ position:relative; display:inline-block; }
+        #docImg{ max-width:100%; height:auto; display:block; }
+        #overlay{ position:absolute; left:0; top:0; }
+        #pad{ border:1px solid #000; display:none; margin-top:10px; width:100%; height:200px }
         </style>
         <script src='https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js'></script>
         </head><body>
         <img src='/static/logos/header_logo.png' style='max-width:150px;margin-top:10px' alt='DocCropper'>
         <p>Tap the document then draw your signature</p>
-        <img id='docImg' src='{img}' alt='doc'><br>
+        <div id='container'>
+            <img id='docImg' src='{img}' alt='doc'>
+            <canvas id='overlay'></canvas>
+        </div><br>
         <canvas id='pad'></canvas><br>
         <div id='controls' style='display:none;'>
             <button id='clear'>Clear</button>
-            <button id='submit'>Submit</button>
+            <button id='submit'>Add</button>
+            <button id='finish'>Finish</button>
         </div>
         <div style='margin-top:20px;'><img src='/static/logos/footer_logo.png' style='max-width:120px' alt='IlTuoConsulenteIT'></div>
         <script>
         const padEl=document.getElementById('pad');
+        const overlay=document.getElementById('overlay');
         const controls=document.getElementById('controls');
+        const docImg=document.getElementById('docImg');
         let pos=null;
-        function resize(){ padEl.width=window.innerWidth*0.9; padEl.height=200; }
+        function resize(){
+            padEl.width=window.innerWidth*0.9; padEl.height=200;
+            overlay.width=docImg.clientWidth; overlay.height=docImg.clientHeight;
+        }
         resize(); window.addEventListener('resize',resize);
         const pad=new SignaturePad(padEl);
-        document.getElementById('docImg').onclick=e=>{ const r=e.target.getBoundingClientRect(); pos={x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}; padEl.style.display='block'; controls.style.display='block'; };
+        docImg.onclick=e=>{ const r=e.target.getBoundingClientRect(); pos={x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}; padEl.style.display='block'; controls.style.display='block'; };
         document.getElementById('clear').onclick=()=>pad.clear();
         document.getElementById('submit').onclick=async()=>{
             if(!pos||pad.isEmpty())return;
             const img=pad.toDataURL('image/png');
             await fetch('/submit-signature/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:img,x:pos.x,y:pos.y})});
+            const ctx=overlay.getContext('2d');
+            const tmp=new Image();
+            tmp.onload=()=>{
+                const w=tmp.width*(overlay.height/10)/tmp.height;
+                const h=overlay.height/10;
+                const x=pos.x*overlay.width - w/2;
+                const y=pos.y*overlay.height - h/2;
+                ctx.drawImage(tmp,x,y,w,h);
+            };
+            tmp.src=img;
+            pad.clear();
+            padEl.style.display='none';
+        };
+        document.getElementById('finish').onclick=async()=>{
+            await fetch('/finish-signing/{token}',{method:'POST'});
             document.body.innerHTML='<p>Signature saved. You may close this page.</p>';
         };
         </script>
@@ -148,19 +176,35 @@ def register(app, utils):
         except Exception:
             return JSONResponse(status_code=400, content={'message': 'Invalid image'})
         os.makedirs(signatures_dir, exist_ok=True)
-        img_path = os.path.join(signatures_dir, f'signature_{token}.png')
-        with open(img_path, 'wb') as fh:
-            fh.write(img_bytes)
         info_path = os.path.join(signatures_dir, f'{token}.json')
         if os.path.exists(info_path):
             with open(info_path, 'r') as fh:
                 info = json.load(fh)
         else:
             info = {}
+        sig_idx = len(info.get('signatures', []))
+        img_path = os.path.join(signatures_dir, f'signature_{token}_{sig_idx}.png')
+        with open(img_path, 'wb') as fh:
+            fh.write(img_bytes)
+        sig_entry = {
+            'image_path': img_path,
+            'x': float(data.get('x', 0.5)),
+            'y': float(data.get('y', 0.5))
+        }
+        info.setdefault('signatures', []).append(sig_entry)
+        info['signed'] = False
+        with open(info_path, 'w') as fh:
+            json.dump(info, fh)
+        return {'status': 'ok'}
+
+    @app.post('/finish-signing/{token}')
+    async def finish_signing(token: str):
+        info_path = os.path.join(signatures_dir, f'{token}.json')
+        if not os.path.exists(info_path):
+            return JSONResponse(status_code=404, content={'message': 'Not found'})
+        with open(info_path, 'r') as fh:
+            info = json.load(fh)
         info['signed'] = True
-        info['image_path'] = img_path
-        info['x'] = float(data.get('x', 0.5))
-        info['y'] = float(data.get('y', 0.5))
         with open(info_path, 'w') as fh:
             json.dump(info, fh)
         return {'status': 'ok'}
@@ -174,11 +218,9 @@ def register(app, utils):
             info = json.load(fh)
         if not info.get('signed'):
             return JSONResponse(status_code=202, content={'message': 'Pending'})
-        with open(info['image_path'], 'rb') as fh:
-            b64 = base64.b64encode(fh.read()).decode()
-        return {
-            'page': info.get('page', 0),
-            'image': 'data:image/png;base64,' + b64,
-            'x': info.get('x', 0.5),
-            'y': info.get('y', 0.5)
-        }
+        sigs = []
+        for sig in info.get('signatures', []):
+            with open(sig['image_path'], 'rb') as fh:
+                b64 = base64.b64encode(fh.read()).decode()
+            sigs.append({'image': 'data:image/png;base64,' + b64, 'x': sig['x'], 'y': sig['y']})
+        return {'page': info.get('page', 0), 'signatures': sigs}

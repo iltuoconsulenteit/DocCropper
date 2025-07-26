@@ -1657,34 +1657,35 @@ if (discardSignatureBtn) {
     });
 }
 
-function applyRemoteSignature(data) {
+async function applyRemoteSignature(data) {
     const pageIdx = parseInt(data.page || 0);
     const base = new Image();
-    base.onload = () => {
-        const sig = new Image();
-        sig.onload = async () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = base.width;
-            canvas.height = base.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(base, 0, 0);
-            const baseRatio = (canvas.height / 10) / sig.height;
-            const w = sig.width * baseRatio;
-            const h = sig.height * baseRatio;
-            const x = data.x * canvas.width - w / 2;
-            const y = data.y * canvas.height - h / 2;
-            ctx.drawImage(sig, x, y, w, h);
-            const url = canvas.toDataURL('image/png');
-            processedImages[pageIdx] = url;
-            const cont = processedGallery.children[pageIdx];
-            if (cont) cont.querySelector('img').src = url;
-            const blob = await (await fetch(url)).blob();
-            processedFiles[pageIdx] = new File([blob], processedFiles[pageIdx]?.name || `image_${pageIdx}.png`, {type:'image/png'});
-            statusMessageElement.textContent = translations['pageSigned'] || 'Page signed';
-        };
-        sig.src = data.image;
-    };
-    base.src = processedImages[pageIdx];
+    await new Promise(res => { base.onload = res; base.src = processedImages[pageIdx]; });
+    const canvas = document.createElement('canvas');
+    canvas.width = base.width;
+    canvas.height = base.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(base, 0, 0);
+    const list = data.signatures || [{image:data.image, x:data.x, y:data.y}];
+    for (const sigData of list) {
+        const img = new Image();
+        await new Promise(res => { img.onload = res; img.src = sigData.image; });
+        const baseRatio = (canvas.height / 10) / img.height;
+        const w = img.width * baseRatio;
+        const h = img.height * baseRatio;
+        const x = sigData.x * canvas.width - w / 2;
+        const y = sigData.y * canvas.height - h / 2;
+        ctx.drawImage(img, x, y, w, h);
+    }
+    const url = canvas.toDataURL('image/png');
+    processedImages[pageIdx] = url;
+    const cont = processedGallery.children[pageIdx];
+    if (cont) cont.querySelector('img').src = url;
+    try {
+        const blob = await (await fetch(url)).blob();
+        processedFiles[pageIdx] = new File([blob], processedFiles[pageIdx]?.name || `image_${pageIdx}.png`, {type:'image/png'});
+    } catch {}
+    statusMessageElement.textContent = translations['pageSigned'] || 'Page signed';
 }
 
 window.addEventListener('remoteSignature', (e) => applyRemoteSignature(e.detail));
