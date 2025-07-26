@@ -121,6 +121,13 @@
   "drawSignature": "Disegna firma",
   "clearSignature": "Pulisci",
   "useSignature": "Usa disegno",
-  "pageSigned": "Pagina firmata"
+  "pageSigned": "Pagina firmata",
+  "settings": "Impostazioni",
+  "licenseType": "Tipo di licenza:",
+  "saveSettings": "Salva impostazioni",
+  "settingsSaved": "Impostazioni salvate",
+  "googleClientId": "ID client Google:",
+  "docusealUrl": "URL Docuseal:",
+  "docusealKey": "Chiave Docuseal:"
 }
 

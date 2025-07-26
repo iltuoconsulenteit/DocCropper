@@ -46,6 +46,7 @@ const layoutPreview = document.getElementById('layoutPreview');
 const licenseInfo = document.getElementById('licenseInfo');
 const purchaseBox = document.getElementById('purchaseBox');
 const licenseBox = document.getElementById('licenseBox');
+const settingsBox = document.getElementById('settingsBox');
 const loginArea = document.getElementById('loginArea');
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
@@ -53,6 +54,7 @@ const instructionsBox = document.getElementById('instructionsBox');
 const helpBtn = document.getElementById('helpBtn');
 const purchaseBtn = document.getElementById('purchaseBtn');
 const licenseBtn = document.getElementById('licenseBtn');
+const settingsBtn = document.getElementById('settingsBtn');
 const bannerBox = document.getElementById('bannerBox');
 const closeBanner = document.getElementById('closeBanner');
 const sloganImg = document.getElementById('sloganImg');
@@ -1385,6 +1387,13 @@ licenseBtn.addEventListener('click', () => {
     licenseBox.style.top = (rect.bottom + window.scrollY) + 'px';
     licenseBox.classList.toggle('visible');
 });
+settingsBtn.addEventListener('click', () => {
+    const rect = settingsBtn.getBoundingClientRect();
+    settingsBox.style.display = 'block';
+    settingsBox.style.top = (rect.bottom + window.scrollY) + 'px';
+    renderSettingsBox();
+    settingsBox.classList.toggle('visible');
+});
 if (closeBanner) {
     closeBanner.addEventListener('click', () => {
         bannerBox.style.display = 'none';
@@ -1539,6 +1548,7 @@ langSelect.addEventListener('change', async () => {
     applyTranslations();
     renderPaymentBox(currentSettings);
     renderLicenseBox();
+    settingsBox.innerHTML = '';
     saveSettings({ language: currentLang });
 });
 
@@ -1895,6 +1905,61 @@ function renderLicenseBox() {
         licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
         alert(t('licenseSaved'));
         licenseBox.classList.remove('visible');
+    });
+}
+
+function renderSettingsBox() {
+    const level = currentSettings.license_level || 'free';
+    const html = `
+    <div class="settingsForm">
+        <label>${t('licenseType')}</label>
+        <select id="licenseLevelSelect">
+            <option value="free" ${level==='free'?'selected':''}>${t('freeEdition')}</option>
+            <option value="pro" ${level==='pro'?'selected':''}>${t('proEdition')}</option>
+            <option value="full" ${level==='full'?'selected':''}>${t('fullEdition')}</option>
+        </select>
+        <div id="googleSettings" style="${level==='pro'||level==='full'?'':'display:none;'}">
+            <label>${t('googleClientId')}</label>
+            <input type="text" id="googleClientIdInput" value="${currentSettings.google_client_id || ''}">
+        </div>
+        <div id="docusealSettings" style="${level==='full'?'':'display:none;'}">
+            <label>${t('docusealUrl')}</label>
+            <input type="text" id="docusealUrlInput" value="${currentSettings.docuseal_api_url || ''}">
+            <label>${t('docusealKey')}</label>
+            <input type="text" id="docusealKeyInput" value="${currentSettings.docuseal_api_key || ''}">
+        </div>
+        <button id="saveSettingsBtn">${t('saveSettings')}</button>
+    </div>`;
+    settingsBox.innerHTML = html;
+    settingsBox.style.display = 'block';
+    const levelSelect = document.getElementById('licenseLevelSelect');
+    const googleDiv = document.getElementById('googleSettings');
+    const docusealDiv = document.getElementById('docusealSettings');
+    levelSelect.addEventListener('change', () => {
+        const val = levelSelect.value;
+        googleDiv.style.display = (val === 'pro' || val === 'full') ? 'block' : 'none';
+        docusealDiv.style.display = val === 'full' ? 'block' : 'none';
+    });
+    document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+        const lvl = levelSelect.value;
+        const update = { license_level: lvl };
+        if (lvl === 'pro' || lvl === 'full') {
+            update.google_client_id = document.getElementById('googleClientIdInput').value.trim();
+        } else {
+            update.google_client_id = '';
+        }
+        if (lvl === 'full') {
+            update.docuseal_api_url = document.getElementById('docusealUrlInput').value.trim();
+            update.docuseal_api_key = document.getElementById('docusealKeyInput').value.trim();
+        } else {
+            update.docuseal_api_url = '';
+            update.docuseal_api_key = '';
+        }
+        await saveSettings(update);
+        const cfg = await loadSettings();
+        applySettings(cfg);
+        alert(t('settingsSaved'));
+        settingsBox.classList.remove('visible');
     });
 }
 

@@ -122,4 +122,11 @@
   "clearSignature": "Clear",
   "useSignature": "Use drawing",
   "pageSigned": "Page signed",
+  "settings": "Settings",
+  "licenseType": "License type:",
+  "saveSettings": "Save settings",
+  "settingsSaved": "Settings saved",
+  "googleClientId": "Google client ID:",
+  "docusealUrl": "Docuseal URL:",
+  "docusealKey": "Docuseal key:"
 }
