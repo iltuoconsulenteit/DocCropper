@@ -35,7 +35,7 @@ rem Default developer branch
 if defined DOCROPPER_DEV_BRANCH (
     set "DEV_BRANCH=%DOCROPPER_DEV_BRANCH%"
 ) else (
-    set "DEV_BRANCH=codex/remove-shortcut-installation-and-scanner-capture"
+    set "DEV_BRANCH=1kh6hg-codex/remove-shortcut-installation-and-scanner-capture"
 )
 
 if not defined DOCROPPER_BRANCH (
