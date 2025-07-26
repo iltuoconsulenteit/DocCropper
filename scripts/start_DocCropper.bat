@@ -32,12 +32,12 @@ if exist settings.json (
 )
 echo [INFO] Porta usata: %PORT% >> "!LOG_FILE!"
 
-:: Check if tray helper is running
-tasklist | findstr /I "doccropper_tray" >nul
-if not errorlevel 1 (
-    set "TRAY_RUNNING=1"
-) else (
-    set "TRAY_RUNNING=0"
+:: Check if tray helper is running using PID file
+set "TRAY_PID_FILE=%TEMP%\doccropper_tray.pid"
+set "TRAY_RUNNING=0"
+if exist "!TRAY_PID_FILE!" (
+    for /f %%p in ("!TRAY_PID_FILE!") do set "TRAY_PID=%%p"
+    tasklist /FI "PID eq !TRAY_PID!" | find "!TRAY_PID!" >nul && set "TRAY_RUNNING=1"
 )
 
 :: Check if server already running using PID file

@@ -123,7 +123,7 @@ privileges ("Run as Administrator" on Windows). After writing the
 
 ## ▶️ Running DocCropper
 
-Use the included start scripts from the `scripts/` directory. They handle virtualenv creation and dependency install. On Windows, `start_DocCropper.bat` writes details to `%TEMP%\DocCropper_start.log` so you can troubleshoot launch problems. The scripts verify whether the tray icon and the server are already running and launch whichever component is missing before opening the browser. They also pause before closing so errors remain visible. DocCropper stores its PID file in the system temp folder so it can be managed without admin rights. By default the server listens on **port 8765** unless you override it in `settings.json` or with `--port`.
+Use the included start scripts from the `scripts/` directory. They handle virtualenv creation and dependency install. On Windows, `start_DocCropper.bat` writes details to `%TEMP%\DocCropper_start.log` so you can troubleshoot launch problems. The scripts verify whether the tray icon and the server are already running and launch whichever component is missing before opening the browser. They also pause before closing so errors remain visible. DocCropper stores its PID file in the system temp folder so it can be managed without admin rights. The tray helper writes its own PID to `doccropper_tray.pid` so duplicate icons are avoided. By default the server listens on **port 8765** unless you override it in `settings.json` or with `--port`.
 
 To stop the server, run the matching stop script or send a POST to `/shutdown/`.
 

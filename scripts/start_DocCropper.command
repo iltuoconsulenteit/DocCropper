@@ -22,8 +22,13 @@ except Exception:
 PY
 )
 
-# Detect running tray
-if pgrep -f doccropper_tray.py >/dev/null 2>&1; then
+# Detect running tray via PID file
+TRAY_PID_FILE=$(python3 - <<'PY'
+import tempfile, os
+print(os.path.join(tempfile.gettempdir(), 'doccropper_tray.pid'))
+PY
+)
+if [ -f "$TRAY_PID_FILE" ] && ps -p $(cat "$TRAY_PID_FILE") >/dev/null 2>&1; then
   TRAY_RUNNING=1
 else
   TRAY_RUNNING=0

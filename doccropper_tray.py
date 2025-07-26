@@ -6,6 +6,7 @@ from pathlib import Path
 import tempfile
 from pystray import Icon, Menu, MenuItem
 import threading
+import atexit
 from PIL import Image, ImageDraw
 import webbrowser
 from urllib.request import urlopen
@@ -21,6 +22,9 @@ INSTALL_DIR = BASE_DIR / 'install'
 SCRIPTS_DIR = BASE_DIR / 'scripts'
 
 LOG_FILE = Path(tempfile.gettempdir()) / 'doccropper_tray.log'
+
+# Store the tray process ID so launch scripts can detect it
+TRAY_PID_FILE = Path(tempfile.gettempdir()) / 'doccropper_tray.pid'
 logging.basicConfig(
     filename=LOG_FILE,
     level=logging.INFO,
@@ -182,6 +186,11 @@ def main():
 
     developer = os.environ.get('DOCROPPER_DEVELOPER') == '1' or is_developer()
     logging.info("Tray icon started (developer=%s)", developer)
+    try:
+        TRAY_PID_FILE.write_text(str(os.getpid()))
+    except Exception:
+        pass
+    atexit.register(lambda: TRAY_PID_FILE.unlink(missing_ok=True))
 
     load_base_image()
     running = is_running()
