@@ -81,6 +81,7 @@ const addSignatureBtn = document.getElementById('addSignatureBtn');
 const discardSignatureBtn = document.getElementById('discardSignatureBtn');
 const saveSignatureBtn = document.getElementById('saveSignatureBtn');
 const qrSignBtn = document.getElementById('qrSignBtn');
+const qrSignPageBtn = document.getElementById('qrSignPageBtn');
 const digitalSignBtn = document.getElementById('remoteSignBtn');
 const signQR = document.getElementById('signQR');
 const signQrImg = document.getElementById('signQrImg');
@@ -1403,6 +1404,22 @@ if (qrSignBtn) {
             console.error('start sign error', e);
         }
         exportOptions.style.display = 'none';
+    });
+}
+
+if (qrSignPageBtn) {
+    qrSignPageBtn.addEventListener('click', async () => {
+        try {
+            const resp = await fetch('/start-sign/');
+            const data = await resp.json();
+            if (data.qr) {
+                signQrImg.src = data.qr;
+                signQrHint.textContent = translations['qrScanHint'] || '';
+                signQR.style.display = 'block';
+            }
+        } catch (e) {
+            console.error('start sign error', e);
+        }
     });
 }
 
