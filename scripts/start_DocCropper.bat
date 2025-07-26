@@ -28,7 +28,7 @@ echo [INFO] Directory app: !APP_DIR! >> "!LOG_FILE!"
 :: Default port
 set "PORT=8765"
 if exist settings.json (
-    for /f "delims=" %%p in ('python -c "import json,sys;print(json.load(open(\"settings.json\")).get('port', 8765))" 2^>nul') do set "PORT=%%p"
+    for /f "delims=" %%p in ('python -c "import json,sys;print(json.load(open('settings.json')).get('port', 8765))" 2^>nul') do set "PORT=%%p"
 )
 echo [INFO] Porta usata: %PORT% >> "!LOG_FILE!"
 
@@ -36,7 +36,7 @@ echo [INFO] Porta usata: %PORT% >> "!LOG_FILE!"
 set "TRAY_PID_FILE=%TEMP%\doccropper_tray.pid"
 set "TRAY_RUNNING=0"
 if exist "!TRAY_PID_FILE!" (
-    for /f %%p in ("!TRAY_PID_FILE!") do set "TRAY_PID=%%p"
+    for /f %%p in (!TRAY_PID_FILE!) do set "TRAY_PID=%%p"
     tasklist /FI "PID eq !TRAY_PID!" | find "!TRAY_PID!" >nul && set "TRAY_RUNNING=1"
 )
 
@@ -44,7 +44,7 @@ if exist "!TRAY_PID_FILE!" (
 set "PID_FILE=%TEMP%\doccropper.pid"
 set "SERVER_RUNNING=0"
 if exist "!PID_FILE!" (
-    for /f %%p in ("!PID_FILE!") do set "PID=%%p"
+    for /f %%p in (!PID_FILE!) do set "PID=%%p"
     tasklist /FI "PID eq !PID!" | find "!PID!" >nul && set "SERVER_RUNNING=1"
 )
 
@@ -57,7 +57,7 @@ if "!TRAY_RUNNING!"=="0" (
 rem refresh server status after possible tray launch
 set "SERVER_RUNNING=0"
 if exist "!PID_FILE!" (
-    for /f %%p in ("!PID_FILE!") do set "PID=%%p"
+    for /f %%p in (!PID_FILE!) do set "PID=%%p"
     tasklist /FI "PID eq !PID!" | find "!PID!" >nul && set "SERVER_RUNNING=1"
 )
 
