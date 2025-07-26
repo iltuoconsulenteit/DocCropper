@@ -106,6 +106,7 @@ pip install -r requirements.txt
 You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer branch or `DOCROPPER_BRANCH` to force a specific branch.
 
 You can pre-populate `settings.json` or override values using `.env` files in the `env/` folder.
+Use `env/.env.example` as a reference for all supported variables.
 The `.env` files may also define `LICENSE_CHECK=true` to enforce license validation via a remote server.
 To quickly create an environment file for testing you can run one of the
 `scripts/setup_license` helpers. The script for your platform (`.bat`, `.sh` or
