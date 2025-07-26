@@ -80,7 +80,8 @@ const useDrawBtn = document.getElementById('useDrawBtn');
 const addSignatureBtn = document.getElementById('addSignatureBtn');
 const discardSignatureBtn = document.getElementById('discardSignatureBtn');
 const saveSignatureBtn = document.getElementById('saveSignatureBtn');
-const remoteSignBtn = document.getElementById('remoteSignBtn');
+const qrSignBtn = document.getElementById('qrSignBtn');
+const digitalSignBtn = document.getElementById('remoteSignBtn');
 const signQR = document.getElementById('signQR');
 const signQrImg = document.getElementById('signQrImg');
 const signQrHint = document.getElementById('signQrHint');
@@ -200,6 +201,12 @@ function startCamera() {
     }).catch(err => {
         console.warn('Camera unavailable, using file input', err);
         cameraAvailable = false;
+    });
+}
+
+if (digitalSignBtn) {
+    digitalSignBtn.addEventListener('click', () => {
+        alert(translations['comingSoon'] || 'Coming soon');
     });
 }
 
@@ -1382,8 +1389,8 @@ if (emailShareBtn) {
     });
 }
 
-if (remoteSignBtn) {
-    remoteSignBtn.addEventListener('click', async () => {
+if (qrSignBtn) {
+    qrSignBtn.addEventListener('click', async () => {
         try {
             const resp = await fetch('/start-sign/');
             const data = await resp.json();

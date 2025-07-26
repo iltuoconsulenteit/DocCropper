@@ -85,10 +85,11 @@
     <button id="submitBtn" data-i18n="processImage">Process Image</button>
     <button id="exportPdfBtn" style="display:none;" data-i18n="exportPdf">Create PDF</button>
     <div id="exportOptions" style="display:none;">
-        <button id="downloadPdfBtn" class="iconBtn" data-i18n-title="downloadPdf" title="PDF">📥</button>
-        <button id="waShareBtn" class="iconBtn" data-i18n-title="shareWhatsapp" title="WhatsApp">🟢</button>
-        <button id="emailShareBtn" class="iconBtn" data-i18n-title="shareEmail" title="Email">✉️</button>
-        <button id="remoteSignBtn" class="iconTextBtn" data-i18n="remoteSign">🔏</button>
+        <button id="downloadPdfBtn" class="iconTextBtn" data-i18n-title="downloadPdf" title="PDF">📥 <span data-i18n="downloadPdf"></span></button>
+        <button id="waShareBtn" class="iconTextBtn" data-i18n-title="shareWhatsapp" title="WhatsApp">🟢 <span data-i18n="shareWhatsapp"></span></button>
+        <button id="emailShareBtn" class="iconTextBtn" data-i18n-title="shareEmail" title="Email">✉️ <span data-i18n="shareEmail"></span></button>
+        <button id="qrSignBtn" class="iconTextBtn" data-i18n-title="mobileSign" title="Mobile Sign">📱 <span data-i18n="mobileSign"></span></button>
+        <button id="remoteSignBtn" class="iconTextBtn" data-i18n-title="digitalSign" title="Digital Sign" disabled>🔏 <span data-i18n="digitalSign"></span></button>
     </div>
     <div id="signQR" style="display:none;text-align:center;">
         <img id="signQrImg" alt="QR" style="max-width:200px;">
