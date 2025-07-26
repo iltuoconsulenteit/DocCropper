@@ -91,10 +91,6 @@
         <button id="qrSignBtn" class="iconTextBtn" data-i18n-title="mobileSign" title="Mobile Sign">📱 <span data-i18n="mobileSign"></span></button>
         <button id="remoteSignBtn" class="iconTextBtn" data-i18n-title="digitalSign" title="Digital Sign" disabled>🔏 <span data-i18n="digitalSign"></span></button>
     </div>
-    <div id="signQR" style="display:none;text-align:center;">
-        <img id="signQrImg" alt="QR" style="max-width:200px;">
-        <p id="signQrHint"></p>
-    </div>
     <button id="ocrBtn" style="display:none;" data-i18n="extractText">Extract Text</button>
     <textarea id="ocrOutput" readonly style="display:none;width:100%;height:150px;"></textarea>
     <div id="layoutControls" style="display:none;">
@@ -156,6 +152,10 @@
         </div>
         <canvas id="signaturePreview" width="420" height="595" style="display:none;"></canvas>
         <div id="signatureHint" data-i18n="dragSignature" style="display:none;"></div>
+        <div id="signQR" style="display:none;text-align:center;">
+            <img id="signQrImg" alt="QR" style="max-width:200px;">
+            <p id="signQrHint"></p>
+        </div>
     </div>
 
     <h2 data-i18n="processedImages">Processed Images:</h2>
