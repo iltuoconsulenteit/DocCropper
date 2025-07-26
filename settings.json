@@ -5,7 +5,7 @@
   "arrangement": "auto",
   "scale_mode": "fit",
   "scale_percent": 100,
-  "port": 8000,
+  "port": 8765,
   "license_key": "",
   "license_name": "",
   "payment_mode": "donation",
@@ -13,5 +13,14 @@
   "stripe_link": "",
   "bank_info": "",
   "google_client_id": ""
-  , "brand_html": ""
+  , "brand_html": "",
+  "client_logo": "",
+  "sponsor_logo": "",
+  "sponsor_scale": 100,
+  "sponsor_bottom": 80,
+  "blank_threshold": 95,
+  "skip_blank": true,
+  "license_check": false,
+  "license_level": "free",
+  "banner_images": ["DocCropper_slogan_{{lang}}.png"]
 }

@@ -3,6 +3,7 @@ import platform
 import subprocess
 import logging
 from pathlib import Path
+import tempfile
 from pystray import Icon, Menu, MenuItem
 import threading
 from PIL import Image, ImageDraw
@@ -12,11 +13,14 @@ import json
 import time
 from dotenv import load_dotenv
 
+LANG = 'en'
+TRANSLATIONS = {}
+
 BASE_DIR = Path(__file__).resolve().parent
 INSTALL_DIR = BASE_DIR / 'install'
 SCRIPTS_DIR = BASE_DIR / 'scripts'
 
-LOG_FILE = BASE_DIR / 'doccropper_tray.log'
+LOG_FILE = Path(tempfile.gettempdir()) / 'doccropper_tray.log'
 logging.basicConfig(
     filename=LOG_FILE,
     level=logging.INFO,
@@ -28,6 +32,25 @@ ENV_DIR = BASE_DIR / 'env'
 if ENV_DIR.is_dir():
     for env_file in ENV_DIR.glob('*.env'):
         load_dotenv(env_file, override=False)
+
+def load_language():
+    global LANG, TRANSLATIONS
+    try:
+        with open(BASE_DIR / 'settings.json') as fh:
+            data = json.load(fh)
+        LANG = data.get('language', 'en')
+    except Exception:
+        LANG = 'en'
+    try:
+        with open(BASE_DIR / 'static' / 'lang' / f'{LANG}.json') as fh:
+            TRANSLATIONS = json.load(fh)
+    except Exception:
+        TRANSLATIONS = {}
+
+def tr(key):
+    return TRANSLATIONS.get(key, key)
+
+load_language()
 
 SYSTEM = platform.system()
 START_SCRIPTS = {
@@ -42,6 +65,10 @@ INSTALL_SCRIPTS = {
     'Windows': 'install_DocCropper.bat',
     'Darwin': 'install_DocCropper.command',
 }.get(SYSTEM, 'install_DocCropper.sh')
+UNINSTALL_SCRIPTS = {
+    'Windows': 'uninstall_DocCropper.bat',
+    'Darwin': 'uninstall_DocCropper.command',
+}.get(SYSTEM, 'uninstall_DocCropper.sh')
 
 def is_developer():
     settings_file = BASE_DIR / 'settings.json'
@@ -49,8 +76,8 @@ def is_developer():
         with open(settings_file) as fh:
             data = json.load(fh)
         key = data.get('license_key', '').strip().upper()
-        dev = os.environ.get('DOCROPPER_DEV_LICENSE', 'ILTUOCONSULENTEIT-DEV').upper()
-        return key == dev
+        dev = os.environ.get('DOCROPPER_DEV_LICENSE', '').upper()
+        return bool(dev) and key == dev
     except Exception:
         return False
 
@@ -93,6 +120,9 @@ def update_branch():
     env['BRANCH'] = branch
     run_script(INSTALL_SCRIPTS, env)
 
+def uninstall_app():
+    run_script(UNINSTALL_SCRIPTS)
+
 def open_browser():
     port = get_port()
     webbrowser.open(f'http://127.0.0.1:{port}/')
@@ -101,9 +131,9 @@ def get_port():
     try:
         with open(BASE_DIR / 'settings.json') as fh:
             data = json.load(fh)
-        return int(data.get('port', 8000))
+        return int(data.get('port', 8765))
     except Exception:
-        return 8000
+        return 8765
 
 def is_running():
     port = get_port()
@@ -117,9 +147,11 @@ BASE_IMAGE = None
 
 def load_base_image():
     global BASE_IMAGE
-    path = BASE_DIR / 'static' / 'logos' / 'header_logo.png'
-    if path.exists():
-        BASE_IMAGE = Image.open(path).convert('RGBA').resize((64, 64))
+    for name in ('app_logo.png', 'header_logo.png'):
+        path = BASE_DIR / 'static' / 'logos' / name
+        if path.exists():
+            BASE_IMAGE = Image.open(path).convert('RGBA').resize((64, 64))
+            break
     else:
         BASE_IMAGE = Image.new('RGBA', (64, 64), 'white')
 
@@ -155,6 +187,7 @@ def main():
     running = is_running()
 
     if args.auto_start and not running:
+        logging.info("Auto-start requested from start script")
         start_app()
         # give the server a moment to start
         time.sleep(1)
@@ -170,16 +203,20 @@ def main():
         icon.icon = create_image(state)
 
     menu_items = [
-        MenuItem('Open DocCropper', lambda icon, item: open_browser()),
-        MenuItem('Start DocCropper', lambda icon, item: [start_app(), update(True)]),
-        MenuItem('Stop DocCropper', lambda icon, item: [stop_app(), update(False)]),
-        MenuItem('Update from main', lambda icon, item: update_main())
+        MenuItem(tr('openApp'), lambda icon, item: open_browser()),
+        MenuItem(tr('startApp'), lambda icon, item: [start_app(), update(True)]),
+        MenuItem(tr('stopApp'), lambda icon, item: [stop_app(), update(False)]),
+        MenuItem(tr('updateMain'), lambda icon, item: update_main()),
+        MenuItem(tr('uninstallApp'), lambda icon, item: uninstall_app())
     ]
     if developer:
-        menu_items.append(MenuItem('Update from branch', lambda icon, item: update_branch()))
-    menu_items.append(MenuItem('Quit', quit_app))
+        menu_items.append(MenuItem(tr('updateBranch'), lambda icon, item: update_branch()))
+    menu_items.append(MenuItem(tr('quit'), quit_app))
 
     icon = Icon('DocCropper', create_image(running), 'DocCropper', menu=Menu(*menu_items))
+
+    def setup(icon):
+        icon.visible = True
 
     def poll():
         while True:
@@ -191,7 +228,7 @@ def main():
     thread.start()
 
     try:
-        icon.run()
+        icon.run(setup=setup)
     except Exception as e:
         logging.exception("Tray icon error: %s", e)
         logging.info("Falling back to running without tray")

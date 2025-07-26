@@ -1,15 +1,39 @@
 #!/bin/bash
 set -e
 
+# Require root so we can install under /Applications
+if [ "$(id -u)" -ne 0 ]; then
+  if command -v sudo >/dev/null 2>&1; then
+    echo "⚠️  This installer needs administrative privileges. Re-running with sudo..."
+    exec sudo "$0" "$@"
+  else
+    echo "❌ Please run this installer as root." >&2
+    exit 1
+  fi
+fi
+
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
-DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"
-DEV_BRANCH="${DOCROPPER_DEV_BRANCH:-codex/move-version-number-to-bottom-right}"
+DEV_KEY="${DOCROPPER_DEV_LICENSE:-}"
+if [ -z "$DOCROPPER_DEV_BRANCH" ]; then
+  DEV_BRANCH="codex/remove-shortcut-installation-and-scanner-capture"
+else
+  DEV_BRANCH="$DOCROPPER_DEV_BRANCH"
+fi
 
 DEFAULT_DIR="/Applications/DocCropper"
 read -r -p "Installation directory [$DEFAULT_DIR]: " TARGET_DIR
 TARGET_DIR=${TARGET_DIR:-$DEFAULT_DIR}
 mkdir -p "$TARGET_DIR"
 echo "Installing to: $TARGET_DIR"
+
+# Start logging after we know the target directory
+LOG_FILE="${DOCROPPER_LOG_FILE:-$TARGET_DIR/install.log}"
+if ! touch "$LOG_FILE" >/dev/null 2>&1; then
+  LOG_FILE="/tmp/DocCropper_install.log"
+  echo "Cannot write log to $TARGET_DIR. Using $LOG_FILE"
+fi
+echo "Logging to $LOG_FILE"
+exec > >(tee -a "$LOG_FILE") 2>&1
 
 DEFAULT_KEY=""
 if [ -f "$TARGET_DIR/settings.json" ]; then
@@ -63,6 +87,16 @@ fi
 
 printf '\xE2\x9C\x85 Operazione completata.\n'
 
+# Set up virtual environment and install dependencies
+cd "$TARGET_DIR"
+if [ ! -d "venv" ]; then
+  python3 -m venv venv
+fi
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+cd - >/dev/null
+
 SETTINGS_FILE="$TARGET_DIR/settings.json"
 if [ ! -f "$SETTINGS_FILE" ]; then
   cat > "$SETTINGS_FILE" <<'EOF'
@@ -73,7 +107,7 @@ if [ ! -f "$SETTINGS_FILE" ]; then
   "arrangement": "auto",
   "scale_mode": "fit",
   "scale_percent": 100,
-  "port": 8000,
+  "port": 8765,
   "license_key": "",
   "license_name": ""
 }
@@ -82,7 +116,7 @@ fi
 
 if [ -n "$LIC_KEY" ]; then
   UPPER_KEY="$(echo "$LIC_KEY" | tr '[:lower:]' '[:upper:]')"
-  DEV_KEY="${DOCROPPER_DEV_LICENSE:-ILTUOCONSULENTEIT-DEV}"
+  DEV_KEY="${DOCROPPER_DEV_LICENSE:-}"
   DEV_KEY_UPPER="$(echo "$DEV_KEY" | tr '[:lower:]' '[:upper:]')"
   if [ "$UPPER_KEY" = "VALID" ] || [ "$UPPER_KEY" = "$DEV_KEY_UPPER" ]; then
     read -r -p "👤 Licensed to: " LIC_NAME
@@ -115,9 +149,10 @@ read -r -p "🚀 Launch DocCropper with tray icon now? [Y/n] " RUN_APP
 if [[ ! "$RUN_APP" =~ ^[Nn]$ ]]; then
   pushd "$TARGET_DIR" >/dev/null
   if command -v pythonw >/dev/null 2>&1; then
-    (pythonw doccropper_tray.py &)
+    (pythonw doccropper_tray.py --auto-start &)
   else
-    (python3 doccropper_tray.py &)
+    (python3 doccropper_tray.py --auto-start &)
   fi
   popd >/dev/null
 fi
+
