@@ -48,7 +48,7 @@ def register(app, utils):
 
     @app.get('/sign/{token}', response_class=HTMLResponse)
     async def sign_page(token: str):
-        html = """
+        html = f"""
         <html><head>
         <meta name='viewport' content='width=device-width,initial-scale=1.0'>
         <script src='https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js'></script>
@@ -58,22 +58,22 @@ def register(app, utils):
         <button id='submit'>Submit</button>
         <script>
         const canvas=document.getElementById('pad');
-        function resize(){
+        function resize(){{
             canvas.width=window.innerWidth*0.9;
             canvas.height=200;
-        }
+        }}
         resize();window.addEventListener('resize',resize);
         const pad=new SignaturePad(canvas);
         document.getElementById('clear').onclick=()=>pad.clear();
-        document.getElementById('submit').onclick=async()=>{
+        document.getElementById('submit').onclick=async()=>{{
             if(pad.isEmpty())return;
             const img=pad.toDataURL('image/png');
-            await fetch('/submit-signature/{}', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({image:img})});
+            await fetch('/submit-signature/{token}', {{method:'POST', headers:{{'Content-Type':'application/json'}}, body: JSON.stringify({{image:img}})}});
             document.body.innerHTML='<p>Signature saved. You may close this page.</p>';
-        };
+        }};
         </script>
         </body></html>
-        """.format(token)
+        """
         return HTMLResponse(content=html)
 
     @app.post('/submit-signature/{token}')
