@@ -59,12 +59,26 @@ def register(app, utils):
         except Exception:
             return JSONResponse(status_code=500, content={'message': 'Docuseal request failed'})
 
-    @app.get('/start-sign/')
-    async def start_sign(request: Request):
+    @app.post('/start-sign/')
+    async def start_sign(request: Request, data: dict = Body(...)):
+        """Begin a mobile signing session for a specific page."""
         settings = load_settings()
         if settings.get('license_level', 'free') == 'free':
             return JSONResponse(status_code=403, content={'message': 'Pro required'})
+        img = data.get('image')
+        page = int(data.get('page', 0))
+        if not img:
+            return JSONResponse(status_code=400, content={'message': 'No image supplied'})
         token = uuid.uuid4().hex
+        info = {
+            'session': request.cookies.get('session_id'),
+            'page': page,
+            'image': img,
+            'signed': False,
+        }
+        os.makedirs(signatures_dir, exist_ok=True)
+        with open(os.path.join(signatures_dir, f'{token}.json'), 'w') as fh:
+            json.dump(info, fh)
         port = int(settings.get('port', 8765))
         host = get_lan_ip()
         url = f'http://{host}:{port}/sign/{token}'
@@ -73,40 +87,50 @@ def register(app, utils):
         qr_img.save(buf, format='PNG')
         b64 = base64.b64encode(buf.getvalue()).decode()
         return {'token': token, 'url': url, 'qr': 'data:image/png;base64,' + b64}
-
     @app.get('/sign/{token}', response_class=HTMLResponse)
     async def sign_page(token: str):
-        html = f"""
+        info_path = os.path.join(signatures_dir, f'{token}.json')
+        if not os.path.exists(info_path):
+            return HTMLResponse('<p>Invalid token</p>', status_code=404)
+        with open(info_path, 'r') as fh:
+            info = json.load(fh)
+        img_b64 = info.get('image', '')
+        html = """
         <html><head>
         <meta name='viewport' content='width=device-width,initial-scale=1.0'>
-        <style>body{{text-align:center;font-family:sans-serif;}} img{{max-width:100%;height:auto;}}</style>
+        <style>body{ text-align:center;font-family:sans-serif; }
+        #docImg{ max-width:100%;height:auto; }
+        #pad{ border:1px solid #000;display:none;margin-top:10px;width:100%;height:200px }
+        </style>
         <script src='https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js'></script>
         </head><body>
         <img src='/static/logos/header_logo.png' style='max-width:150px;margin-top:10px' alt='DocCropper'>
-        <p>Sign the document below</p>
-        <canvas id='pad' style='border:1px solid #000;width:100%;height:200px'></canvas><br>
-        <label><input type='checkbox' id='consent'> I consent to sign</label><br>
-        <button id='clear'>Clear</button>
-        <button id='submit'>Submit</button>
+        <p>Tap the document then draw your signature</p>
+        <img id='docImg' src='{img}' alt='doc'><br>
+        <canvas id='pad'></canvas><br>
+        <div id='controls' style='display:none;'>
+            <button id='clear'>Clear</button>
+            <button id='submit'>Submit</button>
+        </div>
         <div style='margin-top:20px;'><img src='/static/logos/footer_logo.png' style='max-width:120px' alt='IlTuoConsulenteIT'></div>
         <script>
-        const canvas=document.getElementById('pad');
-        function resize(){{
-            canvas.width=window.innerWidth*0.9;
-            canvas.height=200;
-        }}
-        resize();window.addEventListener('resize',resize);
-        const pad=new SignaturePad(canvas);
+        const padEl=document.getElementById('pad');
+        const controls=document.getElementById('controls');
+        let pos=null;
+        function resize(){ padEl.width=window.innerWidth*0.9; padEl.height=200; }
+        resize(); window.addEventListener('resize',resize);
+        const pad=new SignaturePad(padEl);
+        document.getElementById('docImg').onclick=e=>{ const r=e.target.getBoundingClientRect(); pos={x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}; padEl.style.display='block'; controls.style.display='block'; };
         document.getElementById('clear').onclick=()=>pad.clear();
-        document.getElementById('submit').onclick=async()=>{{
-            if(pad.isEmpty())return;
+        document.getElementById('submit').onclick=async()=>{
+            if(!pos||pad.isEmpty())return;
             const img=pad.toDataURL('image/png');
-            await fetch('/submit-signature/{token}', {{method:'POST', headers:{{'Content-Type':'application/json'}}, body: JSON.stringify({{image:img}})}});
+            await fetch('/submit-signature/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:img,x:pos.x,y:pos.y})});
             document.body.innerHTML='<p>Signature saved. You may close this page.</p>';
-        }};
+        };
         </script>
         </body></html>
-        """
+        """.replace('{token}', token).replace('{img}', img_b64)
         return HTMLResponse(content=html)
 
     @app.post('/submit-signature/{token}')
@@ -124,7 +148,37 @@ def register(app, utils):
         except Exception:
             return JSONResponse(status_code=400, content={'message': 'Invalid image'})
         os.makedirs(signatures_dir, exist_ok=True)
-        path = os.path.join(signatures_dir, f'signature_{token}.png')
-        with open(path, 'wb') as fh:
+        img_path = os.path.join(signatures_dir, f'signature_{token}.png')
+        with open(img_path, 'wb') as fh:
             fh.write(img_bytes)
+        info_path = os.path.join(signatures_dir, f'{token}.json')
+        if os.path.exists(info_path):
+            with open(info_path, 'r') as fh:
+                info = json.load(fh)
+        else:
+            info = {}
+        info['signed'] = True
+        info['image_path'] = img_path
+        info['x'] = float(data.get('x', 0.5))
+        info['y'] = float(data.get('y', 0.5))
+        with open(info_path, 'w') as fh:
+            json.dump(info, fh)
         return {'status': 'ok'}
+
+    @app.get('/signature-result/{token}')
+    async def signature_result(token: str):
+        info_path = os.path.join(signatures_dir, f'{token}.json')
+        if not os.path.exists(info_path):
+            return JSONResponse(status_code=404, content={'message': 'Not found'})
+        with open(info_path, 'r') as fh:
+            info = json.load(fh)
+        if not info.get('signed'):
+            return JSONResponse(status_code=202, content={'message': 'Pending'})
+        with open(info['image_path'], 'rb') as fh:
+            b64 = base64.b64encode(fh.read()).decode()
+        return {
+            'page': info.get('page', 0),
+            'image': 'data:image/png;base64,' + b64,
+            'x': info.get('x', 0.5),
+            'y': info.get('y', 0.5)
+        }

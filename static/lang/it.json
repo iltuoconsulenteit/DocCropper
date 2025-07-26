@@ -113,6 +113,7 @@
   "skipBlank": "Salta pagine bianche",
   "drawSignature": "Disegna firma",
   "clearSignature": "Pulisci",
-  "useSignature": "Usa disegno"
+  "useSignature": "Usa disegno",
+  "pageSigned": "Pagina firmata"
 }
 

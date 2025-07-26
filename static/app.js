@@ -1609,8 +1609,8 @@ if (discardSignatureBtn) {
     });
 }
 
-if (saveSignatureBtn) {
-    saveSignatureBtn.addEventListener('click', () => {
+    if (saveSignatureBtn) {
+        saveSignatureBtn.addEventListener('click', () => {
         const pageIdx = parseInt(signaturePage.value || '0');
         let stamps = signatures.filter(s => s.page === pageIdx);
         // also include the currently positioned stamp in case the user
@@ -1653,6 +1653,38 @@ if (saveSignatureBtn) {
         base.src = processedImages[pageIdx];
     });
 }
+
+function applyRemoteSignature(data) {
+    const pageIdx = parseInt(data.page || 0);
+    const base = new Image();
+    base.onload = () => {
+        const sig = new Image();
+        sig.onload = async () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = base.width;
+            canvas.height = base.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(base, 0, 0);
+            const baseRatio = (canvas.height / 10) / sig.height;
+            const w = sig.width * baseRatio;
+            const h = sig.height * baseRatio;
+            const x = data.x * canvas.width - w / 2;
+            const y = data.y * canvas.height - h / 2;
+            ctx.drawImage(sig, x, y, w, h);
+            const url = canvas.toDataURL('image/png');
+            processedImages[pageIdx] = url;
+            const cont = processedGallery.children[pageIdx];
+            if (cont) cont.querySelector('img').src = url;
+            const blob = await (await fetch(url)).blob();
+            processedFiles[pageIdx] = new File([blob], processedFiles[pageIdx]?.name || `image_${pageIdx}.png`, {type:'image/png'});
+            statusMessageElement.textContent = translations['pageSigned'] || 'Page signed';
+        };
+        sig.src = data.image;
+    };
+    base.src = processedImages[pageIdx];
+}
+
+window.addEventListener('remoteSignature', (e) => applyRemoteSignature(e.detail));
 
 function updateImageFilters() {
     const b = brightnessRange.value;
