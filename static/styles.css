@@ -392,6 +392,17 @@ button:hover {
     pointer-events: auto;
 }
 
+.licenseForm label {
+    display: block;
+    margin-top: 4px;
+}
+.licenseForm input {
+    width: 100%;
+}
+.licenseForm button {
+    margin-top: 6px;
+}
+
 #exportOptions {
     position: fixed;
     top: 50%;

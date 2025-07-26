@@ -1875,9 +1875,27 @@ function renderLicenseBox() {
         <li><strong>${t('freeEdition')}</strong> - ${t('freeFeatures')}</li>
         <li><strong>${t('proEdition')}</strong> - ${t('proFeatures')}</li>
         <li><strong>${t('fullEdition')}</strong> - ${t('fullFeatures')}</li>
-    </ul>`;
+    </ul>
+    <div class="licenseForm">
+        <label>${t('licenseKey')}</label>
+        <input type="text" id="licenseKeyInput" value="${currentSettings.license_key || ''}"><br>
+        <label>${t('licenseName')}</label>
+        <input type="text" id="licenseNameInput" value="${currentSettings.license_name || ''}"><br>
+        <button id="saveLicenseBtn">${t('saveLicense')}</button>
+    </div>`;
     licenseBox.innerHTML = html;
     licenseBox.style.display = 'block';
+    const btn = document.getElementById('saveLicenseBtn');
+    btn.addEventListener('click', async () => {
+        const key = document.getElementById('licenseKeyInput').value.trim();
+        const name = document.getElementById('licenseNameInput').value.trim();
+        await saveSettings({license_key: key, license_name: name});
+        const cfg = await loadSettings();
+        applySettings(cfg);
+        licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
+        alert(t('licenseSaved'));
+        licenseBox.classList.remove('visible');
+    });
 }
 
 function renderLogin(cfg) {

@@ -174,7 +174,7 @@ only used to identify users and is not tied to licensing.
 
 ## 🔓 Licensing
 
-DocCropper ships with three editions. A new **Licenses** button in the header opens a panel explaining these options.
+DocCropper ships with three editions. A **Licenses** button in the header opens a panel where you can review the editions and enter your license key. Free users may paste a key here at any time to unlock Pro or Full features.
 
 - **Free** – Watermark applied, up to five images per project, LAN access disabled
 - **Pro** – No watermark and unlimited images, but still restricted to local access
@@ -183,7 +183,7 @@ DocCropper ships with three editions. A new **Licenses** button in the header op
 DocCropper itself is released under the [MIT](LICENSE.txt) license. See [Terms of Use](TERMS_OF_USE.md) for additional conditions.
 
 To activate Pro or Full editions:
-- Provide a valid license key in `settings.json` or `.env`
+- Provide a valid license key in `settings.json`, `.env`, or the Licenses panel
 - Developer keys unlock all features for testing when `DOCROPPER_DEV_LICENSE` matches your `license_key`
 - You can generate a suitable `.env` by running `scripts/setup_license.bat` (or
   `.sh` / `.command`) and entering your details
