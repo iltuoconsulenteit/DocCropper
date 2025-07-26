@@ -124,6 +124,7 @@ const MAX_IMAGES_FREE = 5;
 let files = [];
 let currentFileIndex = 0;
 let processedImages = [];
+window.processedImages = processedImages;
 let processedFiles = [];
 let editingIndex = null;
 let cameraStream = null;
@@ -830,6 +831,7 @@ function updateProcessedArrays() {
         newFiles.push(processedFiles[idx]);
     });
     processedImages = newImages;
+    window.processedImages = processedImages;
     processedFiles = newFiles;
     refreshThumbnailIndexes();
 }
@@ -1066,6 +1068,7 @@ async function addFiles(newFiles) {
         files = compressed;
         currentFileIndex = 0;
         processedImages = [];
+        window.processedImages = processedImages;
         processedFiles = [];
         editingIndex = null;
         processedGallery.innerHTML = '';
