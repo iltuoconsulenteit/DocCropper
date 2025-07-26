@@ -19,7 +19,7 @@ app.use(passport.session());
 passport.use(new GoogleStrategy({
   clientID: process.env.CLIENT_ID,
   clientSecret: process.env.CLIENT_SECRET,
-  callbackURL: process.env.REDIRECT_URI || 'http://localhost:8000/auth/google/callback'
+  callbackURL: process.env.REDIRECT_URI || 'http://localhost:8765/auth/google/callback'
 }, (accessToken, refreshToken, profile, done) => {
   return done(null, profile);
 }));
@@ -56,6 +56,6 @@ app.get('/logout', (req, res, next) => {
 
 app.use(express.static(path.join(__dirname, 'static')));
 
-app.listen(8000, () => {
-  console.log('Auth server running on http://localhost:8000');
+app.listen(8765, () => {
+  console.log('Auth server running on http://localhost:8765');
 });

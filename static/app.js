@@ -1,4 +1,5 @@
 import interact from 'https://cdn.interactjs.io/v1.10.11/interactjs/index.js';
+import { initSignaturePlugin } from './plugins/signature.js';
 
 let scaling_factor_w;
 let scaling_factor_h;
@@ -15,125 +16,220 @@ const fogPathElement = document.getElementById('fogPath');
 const imageUploadElement = document.getElementById('imageUpload');
 const submitBtn = document.getElementById('submitBtn');
 const exportPdfBtn = document.getElementById('exportPdfBtn');
+const exportOptions = document.getElementById('exportOptions');
+const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+const waShareBtn = document.getElementById('waShareBtn');
+const emailShareBtn = document.getElementById('emailShareBtn');
 const layoutControls = document.getElementById('layoutControls');
 const layoutSelect = document.getElementById('layoutSelect');
 const orientationSelect = document.getElementById('orientationSelect');
 const arrangeSelect = document.getElementById('arrangeSelect');
 const scaleMode = document.getElementById('scaleMode');
 const scalePercent = document.getElementById('scalePercent');
+const colorModeSelect = document.getElementById('colorModeSelect');
+const colorModeLabel = document.querySelector("label[for='colorModeSelect']");
+const blankThresholdInput = document.getElementById('blankThreshold');
+const blankThresholdLabel = document.querySelector("label[for='blankThreshold']");
+const skipBlankCheckbox = document.getElementById('skipBlank');
+let globalColorMode = 'color';
+let blankThreshold = 95;
+let skipBlank = true;
 const processedImageElement = document.getElementById('processedImage');
 const processedGallery = document.getElementById('processedGallery');
 const statusMessageElement = document.getElementById('statusMessage');
+const reorderHint = document.getElementById('reorderHint');
 const imageModal = document.getElementById('imageModal');
 const modalImage = document.getElementById('modalImage');
 const closeModal = document.getElementById('closeModal');
 const langSelect = document.getElementById('langSelect');
 const layoutPreview = document.getElementById('layoutPreview');
 const licenseInfo = document.getElementById('licenseInfo');
-const paymentBox = document.getElementById('paymentBox');
+const purchaseBox = document.getElementById('purchaseBox');
+const licenseBox = document.getElementById('licenseBox');
 const loginArea = document.getElementById('loginArea');
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
 const instructionsBox = document.getElementById('instructionsBox');
 const helpBtn = document.getElementById('helpBtn');
+const purchaseBtn = document.getElementById('purchaseBtn');
+const licenseBtn = document.getElementById('licenseBtn');
+const bannerBox = document.getElementById('bannerBox');
+const closeBanner = document.getElementById('closeBanner');
+const sloganImg = document.getElementById('sloganImg');
+const wikiFrame = document.getElementById('wikiFrame');
+const openWikiLink = document.getElementById('openWikiLink');
+const clientLogo = document.getElementById('clientLogo');
+const sponsorLogo = document.getElementById('sponsorLogo');
+const autoDetectHint = document.getElementById('autoDetectHint');
 const adjustControls = document.getElementById('adjustControls');
 const brightnessRange = document.getElementById('brightnessRange');
 const contrastRange = document.getElementById('contrastRange');
 const ocrBtn = document.getElementById('ocrBtn');
 const ocrOutput = document.getElementById('ocrOutput');
+const signatureControls = document.getElementById('signatureControls');
+const signatureUpload = document.getElementById('signatureUpload');
+const signaturePreview = document.getElementById('signaturePreview');
+const signatureHint = document.getElementById('signatureHint');
+const signatureExtra = document.getElementById('signatureExtra');
+const signaturePage = document.getElementById('signaturePage');
+const signatureScaleInput = document.getElementById('signatureScale');
+const drawSignatureBtn = document.getElementById('drawSignatureBtn');
+const drawArea = document.getElementById('drawArea');
+const signatureDrawCanvas = document.getElementById('signatureDrawCanvas');
+const clearDrawBtn = document.getElementById('clearDrawBtn');
+const useDrawBtn = document.getElementById('useDrawBtn');
+const addSignatureBtn = document.getElementById('addSignatureBtn');
+const discardSignatureBtn = document.getElementById('discardSignatureBtn');
+const saveSignatureBtn = document.getElementById('saveSignatureBtn');
+const qrSignBtn = document.getElementById('qrSignBtn');
+const qrSignPageBtn = document.getElementById('qrSignPageBtn');
+const digitalSignBtn = document.getElementById('remoteSignBtn');
+const signQR = document.getElementById('signQR');
+const signQrImg = document.getElementById('signQrImg');
+const signQrHint = document.getElementById('signQrHint');
+let signatureImageData = null;
+let signatureImg = null;
+let signaturePosition = { x: 0.85, y: 0.85 };
+let signatureScale = 1;
+let signatures = [];
+let pendingSigPos = null;
+let draggingSig = false;
+let drawing = false;
+let lastPoint = null;
+const OCR_ENABLED = false;
+let bannerImages = [];
+let bannerIndex = 0;
+let bannerTimer;
+if (!OCR_ENABLED) {
+    if (ocrBtn) ocrBtn.style.display = 'none';
+    if (ocrOutput) ocrOutput.style.display = 'none';
+}
 const inputMode = document.getElementById('inputMode');
 const fileInputArea = document.getElementById('fileInputArea');
-const scanControls = document.getElementById('scanControls');
-const scanBtn = document.getElementById('scanBtn');
 const cameraControls = document.getElementById('cameraControls');
 const cameraPreview = document.getElementById('cameraPreview');
+const cameraSelect = document.getElementById('cameraSelect');
 const captureBtn = document.getElementById('captureBtn');
+const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 const cameraFileInput = document.getElementById('cameraFileInput');
+const CAPTURE_MAX_DIM = 1600;
+const CAPTURE_QUALITY = 0.8;
 
 let isLicensed = false;
 let licenseName = '';
 let appVersion = '';
-const DEV_KEY = 'ILTUOCONSULENTEIT-DEV';
-const DEV_KEY_UPPER = DEV_KEY.toUpperCase();
 let userInfo = null;
+let currentLicenseLevel = 'free';
+const MAX_IMAGES_FREE = 5;
 
 let files = [];
 let currentFileIndex = 0;
 let processedImages = [];
+window.processedImages = processedImages;
 let processedFiles = [];
 let editingIndex = null;
 let cameraStream = null;
+let cameraAvailable = false;
+let currentPdfBlob = null;
+let sortable = null;
+let currentFile = null;
+let docusealEnabled = false;
 
 let translations = {};
 let currentLang = 'en';
 let currentSettings = {};
 
-async function checkScanAvailability() {
+async function enumerateCameras() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        return;
+    }
     try {
-        const resp = await fetch('/scan/available');
-        if (resp.ok) {
-            const data = await resp.json();
-            if (!data.available) {
-                const opt = inputMode.querySelector('option[value="scanner"]');
-                if (opt) opt.remove();
-            }
-        }
-    } catch (e) {
-        console.error('Scanner check failed', e);
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cams = devices.filter(d => d.kind === 'videoinput');
+        cameraSelect.innerHTML = '';
+        cams.forEach((c, idx) => {
+            const opt = document.createElement('option');
+            opt.value = c.deviceId;
+            opt.textContent = c.label || `${t('modeCamera')} ${idx + 1}`;
+            cameraSelect.appendChild(opt);
+        });
+        cameraSelect.style.display = cams.length > 1 ? 'block' : 'none';
+    } catch (err) {
+        console.warn('Failed to enumerate cameras', err);
     }
 }
+
+function setupDeviceMode() {
+    if (isMobile) {
+        inputMode.style.display = 'inline-block';
+        if (!Array.from(inputMode.options).some(o => o.value === 'camera')) {
+            const opt = document.createElement('option');
+            opt.value = 'camera';
+            opt.textContent = t('modeCamera');
+            inputMode.appendChild(opt);
+        }
+        inputMode.value = 'upload';
+        enumerateCameras();
+    } else {
+        inputMode.style.display = 'none';
+        inputMode.value = 'upload';
+    }
+}
+
 
 function updateInputMode() {
     const mode = inputMode.value;
     fileInputArea.style.display = mode === 'upload' ? 'block' : 'none';
-    scanControls.style.display = mode === 'scanner' ? 'block' : 'none';
     cameraControls.style.display = mode === 'camera' ? 'block' : 'none';
     if (mode === 'camera') {
+        enumerateCameras();
         startCamera();
     } else {
         stopCamera();
     }
 }
 
-async function scanDocument() {
-    try {
-        statusMessageElement.textContent = 'Scanning...';
-        const resp = await fetch('/scan/');
-        if (resp.ok) {
-            const data = await resp.json();
-            if (data.image) {
-                files = [data.image];
-                currentFileIndex = 0;
-                const reader = new FileReader();
-                reader.onload = (e) => setupImage(e.target.result);
-                reader.readAsDataURL(dataURItoBlob(data.image));
-            } else {
-                statusMessageElement.textContent = 'No image returned';
-            }
-        } else {
-            statusMessageElement.textContent = 'Scan not available';
-        }
-    } catch (e) {
-        console.error('Scan failed', e);
-        statusMessageElement.textContent = 'Scan failed';
-    }
-}
 
 function startCamera() {
-    if (cameraStream) return;
-    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        cameraAvailable = false;
+        return;
+    }
+    if (cameraStream) {
+        stopCamera();
+    }
+    const constraints = { video: { deviceId: cameraSelect.value ? { exact: cameraSelect.value } : undefined } };
+    navigator.mediaDevices.getUserMedia(constraints).then(stream => {
         cameraStream = stream;
+        cameraAvailable = true;
         cameraPreview.srcObject = stream;
     }).catch(err => {
-        console.error('Camera error', err);
-        const fallback = cameraFileInput;
-        if (fallback) {
-            fallback.click();
-        } else {
-            statusMessageElement.textContent = 'Camera not available';
-            inputMode.value = 'upload';
-            updateInputMode();
+        console.warn('Camera unavailable, using file input', err);
+        cameraAvailable = false;
+    });
+}
+
+if (digitalSignBtn) {
+    digitalSignBtn.addEventListener('click', async () => {
+        if (!docusealEnabled) {
+            alert(translations['comingSoon'] || 'Coming soon');
+            return;
         }
+        statusMessageElement.textContent = translations['signingPdf'] || 'Signing PDF...';
+        try {
+            const resp = await fetch('/docuseal-sign/', {method: 'POST'});
+            const data = await resp.json();
+            if (data.url) {
+                window.open(data.url, '_blank');
+                statusMessageElement.textContent = translations['pdfSigned'] || 'PDF signed.';
+            } else {
+                statusMessageElement.textContent = data.message || 'Error';
+            }
+        } catch (e) {
+            console.error('Docuseal sign error', e);
+            statusMessageElement.textContent = translations['docusealError'] || 'Docuseal request failed';
+        }
+        exportOptions.style.display = 'none';
     });
 }
 
@@ -143,30 +239,125 @@ function stopCamera() {
         cameraStream = null;
         cameraPreview.srcObject = null;
     }
+    cameraAvailable = false;
 }
 
 function capturePhoto() {
-    if (!cameraStream) return;
+    if (!cameraStream || !cameraAvailable) {
+        cameraFileInput.click();
+        return;
+    }
     const video = cameraPreview;
+    let w = video.videoWidth;
+    let h = video.videoHeight;
+    const scale = Math.min(1, CAPTURE_MAX_DIM / Math.max(w, h));
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
-    const dataUrl = canvas.toDataURL('image/png');
-    files = [dataUrl];
-    currentFileIndex = 0;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', CAPTURE_QUALITY);
+    const blob = dataURItoBlob(dataUrl);
+    files.push(blob);
+    currentFileIndex = files.length - 1;
+    currentFile = blob;
     setupImage(dataUrl);
 }
 
 function dataURItoBlob(dataURI) {
-    const byteString = atob(dataURI.split(',')[1]);
+    const parts = dataURI.split(',');
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+    const byteString = atob(parts[1]);
     const ab = new ArrayBuffer(byteString.length);
     const ia = new Uint8Array(ab);
     for (let i = 0; i < byteString.length; i++) {
         ia[i] = byteString.charCodeAt(i);
     }
-    return new Blob([ab], { type: 'image/png' });
+    return new Blob([ab], { type: mime });
+}
+
+function compressImageFile(file) {
+    return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+            let w = img.width;
+            let h = img.height;
+            const scale = Math.min(1, CAPTURE_MAX_DIM / Math.max(w, h));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(w * scale);
+            canvas.height = Math.round(h * scale);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(blob => {
+                resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+            }, 'image/jpeg', CAPTURE_QUALITY);
+        };
+        img.src = URL.createObjectURL(file);
+    });
+}
+
+function fileToDataURL(file) {
+    return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.readAsDataURL(file);
+    });
+}
+
+async function convertPdfToImages(file) {
+    const form = new FormData();
+    form.append('pdf_file', file, file.name);
+    form.append('threshold', blankThreshold);
+    form.append('skip_blank', skipBlank ? '1' : '0');
+    const resp = await fetch('/pdf-to-images/', { method: 'POST', body: form });
+    if (!resp.ok) {
+        throw new Error('PDF conversion failed');
+    }
+    const data = await resp.json();
+    const out = [];
+    if (Array.isArray(data.images)) {
+        data.images.forEach((dataUrl, idx) => {
+            const blob = dataURItoBlob(dataUrl);
+            out.push(new File([blob], `${file.name.replace(/\.pdf$/i,'')}_${idx+1}.png`, {type: 'image/png'}));
+        });
+    }
+    return out;
+}
+
+async function importPdfPages(file) {
+    if (currentLicenseLevel === 'free') {
+        statusMessageElement.textContent = t('pdfImportPro');
+        return;
+    }
+    const pages = await convertPdfToImages(file);
+    let toAdd = pages;
+    for (const p of toAdd) {
+        let imgFile = p;
+        try {
+            imgFile = await compressImageFile(p);
+        } catch (e) {
+            console.warn('Compress failed', e);
+        }
+        processedFiles.push(imgFile);
+        const dataUrl = await fileToDataURL(imgFile);
+        processedImages.push(dataUrl);
+        addThumbnail(dataUrl, processedImages.length - 1);
+    }
+    if (processedImages.length > 0) {
+        exportPdfBtn.style.display = 'inline-block';
+        if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
+        layoutControls.style.display = 'block';
+        signatureControls.style.display = 'block';
+        if (signatureImg) {
+            signaturePreview.style.display = 'block';
+            signatureHint.style.display = 'block';
+            signatureExtra.style.display = 'block';
+            populateSignaturePages();
+            renderSignaturePreview();
+        }
+        updateLayoutPreview();
+    }
 }
 
 async function loadSettings() {
@@ -213,21 +404,67 @@ function applySettings(cfg) {
     if (cfg.scale_percent !== undefined) {
         scalePercent.value = cfg.scale_percent;
     }
+    if (cfg.color_mode) {
+        colorModeSelect.value = cfg.color_mode;
+        globalColorMode = cfg.color_mode;
+    }
+    if (cfg.blank_threshold !== undefined) {
+        blankThreshold = parseInt(cfg.blank_threshold);
+        if (blankThresholdInput) blankThresholdInput.value = blankThreshold;
+    }
+    if (cfg.skip_blank !== undefined) {
+        skipBlank = !!cfg.skip_blank;
+        if (skipBlankCheckbox) skipBlankCheckbox.checked = skipBlank;
+    }
+    if (cfg.license_level) {
+        currentLicenseLevel = cfg.license_level.toLowerCase();
+    } else {
+        currentLicenseLevel = 'free';
+    }
     isLicensed = false;
     licenseName = '';
     if (cfg.license_key && cfg.license_key.trim()) {
         isLicensed = true;
     }
-    if ((cfg.license_key || '').toUpperCase() === DEV_KEY_UPPER) {
-        licenseName = 'Developer';
-    } else if (cfg.license_name) {
+    if (cfg.license_name) {
         licenseName = cfg.license_name;
     }
     if (brandBox) {
         brandBox.innerHTML = cfg.brand_html || '';
     }
+    if (clientLogo) {
+        if (cfg.client_logo) {
+            clientLogo.src = `/static/logos/${cfg.client_logo}`;
+            clientLogo.style.display = 'block';
+        } else {
+            clientLogo.style.display = 'none';
+        }
+    }
+    if (sponsorLogo) {
+        if (cfg.sponsor_logo) {
+            sponsorLogo.src = `/static/logos/${cfg.sponsor_logo}`;
+            sponsorLogo.style.display = 'block';
+        } else {
+            sponsorLogo.style.display = 'none';
+        }
+    }
+    if (Array.isArray(cfg.banner_images)) {
+        bannerImages = cfg.banner_images;
+    } else {
+        bannerImages = ['DocCropper_slogan_{{lang}}.png'];
+    }
+    bannerIndex = 0;
+    startBannerRotation();
+    if (sloganImg) {
+        const scale = parseFloat(cfg.sponsor_scale || 100) / 100;
+        sloganImg.style.maxHeight = (200 * scale) + 'px';
+    }
     if (cfg.version) {
         appVersion = cfg.version;
+    }
+    docusealEnabled = !!cfg.docuseal_api_url;
+    if (digitalSignBtn) {
+        digitalSignBtn.disabled = !docusealEnabled || currentLicenseLevel === 'free';
     }
 }
 
@@ -249,6 +486,12 @@ function applyTranslations() {
         const k = el.getAttribute('data-i18n');
         if (translations[k]) {
             el.textContent = translations[k];
+        }
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const k = el.getAttribute('data-i18n-title');
+        if (translations[k]) {
+            el.title = translations[k];
         }
     });
     // also update dynamic option labels
@@ -276,14 +519,46 @@ function applyTranslations() {
             opt.textContent = translations[k];
         }
     });
-    processedGallery.querySelectorAll('.thumbButtons button').forEach(btn => {
-        const key = btn.dataset.key;
+    processedGallery.querySelectorAll('.thumbMenu option').forEach(opt => {
+        const key = opt.dataset.key;
         if (translations[key]) {
-            btn.textContent = translations[key];
+            opt.textContent = translations[key];
         }
     });
     if (versionBox && appVersion) {
         versionBox.textContent = translations['version'] ? `${translations['version']} ${appVersion}` : `Version ${appVersion}`;
+    }
+    if (sloganImg) {
+        sloganImg.src = `/static/logos/DocCropper_slogan_${currentLang}.png`;
+    }
+    if (autoDetectHint) {
+        autoDetectHint.textContent = translations['autoHint'] || 'Double click to auto-detect';
+    }
+    updateWikiLinks();
+    startBannerRotation();
+}
+
+function updateWikiLinks() {
+    const url = `/wiki/${currentLang}/index.html`;
+    if (wikiFrame) wikiFrame.src = url;
+    if (openWikiLink) openWikiLink.href = url;
+}
+
+function updateBannerImage() {
+    if (!sloganImg || bannerImages.length === 0) return;
+    let img = bannerImages[bannerIndex % bannerImages.length];
+    img = img.replace('{{lang}}', currentLang);
+    sloganImg.src = `/static/logos/${img}`;
+}
+
+function startBannerRotation() {
+    updateBannerImage();
+    if (bannerTimer) clearInterval(bannerTimer);
+    if (bannerImages.length > 1) {
+        bannerTimer = setInterval(() => {
+            bannerIndex = (bannerIndex + 1) % bannerImages.length;
+            updateBannerImage();
+        }, 5000);
     }
 }
 
@@ -356,21 +631,75 @@ function rotateImage(index) {
     img.src = processedImages[index];
 }
 
+function convertColor(index, mode) {
+    const img = new Image();
+    img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const d = data.data;
+        for (let i = 0; i < d.length; i += 4) {
+            const r = d[i];
+            const g = d[i+1];
+            const b = d[i+2];
+            const gray = 0.299*r + 0.587*g + 0.114*b;
+            if (mode === 'gray') {
+                d[i] = d[i+1] = d[i+2] = gray;
+            } else if (mode === 'bw') {
+                const bw = gray > 128 ? 255 : 0;
+                d[i] = d[i+1] = d[i+2] = bw;
+            }
+        }
+        ctx.putImageData(data, 0, 0);
+        const out = canvas.toDataURL('image/png');
+        processedImages[index] = out;
+        const container = processedGallery.children[index];
+        container.querySelector('img').src = out;
+        if (imageModal.style.display === 'block') {
+            openModal(out);
+        }
+    };
+    img.src = processedImages[index];
+}
+
 function deleteImage(index) {
     processedImages.splice(index, 1);
     processedFiles.splice(index, 1);
     processedGallery.removeChild(processedGallery.children[index]);
+    refreshThumbnailIndexes();
     if (processedImages.length === 0) {
         exportPdfBtn.style.display = 'none';
         ocrBtn.style.display = 'none';
         ocrOutput.style.display = 'none';
         layoutControls.style.display = 'none';
+        signatureControls.style.display = 'none';
+        signaturePreview.style.display = 'none';
+        signatureHint.style.display = 'none';
     }
+}
+
+function openSignatureForPage(idx) {
+    populateSignaturePages();
+    signaturePage.value = idx;
+    signatureControls.style.display = 'block';
+    signatureExtra.style.display = 'block';
+    if (signatureImg) {
+        signaturePreview.style.display = 'block';
+        signatureHint.style.display = 'block';
+    } else {
+        signaturePreview.style.display = 'none';
+        signatureHint.style.display = 'none';
+    }
+    renderSignaturePreview();
 }
 
 function editImage(index) {
     editingIndex = index;
     const file = processedFiles[index];
+    currentFile = file;
     const reader = new FileReader();
     reader.onload = (e) => {
         setupImage(e.target.result);
@@ -380,12 +709,54 @@ function editImage(index) {
     ocrBtn.style.display = 'none';
     ocrOutput.style.display = 'none';
     layoutControls.style.display = 'none';
+    signatureControls.style.display = 'none';
     statusMessageElement.textContent = 'Edit image and press Process Image to save.';
+}
+
+
+async function shareWhatsApp() {
+    if (!currentPdfBlob) return;
+    const file = new File([currentPdfBlob], 'DocCropper.pdf', { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+            await navigator.share({ files: [file], title: 'DocCropper PDF' });
+            return;
+        } catch (e) {
+            console.error('Web Share failed', e);
+        }
+    }
+    let phone = prompt(translations['enterPhone'] || 'Enter phone number (optional)');
+    phone = phone ? phone.replace(/[^0-9]/g, '') : '';
+    const encoded = encodeURIComponent(translations['shareText'] || 'See attached document.');
+    const url = phone ?
+        `https://web.whatsapp.com/send?phone=${phone}&text=${encoded}` :
+        `https://web.whatsapp.com/send?text=${encoded}`;
+    window.open(url, '_blank');
+}
+
+async function shareEmail() {
+    if (!currentPdfBlob) return;
+    const file = new File([currentPdfBlob], 'DocCropper.pdf', { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+            await navigator.share({ files: [file], title: 'DocCropper PDF' });
+            return;
+        } catch (e) {
+            console.error('Web Share failed', e);
+        }
+    }
+    let email = prompt(translations['enterEmail'] || 'Enter email address (optional)');
+    email = email ? encodeURIComponent(email) : '';
+    const subject = encodeURIComponent('DocCropper PDF');
+    const body = encodeURIComponent(translations['shareText'] || 'See attached document.');
+    const mailto = `mailto:${email}?subject=${subject}&body=${body}`;
+    window.open(mailto, '_blank');
 }
 
 function addThumbnail(src, index) {
     const container = document.createElement('div');
     container.className = 'thumbContainer';
+    container.dataset.index = index;
 
     const imgEl = document.createElement('img');
     imgEl.src = src;
@@ -395,41 +766,75 @@ function addThumbnail(src, index) {
     });
     container.appendChild(imgEl);
 
-    const btns = document.createElement('div');
-    btns.className = 'thumbButtons';
+    const menu = document.createElement('select');
+    menu.className = 'thumbMenu';
 
-    const rotateBtn = document.createElement('button');
-    rotateBtn.dataset.key = 'rotate';
-    rotateBtn.textContent = t('rotate');
-    rotateBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
+    function addOption(val, key) {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.dataset.key = key;
+        opt.textContent = t(key);
+        menu.appendChild(opt);
+    }
+
+    addOption('', 'chooseAction');
+    addOption('rotate', 'rotate');
+    if (isLicensed && currentLicenseLevel !== 'free') {
+        addOption('gray', 'toGray');
+        addOption('bw', 'toBW');
+    }
+    addOption('sign', 'sign');
+    addOption('edit', 'edit');
+    addOption('delete', 'delete');
+
+    menu.addEventListener('change', (e) => {
+        const val = menu.value;
         const idx = Array.from(processedGallery.children).indexOf(container);
-        rotateImage(idx);
+        switch (val) {
+            case 'rotate':
+                rotateImage(idx);
+                break;
+            case 'gray':
+                convertColor(idx, 'gray');
+                break;
+            case 'bw':
+                convertColor(idx, 'bw');
+                break;
+            case 'sign':
+                openSignatureForPage(idx);
+                break;
+            case 'edit':
+                editImage(idx);
+                break;
+            case 'delete':
+                deleteImage(idx);
+                break;
+        }
+        menu.value = '';
     });
-    btns.appendChild(rotateBtn);
 
-    const editBtn = document.createElement('button');
-    editBtn.dataset.key = 'edit';
-    editBtn.textContent = t('edit');
-    editBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const idx = Array.from(processedGallery.children).indexOf(container);
-        editImage(idx);
-    });
-    btns.appendChild(editBtn);
-
-    const delBtn = document.createElement('button');
-    delBtn.dataset.key = 'delete';
-    delBtn.textContent = t('delete');
-    delBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const idx = Array.from(processedGallery.children).indexOf(container);
-        deleteImage(idx);
-    });
-    btns.appendChild(delBtn);
-
-    container.appendChild(btns);
+    container.appendChild(menu);
     processedGallery.appendChild(container);
+}
+
+function refreshThumbnailIndexes() {
+    Array.from(processedGallery.children).forEach((c, i) => {
+        c.dataset.index = i;
+    });
+}
+
+function updateProcessedArrays() {
+    const newImages = [];
+    const newFiles = [];
+    Array.from(processedGallery.children).forEach(c => {
+        const idx = parseInt(c.dataset.index);
+        newImages.push(processedImages[idx]);
+        newFiles.push(processedFiles[idx]);
+    });
+    processedImages = newImages;
+    window.processedImages = processedImages;
+    processedFiles = newFiles;
+    refreshThumbnailIndexes();
 }
 
 closeModal.addEventListener('click', () => {
@@ -532,10 +937,25 @@ function initializeDraggablePoints(imgDisplayWidth, imgDisplayHeight) {
     updatePolygonAndPoints();
 }
 
+function setDraggablePoints(displayPoints) {
+    ['p1','p2','p3','p4'].forEach((id, idx) => {
+        const el = draggableElements[id];
+        const x = displayPoints[idx * 2];
+        const y = displayPoints[idx * 2 + 1];
+        el.style.transform = 'translate(0px, 0px)';
+        el.setAttribute('data-x', '0');
+        el.setAttribute('data-y', '0');
+        el.style.left = `${x - el.offsetWidth / 2}px`;
+        el.style.top = `${y - el.offsetHeight / 2}px`;
+    });
+    updatePolygonAndPoints();
+}
+
 function setupImage(imageUrl) {
     imageElement.src = imageUrl;
     imageElement.style.display = 'block';
     wrapperElement.style.display = 'block';
+    if (autoDetectHint) autoDetectHint.style.display = 'block';
     processedImageElement.style.display = 'none';
     statusMessageElement.textContent = 'Loading image...';
 
@@ -547,6 +967,7 @@ function setupImage(imageUrl) {
             console.error("Image natural dimensions are zero. Image might be invalid or not loaded.");
             statusMessageElement.textContent = "Error: Image data is invalid or not fully loaded.";
             wrapperElement.style.display = 'none';
+            if (autoDetectHint) autoDetectHint.style.display = 'none';
             adjustControls.style.display = 'none';
             return;
         }
@@ -619,24 +1040,44 @@ function setupImage(imageUrl) {
         console.error("Error loading image source.");
         statusMessageElement.textContent = "Error: Could not load the selected image file.";
         wrapperElement.style.display = 'none';
+        if (autoDetectHint) autoDetectHint.style.display = 'none';
         adjustControls.style.display = 'none';
     };
 }
 
 
-imageUploadElement.addEventListener('change', (event) => {
-    const newFiles = Array.from(event.target.files);
+async function addFiles(newFiles) {
+    if (currentLicenseLevel === 'free') {
+        const allowed = MAX_IMAGES_FREE - files.length;
+        if (allowed <= 0) {
+            statusMessageElement.textContent = t('maxImagesFree');
+            return;
+        }
+        newFiles = Array.from(newFiles).slice(0, allowed);
+    }
+    const compressed = [];
+    for (const f of Array.from(newFiles)) {
+        try {
+            compressed.push(await compressImageFile(f));
+        } catch (e) {
+            console.warn('Compress failed', e);
+            compressed.push(f);
+        }
+    }
     if (files.length === 0 && processedImages.length === 0) {
         // first batch of files
-        files = newFiles;
+        files = compressed;
         currentFileIndex = 0;
         processedImages = [];
+        window.processedImages = processedImages;
         processedFiles = [];
         editingIndex = null;
         processedGallery.innerHTML = '';
         exportPdfBtn.style.display = 'none';
         layoutControls.style.display = 'none';
+        signatureControls.style.display = 'none';
         if (files.length > 0) {
+            currentFile = files[0];
             const reader = new FileReader();
             reader.onload = (e) => {
                 setupImage(e.target.result);
@@ -646,8 +1087,9 @@ imageUploadElement.addEventListener('change', (event) => {
     } else {
         // add new files to existing queue
         const startProcessing = currentFileIndex >= files.length;
-        files = files.concat(newFiles);
+        files = files.concat(compressed);
         if (startProcessing && newFiles.length > 0) {
+            currentFile = files[currentFileIndex];
             const reader = new FileReader();
             reader.onload = (e) => {
                 setupImage(e.target.result);
@@ -655,7 +1097,56 @@ imageUploadElement.addEventListener('change', (event) => {
             reader.readAsDataURL(files[currentFileIndex]);
         }
     }
+
+}
+
+imageUploadElement.addEventListener('change', async (event) => {
+    const list = Array.from(event.target.files);
+    const toProcess = [];
+    for (const f of list) {
+        if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
+            if (currentLicenseLevel === 'free') {
+                statusMessageElement.textContent = t('pdfImportPro');
+            } else {
+                try {
+                    await importPdfPages(f);
+                } catch (e) {
+                    console.error('PDF conversion failed', e);
+                }
+            }
+        } else {
+            toProcess.push(f);
+        }
+    }
+    if (toProcess.length) addFiles(toProcess);
 });
+
+async function handleDrop(event) {
+    event.preventDefault();
+    if (event.dataTransfer && event.dataTransfer.files) {
+        const list = Array.from(event.dataTransfer.files);
+        const toProcess = [];
+        for (const f of list) {
+            if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
+                if (currentLicenseLevel === 'free') {
+                    statusMessageElement.textContent = t('pdfImportPro');
+                } else {
+                    try {
+                        await importPdfPages(f);
+                    } catch (e) {
+                        console.error('PDF conversion failed', e);
+                    }
+                }
+            } else {
+                toProcess.push(f);
+            }
+        }
+        if (toProcess.length) addFiles(toProcess);
+    }
+}
+
+document.addEventListener('dragover', (e) => e.preventDefault());
+document.addEventListener('drop', handleDrop);
 
 interact('.draggable').draggable({
     modifiers: [
@@ -682,8 +1173,8 @@ interact('.draggable').draggable({
 
 
 submitBtn.addEventListener('click', () => {
-    if (!imageUploadElement.files || imageUploadElement.files.length === 0) {
-        statusMessageElement.textContent = 'Please upload an image first.';
+    if (files.length === 0) {
+        statusMessageElement.textContent = t('noImage');
         return;
     }
     if (currentPointsOnDisplayedImage.length !== 8) {
@@ -738,10 +1229,12 @@ submitBtn.addEventListener('click', () => {
                 editingIndex = null;
                 statusMessageElement.textContent = 'Image reprocessed.';
                 wrapperElement.style.display = 'none';
+                if (autoDetectHint) autoDetectHint.style.display = 'none';
                 adjustControls.style.display = 'none';
                 exportPdfBtn.style.display = 'inline-block';
-                ocrBtn.style.display = 'inline-block';
+                if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                 layoutControls.style.display = 'block';
+                signatureControls.style.display = 'block';
                 updateLayoutPreview();
             } else {
                 processedImages.push(data.processed_image);
@@ -754,14 +1247,24 @@ submitBtn.addEventListener('click', () => {
                     reader.onload = (e) => {
                         setupImage(e.target.result);
                     };
-                    reader.readAsDataURL(files[currentFileIndex]);
+                    currentFile = files[currentFileIndex];
+                    reader.readAsDataURL(currentFile);
                 } else {
                     statusMessageElement.textContent = 'All images processed.';
                     wrapperElement.style.display = 'none';
+                    if (autoDetectHint) autoDetectHint.style.display = 'none';
                     adjustControls.style.display = 'none';
                     exportPdfBtn.style.display = 'inline-block';
-                    ocrBtn.style.display = 'inline-block';
+                    if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                     layoutControls.style.display = 'block';
+                    signatureControls.style.display = 'block';
+                    if (signatureImg) {
+                        signaturePreview.style.display = 'block';
+                        signatureHint.style.display = 'block';
+                        signatureExtra.style.display = 'block';
+                        populateSignaturePages();
+                        renderSignaturePreview();
+                    }
                     updateLayoutPreview();
                 }
             }
@@ -786,7 +1289,7 @@ exportPdfBtn.addEventListener('click', () => {
     const arrangement = arrangeSelect.value || 'auto';
     const scale_mode = scaleMode.value || 'fit';
     const scale_percent = parseInt(scalePercent.value || '100');
-    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent };
+    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures };
     fetch('/create-pdf/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -800,11 +1303,16 @@ exportPdfBtn.addEventListener('click', () => {
     })
     .then(data => {
         if (data.pdf) {
-            const link = document.createElement('a');
-            link.href = data.pdf;
-            link.download = 'documents.pdf';
-            link.click();
-            statusMessageElement.textContent = 'PDF generated.';
+            const base64 = data.pdf.split(',')[1];
+            const byteChars = atob(base64);
+            const byteNumbers = new Array(byteChars.length);
+            for (let i = 0; i < byteChars.length; i++) {
+                byteNumbers[i] = byteChars.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            currentPdfBlob = new Blob([byteArray], {type: 'application/pdf'});
+            exportOptions.style.display = 'block';
+            statusMessageElement.textContent = 'PDF ready.';
         } else {
             statusMessageElement.textContent = data.message || 'Failed to create PDF.';
         }
@@ -815,56 +1323,222 @@ exportPdfBtn.addEventListener('click', () => {
     });
 });
 
-ocrBtn.addEventListener('click', () => {
-    if (processedImages.length === 0) {
-        statusMessageElement.textContent = 'No images for OCR.';
-        return;
-    }
-    statusMessageElement.textContent = 'Extracting text...';
-    fetch('/ocr/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images: processedImages })
-    })
-    .then(resp => resp.json())
-    .then(data => {
-        if (data.text) {
-            ocrOutput.style.display = 'block';
-            ocrOutput.value = data.text;
-            statusMessageElement.textContent = translations['ocrResult'] ? translations['ocrResult'] : 'Recognized Text:';
-        } else {
-            statusMessageElement.textContent = data.message || (translations['ocrNoSupport'] || 'OCR not available');
+if (OCR_ENABLED) {
+    ocrBtn.addEventListener('click', () => {
+        if (processedImages.length === 0) {
+            statusMessageElement.textContent = 'No images for OCR.';
+            return;
         }
-    })
-    .catch(err => {
-        statusMessageElement.textContent = 'OCR error';
-        console.error('OCR error', err);
+        statusMessageElement.textContent = 'Extracting text...';
+        fetch('/ocr/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ images: processedImages })
+        })
+        .then(resp => resp.json())
+        .then(data => {
+            if (data.text) {
+                ocrOutput.style.display = 'block';
+                ocrOutput.value = data.text;
+                statusMessageElement.textContent = translations['ocrResult'] ? translations['ocrResult'] : 'Recognized Text:';
+            } else {
+                statusMessageElement.textContent = data.message || (translations['ocrNoSupport'] || 'OCR not available');
+            }
+        })
+        .catch(err => {
+            statusMessageElement.textContent = 'OCR error';
+            console.error('OCR error', err);
+        });
     });
-});
+}
 
 inputMode.addEventListener('change', updateInputMode);
-scanBtn.addEventListener('click', scanDocument);
 captureBtn.addEventListener('click', capturePhoto);
+cameraSelect.addEventListener('change', () => {
+    if (inputMode.value === 'camera') {
+        startCamera();
+    }
+});
+let lastTap = 0;
+imageElement.addEventListener('dblclick', autoDetectCorners);
+imageElement.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTap < 300) {
+        e.preventDefault();
+        autoDetectCorners();
+    }
+    lastTap = now;
+});
 helpBtn.addEventListener('click', () => {
+    const rect = helpBtn.getBoundingClientRect();
+    instructionsBox.style.top = (rect.bottom + window.scrollY) + 'px';
     instructionsBox.classList.toggle('visible');
 });
-cameraFileInput.addEventListener('change', (e) => {
-    const f = e.target.files && e.target.files[0];
-    if (!f) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-        files = [ev.target.result];
-        currentFileIndex = 0;
-        setupImage(ev.target.result);
-    };
-    reader.readAsDataURL(f);
+purchaseBtn.addEventListener('click', () => {
+    const rect = purchaseBtn.getBoundingClientRect();
+    purchaseBox.style.top = (rect.bottom + window.scrollY) + 'px';
+    purchaseBox.classList.toggle('visible');
 });
+licenseBtn.addEventListener('click', () => {
+    const rect = licenseBtn.getBoundingClientRect();
+    licenseBox.style.display = 'block';
+    licenseBox.style.top = (rect.bottom + window.scrollY) + 'px';
+    licenseBox.classList.toggle('visible');
+});
+if (closeBanner) {
+    closeBanner.addEventListener('click', () => {
+        bannerBox.style.display = 'none';
+    });
+}
+
+if (downloadPdfBtn) {
+    downloadPdfBtn.addEventListener('click', () => {
+        if (!currentPdfBlob) return;
+        const url = URL.createObjectURL(currentPdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'documents.pdf';
+        link.click();
+        URL.revokeObjectURL(url);
+        exportOptions.style.display = 'none';
+    });
+}
+
+if (waShareBtn) {
+    waShareBtn.addEventListener('click', async () => {
+        await shareWhatsApp();
+        exportOptions.style.display = 'none';
+    });
+}
+
+if (emailShareBtn) {
+    emailShareBtn.addEventListener('click', async () => {
+        await shareEmail();
+        exportOptions.style.display = 'none';
+    });
+}
+
+cameraFileInput.addEventListener('change', (e) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    addFiles(e.target.files);
+});
+
+if (signatureUpload) {
+    signatureUpload.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) { signatureImageData = null; signatureImg = null; signaturePreview.style.display = 'none'; signatureHint.style.display = 'none'; return; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                for (let i = 0; i < data.data.length; i += 4) {
+                    if (data.data[i] > 240 && data.data[i+1] > 240 && data.data[i+2] > 240) {
+                        data.data[i+3] = 0;
+                    }
+                }
+                ctx.putImageData(data, 0, 0);
+                signatureImageData = canvas.toDataURL('image/png');
+                signatureImg = new Image();
+                signatureImg.onload = renderSignaturePreview;
+                signatureImg.src = signatureImageData;
+                if (processedImages.length > 0) {
+                    signaturePreview.style.display = 'block';
+                    signatureHint.style.display = 'block';
+                    signatureExtra.style.display = 'block';
+                    populateSignaturePages();
+                    renderSignaturePreview();
+                }
+            };
+            img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+if (drawSignatureBtn && signatureDrawCanvas) {
+    const ctx = signatureDrawCanvas.getContext('2d');
+    const getPos = (e) => {
+        const rect = signatureDrawCanvas.getBoundingClientRect();
+        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+        return { x, y };
+    };
+    const startDraw = (e) => { drawing = true; lastPoint = getPos(e); e.preventDefault(); };
+    const moveDraw = (e) => {
+        if (!drawing) return;
+        const p = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(lastPoint.x, lastPoint.y);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        lastPoint = p;
+        e.preventDefault();
+    };
+    const endDraw = () => { drawing = false; };
+    signatureDrawCanvas.addEventListener('mousedown', startDraw);
+    signatureDrawCanvas.addEventListener('touchstart', startDraw);
+    signatureDrawCanvas.addEventListener('mousemove', moveDraw);
+    signatureDrawCanvas.addEventListener('touchmove', moveDraw);
+    document.addEventListener('mouseup', endDraw);
+    document.addEventListener('touchend', endDraw);
+    clearDrawBtn.addEventListener('click', () => { ctx.clearRect(0,0,signatureDrawCanvas.width,signatureDrawCanvas.height); });
+    useDrawBtn.addEventListener('click', () => {
+        signatureImageData = signatureDrawCanvas.toDataURL('image/png');
+        signatureImg = new Image();
+        signatureImg.onload = () => {
+            drawArea.style.display = 'none';
+            if (pendingSigPos) {
+                signaturePosition.x = pendingSigPos.x;
+                signaturePosition.y = pendingSigPos.y;
+                pendingSigPos = null;
+            }
+            if (processedImages.length > 0) {
+                signaturePreview.style.display = 'block';
+                signatureHint.style.display = 'block';
+                signatureExtra.style.display = 'block';
+                populateSignaturePages();
+                renderSignaturePreview();
+                addCurrentSignature();
+            }
+        };
+        signatureImg.src = signatureImageData;
+    });
+    drawSignatureBtn.addEventListener('click', () => {
+        drawArea.style.display = drawArea.style.display === 'none' ? 'block' : 'none';
+    });
+}
+
+if (signaturePreview) {
+    signaturePreview.addEventListener('mousedown', (e) => {
+        draggingSig = true;
+        updateSigPosition(e);
+    });
+    signaturePreview.addEventListener('mousemove', (e) => {
+        if (draggingSig) updateSigPosition(e);
+    });
+    document.addEventListener('mouseup', () => { draggingSig = false; });
+    signaturePreview.addEventListener('dblclick', (e) => {
+        const rect = signaturePreview.getBoundingClientRect();
+        pendingSigPos = {
+            x: (e.clientX - rect.left) / signaturePreview.width,
+            y: (e.clientY - rect.top) / signaturePreview.height
+        };
+        drawArea.style.display = 'block';
+    });
+}
 
 langSelect.addEventListener('change', async () => {
     currentLang = langSelect.value;
     await loadTranslations(currentLang);
     applyTranslations();
     renderPaymentBox(currentSettings);
+    renderLicenseBox();
     saveSettings({ language: currentLang });
 });
 
@@ -891,6 +1565,22 @@ scaleMode.addEventListener('change', () => {
 scalePercent.addEventListener('change', () => {
     saveSettings({ scale_percent: parseInt(scalePercent.value || '100') });
 });
+colorModeSelect.addEventListener("change", () => {
+    globalColorMode = colorModeSelect.value;
+    saveSettings({ color_mode: globalColorMode });
+});
+if (blankThresholdInput) {
+    blankThresholdInput.addEventListener('change', () => {
+        blankThreshold = parseInt(blankThresholdInput.value || '95');
+        saveSettings({ blank_threshold: blankThreshold });
+    });
+}
+if (skipBlankCheckbox) {
+    skipBlankCheckbox.addEventListener('change', () => {
+        skipBlank = skipBlankCheckbox.checked;
+        saveSettings({ skip_blank: skipBlank });
+    });
+}
 
 brightnessRange.addEventListener('input', () => {
     updateImageFilters();
@@ -900,37 +1590,257 @@ contrastRange.addEventListener('input', () => {
     updateImageFilters();
 });
 
+if (signatureScaleInput) {
+    signatureScaleInput.addEventListener('input', () => {
+        signatureScale = parseFloat(signatureScaleInput.value || '1');
+        renderSignaturePreview();
+    });
+}
+
+if (signaturePage) {
+    signaturePage.addEventListener('change', () => {
+        renderSignaturePreview();
+    });
+}
+
+function addCurrentSignature() {
+    const page = parseInt(signaturePage.value || '0');
+    signatures.push({ page, x: signaturePosition.x, y: signaturePosition.y, scale: signatureScale });
+    const OFFSET = 0.05;
+    signaturePosition.x += OFFSET;
+    if (signaturePosition.x > 0.95) signaturePosition.x = OFFSET;
+    signaturePosition.y += OFFSET;
+    if (signaturePosition.y > 0.95) signaturePosition.y = OFFSET;
+    renderSignaturePreview();
+}
+
+if (addSignatureBtn) {
+    addSignatureBtn.addEventListener('click', addCurrentSignature);
+}
+
+if (discardSignatureBtn) {
+    discardSignatureBtn.addEventListener('click', () => {
+        const pageIdx = parseInt(signaturePage.value || '0');
+        signatures = signatures.filter(s => s.page !== pageIdx);
+        signatureControls.style.display = 'none';
+        signaturePreview.style.display = 'none';
+        signatureHint.style.display = 'none';
+    });
+}
+
+    if (saveSignatureBtn) {
+        saveSignatureBtn.addEventListener('click', () => {
+        const pageIdx = parseInt(signaturePage.value || '0');
+        let stamps = signatures.filter(s => s.page === pageIdx);
+        // also include the currently positioned stamp in case the user
+        // did not press Add before saving
+        if (signatureImg) {
+            stamps = stamps.concat([{ page: pageIdx, x: signaturePosition.x, y: signaturePosition.y, scale: signatureScale }]);
+        }
+        if (!signatureImg || stamps.length === 0) {
+            statusMessageElement.textContent = translations['noSignatures'] || 'No signatures to save';
+            return;
+        }
+        const base = new Image();
+        base.onload = async () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = base.width;
+            canvas.height = base.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(base, 0, 0);
+            const baseRatio = (canvas.height / 10) / signatureImg.height;
+            const drawOne = sig => {
+                const w = signatureImg.width * baseRatio * sig.scale;
+                const h = signatureImg.height * baseRatio * sig.scale;
+                const x = sig.x * canvas.width - w / 2;
+                const y = sig.y * canvas.height - h / 2;
+                ctx.drawImage(signatureImg, x, y, w, h);
+            };
+            stamps.forEach(drawOne);
+            const url = canvas.toDataURL('image/png');
+            processedImages[pageIdx] = url;
+            const container = processedGallery.children[pageIdx];
+            if (container) container.querySelector('img').src = url;
+            try {
+                const blob = await (await fetch(url)).blob();
+                processedFiles[pageIdx] = new File([blob], processedFiles[pageIdx]?.name || `image_${pageIdx}.png`, { type: 'image/png' });
+            } catch {}
+            signatures = signatures.filter(s => s.page !== pageIdx);
+            renderSignaturePreview();
+            statusMessageElement.textContent = translations['imageSaved'] || 'Image updated';
+        };
+        base.src = processedImages[pageIdx];
+    });
+}
+
+async function applyRemoteSignature(data) {
+    const pageIdx = parseInt(data.page || 0);
+    const base = new Image();
+    await new Promise(res => { base.onload = res; base.src = processedImages[pageIdx]; });
+    const canvas = document.createElement('canvas');
+    canvas.width = base.width;
+    canvas.height = base.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(base, 0, 0);
+    const list = data.signatures || [{image:data.image, x:data.x, y:data.y}];
+    for (const sigData of list) {
+        const img = new Image();
+        await new Promise(res => { img.onload = res; img.src = sigData.image; });
+        const baseRatio = (canvas.height / 10) / img.height;
+        const w = img.width * baseRatio;
+        const h = img.height * baseRatio;
+        const x = sigData.x * canvas.width - w / 2;
+        const y = sigData.y * canvas.height - h / 2;
+        ctx.drawImage(img, x, y, w, h);
+    }
+    const url = canvas.toDataURL('image/png');
+    processedImages[pageIdx] = url;
+    const cont = processedGallery.children[pageIdx];
+    if (cont) cont.querySelector('img').src = url;
+    try {
+        const blob = await (await fetch(url)).blob();
+        processedFiles[pageIdx] = new File([blob], processedFiles[pageIdx]?.name || `image_${pageIdx}.png`, {type:'image/png'});
+    } catch {}
+    statusMessageElement.textContent = translations['pageSigned'] || 'Page signed';
+}
+
+window.addEventListener('remoteSignature', (e) => applyRemoteSignature(e.detail));
+
 function updateImageFilters() {
     const b = brightnessRange.value;
     const c = contrastRange.value;
     imageElement.style.filter = `brightness(${b}%) contrast(${c}%)`;
 }
 
+function renderSignaturePreview() {
+    if (!signaturePreview || processedImages.length === 0) return;
+    const pageIdx = parseInt(signaturePage.value || '0');
+    const ctx = signaturePreview.getContext('2d');
+    const baseImg = new Image();
+    baseImg.onload = () => {
+        let maxDim = 600;
+        let w = baseImg.width;
+        let h = baseImg.height;
+        if (w > h) {
+            if (w > maxDim) {
+                h = h * (maxDim / w);
+                w = maxDim;
+            }
+        } else {
+            if (h > maxDim) {
+                w = w * (maxDim / h);
+                h = maxDim;
+            }
+        }
+        signaturePreview.width = w;
+        signaturePreview.height = h;
+        const cw = w;
+        const ch = h;
+        ctx.clearRect(0, 0, cw, ch);
+        ctx.drawImage(baseImg, 0, 0, cw, ch);
+        if (signatureImg) {
+            const drawOne = (sig) => {
+                const scale = (ch / 10) * sig.scale / signatureImg.height;
+                const sw = signatureImg.width * scale;
+                const sh = signatureImg.height * scale;
+                const x = sig.x * cw - sw / 2;
+                const y = sig.y * ch - sh / 2;
+                ctx.drawImage(signatureImg, x, y, sw, sh);
+            };
+            signatures.filter(s => s.page === pageIdx).forEach(drawOne);
+            // current editing signature
+            drawOne({x: signaturePosition.x, y: signaturePosition.y, scale: signatureScale});
+        }
+    };
+    baseImg.src = processedImages[pageIdx];
+}
+
+function updateSigPosition(evt) {
+    const rect = signaturePreview.getBoundingClientRect();
+    const x = (evt.clientX - rect.left) / signaturePreview.width;
+    const y = (evt.clientY - rect.top) / signaturePreview.height;
+    signaturePosition.x = Math.max(0, Math.min(1, x));
+    signaturePosition.y = Math.max(0, Math.min(1, y));
+    renderSignaturePreview();
+}
+
+function autoDetectCorners() {
+    if (!currentFile) return;
+    statusMessageElement.textContent = translations['detectingEdges'] || 'Detecting edges...';
+    const formData = new FormData();
+    formData.append('image_file', currentFile);
+    fetch('/detect-corners/', { method: 'POST', body: formData })
+        .then(resp => resp.json())
+        .then(data => {
+            if (data.points && data.points.length === 8) {
+                const disp = data.points.map((v,i)=> v / (i%2===0 ? scaling_factor_w : scaling_factor_h));
+                setDraggablePoints(disp);
+                statusMessageElement.textContent = 'Image loaded. Adjust points.';
+            } else {
+                statusMessageElement.textContent = data.message || (translations['detectFail'] || 'Detection failed');
+            }
+        })
+        .catch(err => {
+            console.error('Detect error', err);
+            statusMessageElement.textContent = translations['detectFail'] || 'Detection failed';
+        });
+}
+
+function populateSignaturePages() {
+    signaturePage.innerHTML = '';
+    for (let i = 0; i < processedImages.length; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = (i + 1).toString();
+        signaturePage.appendChild(opt);
+    }
+}
+
 function applyProStatus() {
     // In demo mode features remain usable but PDF pages beyond the first
     // will include a DEMO watermark. We simply update the button style
     // to reflect the license status without disabling functionality.
-    if (!isLicensed) {
+    if (!isLicensed || currentLicenseLevel === 'free') {
         exportPdfBtn.classList.remove('pro-disabled');
         imageUploadElement.multiple = true;
+        imageUploadElement.accept = 'image/*';
+        document.querySelectorAll('.shareBtn').forEach(btn => btn.style.display = 'none');
+        if (sortable) { sortable.destroy(); sortable = null; }
+        if (reorderHint) reorderHint.style.display = 'none';
+        if (colorModeSelect) colorModeSelect.style.display = 'none';
+        if (colorModeLabel) colorModeLabel.style.display = 'none';
+        if (blankThresholdInput) blankThresholdInput.style.display = 'none';
+        if (blankThresholdLabel) blankThresholdLabel.style.display = 'none';
+        if (skipBlankCheckbox) skipBlankCheckbox.style.display = 'none';
     } else {
         exportPdfBtn.classList.remove('pro-disabled');
         imageUploadElement.multiple = true;
+        imageUploadElement.accept = 'image/*,application/pdf';
+        document.querySelectorAll('.shareBtn').forEach(btn => btn.style.display = 'inline-block');
+        if (!sortable && typeof Sortable !== 'undefined') {
+            sortable = Sortable.create(processedGallery, { animation: 150, onEnd: updateProcessedArrays });
+        }
+        if (reorderHint) reorderHint.style.display = 'block';
+        if (colorModeSelect) colorModeSelect.style.display = 'inline-block';
+        if (colorModeLabel) colorModeLabel.style.display = 'inline-block';
+        if (blankThresholdInput) blankThresholdInput.style.display = 'inline-block';
+        if (blankThresholdLabel) blankThresholdLabel.style.display = 'inline-block';
+        if (skipBlankCheckbox) skipBlankCheckbox.style.display = 'inline-block';
     }
 }
 
 function renderPaymentBox(cfg) {
     if (!cfg || !cfg.payment_mode) {
-        paymentBox.style.display = 'none';
+        purchaseBox.style.display = 'none';
         return;
     }
     const mode = cfg.payment_mode.toLowerCase();
     if (mode === 'none') {
-        paymentBox.style.display = 'none';
+        purchaseBox.style.display = 'none';
         return;
     }
-    paymentBox.style.display = 'block';
-    let html = `<h3>${t('support')}</h3><ul>`;
+    purchaseBox.style.display = 'block';
+    let html = `<h3>${t('purchaseInfo')}</h3><ul>`;
     let hasItem = false;
     if (mode === 'donation') {
         if (cfg.paypal_link) {
@@ -955,7 +1865,37 @@ function renderPaymentBox(cfg) {
         html += `<li>${t('noPaymentInfo')}</li>`;
     }
     html += '</ul>';
-    paymentBox.innerHTML = html;
+    purchaseBox.innerHTML = html;
+}
+
+function renderLicenseBox() {
+    const html = `
+    <h3>${t('licenseOptions')}</h3>
+    <ul>
+        <li><strong>${t('freeEdition')}</strong> - ${t('freeFeatures')}</li>
+        <li><strong>${t('proEdition')}</strong> - ${t('proFeatures')}</li>
+        <li><strong>${t('fullEdition')}</strong> - ${t('fullFeatures')}</li>
+    </ul>
+    <div class="licenseForm">
+        <label>${t('licenseKey')}</label>
+        <input type="text" id="licenseKeyInput" value="${currentSettings.license_key || ''}"><br>
+        <label>${t('licenseName')}</label>
+        <input type="text" id="licenseNameInput" value="${currentSettings.license_name || ''}"><br>
+        <button id="saveLicenseBtn">${t('saveLicense')}</button>
+    </div>`;
+    licenseBox.innerHTML = html;
+    licenseBox.style.display = 'block';
+    const btn = document.getElementById('saveLicenseBtn');
+    btn.addEventListener('click', async () => {
+        const key = document.getElementById('licenseKeyInput').value.trim();
+        const name = document.getElementById('licenseNameInput').value.trim();
+        await saveSettings({license_key: key, license_name: name});
+        const cfg = await loadSettings();
+        applySettings(cfg);
+        licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
+        alert(t('licenseSaved'));
+        licenseBox.classList.remove('visible');
+    });
 }
 
 function renderLogin(cfg) {
@@ -1022,12 +1962,14 @@ loadSettings().then(async (cfg) => {
     applySettings(cfg);
     await loadTranslations(currentLang);
     applyTranslations();
+    initSignaturePlugin(translations);
     renderPaymentBox(cfg);
+    renderLicenseBox();
     renderLogin(cfg);
     licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
     applyProStatus();
     updateLayoutPreview();
-    await checkScanAvailability();
+    setupDeviceMode();
     updateInputMode();
 });
 
