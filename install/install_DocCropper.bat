@@ -35,7 +35,7 @@ rem Default developer branch
 if defined DOCROPPER_DEV_BRANCH (
     set "DEV_BRANCH=%DOCROPPER_DEV_BRANCH%"
 ) else (
-    set "DEV_BRANCH=codex/add-license-specific-settings-menu"
+    set "DEV_BRANCH=work"
 )
 
 if not defined DOCROPPER_BRANCH (

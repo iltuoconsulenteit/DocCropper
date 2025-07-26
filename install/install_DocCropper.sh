@@ -18,7 +18,7 @@ fi
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-}"
 if [ -z "$DOCROPPER_DEV_BRANCH" ]; then
-  DEV_BRANCH="codex/add-license-specific-settings-menu"
+  DEV_BRANCH="work"
 else
   DEV_BRANCH="$DOCROPPER_DEV_BRANCH"
 fi
