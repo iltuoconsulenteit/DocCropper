@@ -410,6 +410,14 @@ button:hover {
     padding: 6px 10px;
 }
 
+.iconTextBtn {
+    font-size: 1em;
+    padding: 6px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
 @media (max-width: 600px) {
     #pageHeader {
         flex-direction: column;

@@ -203,8 +203,8 @@ DocCropper can apply a personal signature in several ways:
    to queue it for that page. Use **Save** to embed the placed stamps or **Discard**
    to cancel. You may add multiple signatures to any page before exporting the final PDF.
    Each new stamp is offset slightly so it doesn’t hide the previous one by default.
-2. **Remote Digital Signing** – Set `DOCROPPER_REMOTE_SIGN_CMD` to an external signing command (e.g. an Aruba Sign script). After creating the PDF, press **Remote Sign** to apply the digital signature to the entire document.
-3. **Touch Signature** – Press **Remote Sign** and DocCropper generates a one-time token and LAN link. Scan the QR code with your phone or tablet and sign on the provided page. The drawing is saved under `signatures/signature_<token>.png`.
+2. **Remote Digital Signing** – Set `DOCROPPER_REMOTE_SIGN_CMD` to an external signing command (e.g. an Aruba Sign script). After creating the PDF, press **Mobile Sign** to apply the digital signature to the entire document.
+3. **Touch Signature** – Press **Mobile Sign** and DocCropper generates a one-time token and LAN link. Scan the QR code with your phone or tablet and sign on the provided page. The drawing is saved under `signatures/signature_<token>.png`. The **Mobile Sign** button becomes available in the export panel once the PDF is ready.
 
    - GET `/start-sign/` returns `{token, url, qr}` with a QR code for the LAN link
    - Visit `/sign/<token>` to draw the signature
