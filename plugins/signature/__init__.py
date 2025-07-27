@@ -67,13 +67,20 @@ def register(app, utils):
             return JSONResponse(status_code=403, content={'message': 'Pro required'})
         img = data.get('image')
         page = int(data.get('page', 0))
-        if not img:
+        images = data.get('images') if isinstance(data.get('images'), list) else None
+        if images:
+            if len(images) == 0:
+                return JSONResponse(status_code=400, content={'message': 'No image supplied'})
+        elif not img:
             return JSONResponse(status_code=400, content={'message': 'No image supplied'})
+        else:
+            images = [img]
         token = uuid.uuid4().hex
         info = {
             'session': request.cookies.get('session_id'),
             'page': page,
             'image': img,
+            'images': images,
             'signed': False,
             'signatures': [],
         }
@@ -96,6 +103,8 @@ def register(app, utils):
         with open(info_path, 'r') as fh:
             info = json.load(fh)
         img_b64 = info.get('image', '')
+        images = info.get('images') or [img_b64]
+        page_index = int(info.get('page', 0))
         html = """
         <html><head>
         <meta name='viewport' content='width=device-width,initial-scale=1.0'>
@@ -109,8 +118,10 @@ def register(app, utils):
         <script src='https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js'></script>
         </head><body>
         <img src='/static/logos/header_logo.png' style='max-width:150px;margin-top:10px' alt='DocCropper'>
+        <p style='font-size:small;color:#a00;margin-top:5px'>DocCropper and its authors accept no liability for illegal use.</p>
         <p id='finishMsg' style='display:none;color:green;font-weight:bold'></p>
         <p>Tap the document then draw your signature</p>
+        <select id='pageSelect' style='margin-top:10px'></select>
         <div id='container'>
             <img id='docImg' src='{img}' alt='doc'>
             <canvas id='overlay'></canvas>
@@ -127,19 +138,28 @@ def register(app, utils):
         const overlay=document.getElementById('overlay');
         const controls=document.getElementById('controls');
         const docImg=document.getElementById('docImg');
+        const pageSelect=document.getElementById('pageSelect');
+        const submitBtn=document.getElementById('submit');
+        const clearBtn=document.getElementById('clear');
+        const finishBtn=document.getElementById('finish');
+        const images={images_json};
+        images.forEach((img,idx)=>{const opt=document.createElement('option');opt.value=idx;opt.textContent=(idx+1);pageSelect.appendChild(opt);});
+        pageSelect.value={page};
         let pos=null;
+        let finished=false;
         function resize(){
             padEl.width=window.innerWidth*0.9; padEl.height=200;
             overlay.width=docImg.clientWidth; overlay.height=docImg.clientHeight;
         }
         resize(); window.addEventListener('resize',resize);
         const pad=new SignaturePad(padEl);
-        docImg.onclick=e=>{ const r=e.target.getBoundingClientRect(); pos={x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}; padEl.style.display='block'; controls.style.display='block'; };
-        document.getElementById('clear').onclick=()=>pad.clear();
+        pageSelect.onchange=()=>{ docImg.src=images[pageSelect.value]; const ctx=overlay.getContext('2d'); ctx.clearRect(0,0,overlay.width,overlay.height); pos=null; };
+        docImg.onclick=e=>{ if(finished) return; const r=e.target.getBoundingClientRect(); pos={x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}; padEl.style.display='block'; controls.style.display='block'; };
+        clearBtn.onclick=()=>pad.clear();
         async function submitCurrent(){
             if(!pos||pad.isEmpty())return false;
             const img=pad.toDataURL('image/png');
-            await fetch('/submit-signature/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:img,x:pos.x,y:pos.y})});
+            await fetch('/submit-signature/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:img,x:pos.x,y:pos.y,page:parseInt(pageSelect.value)})});
             const ctx=overlay.getContext('2d');
             const tmp=new Image();
             tmp.onload=()=>{
@@ -154,17 +174,24 @@ def register(app, utils):
             padEl.style.display='none';
             return true;
         }
-        document.getElementById('submit').onclick=submitCurrent;
+        submitBtn.onclick=submitCurrent;
         const finishMsg=document.getElementById('finishMsg');
-        document.getElementById('finish').onclick=async()=>{
+        finishBtn.onclick=async()=>{
+            if(finished) return;
             if(!pad.isEmpty()) await submitCurrent();
-            await fetch('/finish-signing/{token}',{method:'POST'});
-            finishMsg.textContent='Signature sent.';
+            finishMsg.textContent='Sending signatures...';
             finishMsg.style.display='block';
+            await fetch('/finish-signing/{token}',{method:'POST'});
+            finishMsg.textContent='Signatures sent. You may close this page.';
+            finished=true;
+            finishBtn.disabled=true;
+            submitBtn.disabled=true;
+            clearBtn.disabled=true;
+            docImg.onclick=null;
         };
         </script>
         </body></html>
-        """.replace('{token}', token).replace('{img}', img_b64)
+        """.replace('{token}', token).replace('{img}', img_b64).replace('{images_json}', json.dumps(images)).replace('{page}', str(page_index))
         return HTMLResponse(content=html)
 
     @app.post('/submit-signature/{token}')
@@ -195,7 +222,8 @@ def register(app, utils):
         sig_entry = {
             'image_path': img_path,
             'x': float(data.get('x', 0.5)),
-            'y': float(data.get('y', 0.5))
+            'y': float(data.get('y', 0.5)),
+            'page': int(data.get('page', info.get('page', 0)))
         }
         info.setdefault('signatures', []).append(sig_entry)
         info['signed'] = False
@@ -224,9 +252,10 @@ def register(app, utils):
             info = json.load(fh)
         if not info.get('signed'):
             return JSONResponse(status_code=202, content={'message': 'Pending'})
-        sigs = []
+        pages = {}
         for sig in info.get('signatures', []):
             with open(sig['image_path'], 'rb') as fh:
                 b64 = base64.b64encode(fh.read()).decode()
-            sigs.append({'image': 'data:image/png;base64,' + b64, 'x': sig['x'], 'y': sig['y']})
-        return {'page': info.get('page', 0), 'signatures': sigs}
+            page = sig.get('page', info.get('page', 0))
+            pages.setdefault(page, []).append({'image': 'data:image/png;base64,' + b64, 'x': sig['x'], 'y': sig['y']})
+        return {'signatures': pages}

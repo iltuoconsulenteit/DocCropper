@@ -199,6 +199,7 @@ For inquiries: **doccropper@iltuoconsulenteit.it**
 Simple image or drawn signatures are available in all editions, but the Free edition keeps the watermark on exported PDFs.
 
 Signature functionality is packaged as a plugin under `plugins/signature` so it can evolve separately.  This folder now contains both the client script and the Python routes registered by `main.py`.
+> **Note** The mobile signing page includes a page selector and a disclaimer that DocCropper and its authors accept no liability for illegal use. After pressing **Finish** no more signatures can be added. Contract-signing workflows may be provided as a Full edition plugin.
 DocCropper can apply a personal signature in several ways:
 
 1. **Image Stamp** – Use the action menu below each processed page and choose `Sign`

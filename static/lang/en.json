@@ -128,5 +128,8 @@
   "settingsSaved": "Settings saved",
   "googleClientId": "Google client ID:",
   "docusealUrl": "Docuseal URL:",
-  "docusealKey": "Docuseal key:"
+  "docusealKey": "Docuseal key:",
+  "legalDisclaimer": "DocCropper and its authors accept no liability for illegal use.",
+  "signaturesSent": "Signatures sent. You may close this page.",
+  "pageToSign": "Page to sign:"
 }
