@@ -143,8 +143,21 @@ def register(app, utils):
         const clearBtn=document.getElementById('clear');
         const finishBtn=document.getElementById('finish');
         const images={images_json};
-        images.forEach((img,idx)=>{const opt=document.createElement('option');opt.value=idx;opt.textContent=(idx+1);pageSelect.appendChild(opt);});
-        pageSelect.value={page};
+        async function loadPages(){
+            try{
+                const resp=await fetch('/sign-pages/{token}');
+                if(resp.ok){
+                    const data=await resp.json();
+                    if(Array.isArray(data.images)){
+                        images.splice(0,images.length,...data.images);
+                    }
+                }
+            }catch{}
+            images.forEach((img,idx)=>{const opt=document.createElement('option');opt.value=idx;opt.textContent=(idx+1);pageSelect.appendChild(opt);});
+            pageSelect.value={page};
+            docImg.src=images[pageSelect.value];
+        }
+        loadPages();
         let pos=null;
         let finished=false;
         function resize(){
@@ -193,6 +206,16 @@ def register(app, utils):
         </body></html>
         """.replace('{token}', token).replace('{img}', img_b64).replace('{images_json}', json.dumps(images)).replace('{page}', str(page_index))
         return HTMLResponse(content=html)
+
+    @app.get('/sign-pages/{token}')
+    async def get_sign_pages(token: str):
+        info_path = os.path.join(signatures_dir, f'{token}.json')
+        if not os.path.exists(info_path):
+            return JSONResponse(status_code=404, content={'message': 'Not found'})
+        with open(info_path, 'r') as fh:
+            info = json.load(fh)
+        images = info.get('images') or [info.get('image', '')]
+        return {'images': images}
 
     @app.post('/submit-signature/{token}')
     async def submit_signature(token: str, data: dict = Body(...)):
