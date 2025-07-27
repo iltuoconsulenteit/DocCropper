@@ -19,6 +19,7 @@ def register(app, utils):
         img = data.get('image')
         page = int(data.get('page', 0))
         images = data.get('images') if isinstance(data.get('images'), list) else None
+        points = data.get('points') if isinstance(data.get('points'), dict) else {}
         if images:
             if len(images) == 0:
                 return JSONResponse(status_code=400, content={'message': 'No image supplied'})
@@ -32,6 +33,7 @@ def register(app, utils):
             'page': page,
             'image': img,
             'images': images,
+            'points': points,
             'signed': False,
             'signatures': [],
         }
@@ -55,6 +57,7 @@ def register(app, utils):
             info = json.load(fh)
         img_b64 = info.get('image', '')
         images = info.get('images') or [img_b64]
+        points = info.get('points') or {}
         page_index = int(info.get('page', 0))
         html = """
         <html><head>
@@ -94,6 +97,7 @@ def register(app, utils):
         const clearBtn=document.getElementById('clear');
         const finishBtn=document.getElementById('finish');
         const images={images_json};
+        const spots={spots_json};
         async function loadPages(){
             try{
                 const resp=await fetch('/sign-pages/{token}');
@@ -107,6 +111,7 @@ def register(app, utils):
             images.forEach((img,idx)=>{const opt=document.createElement('option');opt.value=idx;opt.textContent=(idx+1);pageSelect.appendChild(opt);});
             pageSelect.value={page};
             docImg.src=images[pageSelect.value];
+            drawSpots();
         }
         loadPages();
         let pos=null;
@@ -117,7 +122,15 @@ def register(app, utils):
         }
         resize(); window.addEventListener('resize',resize);
         const pad=new SignaturePad(padEl);
-        pageSelect.onchange=()=>{ docImg.src=images[pageSelect.value]; const ctx=overlay.getContext('2d'); ctx.clearRect(0,0,overlay.width,overlay.height); pos=null; };
+        function drawSpots(){
+            const ctx=overlay.getContext('2d');
+            ctx.clearRect(0,0,overlay.width,overlay.height);
+            const list=spots[pageSelect.value]||[];
+            ctx.strokeStyle='#f00';
+            ctx.lineWidth=2;
+            list.forEach(pt=>{const x=pt.x*overlay.width;const y=pt.y*overlay.height;ctx.beginPath();ctx.moveTo(x-10,y);ctx.lineTo(x+10,y);ctx.moveTo(x,y-10);ctx.lineTo(x,y+10);ctx.stroke();});
+        }
+        pageSelect.onchange=()=>{ docImg.src=images[pageSelect.value]; drawSpots(); pos=null; };
         docImg.onclick=e=>{ if(finished) return; const r=e.target.getBoundingClientRect(); pos={x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}; padEl.style.display='block'; controls.style.display='block'; };
         clearBtn.onclick=()=>pad.clear();
         async function submitCurrent(){
@@ -136,6 +149,7 @@ def register(app, utils):
             tmp.src=img;
             pad.clear();
             padEl.style.display='none';
+            drawSpots();
             return true;
         }
         submitBtn.onclick=submitCurrent;
@@ -155,7 +169,7 @@ def register(app, utils):
         };
         </script>
         </body></html>
-        """.replace('{token}', token).replace('{img}', img_b64).replace('{images_json}', json.dumps(images)).replace('{page}', str(page_index))
+        """.replace('{token}', token).replace('{img}', img_b64).replace('{images_json}', json.dumps(images)).replace('{spots_json}', json.dumps(points)).replace('{page}', str(page_index))
         return HTMLResponse(content=html)
 
     @app.get('/sign-pages/{token}')

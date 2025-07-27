@@ -50,6 +50,9 @@ export function initSignaturePlugin(translations, enabled = true) {
             if (!images.length) return;
             const payload = { page, images };
             payload.image = images[page];
+            if (window.mobileSignPoints && Object.keys(window.mobileSignPoints).length) {
+                payload.points = window.mobileSignPoints;
+            }
             const resp = await fetch('/start-sign/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

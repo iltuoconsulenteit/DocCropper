@@ -224,7 +224,7 @@ DocCropper can apply a personal signature in several ways:
    embed the placed stamps or **Discard** to cancel. You may add multiple
    signatures to any page before exporting the final PDF.
    Each new stamp is offset slightly so it doesn’t hide the previous one by default.
-2. **Mobile Sign** – Use the **Mobile Sign** button (in the signature panel or export menu) to generate a one-time token and QR code. Scan it with your phone or tablet and draw your signature on the provided page. The drawing is saved under `signatures/signature_<token>.png` and added to the PDF.
+2. **Mobile Sign** – Before creating the QR code you may mark where each remote signer should place their signature. Open the signature panel, double-click the preview and press **Add** without loading a signature image to drop a red cross marker. Then use the **Mobile Sign** button (in the panel or export menu) to generate a one-time token and QR code. Scan it with your phone or tablet and draw your signature on the indicated pages. The drawing is saved under `signatures/signature_<token>.png` and added to the PDF.
 3. **Remote Digital Signing** – Configure `DOCUSEAL_API_URL` and `DOCUSEAL_API_KEY` to upload the exported PDF to a Docuseal instance. Press **Digital Sign** to receive a link where the document can be signed online. You may still set `DOCROPPER_REMOTE_SIGN_CMD` to run a custom script instead.
 
    - GET `/start-sign/` returns `{token, url, qr}` with a QR code for the LAN link

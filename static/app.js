@@ -96,6 +96,8 @@ let signatureImg = null;
 let signaturePosition = { x: 0.85, y: 0.85 };
 let signatureScale = 1;
 let signatures = [];
+let mobileSignPoints = {};
+window.mobileSignPoints = mobileSignPoints;
 let pendingSigPos = null;
 let draggingSig = false;
 let drawing = false;
@@ -1649,7 +1651,12 @@ if (signaturePage) {
 
 function addCurrentSignature() {
     const page = parseInt(signaturePage.value || '0');
-    signatures.push({ page, x: signaturePosition.x, y: signaturePosition.y, scale: signatureScale });
+    if (!signatureImg) {
+        if (!mobileSignPoints[page]) mobileSignPoints[page] = [];
+        mobileSignPoints[page].push({ x: signaturePosition.x, y: signaturePosition.y });
+    } else {
+        signatures.push({ page, x: signaturePosition.x, y: signaturePosition.y, scale: signatureScale });
+    }
     const OFFSET = 0.05;
     signaturePosition.x += OFFSET;
     if (signaturePosition.x > 0.95) signaturePosition.x = OFFSET;
@@ -1666,6 +1673,7 @@ if (discardSignatureBtn) {
     discardSignatureBtn.addEventListener('click', () => {
         const pageIdx = parseInt(signaturePage.value || '0');
         signatures = signatures.filter(s => s.page !== pageIdx);
+        delete mobileSignPoints[pageIdx];
         signatureControls.style.display = 'none';
         signaturePreview.style.display = 'none';
         signatureHint.style.display = 'none';
@@ -1785,6 +1793,20 @@ function renderSignaturePreview() {
         const ch = h;
         ctx.clearRect(0, 0, cw, ch);
         ctx.drawImage(baseImg, 0, 0, cw, ch);
+        if (mobileSignPoints[pageIdx]) {
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            for (const pt of mobileSignPoints[pageIdx]) {
+                const x = pt.x * cw;
+                const y = pt.y * ch;
+                ctx.beginPath();
+                ctx.moveTo(x - 10, y);
+                ctx.lineTo(x + 10, y);
+                ctx.moveTo(x, y - 10);
+                ctx.lineTo(x, y + 10);
+                ctx.stroke();
+            }
+        }
         if (signatureImg) {
             const drawOne = (sig) => {
                 const scale = (ch / 10) * sig.scale / signatureImg.height;
