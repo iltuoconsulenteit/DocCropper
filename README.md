@@ -202,8 +202,9 @@ Signature functionality is packaged as a plugin under `plugins/signature` so it 
 > **Note** The mobile signing page includes a page selector and a disclaimer that DocCropper and its authors accept no liability for illegal use. After pressing **Finish** no more signatures can be added. Contract-signing workflows may be provided as a Full edition plugin.
 DocCropper can apply a personal signature in several ways:
 
-1. **Image Stamp** – Use the action menu below each processed page and choose `Sign`
-   to upload a signature image. White backgrounds are automatically removed.
+1. **Image Stamp** – Click the **Sign Page** button to open the signing panel,
+   then select the page to sign from the dropdown and upload a signature image.
+   White backgrounds are automatically removed.
    Alternatively, press **Draw signature** to handwrite your signature with a mouse or
    touch device. A dashed border shows where to draw. Clear and reuse the drawing until
    satisfied.

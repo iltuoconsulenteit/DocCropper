@@ -16,6 +16,7 @@ const fogPathElement = document.getElementById('fogPath');
 const imageUploadElement = document.getElementById('imageUpload');
 const submitBtn = document.getElementById('submitBtn');
 const exportPdfBtn = document.getElementById('exportPdfBtn');
+const signBtn = document.getElementById('signBtn');
 const exportOptions = document.getElementById('exportOptions');
 const downloadPdfBtn = document.getElementById('downloadPdfBtn');
 const waShareBtn = document.getElementById('waShareBtn');
@@ -348,6 +349,7 @@ async function importPdfPages(file) {
     }
     if (processedImages.length > 0) {
         exportPdfBtn.style.display = 'inline-block';
+        if (signBtn) signBtn.style.display = 'inline-block';
         if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
         layoutControls.style.display = 'block';
         signatureControls.style.display = 'block';
@@ -674,6 +676,7 @@ function deleteImage(index) {
     refreshThumbnailIndexes();
     if (processedImages.length === 0) {
         exportPdfBtn.style.display = 'none';
+        if (signBtn) signBtn.style.display = 'none';
         ocrBtn.style.display = 'none';
         ocrOutput.style.display = 'none';
         layoutControls.style.display = 'none';
@@ -708,6 +711,7 @@ function editImage(index) {
     };
     reader.readAsDataURL(file);
     exportPdfBtn.style.display = 'none';
+    if (signBtn) signBtn.style.display = 'none';
     ocrBtn.style.display = 'none';
     ocrOutput.style.display = 'none';
     layoutControls.style.display = 'none';
@@ -785,7 +789,6 @@ function addThumbnail(src, index) {
         addOption('gray', 'toGray');
         addOption('bw', 'toBW');
     }
-    addOption('sign', 'sign');
     addOption('edit', 'edit');
     addOption('delete', 'delete');
 
@@ -801,9 +804,6 @@ function addThumbnail(src, index) {
                 break;
             case 'bw':
                 convertColor(idx, 'bw');
-                break;
-            case 'sign':
-                openSignatureForPage(idx);
                 break;
             case 'edit':
                 editImage(idx);
@@ -1076,6 +1076,7 @@ async function addFiles(newFiles) {
         editingIndex = null;
         processedGallery.innerHTML = '';
         exportPdfBtn.style.display = 'none';
+        if (signBtn) signBtn.style.display = 'none';
         layoutControls.style.display = 'none';
         signatureControls.style.display = 'none';
         if (files.length > 0) {
@@ -1234,6 +1235,7 @@ submitBtn.addEventListener('click', () => {
                 if (autoDetectHint) autoDetectHint.style.display = 'none';
                 adjustControls.style.display = 'none';
                 exportPdfBtn.style.display = 'inline-block';
+                if (signBtn) signBtn.style.display = 'inline-block';
                 if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                 layoutControls.style.display = 'block';
                 signatureControls.style.display = 'block';
@@ -1257,6 +1259,7 @@ submitBtn.addEventListener('click', () => {
                     if (autoDetectHint) autoDetectHint.style.display = 'none';
                     adjustControls.style.display = 'none';
                     exportPdfBtn.style.display = 'inline-block';
+                    if (signBtn) signBtn.style.display = 'inline-block';
                     if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                     layoutControls.style.display = 'block';
                     signatureControls.style.display = 'block';
@@ -1387,6 +1390,11 @@ licenseBtn.addEventListener('click', () => {
     licenseBox.style.top = (rect.bottom + window.scrollY) + 'px';
     licenseBox.classList.toggle('visible');
 });
+if (signBtn) {
+    signBtn.addEventListener('click', () => {
+        openSignatureForPage(0);
+    });
+}
 settingsBtn.addEventListener('click', () => {
     const rect = settingsBtn.getBoundingClientRect();
     settingsBox.style.display = 'block';
