@@ -1,5 +1,5 @@
 import interact from 'https://cdn.interactjs.io/v1.10.11/interactjs/index.js';
-import { initSignaturePlugin } from './plugins/signature.js';
+import { initSignaturePlugin } from './plugins/mobilesign.js';
 
 let scaling_factor_w;
 let scaling_factor_h;

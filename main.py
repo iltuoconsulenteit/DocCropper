@@ -22,8 +22,9 @@ from dotenv import load_dotenv
 import urllib.request
 import urllib.parse
 import socket
-import qrcode
-from plugins.signature import register as register_signature
+from plugins.sign import register as register_sign
+from plugins.mobilesign import register as register_mobilesign
+from plugins.remotesign import register as register_remotesign
 
 try:
     import stripe
@@ -280,12 +281,15 @@ app = FastAPI()
 # Mount static files directory and local wiki
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/wiki", StaticFiles(directory="wiki", html=True), name="wiki")
-register_signature(app, {
+plugin_utils = {
     'load_settings': load_settings,
     'get_session_dir': get_session_dir,
     'get_lan_ip': get_lan_ip,
     'SIGNATURES_DIR': SIGNATURES_DIR,
-})
+}
+register_sign(app, plugin_utils)
+register_mobilesign(app, plugin_utils)
+register_remotesign(app, plugin_utils)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
