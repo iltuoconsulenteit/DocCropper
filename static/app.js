@@ -1,5 +1,5 @@
 import interact from 'https://cdn.interactjs.io/v1.10.11/interactjs/index.js';
-import { initSignaturePlugin } from './plugins/signature.js';
+import { initSignaturePlugin } from './plugins/mobilesign.js';
 
 let scaling_factor_w;
 let scaling_factor_h;
@@ -16,6 +16,8 @@ const fogPathElement = document.getElementById('fogPath');
 const imageUploadElement = document.getElementById('imageUpload');
 const submitBtn = document.getElementById('submitBtn');
 const exportPdfBtn = document.getElementById('exportPdfBtn');
+const signBtn = document.getElementById('signBtn');
+const mobileSignBtn = document.getElementById('mobileSignBtn');
 const exportOptions = document.getElementById('exportOptions');
 const downloadPdfBtn = document.getElementById('downloadPdfBtn');
 const waShareBtn = document.getElementById('waShareBtn');
@@ -46,6 +48,7 @@ const layoutPreview = document.getElementById('layoutPreview');
 const licenseInfo = document.getElementById('licenseInfo');
 const purchaseBox = document.getElementById('purchaseBox');
 const licenseBox = document.getElementById('licenseBox');
+const settingsBox = document.getElementById('settingsBox');
 const loginArea = document.getElementById('loginArea');
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
@@ -53,6 +56,7 @@ const instructionsBox = document.getElementById('instructionsBox');
 const helpBtn = document.getElementById('helpBtn');
 const purchaseBtn = document.getElementById('purchaseBtn');
 const licenseBtn = document.getElementById('licenseBtn');
+const settingsBtn = document.getElementById('settingsBtn');
 const bannerBox = document.getElementById('bannerBox');
 const closeBanner = document.getElementById('closeBanner');
 const sloganImg = document.getElementById('sloganImg');
@@ -92,6 +96,8 @@ let signatureImg = null;
 let signaturePosition = { x: 0.85, y: 0.85 };
 let signatureScale = 1;
 let signatures = [];
+let mobileSignPoints = {};
+window.mobileSignPoints = mobileSignPoints;
 let pendingSigPos = null;
 let draggingSig = false;
 let drawing = false;
@@ -134,6 +140,9 @@ let currentPdfBlob = null;
 let sortable = null;
 let currentFile = null;
 let docusealEnabled = false;
+let signEnabled = true;
+let mobileSignEnabled = false;
+let remoteSignEnabled = false;
 
 let translations = {};
 let currentLang = 'en';
@@ -346,6 +355,8 @@ async function importPdfPages(file) {
     }
     if (processedImages.length > 0) {
         exportPdfBtn.style.display = 'inline-block';
+        if (signBtn && signEnabled) signBtn.style.display = 'inline-block';
+        if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
         if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
         layoutControls.style.display = 'block';
         signatureControls.style.display = 'block';
@@ -463,9 +474,15 @@ function applySettings(cfg) {
         appVersion = cfg.version;
     }
     docusealEnabled = !!cfg.docuseal_api_url;
+    signEnabled = cfg.enable_sign !== false;
+    mobileSignEnabled = !!cfg.enable_mobilesign;
+    remoteSignEnabled = !!cfg.enable_remotesign;
     if (digitalSignBtn) {
-        digitalSignBtn.disabled = !docusealEnabled || currentLicenseLevel === 'free';
+        digitalSignBtn.disabled = !docusealEnabled || currentLicenseLevel === 'free' || !remoteSignEnabled;
     }
+    if (mobileSignBtn) mobileSignBtn.style.display = mobileSignEnabled ? 'inline-block' : 'none';
+    if (qrSignBtn) qrSignBtn.style.display = mobileSignEnabled ? 'inline-block' : 'none';
+    if (signBtn && !signEnabled) signBtn.style.display = 'none';
 }
 
 async function loadTranslations(lang) {
@@ -672,6 +689,8 @@ function deleteImage(index) {
     refreshThumbnailIndexes();
     if (processedImages.length === 0) {
         exportPdfBtn.style.display = 'none';
+        if (signBtn) signBtn.style.display = 'none';
+        if (mobileSignBtn) mobileSignBtn.style.display = 'none';
         ocrBtn.style.display = 'none';
         ocrOutput.style.display = 'none';
         layoutControls.style.display = 'none';
@@ -706,6 +725,8 @@ function editImage(index) {
     };
     reader.readAsDataURL(file);
     exportPdfBtn.style.display = 'none';
+    if (signBtn) signBtn.style.display = 'none';
+    if (mobileSignBtn) mobileSignBtn.style.display = 'none';
     ocrBtn.style.display = 'none';
     ocrOutput.style.display = 'none';
     layoutControls.style.display = 'none';
@@ -783,7 +804,6 @@ function addThumbnail(src, index) {
         addOption('gray', 'toGray');
         addOption('bw', 'toBW');
     }
-    addOption('sign', 'sign');
     addOption('edit', 'edit');
     addOption('delete', 'delete');
 
@@ -799,9 +819,6 @@ function addThumbnail(src, index) {
                 break;
             case 'bw':
                 convertColor(idx, 'bw');
-                break;
-            case 'sign':
-                openSignatureForPage(idx);
                 break;
             case 'edit':
                 editImage(idx);
@@ -1074,6 +1091,8 @@ async function addFiles(newFiles) {
         editingIndex = null;
         processedGallery.innerHTML = '';
         exportPdfBtn.style.display = 'none';
+        if (signBtn) signBtn.style.display = 'none';
+        if (mobileSignBtn) mobileSignBtn.style.display = 'none';
         layoutControls.style.display = 'none';
         signatureControls.style.display = 'none';
         if (files.length > 0) {
@@ -1232,6 +1251,8 @@ submitBtn.addEventListener('click', () => {
                 if (autoDetectHint) autoDetectHint.style.display = 'none';
                 adjustControls.style.display = 'none';
                 exportPdfBtn.style.display = 'inline-block';
+                if (signBtn && signEnabled) signBtn.style.display = 'inline-block';
+                if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
                 if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                 layoutControls.style.display = 'block';
                 signatureControls.style.display = 'block';
@@ -1255,6 +1276,8 @@ submitBtn.addEventListener('click', () => {
                     if (autoDetectHint) autoDetectHint.style.display = 'none';
                     adjustControls.style.display = 'none';
                     exportPdfBtn.style.display = 'inline-block';
+                    if (signBtn && signEnabled) signBtn.style.display = 'inline-block';
+                    if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
                     if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                     layoutControls.style.display = 'block';
                     signatureControls.style.display = 'block';
@@ -1385,6 +1408,24 @@ licenseBtn.addEventListener('click', () => {
     licenseBox.style.top = (rect.bottom + window.scrollY) + 'px';
     licenseBox.classList.toggle('visible');
 });
+if (signBtn) {
+    signBtn.addEventListener('click', () => {
+        openSignatureForPage(0);
+    });
+}
+if (mobileSignBtn) {
+    mobileSignBtn.addEventListener('click', () => {
+        const msBtn = document.getElementById('qrSignBtn');
+        if (msBtn) msBtn.click();
+    });
+}
+settingsBtn.addEventListener('click', () => {
+    const rect = settingsBtn.getBoundingClientRect();
+    settingsBox.style.display = 'block';
+    settingsBox.style.top = (rect.bottom + window.scrollY) + 'px';
+    renderSettingsBox();
+    settingsBox.classList.toggle('visible');
+});
 if (closeBanner) {
     closeBanner.addEventListener('click', () => {
         bannerBox.style.display = 'none';
@@ -1504,7 +1545,6 @@ if (drawSignatureBtn && signatureDrawCanvas) {
                 signatureExtra.style.display = 'block';
                 populateSignaturePages();
                 renderSignaturePreview();
-                addCurrentSignature();
             }
         };
         signatureImg.src = signatureImageData;
@@ -1525,11 +1565,16 @@ if (signaturePreview) {
     document.addEventListener('mouseup', () => { draggingSig = false; });
     signaturePreview.addEventListener('dblclick', (e) => {
         const rect = signaturePreview.getBoundingClientRect();
-        pendingSigPos = {
-            x: (e.clientX - rect.left) / signaturePreview.width,
-            y: (e.clientY - rect.top) / signaturePreview.height
-        };
-        drawArea.style.display = 'block';
+        const x = (e.clientX - rect.left) / signaturePreview.width;
+        const y = (e.clientY - rect.top) / signaturePreview.height;
+        if (signatureImg) {
+            signaturePosition.x = x;
+            signaturePosition.y = y;
+            renderSignaturePreview();
+        } else {
+            pendingSigPos = { x, y };
+            drawArea.style.display = 'block';
+        }
     });
 }
 
@@ -1539,6 +1584,7 @@ langSelect.addEventListener('change', async () => {
     applyTranslations();
     renderPaymentBox(currentSettings);
     renderLicenseBox();
+    settingsBox.innerHTML = '';
     saveSettings({ language: currentLang });
 });
 
@@ -1605,7 +1651,12 @@ if (signaturePage) {
 
 function addCurrentSignature() {
     const page = parseInt(signaturePage.value || '0');
-    signatures.push({ page, x: signaturePosition.x, y: signaturePosition.y, scale: signatureScale });
+    if (!signatureImg) {
+        if (!mobileSignPoints[page]) mobileSignPoints[page] = [];
+        mobileSignPoints[page].push({ x: signaturePosition.x, y: signaturePosition.y });
+    } else {
+        signatures.push({ page, x: signaturePosition.x, y: signaturePosition.y, scale: signatureScale });
+    }
     const OFFSET = 0.05;
     signaturePosition.x += OFFSET;
     if (signaturePosition.x > 0.95) signaturePosition.x = OFFSET;
@@ -1622,6 +1673,7 @@ if (discardSignatureBtn) {
     discardSignatureBtn.addEventListener('click', () => {
         const pageIdx = parseInt(signaturePage.value || '0');
         signatures = signatures.filter(s => s.page !== pageIdx);
+        delete mobileSignPoints[pageIdx];
         signatureControls.style.display = 'none';
         signaturePreview.style.display = 'none';
         signatureHint.style.display = 'none';
@@ -1705,6 +1757,9 @@ async function applyRemoteSignature(data) {
 }
 
 window.addEventListener('remoteSignature', (e) => applyRemoteSignature(e.detail));
+window.addEventListener('mobileSignComplete', () => {
+    if (exportPdfBtn) exportPdfBtn.click();
+});
 
 function updateImageFilters() {
     const b = brightnessRange.value;
@@ -1738,6 +1793,20 @@ function renderSignaturePreview() {
         const ch = h;
         ctx.clearRect(0, 0, cw, ch);
         ctx.drawImage(baseImg, 0, 0, cw, ch);
+        if (mobileSignPoints[pageIdx]) {
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            for (const pt of mobileSignPoints[pageIdx]) {
+                const x = pt.x * cw;
+                const y = pt.y * ch;
+                ctx.beginPath();
+                ctx.moveTo(x - 10, y);
+                ctx.lineTo(x + 10, y);
+                ctx.moveTo(x, y - 10);
+                ctx.lineTo(x, y + 10);
+                ctx.stroke();
+            }
+        }
         if (signatureImg) {
             const drawOne = (sig) => {
                 const scale = (ch / 10) * sig.scale / signatureImg.height;
@@ -1852,8 +1921,12 @@ function renderPaymentBox(cfg) {
             html += `<li><a href="${cfg.paypal_link}" target="_blank">${t('payPaypal')}</a></li>`;
             hasItem = true;
         }
-        if (cfg.stripe_link) {
-            html += `<li><a href="${cfg.stripe_link}" target="_blank">${t('payStripe')}</a></li>`;
+        if (cfg.stripe_price_pro) {
+            html += `<li><button id="stripeProBtn">${t('payStripe')} - ${t('proEdition')}</button></li>`;
+            hasItem = true;
+        }
+        if (cfg.stripe_price_full) {
+            html += `<li><button id="stripeFullBtn">${t('payStripe')} - ${t('fullEdition')}</button></li>`;
             hasItem = true;
         }
         if (cfg.bank_info) {
@@ -1866,6 +1939,42 @@ function renderPaymentBox(cfg) {
     }
     html += '</ul>';
     purchaseBox.innerHTML = html;
+    const proBtn = document.getElementById('stripeProBtn');
+    if (proBtn) {
+        proBtn.addEventListener('click', async () => {
+            const res = await fetch('/stripe-checkout/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({level: 'pro'})
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.session_url) {
+                    window.location.href = data.session_url;
+                }
+            } else {
+                alert('Stripe checkout failed');
+            }
+        });
+    }
+    const fullBtn = document.getElementById('stripeFullBtn');
+    if (fullBtn) {
+        fullBtn.addEventListener('click', async () => {
+            const res = await fetch('/stripe-checkout/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({level: 'full'})
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.session_url) {
+                    window.location.href = data.session_url;
+                }
+            } else {
+                alert('Stripe checkout failed');
+            }
+        });
+    }
 }
 
 function renderLicenseBox() {
@@ -1895,6 +2004,61 @@ function renderLicenseBox() {
         licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
         alert(t('licenseSaved'));
         licenseBox.classList.remove('visible');
+    });
+}
+
+function renderSettingsBox() {
+    const level = currentSettings.license_level || 'free';
+    const html = `
+    <div class="settingsForm">
+        <label>${t('licenseType')}</label>
+        <select id="licenseLevelSelect">
+            <option value="free" ${level==='free'?'selected':''}>${t('freeEdition')}</option>
+            <option value="pro" ${level==='pro'?'selected':''}>${t('proEdition')}</option>
+            <option value="full" ${level==='full'?'selected':''}>${t('fullEdition')}</option>
+        </select>
+        <div id="googleSettings" style="${level==='pro'||level==='full'?'':'display:none;'}">
+            <label>${t('googleClientId')}</label>
+            <input type="text" id="googleClientIdInput" value="${currentSettings.google_client_id || ''}">
+        </div>
+        <div id="docusealSettings" style="${level==='full'?'':'display:none;'}">
+            <label>${t('docusealUrl')}</label>
+            <input type="text" id="docusealUrlInput" value="${currentSettings.docuseal_api_url || ''}">
+            <label>${t('docusealKey')}</label>
+            <input type="text" id="docusealKeyInput" value="${currentSettings.docuseal_api_key || ''}">
+        </div>
+        <button id="saveSettingsBtn">${t('saveSettings')}</button>
+    </div>`;
+    settingsBox.innerHTML = html;
+    settingsBox.style.display = 'block';
+    const levelSelect = document.getElementById('licenseLevelSelect');
+    const googleDiv = document.getElementById('googleSettings');
+    const docusealDiv = document.getElementById('docusealSettings');
+    levelSelect.addEventListener('change', () => {
+        const val = levelSelect.value;
+        googleDiv.style.display = (val === 'pro' || val === 'full') ? 'block' : 'none';
+        docusealDiv.style.display = val === 'full' ? 'block' : 'none';
+    });
+    document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+        const lvl = levelSelect.value;
+        const update = { license_level: lvl };
+        if (lvl === 'pro' || lvl === 'full') {
+            update.google_client_id = document.getElementById('googleClientIdInput').value.trim();
+        } else {
+            update.google_client_id = '';
+        }
+        if (lvl === 'full') {
+            update.docuseal_api_url = document.getElementById('docusealUrlInput').value.trim();
+            update.docuseal_api_key = document.getElementById('docusealKeyInput').value.trim();
+        } else {
+            update.docuseal_api_url = '';
+            update.docuseal_api_key = '';
+        }
+        await saveSettings(update);
+        const cfg = await loadSettings();
+        applySettings(cfg);
+        alert(t('settingsSaved'));
+        settingsBox.classList.remove('visible');
     });
 }
 
@@ -1962,7 +2126,7 @@ loadSettings().then(async (cfg) => {
     applySettings(cfg);
     await loadTranslations(currentLang);
     applyTranslations();
-    initSignaturePlugin(translations);
+    initSignaturePlugin(translations, mobileSignEnabled);
     renderPaymentBox(cfg);
     renderLicenseBox();
     renderLogin(cfg);

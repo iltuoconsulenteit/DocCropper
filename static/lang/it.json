@@ -107,7 +107,7 @@
   "saveSigned": "Salva",
   "noSignatures": "Nessuna firma da salvare",
   "imageSaved": "Immagine aggiornata",
-  "dragSignature": "Trascina la firma per posizionarla",
+  "dragSignature": "Fai doppio clic per posizionare la firma e premi Aggiungi",
   "reorderHint": "Trascina le immagini per riordinarle prima dell'esportazione",
   "autoHint": "Doppio clic o doppio tocco per rilevare i bordi",
   "detectFail": "Impossibile individuare i bordi del documento",
@@ -121,6 +121,16 @@
   "drawSignature": "Disegna firma",
   "clearSignature": "Pulisci",
   "useSignature": "Usa disegno",
-  "pageSigned": "Pagina firmata"
+  "pageSigned": "Pagina firmata",
+  "settings": "Impostazioni",
+  "licenseType": "Tipo di licenza:",
+  "saveSettings": "Salva impostazioni",
+  "settingsSaved": "Impostazioni salvate",
+  "googleClientId": "ID client Google:",
+  "docusealUrl": "URL Docuseal:",
+  "docusealKey": "Chiave Docuseal:",
+  "legalDisclaimer": "DocCropper e i suoi autori declinano ogni responsabilità per un uso non conforme alla legge.",
+  "signaturesSent": "Firme inviate. Puoi chiudere la pagina.",
+  "pageToSign": "Pagina da firmare:"
 }
 

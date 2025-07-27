@@ -11,6 +11,12 @@
   "payment_mode": "donation",
   "paypal_link": "",
   "stripe_link": "",
+  "stripe_secret_key": "",
+  "stripe_publishable_key": "",
+  "stripe_price_pro": "",
+  "stripe_price_full": "",
+  "stripe_success_url": "",
+  "stripe_cancel_url": "",
   "bank_info": "",
   "google_client_id": ""
   , "brand_html": "",
@@ -22,5 +28,8 @@
   "skip_blank": true,
   "license_check": false,
   "license_level": "free",
+  "enable_sign": true,
+  "enable_mobilesign": false,
+  "enable_remotesign": false,
   "banner_images": ["DocCropper_slogan_{{lang}}.png"]
 }

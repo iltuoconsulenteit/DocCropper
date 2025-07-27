@@ -1,6 +1,6 @@
 from fastapi import Request, Body
 from fastapi.responses import HTMLResponse, JSONResponse
-import uuid, qrcode, io, base64, os, subprocess, json, urllib.request
+import uuid, qrcode, io, base64, os, json
 
 __all__ = ['register']
 
@@ -10,55 +10,6 @@ def register(app, utils):
     get_lan_ip = utils['get_lan_ip']
     signatures_dir = utils['SIGNATURES_DIR']
 
-    @app.post('/remote-sign/')
-    async def remote_sign(request: Request):
-        session_id = request.cookies.get('session_id')
-        session_dir = get_session_dir(session_id)
-        pdf_path = os.path.join(session_dir, 'output.pdf')
-        if not os.path.exists(pdf_path):
-            return JSONResponse(status_code=404, content={'message': 'PDF not found'})
-        remote_cmd = os.environ.get('DOCROPPER_REMOTE_SIGN_CMD')
-        if not remote_cmd:
-            return JSONResponse(status_code=400, content={'message': 'Remote signing not configured'})
-        try:
-            out_path = pdf_path.replace('.pdf', '_signed.pdf')
-            subprocess.run([remote_cmd, pdf_path, out_path], check=True)
-            with open(out_path, 'rb') as fh:
-                pdf_bytes = fh.read()
-            os.replace(out_path, pdf_path)
-            pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
-            return {'pdf': 'data:application/pdf;base64,' + pdf_base64}
-        except Exception:
-            return JSONResponse(status_code=500, content={'message': 'Remote signing failed'})
-
-    @app.post('/docuseal-sign/')
-    async def docuseal_sign(request: Request):
-        session_id = request.cookies.get('session_id')
-        session_dir = get_session_dir(session_id)
-        pdf_path = os.path.join(session_dir, 'output.pdf')
-        if not os.path.exists(pdf_path):
-            return JSONResponse(status_code=404, content={'message': 'PDF not found'})
-        settings = load_settings()
-        api_url = settings.get('docuseal_api_url') or os.getenv('DOCUSEAL_API_URL')
-        api_key = settings.get('docuseal_api_key') or os.getenv('DOCUSEAL_API_KEY')
-        if not api_url or not api_key:
-            return JSONResponse(status_code=400, content={'message': 'Docuseal not configured'})
-        try:
-            with open(pdf_path, 'rb') as fh:
-                data = fh.read()
-            req = urllib.request.Request(api_url, data=data, method='POST')
-            req.add_header('Authorization', f'Bearer {api_key}')
-            req.add_header('Content-Type', 'application/pdf')
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                resp_data = resp.read()
-            resp_json = json.loads(resp_data.decode())
-            url = resp_json.get('url') or resp_json.get('sign_url')
-            if not url:
-                raise ValueError('no url')
-            return {'url': url}
-        except Exception:
-            return JSONResponse(status_code=500, content={'message': 'Docuseal request failed'})
-
     @app.post('/start-sign/')
     async def start_sign(request: Request, data: dict = Body(...)):
         """Begin a mobile signing session for a specific page."""
@@ -67,13 +18,22 @@ def register(app, utils):
             return JSONResponse(status_code=403, content={'message': 'Pro required'})
         img = data.get('image')
         page = int(data.get('page', 0))
-        if not img:
+        images = data.get('images') if isinstance(data.get('images'), list) else None
+        points = data.get('points') if isinstance(data.get('points'), dict) else {}
+        if images:
+            if len(images) == 0:
+                return JSONResponse(status_code=400, content={'message': 'No image supplied'})
+        elif not img:
             return JSONResponse(status_code=400, content={'message': 'No image supplied'})
+        else:
+            images = [img]
         token = uuid.uuid4().hex
         info = {
             'session': request.cookies.get('session_id'),
             'page': page,
             'image': img,
+            'images': images,
+            'points': points,
             'signed': False,
             'signatures': [],
         }
@@ -96,6 +56,9 @@ def register(app, utils):
         with open(info_path, 'r') as fh:
             info = json.load(fh)
         img_b64 = info.get('image', '')
+        images = info.get('images') or [img_b64]
+        points = info.get('points') or {}
+        page_index = int(info.get('page', 0))
         html = """
         <html><head>
         <meta name='viewport' content='width=device-width,initial-scale=1.0'>
@@ -109,8 +72,10 @@ def register(app, utils):
         <script src='https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js'></script>
         </head><body>
         <img src='/static/logos/header_logo.png' style='max-width:150px;margin-top:10px' alt='DocCropper'>
+        <p style='font-size:small;color:#a00;margin-top:5px'>DocCropper and its authors accept no liability for illegal use.</p>
         <p id='finishMsg' style='display:none;color:green;font-weight:bold'></p>
         <p>Tap the document then draw your signature</p>
+        <select id='pageSelect' style='margin-top:10px'></select>
         <div id='container'>
             <img id='docImg' src='{img}' alt='doc'>
             <canvas id='overlay'></canvas>
@@ -127,19 +92,51 @@ def register(app, utils):
         const overlay=document.getElementById('overlay');
         const controls=document.getElementById('controls');
         const docImg=document.getElementById('docImg');
+        const pageSelect=document.getElementById('pageSelect');
+        const submitBtn=document.getElementById('submit');
+        const clearBtn=document.getElementById('clear');
+        const finishBtn=document.getElementById('finish');
+        const images={images_json};
+        const spots={spots_json};
+        async function loadPages(){
+            try{
+                const resp=await fetch('/sign-pages/{token}');
+                if(resp.ok){
+                    const data=await resp.json();
+                    if(Array.isArray(data.images)){
+                        images.splice(0,images.length,...data.images);
+                    }
+                }
+            }catch{}
+            images.forEach((img,idx)=>{const opt=document.createElement('option');opt.value=idx;opt.textContent=(idx+1);pageSelect.appendChild(opt);});
+            pageSelect.value={page};
+            docImg.src=images[pageSelect.value];
+            drawSpots();
+        }
+        loadPages();
         let pos=null;
+        let finished=false;
         function resize(){
             padEl.width=window.innerWidth*0.9; padEl.height=200;
             overlay.width=docImg.clientWidth; overlay.height=docImg.clientHeight;
         }
         resize(); window.addEventListener('resize',resize);
         const pad=new SignaturePad(padEl);
-        docImg.onclick=e=>{ const r=e.target.getBoundingClientRect(); pos={x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}; padEl.style.display='block'; controls.style.display='block'; };
-        document.getElementById('clear').onclick=()=>pad.clear();
+        function drawSpots(){
+            const ctx=overlay.getContext('2d');
+            ctx.clearRect(0,0,overlay.width,overlay.height);
+            const list=spots[pageSelect.value]||[];
+            ctx.strokeStyle='#f00';
+            ctx.lineWidth=2;
+            list.forEach(pt=>{const x=pt.x*overlay.width;const y=pt.y*overlay.height;ctx.beginPath();ctx.moveTo(x-10,y);ctx.lineTo(x+10,y);ctx.moveTo(x,y-10);ctx.lineTo(x,y+10);ctx.stroke();});
+        }
+        pageSelect.onchange=()=>{ docImg.src=images[pageSelect.value]; drawSpots(); pos=null; };
+        docImg.onclick=e=>{ if(finished) return; const r=e.target.getBoundingClientRect(); pos={x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}; padEl.style.display='block'; controls.style.display='block'; };
+        clearBtn.onclick=()=>pad.clear();
         async function submitCurrent(){
             if(!pos||pad.isEmpty())return false;
             const img=pad.toDataURL('image/png');
-            await fetch('/submit-signature/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:img,x:pos.x,y:pos.y})});
+            await fetch('/submit-signature/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:img,x:pos.x,y:pos.y,page:parseInt(pageSelect.value)})});
             const ctx=overlay.getContext('2d');
             const tmp=new Image();
             tmp.onload=()=>{
@@ -152,20 +149,38 @@ def register(app, utils):
             tmp.src=img;
             pad.clear();
             padEl.style.display='none';
+            drawSpots();
             return true;
         }
-        document.getElementById('submit').onclick=submitCurrent;
+        submitBtn.onclick=submitCurrent;
         const finishMsg=document.getElementById('finishMsg');
-        document.getElementById('finish').onclick=async()=>{
+        finishBtn.onclick=async()=>{
+            if(finished) return;
             if(!pad.isEmpty()) await submitCurrent();
-            await fetch('/finish-signing/{token}',{method:'POST'});
-            finishMsg.textContent='Signature sent.';
+            finishMsg.textContent='Sending signatures...';
             finishMsg.style.display='block';
+            await fetch('/finish-signing/{token}',{method:'POST'});
+            finishMsg.textContent='Signatures sent. You may close this page.';
+            finished=true;
+            finishBtn.disabled=true;
+            submitBtn.disabled=true;
+            clearBtn.disabled=true;
+            docImg.onclick=null;
         };
         </script>
         </body></html>
-        """.replace('{token}', token).replace('{img}', img_b64)
+        """.replace('{token}', token).replace('{img}', img_b64).replace('{images_json}', json.dumps(images)).replace('{spots_json}', json.dumps(points)).replace('{page}', str(page_index))
         return HTMLResponse(content=html)
+
+    @app.get('/sign-pages/{token}')
+    async def get_sign_pages(token: str):
+        info_path = os.path.join(signatures_dir, f'{token}.json')
+        if not os.path.exists(info_path):
+            return JSONResponse(status_code=404, content={'message': 'Not found'})
+        with open(info_path, 'r') as fh:
+            info = json.load(fh)
+        images = info.get('images') or [info.get('image', '')]
+        return {'images': images}
 
     @app.post('/submit-signature/{token}')
     async def submit_signature(token: str, data: dict = Body(...)):
@@ -195,7 +210,8 @@ def register(app, utils):
         sig_entry = {
             'image_path': img_path,
             'x': float(data.get('x', 0.5)),
-            'y': float(data.get('y', 0.5))
+            'y': float(data.get('y', 0.5)),
+            'page': int(data.get('page', info.get('page', 0)))
         }
         info.setdefault('signatures', []).append(sig_entry)
         info['signed'] = False
@@ -224,9 +240,10 @@ def register(app, utils):
             info = json.load(fh)
         if not info.get('signed'):
             return JSONResponse(status_code=202, content={'message': 'Pending'})
-        sigs = []
+        pages = {}
         for sig in info.get('signatures', []):
             with open(sig['image_path'], 'rb') as fh:
                 b64 = base64.b64encode(fh.read()).decode()
-            sigs.append({'image': 'data:image/png;base64,' + b64, 'x': sig['x'], 'y': sig['y']})
-        return {'page': info.get('page', 0), 'signatures': sigs}
+            page = sig.get('page', info.get('page', 0))
+            pages.setdefault(page, []).append({'image': 'data:image/png;base64,' + b64, 'x': sig['x'], 'y': sig['y']})
+        return {'signatures': pages}

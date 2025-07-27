@@ -1,6 +1,7 @@
-export function initSignaturePlugin(translations) {
+export function initSignaturePlugin(translations, enabled = true) {
     const qrSignBtn = document.getElementById('qrSignBtn');
     const qrSignPageBtn = document.getElementById('qrSignPageBtn');
+    const mobileSignBtn = document.getElementById('mobileSignBtn');
     const signQR = document.getElementById('signQR');
     const signQrImg = document.getElementById('signQrImg');
     const signQrHint = document.getElementById('signQrHint');
@@ -9,12 +10,26 @@ export function initSignaturePlugin(translations) {
     const waSignLink = document.getElementById('waSignLink');
     const signaturePage = document.getElementById('signaturePage');
 
+    if (!enabled) {
+        if (qrSignBtn) qrSignBtn.style.display = 'none';
+        if (qrSignPageBtn) qrSignPageBtn.style.display = 'none';
+        if (mobileSignBtn) mobileSignBtn.style.display = 'none';
+        return;
+    }
+
     async function pollSignature(token) {
         try {
             const resp = await fetch(`/signature-result/${token}`);
             if (resp.status === 200) {
                 const data = await resp.json();
-                window.dispatchEvent(new CustomEvent('remoteSignature', {detail: data}));
+                if (data.signatures && typeof data.signatures === 'object') {
+                    Object.keys(data.signatures).forEach(p => {
+                        window.dispatchEvent(new CustomEvent('remoteSignature', {detail: {page: p, signatures: data.signatures[p]}}));
+                    });
+                } else {
+                    window.dispatchEvent(new CustomEvent('remoteSignature', {detail: data}));
+                }
+                window.dispatchEvent(new Event('mobileSignComplete'));
                 signQR.style.display = 'none';
                 return;
             } else if (resp.status === 202) {
@@ -31,12 +46,17 @@ export function initSignaturePlugin(translations) {
     async function startQrSign() {
         try {
             const page = parseInt(signaturePage?.value || '0');
-            const img = window.processedImages ? window.processedImages[page] : null;
-            if (!img) return;
+            const images = window.processedImages || [];
+            if (!images.length) return;
+            const payload = { page, images };
+            payload.image = images[page];
+            if (window.mobileSignPoints && Object.keys(window.mobileSignPoints).length) {
+                payload.points = window.mobileSignPoints;
+            }
             const resp = await fetch('/start-sign/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ page, image: img })
+                body: JSON.stringify(payload)
             });
             const data = await resp.json();
             if (data.qr) {
@@ -59,6 +79,9 @@ export function initSignaturePlugin(translations) {
             const exportOptions = document.getElementById('exportOptions');
             if (exportOptions) exportOptions.style.display = 'none';
         });
+    }
+    if (mobileSignBtn) {
+        mobileSignBtn.addEventListener('click', startQrSign);
     }
     if (qrSignPageBtn) {
         qrSignPageBtn.addEventListener('click', startQrSign);

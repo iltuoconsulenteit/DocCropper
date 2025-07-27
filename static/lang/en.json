@@ -107,7 +107,7 @@
   "saveSigned": "Save",
   "noSignatures": "No signatures to save",
   "imageSaved": "Image updated",
-  "dragSignature": "Drag the signature to position",
+  "dragSignature": "Double-click to set position then press Add",
   "reorderHint": "Drag images to reorder before export",
   "autoHint": "Double click or tap to auto-detect edges",
   "detectFail": "Could not detect document edges",
@@ -122,4 +122,14 @@
   "clearSignature": "Clear",
   "useSignature": "Use drawing",
   "pageSigned": "Page signed",
+  "settings": "Settings",
+  "licenseType": "License type:",
+  "saveSettings": "Save settings",
+  "settingsSaved": "Settings saved",
+  "googleClientId": "Google client ID:",
+  "docusealUrl": "Docuseal URL:",
+  "docusealKey": "Docuseal key:",
+  "legalDisclaimer": "DocCropper and its authors accept no liability for illegal use.",
+  "signaturesSent": "Signatures sent. You may close this page.",
+  "pageToSign": "Page to sign:"
 }

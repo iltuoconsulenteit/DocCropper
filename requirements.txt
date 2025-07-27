@@ -12,3 +12,4 @@ pyhanko
 pytesseract
 PyMuPDF
 qrcode
+stripe

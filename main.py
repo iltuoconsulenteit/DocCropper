@@ -22,8 +22,14 @@ from dotenv import load_dotenv
 import urllib.request
 import urllib.parse
 import socket
-import qrcode
-from plugins.signature import register as register_signature
+from plugins.sign import register as register_sign
+from plugins.mobilesign import register as register_mobilesign
+from plugins.remotesign import register as register_remotesign
+
+try:
+    import stripe
+except Exception:
+    stripe = None
 
 try:
     from pyhanko.sign import signers
@@ -78,6 +84,12 @@ DEFAULT_SETTINGS = {
     "payment_mode": "donation",
     "paypal_link": "",
     "stripe_link": "",
+    "stripe_secret_key": "",
+    "stripe_publishable_key": "",
+    "stripe_price_pro": "",
+    "stripe_price_full": "",
+    "stripe_success_url": "",
+    "stripe_cancel_url": "",
     "bank_info": "",
     "google_client_id": "",
     "license_check": False,
@@ -175,6 +187,12 @@ def load_settings():
         dev_wm_env = os.getenv("DOCROPPER_DEV_WATERMARK")
         docuseal_url = os.getenv("DOCUSEAL_API_URL")
         docuseal_key = os.getenv("DOCUSEAL_API_KEY")
+        stripe_secret = os.getenv("STRIPE_SECRET_KEY")
+        stripe_publish = os.getenv("STRIPE_PUBLISHABLE_KEY")
+        stripe_pro = os.getenv("STRIPE_PRICE_PRO")
+        stripe_full = os.getenv("STRIPE_PRICE_FULL")
+        stripe_success = os.getenv("STRIPE_SUCCESS_URL")
+        stripe_cancel = os.getenv("STRIPE_CANCEL_URL")
         if env_key:
             merged["license_key"] = env_key
         if env_name:
@@ -191,12 +209,25 @@ def load_settings():
             merged["docuseal_api_url"] = docuseal_url
         if docuseal_key:
             merged["docuseal_api_key"] = docuseal_key
+        if stripe_secret:
+            merged["stripe_secret_key"] = stripe_secret
+        if stripe_publish:
+            merged["stripe_publishable_key"] = stripe_publish
+        if stripe_pro:
+            merged["stripe_price_pro"] = stripe_pro
+        if stripe_full:
+            merged["stripe_price_full"] = stripe_full
+        if stripe_success:
+            merged["stripe_success_url"] = stripe_success
+        if stripe_cancel:
+            merged["stripe_cancel_url"] = stripe_cancel
 
         dev_env = DEV_LICENSE_KEY_UPPER
         if dev_env and merged.get("license_key", "").strip().upper() == dev_env:
             merged["license_level"] = "full"
             if not merged.get("license_name"):
                 merged["license_name"] = "Developer"
+            merged["enable_mobilesign"] = True
 
         return merged
     except Exception:
@@ -251,12 +282,24 @@ app = FastAPI()
 # Mount static files directory and local wiki
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/wiki", StaticFiles(directory="wiki", html=True), name="wiki")
-register_signature(app, {
+plugin_utils = {
     'load_settings': load_settings,
     'get_session_dir': get_session_dir,
     'get_lan_ip': get_lan_ip,
     'SIGNATURES_DIR': SIGNATURES_DIR,
-})
+}
+
+settings = load_settings()
+enable_sign = str(os.getenv('DOCROPPER_ENABLE_SIGN', settings.get('enable_sign', True))).lower() != 'false'
+enable_mobilesign = str(os.getenv('DOCROPPER_ENABLE_MOBILESIGN', settings.get('enable_mobilesign', False))).lower() == 'true'
+enable_remotesign = str(os.getenv('DOCROPPER_ENABLE_REMOTESIGN', settings.get('enable_remotesign', False))).lower() == 'true'
+
+if enable_sign:
+    register_sign(app, plugin_utils)
+if enable_mobilesign:
+    register_mobilesign(app, plugin_utils)
+if enable_remotesign:
+    register_remotesign(app, plugin_utils)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
@@ -284,6 +327,8 @@ async def get_settings():
         data["license_key"] = "FREE"
         data["license_name"] = "Free Edition"
     data["version"] = VERSION
+    if "stripe_secret_key" in data:
+        data.pop("stripe_secret_key")
     return data
 
 
@@ -310,6 +355,33 @@ async def update_user_settings_endpoint(request: Request, settings: dict = Body(
     data = save_user_settings(email, settings)
     data["version"] = VERSION
     return data
+
+
+@app.post("/stripe-checkout/")
+async def stripe_checkout(level: str = Body(...)):
+    settings = load_settings()
+    if stripe is None:
+        return JSONResponse(status_code=503, content={"message": "Stripe library missing"})
+    secret = settings.get("stripe_secret_key")
+    if not secret:
+        return JSONResponse(status_code=503, content={"message": "Stripe not configured"})
+    if level not in ("pro", "full"):
+        return JSONResponse(status_code=400, content={"message": "Invalid license"})
+    price_id = settings.get("stripe_price_pro") if level == "pro" else settings.get("stripe_price_full")
+    if not price_id:
+        return JSONResponse(status_code=503, content={"message": "Price ID missing"})
+    stripe.api_key = secret
+    try:
+        session = stripe.checkout.Session.create(
+            mode="payment",
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=settings.get("stripe_success_url") or "https://example.com/success",
+            cancel_url=settings.get("stripe_cancel_url") or "https://example.com/cancel",
+        )
+        return {"session_url": session.url}
+    except Exception as e:
+        logger.exception("Stripe session creation failed")
+        return JSONResponse(status_code=500, content={"message": str(e)})
 
 
 @app.post("/google-login/")

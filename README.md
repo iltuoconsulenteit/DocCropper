@@ -65,7 +65,7 @@ Logos and branding can be customized via `static/logos/`, `settings.json`, and `
 Blank pages can be skipped during PDF import. Enable **Skip blank pages** in the layout controls and adjust the `blank_threshold` percentage (95% by default).
 Pages over this threshold are discarded in the Pro edition.
 
-User preferences are stored in the `users/` folder based on their email address. Anonymous users fallback to global settings in `settings.json`. The system supports optional Google sign-in and a configurable purchase panel (donation or subscription) opened from the **Purchase** button next to the Help button. Developer keys allow full access when the configured `license_key` matches the value of the `DOCROPPER_DEV_LICENSE` environment variable.
+User preferences are stored in the `users/` folder based on their email address. Anonymous users fallback to global settings in `settings.json`. The system supports optional Google sign-in and a configurable purchase panel (donation or subscription) opened from the **Purchase** button next to the Help button. Payment links can be supplied via `settings.json` or through Stripe credentials in `env/stripe.env.example`. Developer keys allow full access when the configured `license_key` matches the value of the `DOCROPPER_DEV_LICENSE` environment variable.
 
 ---
 
@@ -97,7 +97,7 @@ pip install -r requirements.txt
 ### 🛠 Installer Scripts
 
 - Clone the repo
- - Offer a numbered menu to choose `main` or the developer branch (default `1kh6hg-codex/remove-shortcut-installation-and-scanner-capture`)
+ - Offer a numbered menu to choose `main` or the developer branch (default `work`)
 - Set up the environment and install Python dependencies in a virtualenv
 - Ask for an optional license key
 - Write a log file named `install.log` in the installation folder (falling back to `%TEMP%` on Windows or `/tmp` on Linux/macOS)
@@ -106,7 +106,10 @@ pip install -r requirements.txt
 You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer branch or `DOCROPPER_BRANCH` to force a specific branch.
 
 You can pre-populate `settings.json` or override values using `.env` files in the `env/` folder.
-Use `env/.env.example` as a reference for all supported variables.
+Several example files are included so you can enable features individually:
+`license.env.example`, `google.env.example`, `signing.env.example`,
+`docuseal.env.example` and `stripe.env.example`. The consolidated
+`env/.env.example` lists every supported variable.
 The `.env` files may also define `LICENSE_CHECK=true` to enforce license validation via a remote server.
 To quickly create an environment file for testing you can run one of the
 `scripts/setup_license` helpers. The script for your platform (`.bat`, `.sh` or
@@ -185,6 +188,7 @@ DocCropper itself is released under the [MIT](LICENSE.txt) license. See [Terms o
 To activate Pro or Full editions:
 - Provide a valid license key in `settings.json`, `.env`, or the Licenses panel
 - Developer keys unlock all features for testing when `DOCROPPER_DEV_LICENSE` matches your `license_key`
+- Mobile signing is enabled automatically when a developer key is used
 - You can generate a suitable `.env` by running `scripts/setup_license.bat` (or
   `.sh` / `.command`) and entering your details
 - Set `LICENSE_CHECK=true` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
@@ -195,19 +199,32 @@ For inquiries: **doccropper@iltuoconsulenteit.it**
 
 Simple image or drawn signatures are available in all editions, but the Free edition keeps the watermark on exported PDFs.
 
-Signature functionality is packaged as a plugin under `plugins/signature` so it can evolve separately.  This folder now contains both the client script and the Python routes registered by `main.py`.
+Signature functionality is split into three plugins under `plugins/` and each
+may be enabled individually using the `DOCROPPER_ENABLE_*` variables or the
+matching keys in `settings.json`:
+`sign` for local page stamping, `mobilesign` for signing from a smartphone and
+`remotesign` for Docuseal or other external services. The Free edition only
+allows stamping one page with the `sign` plugin, while Pro removes this limit.
+`mobilesign` is an add-on for Pro users and included in the Full edition. The
+mobile signing page includes a disclaimer that DocCropper and its authors accept
+no liability for illegal use. After scanning the QR code the phone fetches all
+pages so you can choose any page from the dropdown. Press **Finish** to lock the
+signatures. Contract-signing workflows may be provided as a Full edition
+feature.
 DocCropper can apply a personal signature in several ways:
 
-1. **Image Stamp** – Use the action menu below each processed page and choose `Sign`
-   to upload a signature image. White backgrounds are automatically removed.
+1. **Image Stamp** – Click the **Sign Page** button to open the signing panel,
+   then select the page to sign from the dropdown and upload a signature image.
+   White backgrounds are automatically removed.
    Alternatively, press **Draw signature** to handwrite your signature with a mouse or
    touch device. A dashed border shows where to draw. Clear and reuse the drawing until
    satisfied.
-   Drag the previewed stamp on the page canvas, adjust its scale, then press **Add**
-   to queue it for that page. Use **Save** to embed the placed stamps or **Discard**
-   to cancel. You may add multiple signatures to any page before exporting the final PDF.
+   Double-click the page preview to set where the signature should appear, then
+   drag if needed and press **Add** to queue it for that page. Use **Save** to
+   embed the placed stamps or **Discard** to cancel. You may add multiple
+   signatures to any page before exporting the final PDF.
    Each new stamp is offset slightly so it doesn’t hide the previous one by default.
-2. **Mobile Sign** – Use the **Mobile Sign** button (in the signature panel or export menu) to generate a one-time token and QR code. Scan it with your phone or tablet and draw your signature on the provided page. The drawing is saved under `signatures/signature_<token>.png` and added to the PDF.
+2. **Mobile Sign** – Before creating the QR code you may mark where each remote signer should place their signature. Open the signature panel, double-click the preview and press **Add** without loading a signature image to drop a red cross marker. Then use the **Mobile Sign** button (in the panel or export menu) to generate a one-time token and QR code. Scan it with your phone or tablet and draw your signature on the indicated pages. The drawing is saved under `signatures/signature_<token>.png` and added to the PDF.
 3. **Remote Digital Signing** – Configure `DOCUSEAL_API_URL` and `DOCUSEAL_API_KEY` to upload the exported PDF to a Docuseal instance. Press **Digital Sign** to receive a link where the document can be signed online. You may still set `DOCROPPER_REMOTE_SIGN_CMD` to run a custom script instead.
 
    - GET `/start-sign/` returns `{token, url, qr}` with a QR code for the LAN link
@@ -240,7 +257,9 @@ npm install
 npm start
 ```
 
-Create a `.env` file based on `.env.example` with your Google `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` (e.g. `http://localhost:8765/auth/google/callback`). Optionally set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` to sign PDFs automatically. To use Docuseal for remote signatures, also set `DOCUSEAL_API_URL` and `DOCUSEAL_API_KEY`.
+Create a `.env` file based on `.env.example` with your Google `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` (e.g. `http://localhost:8765/auth/google/callback`).
+You may also copy any of the sample files under `env/` if you wish to test
+additional features such as Docuseal or local signing.
 
 Visit [http://localhost:8765](http://localhost:8765) and click **Login with Google**. After authenticating you'll be redirected to `/dashboard` which shows your name and email.
 

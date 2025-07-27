@@ -31,6 +31,7 @@
             <button id="helpBtn" data-i18n="showHelp" data-i18n-title="showHelp" title="Help">Help</button>
             <button id="purchaseBtn" data-i18n="purchase" data-i18n-title="purchase" title="Purchase">Purchase</button>
             <button id="licenseBtn" data-i18n="licenses" data-i18n-title="licenses" title="Licenses">Licenses</button>
+            <button id="settingsBtn" data-i18n="settings" data-i18n-title="settings" title="Settings">Settings</button>
         </div>
     </header>
     <div id="instructionsBox">
@@ -42,6 +43,7 @@
 
     <div id="purchaseBox" style="display:none;"></div>
     <div id="licenseBox" style="display:none;"></div>
+    <div id="settingsBox" style="display:none;"></div>
 
     <div id="inputControls">
         <label for="inputMode" data-i18n="inputModeLabel">Source:</label>
@@ -84,6 +86,8 @@
 
     <button id="submitBtn" data-i18n="processImage" data-i18n-title="processImage" title="Process Image">Process Image</button>
     <button id="exportPdfBtn" style="display:none;" data-i18n="exportPdf" data-i18n-title="exportPdf" title="Create PDF">Create PDF</button>
+    <button id="signBtn" style="display:none;" data-i18n="sign" data-i18n-title="sign" title="Sign">Sign</button>
+    <button id="mobileSignBtn" class="iconTextBtn" style="display:none;" data-i18n-title="mobileSign" title="Mobile Sign">📱 <span data-i18n="mobileSign"></span></button>
     <div id="exportOptions" style="display:none;">
         <button id="downloadPdfBtn" class="iconTextBtn" data-i18n-title="downloadPdf" title="PDF">📥 <span data-i18n="downloadPdf"></span></button>
         <button id="waShareBtn" class="iconTextBtn" data-i18n-title="shareWhatsapp" title="WhatsApp">🟢 <span data-i18n="shareWhatsapp"></span></button>
@@ -184,6 +188,6 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <script type="module" src="/static/app.js"></script>
-    <script type="module" src="/static/plugins/signature.js"></script>
+    <script type="module" src="/static/plugins/mobilesign.js"></script>
 </body>
 </html>
