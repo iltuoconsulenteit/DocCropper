@@ -227,6 +227,7 @@ def load_settings():
             merged["license_level"] = "full"
             if not merged.get("license_name"):
                 merged["license_name"] = "Developer"
+            merged["enable_mobilesign"] = True
 
         return merged
     except Exception:

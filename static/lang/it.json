@@ -107,7 +107,7 @@
   "saveSigned": "Salva",
   "noSignatures": "Nessuna firma da salvare",
   "imageSaved": "Immagine aggiornata",
-  "dragSignature": "Trascina la firma per posizionarla",
+  "dragSignature": "Fai doppio clic per posizionare la firma e premi Aggiungi",
   "reorderHint": "Trascina le immagini per riordinarle prima dell'esportazione",
   "autoHint": "Doppio clic o doppio tocco per rilevare i bordi",
   "detectFail": "Impossibile individuare i bordi del documento",

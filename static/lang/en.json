@@ -107,7 +107,7 @@
   "saveSigned": "Save",
   "noSignatures": "No signatures to save",
   "imageSaved": "Image updated",
-  "dragSignature": "Drag the signature to position",
+  "dragSignature": "Double-click to set position then press Add",
   "reorderHint": "Drag images to reorder before export",
   "autoHint": "Double click or tap to auto-detect edges",
   "detectFail": "Could not detect document edges",

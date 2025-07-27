@@ -188,6 +188,7 @@ DocCropper itself is released under the [MIT](LICENSE.txt) license. See [Terms o
 To activate Pro or Full editions:
 - Provide a valid license key in `settings.json`, `.env`, or the Licenses panel
 - Developer keys unlock all features for testing when `DOCROPPER_DEV_LICENSE` matches your `license_key`
+- Mobile signing is enabled automatically when a developer key is used
 - You can generate a suitable `.env` by running `scripts/setup_license.bat` (or
   `.sh` / `.command`) and entering your details
 - Set `LICENSE_CHECK=true` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
@@ -218,9 +219,10 @@ DocCropper can apply a personal signature in several ways:
    Alternatively, press **Draw signature** to handwrite your signature with a mouse or
    touch device. A dashed border shows where to draw. Clear and reuse the drawing until
    satisfied.
-   Drag the previewed stamp on the page canvas, adjust its scale, then press **Add**
-   to queue it for that page. Use **Save** to embed the placed stamps or **Discard**
-   to cancel. You may add multiple signatures to any page before exporting the final PDF.
+   Double-click the page preview to set where the signature should appear, then
+   drag if needed and press **Add** to queue it for that page. Use **Save** to
+   embed the placed stamps or **Discard** to cancel. You may add multiple
+   signatures to any page before exporting the final PDF.
    Each new stamp is offset slightly so it doesn’t hide the previous one by default.
 2. **Mobile Sign** – Use the **Mobile Sign** button (in the signature panel or export menu) to generate a one-time token and QR code. Scan it with your phone or tablet and draw your signature on the provided page. The drawing is saved under `signatures/signature_<token>.png` and added to the PDF.
 3. **Remote Digital Signing** – Configure `DOCUSEAL_API_URL` and `DOCUSEAL_API_KEY` to upload the exported PDF to a Docuseal instance. Press **Digital Sign** to receive a link where the document can be signed online. You may still set `DOCROPPER_REMOTE_SIGN_CMD` to run a custom script instead.

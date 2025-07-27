@@ -1543,7 +1543,6 @@ if (drawSignatureBtn && signatureDrawCanvas) {
                 signatureExtra.style.display = 'block';
                 populateSignaturePages();
                 renderSignaturePreview();
-                addCurrentSignature();
             }
         };
         signatureImg.src = signatureImageData;
@@ -1564,11 +1563,16 @@ if (signaturePreview) {
     document.addEventListener('mouseup', () => { draggingSig = false; });
     signaturePreview.addEventListener('dblclick', (e) => {
         const rect = signaturePreview.getBoundingClientRect();
-        pendingSigPos = {
-            x: (e.clientX - rect.left) / signaturePreview.width,
-            y: (e.clientY - rect.top) / signaturePreview.height
-        };
-        drawArea.style.display = 'block';
+        const x = (e.clientX - rect.left) / signaturePreview.width;
+        const y = (e.clientY - rect.top) / signaturePreview.height;
+        if (signatureImg) {
+            signaturePosition.x = x;
+            signaturePosition.y = y;
+            renderSignaturePreview();
+        } else {
+            pendingSigPos = { x, y };
+            drawArea.style.display = 'block';
+        }
     });
 }
 
