@@ -31,12 +31,14 @@ export function initSignaturePlugin(translations) {
     async function startQrSign() {
         try {
             const page = parseInt(signaturePage?.value || '0');
-            const img = window.processedImages ? window.processedImages[page] : null;
-            if (!img) return;
+            const images = window.processedImages || [];
+            if (!images.length) return;
+            const payload = { page, images };
+            payload.image = images[page];
             const resp = await fetch('/start-sign/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ page, image: img })
+                body: JSON.stringify(payload)
             });
             const data = await resp.json();
             if (data.qr) {
