@@ -198,13 +198,18 @@ For inquiries: **doccropper@iltuoconsulenteit.it**
 
 Simple image or drawn signatures are available in all editions, but the Free edition keeps the watermark on exported PDFs.
 
-Signature functionality is split into three optional plugins under `plugins/`:
+Signature functionality is split into three plugins under `plugins/` and each
+may be enabled individually using the `DOCROPPER_ENABLE_*` variables or the
+matching keys in `settings.json`:
 `sign` for local page stamping, `mobilesign` for signing from a smartphone and
-`remotesign` for Docuseal or other external services. The mobile signing page
-includes a disclaimer that DocCropper and its authors accept no liability for
-illegal use. After scanning the QR code the phone fetches all pages so you can
-choose any page from the dropdown. Press **Finish** to lock the signatures.
-Contract-signing workflows may be provided as a Full edition plugin.
+`remotesign` for Docuseal or other external services. The Free edition only
+allows stamping one page with the `sign` plugin, while Pro removes this limit.
+`mobilesign` is an add-on for Pro users and included in the Full edition. The
+mobile signing page includes a disclaimer that DocCropper and its authors accept
+no liability for illegal use. After scanning the QR code the phone fetches all
+pages so you can choose any page from the dropdown. Press **Finish** to lock the
+signatures. Contract-signing workflows may be provided as a Full edition
+feature.
 DocCropper can apply a personal signature in several ways:
 
 1. **Image Stamp** – Click the **Sign Page** button to open the signing panel,

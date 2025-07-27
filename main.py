@@ -287,9 +287,18 @@ plugin_utils = {
     'get_lan_ip': get_lan_ip,
     'SIGNATURES_DIR': SIGNATURES_DIR,
 }
-register_sign(app, plugin_utils)
-register_mobilesign(app, plugin_utils)
-register_remotesign(app, plugin_utils)
+
+settings = load_settings()
+enable_sign = str(os.getenv('DOCROPPER_ENABLE_SIGN', settings.get('enable_sign', True))).lower() != 'false'
+enable_mobilesign = str(os.getenv('DOCROPPER_ENABLE_MOBILESIGN', settings.get('enable_mobilesign', False))).lower() == 'true'
+enable_remotesign = str(os.getenv('DOCROPPER_ENABLE_REMOTESIGN', settings.get('enable_remotesign', False))).lower() == 'true'
+
+if enable_sign:
+    register_sign(app, plugin_utils)
+if enable_mobilesign:
+    register_mobilesign(app, plugin_utils)
+if enable_remotesign:
+    register_remotesign(app, plugin_utils)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):

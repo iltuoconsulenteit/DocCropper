@@ -28,5 +28,8 @@
   "skip_blank": true,
   "license_check": false,
   "license_level": "free",
+  "enable_sign": true,
+  "enable_mobilesign": false,
+  "enable_remotesign": false,
   "banner_images": ["DocCropper_slogan_{{lang}}.png"]
 }

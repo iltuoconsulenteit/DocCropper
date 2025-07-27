@@ -17,6 +17,7 @@ const imageUploadElement = document.getElementById('imageUpload');
 const submitBtn = document.getElementById('submitBtn');
 const exportPdfBtn = document.getElementById('exportPdfBtn');
 const signBtn = document.getElementById('signBtn');
+const mobileSignBtn = document.getElementById('mobileSignBtn');
 const exportOptions = document.getElementById('exportOptions');
 const downloadPdfBtn = document.getElementById('downloadPdfBtn');
 const waShareBtn = document.getElementById('waShareBtn');
@@ -137,6 +138,9 @@ let currentPdfBlob = null;
 let sortable = null;
 let currentFile = null;
 let docusealEnabled = false;
+let signEnabled = true;
+let mobileSignEnabled = false;
+let remoteSignEnabled = false;
 
 let translations = {};
 let currentLang = 'en';
@@ -349,7 +353,8 @@ async function importPdfPages(file) {
     }
     if (processedImages.length > 0) {
         exportPdfBtn.style.display = 'inline-block';
-        if (signBtn) signBtn.style.display = 'inline-block';
+        if (signBtn && signEnabled) signBtn.style.display = 'inline-block';
+        if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
         if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
         layoutControls.style.display = 'block';
         signatureControls.style.display = 'block';
@@ -467,9 +472,15 @@ function applySettings(cfg) {
         appVersion = cfg.version;
     }
     docusealEnabled = !!cfg.docuseal_api_url;
+    signEnabled = cfg.enable_sign !== false;
+    mobileSignEnabled = !!cfg.enable_mobilesign;
+    remoteSignEnabled = !!cfg.enable_remotesign;
     if (digitalSignBtn) {
-        digitalSignBtn.disabled = !docusealEnabled || currentLicenseLevel === 'free';
+        digitalSignBtn.disabled = !docusealEnabled || currentLicenseLevel === 'free' || !remoteSignEnabled;
     }
+    if (mobileSignBtn) mobileSignBtn.style.display = mobileSignEnabled ? 'inline-block' : 'none';
+    if (qrSignBtn) qrSignBtn.style.display = mobileSignEnabled ? 'inline-block' : 'none';
+    if (signBtn && !signEnabled) signBtn.style.display = 'none';
 }
 
 async function loadTranslations(lang) {
@@ -677,6 +688,7 @@ function deleteImage(index) {
     if (processedImages.length === 0) {
         exportPdfBtn.style.display = 'none';
         if (signBtn) signBtn.style.display = 'none';
+        if (mobileSignBtn) mobileSignBtn.style.display = 'none';
         ocrBtn.style.display = 'none';
         ocrOutput.style.display = 'none';
         layoutControls.style.display = 'none';
@@ -712,6 +724,7 @@ function editImage(index) {
     reader.readAsDataURL(file);
     exportPdfBtn.style.display = 'none';
     if (signBtn) signBtn.style.display = 'none';
+    if (mobileSignBtn) mobileSignBtn.style.display = 'none';
     ocrBtn.style.display = 'none';
     ocrOutput.style.display = 'none';
     layoutControls.style.display = 'none';
@@ -1077,6 +1090,7 @@ async function addFiles(newFiles) {
         processedGallery.innerHTML = '';
         exportPdfBtn.style.display = 'none';
         if (signBtn) signBtn.style.display = 'none';
+        if (mobileSignBtn) mobileSignBtn.style.display = 'none';
         layoutControls.style.display = 'none';
         signatureControls.style.display = 'none';
         if (files.length > 0) {
@@ -1235,7 +1249,8 @@ submitBtn.addEventListener('click', () => {
                 if (autoDetectHint) autoDetectHint.style.display = 'none';
                 adjustControls.style.display = 'none';
                 exportPdfBtn.style.display = 'inline-block';
-                if (signBtn) signBtn.style.display = 'inline-block';
+                if (signBtn && signEnabled) signBtn.style.display = 'inline-block';
+                if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
                 if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                 layoutControls.style.display = 'block';
                 signatureControls.style.display = 'block';
@@ -1259,7 +1274,8 @@ submitBtn.addEventListener('click', () => {
                     if (autoDetectHint) autoDetectHint.style.display = 'none';
                     adjustControls.style.display = 'none';
                     exportPdfBtn.style.display = 'inline-block';
-                    if (signBtn) signBtn.style.display = 'inline-block';
+                    if (signBtn && signEnabled) signBtn.style.display = 'inline-block';
+                    if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
                     if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                     layoutControls.style.display = 'block';
                     signatureControls.style.display = 'block';
@@ -1393,6 +1409,12 @@ licenseBtn.addEventListener('click', () => {
 if (signBtn) {
     signBtn.addEventListener('click', () => {
         openSignatureForPage(0);
+    });
+}
+if (mobileSignBtn) {
+    mobileSignBtn.addEventListener('click', () => {
+        const msBtn = document.getElementById('qrSignBtn');
+        if (msBtn) msBtn.click();
     });
 }
 settingsBtn.addEventListener('click', () => {
@@ -1723,6 +1745,9 @@ async function applyRemoteSignature(data) {
 }
 
 window.addEventListener('remoteSignature', (e) => applyRemoteSignature(e.detail));
+window.addEventListener('mobileSignComplete', () => {
+    if (exportPdfBtn) exportPdfBtn.click();
+});
 
 function updateImageFilters() {
     const b = brightnessRange.value;
@@ -2075,7 +2100,7 @@ loadSettings().then(async (cfg) => {
     applySettings(cfg);
     await loadTranslations(currentLang);
     applyTranslations();
-    initSignaturePlugin(translations);
+    initSignaturePlugin(translations, mobileSignEnabled);
     renderPaymentBox(cfg);
     renderLicenseBox();
     renderLogin(cfg);
