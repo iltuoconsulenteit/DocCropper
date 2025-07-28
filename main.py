@@ -86,6 +86,8 @@ except Exception:
     VERSION = "unknown"
     VERSION_DATE = ""
 
+CACHE_BUST = f"?v={VERSION}"
+
 SESSIONS_ROOT = "sessions"
 SIGNATURES_DIR = "signatures"
 PID_FILE = os.path.join(tempfile.gettempdir(), "doccropper.pid")
@@ -425,6 +427,15 @@ async def read_root(request: Request):
         index_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
         with open(index_path, "r", encoding="utf-8") as f:
             content = f.read()
+        if CACHE_BUST:
+            content = content.replace("styles.css", f"styles.css{CACHE_BUST}")
+            content = content.replace("app.js", f"app.js{CACHE_BUST}")
+            content = content.replace("mobilesign.js", f"mobilesign.js{CACHE_BUST}")
+            content = content.replace("app_logo.png", f"app_logo.png{CACHE_BUST}")
+            content = content.replace("header_logo.png", f"header_logo.png{CACHE_BUST}")
+            content = content.replace("footer_logo.png", f"footer_logo.png{CACHE_BUST}")
+            content = content.replace("DocCropper_slogan_en.png", f"DocCropper_slogan_en.png{CACHE_BUST}")
+            content = content.replace("DocCropper_slogan_it.png", f"DocCropper_slogan_it.png{CACHE_BUST}")
     except FileNotFoundError:
         logger.error("static/index.html not found")
         return HTMLResponse(content="Frontend not found.", status_code=500)

@@ -29,6 +29,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 👤 Multi-user environment support (optional)
 - 🔒 Uploaded files are encrypted and wiped after your session
 - 📏 Uploads larger than 20&nbsp;MB are rejected (adjust with `DOCROPPER_MAX_UPLOAD_MB`)
+- 🚀 Cache busting (`?v=<commit>`) ensures browsers fetch updated files
 
 ---
 
