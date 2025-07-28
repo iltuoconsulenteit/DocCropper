@@ -1936,7 +1936,13 @@ function applyProStatus() {
         imageUploadElement.accept = 'image/*,application/pdf';
         document.querySelectorAll('.shareBtn').forEach(btn => btn.style.display = 'inline-block');
         if (!sortable && typeof Sortable !== 'undefined') {
-            sortable = Sortable.create(processedGallery, { animation: 150, onEnd: updateProcessedArrays });
+            sortable = Sortable.create(processedGallery, {
+                animation: 150,
+                onEnd: updateProcessedArrays,
+                handle: 'img',
+                filter: 'select',
+                preventOnFilter: false
+            });
         }
         if (reorderHint) reorderHint.style.display = 'block';
         if (colorModeSelect) colorModeSelect.style.display = 'inline-block';
