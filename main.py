@@ -392,7 +392,7 @@ if enable_remotesign:
 
 @app.get('/favicon.ico')
 async def favicon():
-    icon_path = os.path.join(os.path.dirname(__file__), 'static', 'logos', 'header_logo.png')
+    icon_path = os.path.join(os.path.dirname(__file__), 'static', 'logos', 'app_logo.png')
     return FileResponse(icon_path)
 
 @app.get("/", response_class=HTMLResponse)
