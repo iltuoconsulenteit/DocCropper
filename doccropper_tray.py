@@ -130,7 +130,10 @@ def uninstall_app():
 
 def open_browser():
     port = get_port()
-    webbrowser.open(f'http://127.0.0.1:{port}/')
+    url = os.environ.get('DOCROPPER_OPEN_URL')
+    if not url:
+        url = f'http://127.0.0.1:{port}/'
+    webbrowser.open(url)
 
 def get_port():
     try:

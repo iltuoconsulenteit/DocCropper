@@ -61,9 +61,12 @@ if exist "!PID_FILE!" (
     tasklist /FI "PID eq !PID!" | find "!PID!" >nul && set "SERVER_RUNNING=1"
 )
 
+set "OPEN_URL=%DOCROPPER_OPEN_URL%"
+if "%OPEN_URL%"=="" set "OPEN_URL=http://localhost:%PORT%"
+
 if "!SERVER_RUNNING!"=="1" (
     echo [INFO] DocCropper gia in esecuzione con PID !PID! >> "!LOG_FILE!"
-    start "" "http://localhost:%PORT%"
+    start "" "%OPEN_URL%"
     goto finish
 )
 
@@ -98,8 +101,8 @@ if "%DOCROPPER_TUNNEL%"=="true" (
 if errorlevel 1 (
     echo ❌ ERRORE: esecuzione fallita! Vedi log: %LOG_FILE%
 ) else (
-    echo ✅ Avvio completato. Apri http://localhost:%PORT%
-    start "" "http://localhost:%PORT%"
+    echo ✅ Avvio completato. Apri %OPEN_URL%
+    start "" "%OPEN_URL%"
 )
 
 goto finish

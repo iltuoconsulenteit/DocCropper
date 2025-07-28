@@ -58,9 +58,11 @@ if [ "$TRAY_RUNNING" -eq 0 ]; then
   fi
 fi
 
+OPEN_URL="${DOCROPPER_OPEN_URL:-http://127.0.0.1:$PORT/}"
+
 if [ "$SERVER_RUNNING" -eq 1 ]; then
   echo "DocCropper already running on port $PORT"
-  if command -v xdg-open >/dev/null; then xdg-open "http://127.0.0.1:$PORT/" >/dev/null 2>&1; fi
+  if command -v xdg-open >/dev/null; then xdg-open "$OPEN_URL" >/dev/null 2>&1; fi
   exit 0
 fi
 
@@ -79,7 +81,7 @@ echo "Starting DocCropper on port $PORT..."
 python3 main.py --host 0.0.0.0 --port "$PORT" &
 sleep 2
 if command -v xdg-open >/dev/null; then
-  xdg-open "http://127.0.0.1:$PORT/" >/dev/null 2>&1 || true
+  xdg-open "$OPEN_URL" >/dev/null 2>&1 || true
 fi
 if [ "${DOCROPPER_TUNNEL}" = "true" ] && command -v cloudflared >/dev/null; then
   echo "Starting Cloudflare Tunnel..."

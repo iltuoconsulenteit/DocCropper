@@ -16,6 +16,7 @@ from fastapi import FastAPI, File, Form, UploadFile, Body, Request
 from PIL import Image, ImageDraw, ImageFont
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 import subprocess
 import sys
 import tempfile
@@ -301,6 +302,27 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+
+# Enable cross-origin requests if needed
+origins = os.getenv("DOCROPPER_CORS_ORIGINS", "*")
+if origins == "*":
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    allowed = [o.strip() for o in origins.split(",") if o.strip()]
+    if allowed:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=allowed,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
 # Mount static files directory and local wiki
 app.mount("/static", StaticFiles(directory="static"), name="static")

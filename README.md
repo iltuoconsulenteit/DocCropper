@@ -171,8 +171,8 @@ without it.
 An offline copy of the documentation is included under the `/wiki` path. The
 web interface displays this wiki in a sidebar on the right beneath the Help
 button. A language-specific page is loaded based on your selection. You can
-also open it in a new tab at `http://localhost:8765/wiki/&lt;lang&gt;/` or view
-the online version on GitHub.
+also open it in a new tab at `http://<host>:<port>/wiki/<lang>/` (by default
+`http://localhost:8765/wiki/<lang>/`) or view the online version on GitHub.
 
 ### Google Sign-In
 
@@ -253,6 +253,12 @@ Alternatively, you may set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` t
 When `DOCROPPER_TUNNEL=true` and `cloudflared` is installed, the start scripts
 launch a temporary Cloudflare Tunnel so the signing link works from outside your
 LAN. The public URL is written to the log.
+
+Set `DOCROPPER_OPEN_URL` if you want the start scripts and tray helper to open a
+custom address (for example your Cloudflare tunnel) instead of
+`http://localhost:PORT`. The server also accepts cross-origin requests when you
+set `DOCROPPER_CORS_ORIGINS` to a comma-separated list of allowed origins or `*`
+to permit any origin.
 
 ### Pro OCR (coming soon)
 
