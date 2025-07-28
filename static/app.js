@@ -52,6 +52,7 @@ const settingsBox = document.getElementById('settingsBox');
 const loginArea = document.getElementById('loginArea');
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
+const demoNotice = document.getElementById('demoNotice');
 const instructionsBox = document.getElementById('instructionsBox');
 const helpBtn = document.getElementById('helpBtn');
 const purchaseBtn = document.getElementById('purchaseBtn');
@@ -127,6 +128,7 @@ let licenseName = '';
 let appVersion = '';
 let userInfo = null;
 let currentLicenseLevel = 'free';
+let demoFullMode = false;
 const MAX_IMAGES_FREE = 5;
 
 let files = [];
@@ -441,6 +443,7 @@ function applySettings(cfg) {
     } else {
         currentLicenseLevel = 'free';
     }
+    demoFullMode = !!cfg.demo_full_mode;
     isLicensed = false;
     licenseName = '';
     if (cfg.license_key && cfg.license_key.trim()) {
@@ -492,6 +495,7 @@ function applySettings(cfg) {
     if (mobileSignBtn) mobileSignBtn.style.display = mobileSignEnabled ? 'inline-block' : 'none';
     if (qrSignBtn) qrSignBtn.style.display = mobileSignEnabled ? 'inline-block' : 'none';
     if (signBtn && !signEnabled) signBtn.style.display = 'none';
+    if (demoNotice) demoNotice.style.display = demoFullMode ? 'block' : 'none';
 }
 
 async function loadTranslations(lang) {

@@ -56,6 +56,7 @@ USERS_DIR = "users"
 # Developer license key for demonstration (case-insensitive)
 DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "")
 DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
+DEMO_FULL_LICENSE_KEY = "DEMO-FULL-DC"
 
 try:
     VERSION = subprocess.check_output(
@@ -104,6 +105,7 @@ DEFAULT_SETTINGS = {
     "skip_blank": True,
     "banner_images": ["DocCropper_slogan_{{lang}}.png"],
     "developer_watermark": False,
+    "demo_full_mode": False,
     "docuseal_api_url": "",
     "docuseal_api_key": "",
 }
@@ -225,7 +227,12 @@ def load_settings():
 
         dev_env = DEV_LICENSE_KEY_UPPER
         key_upper = merged.get("license_key", "").strip().upper()
-        if (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
+        if key_upper == DEMO_FULL_LICENSE_KEY:
+            merged["license_level"] = "full"
+            merged["demo_full_mode"] = True
+            if not merged.get("license_name"):
+                merged["license_name"] = "Demo User"
+        elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
             merged["license_level"] = "full"
             if not merged.get("license_name"):
                 merged["license_name"] = "Developer"
@@ -240,7 +247,12 @@ def save_settings(update: dict):
     data.update(update)
     key_upper = data.get("license_key", "").strip().upper()
     dev_env = DEV_LICENSE_KEY_UPPER
-    if (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
+    if key_upper == DEMO_FULL_LICENSE_KEY:
+        data["license_level"] = "full"
+        data["demo_full_mode"] = True
+        if not data.get("license_name"):
+            data["license_name"] = "Demo User"
+    elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
         data["license_level"] = "full"
         if not data.get("license_name"):
             data["license_name"] = "Developer"
@@ -621,15 +633,19 @@ async def create_pdf(
         license_check = settings.get("license_check", False)
         dev_env = DEV_LICENSE_KEY_UPPER
         dev_key_valid = dev_env and key == dev_env
+        demo_key = key == DEMO_FULL_LICENSE_KEY
         if license_check:
-            licensed = False
-            if dev_key_valid:
+            if demo_key:
+                licensed = False
+            elif dev_key_valid:
                 licensed = True
             elif key:
                 licensed = verify_license_server(key)
+            else:
+                licensed = False
         else:
             licensed = True
-            if dev_key_valid and settings.get("developer_watermark", False):
+            if demo_key or (dev_key_valid and settings.get("developer_watermark", False)):
                 licensed = False
         session_id = request.cookies.get("session_id")
         session_dir = get_session_dir(session_id)

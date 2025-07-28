@@ -585,3 +585,10 @@ button:hover {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+.demo-notice {
+    text-align: center;
+    font-weight: bold;
+    color: #a00;
+    margin: 10px 0;
+}
