@@ -131,6 +131,7 @@
   "googleClientId": "ID client Google:",
   "docusealUrl": "URL Docuseal:",
   "docusealKey": "Chiave Docuseal:",
+  "publicUrl": "Dominio pubblico:",
   "legalDisclaimer": "DocCropper e i suoi autori declinano ogni responsabilità per un uso non conforme alla legge.",
   "signaturesSent": "Firme inviate. Puoi chiudere la pagina.",
   "pageToSign": "Pagina da firmare:"

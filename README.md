@@ -126,7 +126,7 @@ with `DOCROPPER_LICENSE_KEY`, `DOCROPPER_LICENSE_NAME`,
 features are unlocked. Set
 `DOCROPPER_DEV_WATERMARK=true` if you want to keep the watermark while
 testing with a developer key.
-The hidden `DEMO-FULL-DC` license provides Full features and mobile signing but always keeps the watermark for demonstrations.
+A hidden demo license provides Full features and mobile signing but always keeps the watermark for demonstrations.
 If you see **Access denied** when running the script, launch it with administrator
 privileges ("Run as Administrator" on Windows). After writing the
 `env/developer.env` file, restart DocCropper so the new license is applied.
@@ -191,7 +191,7 @@ DocCropper ships with three editions. A **Licenses** button in the header opens 
 - **Free** – Watermark applied, up to five images per project, LAN access disabled
 - **Pro** – No watermark and unlimited images, but still restricted to local access
 - **Full** – Unlocks LAN access so DocCropper can run on an office server
-- *DEMO-FULL-DC* is a hidden key that behaves like the Full edition but keeps
+- *Demo Full* is a hidden license that behaves like the Full edition but keeps
   the watermark, enables mobile signing, and shows a demo notice.
 
 DocCropper itself is released under the [MIT](LICENSE.txt) license. See [Terms of Use](TERMS_OF_USE.md) for additional conditions.
@@ -257,8 +257,9 @@ LAN. The public URL is written to the log.
 Set `DOCROPPER_OPEN_URL` if you want the start scripts and tray helper to open a
 custom address (for example your Cloudflare tunnel) instead of
 `http://localhost:PORT`.
-Use `DOCROPPER_PUBLIC_URL` to force the mobile signing QR link to point to a
-specific domain when proxy headers are missing.
+You may configure the public domain used for mobile signing either through the
+Settings panel or by setting `DOCROPPER_PUBLIC_URL`. When the demo license is
+active the default domain is `https://doccropper.iltuoconsulenteit.it`.
 The server also accepts cross-origin requests when you set
 `DOCROPPER_CORS_ORIGINS` to a comma-separated list of allowed origins or `*` to
 permit any origin.

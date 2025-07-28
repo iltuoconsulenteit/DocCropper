@@ -131,6 +131,7 @@
   "googleClientId": "Google client ID:",
   "docusealUrl": "Docuseal URL:",
   "docusealKey": "Docuseal key:",
+  "publicUrl": "Public URL:",
   "legalDisclaimer": "DocCropper and its authors accept no liability for illegal use.",
   "signaturesSent": "Signatures sent. You may close this page.",
   "pageToSign": "Page to sign:"

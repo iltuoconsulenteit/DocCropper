@@ -39,7 +39,11 @@ def register(app, utils):
         os.makedirs(signatures_dir, exist_ok=True)
         with open(os.path.join(signatures_dir, f'{token}.json'), 'w') as fh:
             json.dump(info, fh)
-        base = os.getenv('DOCROPPER_PUBLIC_URL')
+        settings_data = load_settings()
+        settings_public = settings_data.get('public_url')
+        base = os.getenv('DOCROPPER_PUBLIC_URL') or settings_public
+        if not base and settings_data.get('demo_full_mode'):
+            base = 'https://doccropper.iltuoconsulenteit.it'
         if not base:
             host = request.headers.get('x-forwarded-host') or request.headers.get('host')
             scheme = request.headers.get('x-forwarded-proto') or request.url.scheme

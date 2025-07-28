@@ -109,6 +109,7 @@ DEFAULT_SETTINGS = {
     "demo_full_mode": False,
     "docuseal_api_url": "",
     "docuseal_api_key": "",
+    "public_url": "",
 }
 
 def verify_license_server(key: str) -> bool:
@@ -197,6 +198,7 @@ def load_settings():
         stripe_full = os.getenv("STRIPE_PRICE_FULL")
         stripe_success = os.getenv("STRIPE_SUCCESS_URL")
         stripe_cancel = os.getenv("STRIPE_CANCEL_URL")
+        public_url_env = os.getenv("DOCROPPER_PUBLIC_URL")
         if env_key:
             merged["license_key"] = env_key
         if env_name:
@@ -225,6 +227,8 @@ def load_settings():
             merged["stripe_success_url"] = stripe_success
         if stripe_cancel:
             merged["stripe_cancel_url"] = stripe_cancel
+        if public_url_env:
+            merged["public_url"] = public_url_env
 
         dev_env = DEV_LICENSE_KEY_UPPER
         key_upper = merged.get("license_key", "").strip().upper()
@@ -234,6 +238,8 @@ def load_settings():
             if not merged.get("license_name"):
                 merged["license_name"] = "Demo User"
             merged["enable_mobilesign"] = True
+            if not merged.get("public_url"):
+                merged["public_url"] = "https://doccropper.iltuoconsulenteit.it"
         elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
             merged["license_level"] = "full"
             if not merged.get("license_name"):
@@ -247,6 +253,8 @@ def load_settings():
 def save_settings(update: dict):
     data = load_settings()
     data.update(update)
+    if os.getenv("DOCROPPER_PUBLIC_URL"):
+        data["public_url"] = os.getenv("DOCROPPER_PUBLIC_URL")
     key_upper = data.get("license_key", "").strip().upper()
     dev_env = DEV_LICENSE_KEY_UPPER
     if key_upper == DEMO_FULL_LICENSE_KEY:
@@ -255,6 +263,8 @@ def save_settings(update: dict):
         if not data.get("license_name"):
             data["license_name"] = "Demo User"
         data["enable_mobilesign"] = True
+        if not data.get("public_url"):
+            data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
     elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
         data["license_level"] = "full"
         if not data.get("license_name"):

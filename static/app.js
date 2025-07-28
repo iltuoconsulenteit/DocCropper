@@ -452,6 +452,9 @@ function applySettings(cfg) {
     if (cfg.license_name) {
         licenseName = cfg.license_name;
     }
+    if (cfg.public_url !== undefined) {
+        currentSettings.public_url = cfg.public_url;
+    }
     if (brandBox) {
         brandBox.innerHTML = cfg.brand_html || '';
     }
@@ -2085,6 +2088,10 @@ function renderSettingsBox() {
             <label>${t('docusealKey')}</label>
             <input type="text" id="docusealKeyInput" value="${currentSettings.docuseal_api_key || ''}">
         </div>
+        <div>
+            <label>${t('publicUrl')}</label>
+            <input type="text" id="publicUrlInput" value="${currentSettings.public_url || ''}">
+        </div>
         <button id="saveSettingsBtn">${t('saveSettings')}</button>
     </div>`;
     settingsBox.innerHTML = html;
@@ -2112,6 +2119,7 @@ function renderSettingsBox() {
             update.docuseal_api_url = '';
             update.docuseal_api_key = '';
         }
+        update.public_url = document.getElementById('publicUrlInput').value.trim();
         await saveSettings(update);
         const cfg = await loadSettings();
         applySettings(cfg);
