@@ -39,9 +39,12 @@ def register(app, utils):
         os.makedirs(signatures_dir, exist_ok=True)
         with open(os.path.join(signatures_dir, f'{token}.json'), 'w') as fh:
             json.dump(info, fh)
-        base = str(request.base_url)
-        if base.endswith('/'):
-            base = base[:-1]
+        host = request.headers.get('host')
+        scheme = request.headers.get('x-forwarded-proto', request.url.scheme)
+        if host:
+            base = f'{scheme}://{host}'
+        else:
+            base = str(request.base_url).rstrip('/')
         url = f'{base}/sign/{token}'
         qr_img = qrcode.make(url)
         buf = io.BytesIO()

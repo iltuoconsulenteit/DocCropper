@@ -946,7 +946,7 @@ if __name__ == "__main__":
         if not (dev_env and key == dev_env):
             host = "127.0.0.1"
 
-    config = uvicorn.Config(app, host=host, port=port)
+    config = uvicorn.Config(app, host=host, port=port, forwarded_allow_ips="*")
     server = uvicorn.Server(config)
     app.state.server = server
     with open(PID_FILE, "w") as fh:
