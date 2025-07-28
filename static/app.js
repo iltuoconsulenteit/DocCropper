@@ -84,6 +84,7 @@ const clearDrawBtn = document.getElementById('clearDrawBtn');
 const useDrawBtn = document.getElementById('useDrawBtn');
 const addSignatureBtn = document.getElementById('addSignatureBtn');
 const discardSignatureBtn = document.getElementById('discardSignatureBtn');
+const loadingOverlay = document.getElementById('loadingOverlay');
 const saveSignatureBtn = document.getElementById('saveSignatureBtn');
 const qrSignBtn = document.getElementById('qrSignBtn');
 const qrSignPageBtn = document.getElementById('qrSignPageBtn');
@@ -340,7 +341,13 @@ async function importPdfPages(file) {
         statusMessageElement.textContent = t('pdfImportPro');
         return;
     }
-    const pages = await convertPdfToImages(file);
+    showLoading(t('loading'));
+    let pages;
+    try {
+        pages = await convertPdfToImages(file);
+    } finally {
+        hideLoading();
+    }
     let toAdd = pages;
     for (const p of toAdd) {
         let imgFile = p;
@@ -579,6 +586,17 @@ function startBannerRotation() {
             updateBannerImage();
         }, 5000);
     }
+}
+
+function showLoading(message) {
+    if (!loadingOverlay) return;
+    const span = loadingOverlay.querySelector('span');
+    span.textContent = message || t('loading');
+    loadingOverlay.style.display = 'block';
+}
+
+function hideLoading() {
+    if (loadingOverlay) loadingOverlay.style.display = 'none';
 }
 
 function calculateGrid() {
@@ -1088,10 +1106,12 @@ function setupImage(imageUrl) {
 
 
 async function addFiles(newFiles) {
+    showLoading(t('loading'));
     if (currentLicenseLevel === 'free') {
         const allowed = MAX_IMAGES_FREE - files.length;
         if (allowed <= 0) {
             statusMessageElement.textContent = t('maxImagesFree');
+            hideLoading();
             return;
         }
         newFiles = Array.from(newFiles).slice(0, allowed);
@@ -1141,7 +1161,7 @@ async function addFiles(newFiles) {
             reader.readAsDataURL(files[currentFileIndex]);
         }
     }
-
+    hideLoading();
 }
 
 imageUploadElement.addEventListener('change', async (event) => {
@@ -1162,7 +1182,7 @@ imageUploadElement.addEventListener('change', async (event) => {
             toProcess.push(f);
         }
     }
-    if (toProcess.length) addFiles(toProcess);
+    if (toProcess.length) await addFiles(toProcess);
 });
 
 async function handleDrop(event) {
@@ -1185,7 +1205,7 @@ async function handleDrop(event) {
                 toProcess.push(f);
             }
         }
-        if (toProcess.length) addFiles(toProcess);
+        if (toProcess.length) await addFiles(toProcess);
     }
 }
 
