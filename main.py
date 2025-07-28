@@ -74,6 +74,8 @@ SIGNATURES_DIR = "signatures"
 PID_FILE = os.path.join(tempfile.gettempdir(), "doccropper.pid")
 ENC_SUFFIX = ".enc"
 SESSION_KEYS: dict[str, bytes] = {}
+MAX_UPLOAD_MB = int(os.getenv("DOCROPPER_MAX_UPLOAD_MB", "20"))
+MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 
 DEFAULT_SETTINGS = {
     "language": "en",
@@ -500,6 +502,8 @@ async def google_login(token: str = Body(...)):
 async def detect_corners(image_file: UploadFile = File(...)):
     try:
         contents = await image_file.read()
+        if len(contents) > MAX_UPLOAD_BYTES:
+            return JSONResponse(status_code=413, content={"message": "File too large"})
         nparr = np.frombuffer(contents, np.uint8)
         img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if img_cv is None:
@@ -530,6 +534,8 @@ async def process_image(
     try:
         # Read image
         contents = await image_file.read()
+        if len(contents) > MAX_UPLOAD_BYTES:
+            return JSONResponse(status_code=413, content={"message": "File too large"})
         nparr = np.frombuffer(contents, np.uint8)
         img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
@@ -670,6 +676,8 @@ async def pdf_to_images(
         return JSONResponse(status_code=403, content={"message": "PDF import requires Pro license"})
     try:
         pdf_bytes = await pdf_file.read()
+        if len(pdf_bytes) > MAX_UPLOAD_BYTES:
+            return JSONResponse(status_code=413, content={"message": "File too large"})
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         thr = max(0, min(100, int(threshold))) / 100.0
         images_b64: list[str] = []

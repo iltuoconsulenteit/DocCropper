@@ -52,6 +52,7 @@ const settingsBox = document.getElementById('settingsBox');
 const loginArea = document.getElementById('loginArea');
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
+const donateBox = document.getElementById('donateBox');
 const demoNotice = document.getElementById('demoNotice');
 const instructionsBox = document.getElementById('instructionsBox');
 const helpBtn = document.getElementById('helpBtn');
@@ -131,6 +132,8 @@ let userInfo = null;
 let currentLicenseLevel = 'free';
 let demoFullMode = false;
 const MAX_IMAGES_FREE = 5;
+const MAX_FILE_MB = 20;
+const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 
 let files = [];
 let currentFileIndex = 0;
@@ -326,6 +329,9 @@ async function convertPdfToImages(file) {
     form.append('skip_blank', skipBlank ? '1' : '0');
     const resp = await fetch('/pdf-to-images/', { method: 'POST', body: form });
     if (!resp.ok) {
+        if (resp.status === 413) {
+            statusMessageElement.textContent = t('fileTooLarge').replace('{mb}', MAX_FILE_MB);
+        }
         throw new Error('PDF conversion failed');
     }
     const data = await resp.json();
@@ -342,6 +348,10 @@ async function convertPdfToImages(file) {
 async function importPdfPages(file) {
     if (currentLicenseLevel === 'free') {
         statusMessageElement.textContent = t('pdfImportPro');
+        return;
+    }
+    if (file.size > MAX_FILE_BYTES) {
+        statusMessageElement.textContent = t('fileTooLarge').replace('{mb}', MAX_FILE_MB);
         return;
     }
     showLoading(t('loading'));
@@ -501,10 +511,20 @@ function applySettings(cfg) {
     if (demoNotice) demoNotice.style.display = demoFullMode ? 'block' : 'none';
     if (purchaseBtn) {
         if (demoFullMode) {
-            purchaseBtn.dataset.i18n = 'donatePaypal';
-            purchaseBox.style.display = 'none';
+            purchaseBtn.style.display = 'none';
         } else {
+            purchaseBtn.style.display = 'inline-block';
             purchaseBtn.dataset.i18n = 'purchase';
+        }
+    }
+    if (donateBox) {
+        if (demoFullMode) {
+            const link = currentSettings.paypal_link || DEFAULT_PAYPAL;
+            donateBox.innerHTML = `<a href="${link}" target="_blank"><img src="https://www.paypalobjects.com/it_IT/IT/i/btn/btn_donateCC_LG.gif" alt="Donate"></a>`;
+            donateBox.style.display = 'block';
+        } else {
+            donateBox.style.display = 'none';
+            donateBox.innerHTML = '';
         }
     }
 }
@@ -1137,6 +1157,10 @@ async function addFiles(newFiles) {
     }
     const compressed = [];
     for (const f of Array.from(newFiles)) {
+        if (f.size > MAX_FILE_BYTES) {
+            statusMessageElement.textContent = t('fileTooLarge').replace('{mb}', MAX_FILE_MB);
+            continue;
+        }
         try {
             compressed.push(await compressImageFile(f));
         } catch (e) {
@@ -1297,6 +1321,9 @@ submitBtn.addEventListener('click', () => {
     })
     .then(response => {
         if (!response.ok) {
+            if (response.status === 413) {
+                statusMessageElement.textContent = t('fileTooLarge').replace('{mb}', MAX_FILE_MB);
+            }
             return response.json().then(err => { throw new Error(err.detail || err.message || `HTTP error! status: ${response.status}`) });
         }
         return response.json();
@@ -1916,7 +1943,14 @@ function autoDetectCorners() {
     const formData = new FormData();
     formData.append('image_file', currentFile);
     fetch('/detect-corners/', { method: 'POST', body: formData })
-        .then(resp => resp.json())
+        .then(resp => {
+            if (!resp.ok) {
+                if (resp.status === 413) {
+                    statusMessageElement.textContent = t('fileTooLarge').replace('{mb}', MAX_FILE_MB);
+                }
+            }
+            return resp.json();
+        })
         .then(data => {
             if (data.points && data.points.length === 8) {
                 const disp = data.points.map((v,i)=> v / (i%2===0 ? scaling_factor_w : scaling_factor_h));

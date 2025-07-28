@@ -30,7 +30,7 @@
   "english": "Inglese",
   "italian": "Italiano",
   "demoVersion": "DEMO - funzionalità PRO disabilitate",
-  "demoTestPage": "Pagina di Test DEMO",
+  "demoTestPage": "Sito sperimentale gratuito: sostieni lo sviluppo con una donazione",
   "licensedTo": "Licenziato a",
   "support": "Supporto",
   "donatePaypal": "Dona con PayPal",
@@ -134,7 +134,8 @@
   "publicUrl": "Dominio pubblico:",
   "legalDisclaimer": "DocCropper e i suoi autori declinano ogni responsabilità per un uso non conforme alla legge.",
   "signaturesSent": "Firme inviate. Puoi chiudere la pagina.",
-  "pageToSign": "Pagina da firmare:"
-  ,"loading": "Caricamento..."
+  "pageToSign": "Pagina da firmare:",
+  "loading": "Caricamento...",
+  "fileTroppoGrande": "File troppo grande (max {mb} MB)"
 }
 

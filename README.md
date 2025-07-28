@@ -28,6 +28,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🌐 Works offline or over LAN (no internet required)
 - 👤 Multi-user environment support (optional)
 - 🔒 Uploaded files are encrypted and wiped after your session
+- 📏 Uploads larger than 20&nbsp;MB are rejected (adjust with `DOCROPPER_MAX_UPLOAD_MB`)
 
 ---
 
@@ -273,6 +274,7 @@ active the default domain is `https://doccropper.iltuoconsulenteit.it`.
 The server also accepts cross-origin requests when you set
 `DOCROPPER_CORS_ORIGINS` to a comma-separated list of allowed origins or `*` to
 permit any origin.
+Uploads larger than the configured `DOCROPPER_MAX_UPLOAD_MB` (20&nbsp;MB by default) will be rejected to avoid excessive disk usage.
 
 ### Pro OCR (coming soon)
 
