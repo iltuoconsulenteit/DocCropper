@@ -16,6 +16,17 @@ from fastapi import FastAPI, File, Form, UploadFile, Body, Request
 from PIL import Image, ImageDraw, ImageFont
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+
+
+class NoCacheStaticFiles(StaticFiles):
+    """StaticFiles that sets no-cache headers to avoid proxy caching."""
+
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = "no-cache"
+            response.headers["Pragma"] = "no-cache"
+        return response
 from fastapi.middleware.cors import CORSMiddleware
 from cryptography.fernet import Fernet
 import subprocess
@@ -373,9 +384,9 @@ else:
             allow_headers=["*"],
         )
 
-# Mount static files directory and local wiki
-app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/wiki", StaticFiles(directory="wiki", html=True), name="wiki")
+# Mount static files directory and local wiki with no-cache headers
+app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
+app.mount("/wiki", NoCacheStaticFiles(directory="wiki", html=True), name="wiki")
 plugin_utils = {
     'load_settings': load_settings,
     'get_session_dir': get_session_dir,
@@ -401,7 +412,7 @@ if enable_remotesign:
 @app.get('/favicon.ico')
 async def favicon():
     icon_path = os.path.join(os.path.dirname(__file__), 'static', 'logos', 'app_logo.png')
-    return FileResponse(icon_path)
+    return FileResponse(icon_path, headers={"Cache-Control": "no-cache"})
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
@@ -418,6 +429,8 @@ async def read_root(request: Request):
         logger.error("static/index.html not found")
         return HTMLResponse(content="Frontend not found.", status_code=500)
     response = HTMLResponse(content=content, status_code=200)
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["Pragma"] = "no-cache"
     response.set_cookie("session_id", session_id, httponly=True)
     return response
 
