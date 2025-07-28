@@ -78,6 +78,11 @@ for cmd in git python3 pip3; do
   fi
 done
 
+if [ -f "$TARGET_DIR/scripts/stop_DocCropper.command" ]; then
+  echo "🛑 Stopping running DocCropper..."
+  bash "$TARGET_DIR/scripts/stop_DocCropper.command" >/dev/null 2>&1 || true
+fi
+
 if [ -d "$TARGET_DIR/.git" ]; then
   echo "📁 Repository già presente in $TARGET_DIR"
   read -r -p "🔄 Vuoi aggiornare il repository da GitHub? [s/N] " ans

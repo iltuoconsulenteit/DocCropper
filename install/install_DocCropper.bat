@@ -118,6 +118,11 @@ if errorlevel 1 (
     )
 )
 
+if exist "!APP_DIR!\scripts\stop_DocCropper.bat" (
+    call :log "Stopping running DocCropper..."
+    call "!APP_DIR!\scripts\stop_DocCropper.bat" >nul 2>&1
+)
+
 if not exist "!APP_DIR!\.git" (
     dir /b "!APP_DIR!" | findstr . >nul 2>&1
     if not errorlevel 1 (
