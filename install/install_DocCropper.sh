@@ -187,8 +187,25 @@ if [ -n "$LIC_KEY" ]; then
   UPPER_KEY="$(echo "$LIC_KEY" | tr '[:lower:]' '[:upper:]')"
   DEV_KEY="${DOCROPPER_DEV_LICENSE:-}"
   DEV_KEY_UPPER="$(echo "$DEV_KEY" | tr '[:lower:]' '[:upper:]')"
+  VALID=0
   if [ "$UPPER_KEY" = "VALID" ] || [ "$UPPER_KEY" = "$DEV_KEY_UPPER" ]; then
+    VALID=1
+  elif [[ "$UPPER_KEY" == *-DEV ]]; then
+    VALID=1
+    DEV_KEY="$LIC_KEY"
+    DEV_KEY_UPPER="$UPPER_KEY"
+    export DOCROPPER_DEV_LICENSE="$LIC_KEY"
+  fi
+  if [ $VALID -eq 1 ]; then
     read -r -p "👤 Licensed to: " LIC_NAME
+    if [[ "$UPPER_KEY" == *-DEV ]] && [ ! -f "$TARGET_DIR/env/developer.env" ]; then
+      mkdir -p "$TARGET_DIR/env"
+      cat > "$TARGET_DIR/env/developer.env" <<EOF
+DOCROPPER_LICENSE_KEY=$LIC_KEY
+DOCROPPER_LICENSE_NAME=$LIC_NAME
+DOCROPPER_DEV_LICENSE=$LIC_KEY
+EOF
+    fi
     python3 - "$SETTINGS_FILE" "$LIC_KEY" "$LIC_NAME" <<'PY'
 import json, sys
 f, key, name = sys.argv[1:]

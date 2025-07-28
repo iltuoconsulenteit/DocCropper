@@ -191,8 +191,10 @@ DocCropper itself is released under the [MIT](LICENSE.txt) license. See [Terms o
 
 To activate Pro or Full editions:
 - Provide a valid license key in `settings.json`, `.env`, or the Licenses panel
-- Developer keys unlock all features for testing when `DOCROPPER_DEV_LICENSE` matches your `license_key`
-- Mobile signing is enabled automatically when a developer key is used
+ - Developer keys unlock all features when `DOCROPPER_DEV_LICENSE` matches your `license_key`
+   or the key ends with `-DEV`. The installers store such keys in `env/developer.env`
+   automatically so subsequent runs start in developer mode.
+ - Mobile signing is enabled automatically when a developer key is used
 - You can generate a suitable `.env` by running `scripts/setup_license.bat` (or
   `.sh` / `.command`) and entering your details
 - Set `LICENSE_CHECK=true` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
