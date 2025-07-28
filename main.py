@@ -232,6 +232,7 @@ def load_settings():
             merged["demo_full_mode"] = True
             if not merged.get("license_name"):
                 merged["license_name"] = "Demo User"
+            merged["enable_mobilesign"] = True
         elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
             merged["license_level"] = "full"
             if not merged.get("license_name"):
@@ -252,6 +253,7 @@ def save_settings(update: dict):
         data["demo_full_mode"] = True
         if not data.get("license_name"):
             data["license_name"] = "Demo User"
+        data["enable_mobilesign"] = True
     elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
         data["license_level"] = "full"
         if not data.get("license_name"):

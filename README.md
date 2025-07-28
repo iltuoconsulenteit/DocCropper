@@ -126,7 +126,7 @@ with `DOCROPPER_LICENSE_KEY`, `DOCROPPER_LICENSE_NAME`,
 features are unlocked. Set
 `DOCROPPER_DEV_WATERMARK=true` if you want to keep the watermark while
 testing with a developer key.
-The hidden `DEMO-FULL-DC` license provides Full features but always keeps the watermark for demonstrations.
+The hidden `DEMO-FULL-DC` license provides Full features and mobile signing but always keeps the watermark for demonstrations.
 If you see **Access denied** when running the script, launch it with administrator
 privileges ("Run as Administrator" on Windows). After writing the
 `env/developer.env` file, restart DocCropper so the new license is applied.
@@ -192,7 +192,7 @@ DocCropper ships with three editions. A **Licenses** button in the header opens 
 - **Pro** – No watermark and unlimited images, but still restricted to local access
 - **Full** – Unlocks LAN access so DocCropper can run on an office server
 - *DEMO-FULL-DC* is a hidden key that behaves like the Full edition but keeps
-  the watermark and shows a demo notice.
+  the watermark, enables mobile signing, and shows a demo notice.
 
 DocCropper itself is released under the [MIT](LICENSE.txt) license. See [Terms of Use](TERMS_OF_USE.md) for additional conditions.
 
