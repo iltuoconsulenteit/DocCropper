@@ -702,13 +702,31 @@ function showSponsorModal() {
     return new Promise(resolve => {
         const modal = document.getElementById('sponsorModal');
         const closeBtn = document.getElementById('closeSponsor');
+        const countdownEl = document.getElementById('sponsorCountdown');
+        const video = document.getElementById('sponsorVideo');
+
+        video.src = 'https://www.youtube.com/embed/DerpUM0uK9g?autoplay=1';
+        modal.style.display = 'block';
+        closeBtn.style.display = 'none';
+        let remaining = 15;
+        countdownEl.textContent = remaining;
+        const timer = setInterval(() => {
+            remaining--;
+            countdownEl.textContent = remaining;
+            if (remaining <= 0) {
+                clearInterval(timer);
+                countdownEl.style.display = 'none';
+                closeBtn.style.display = 'block';
+            }
+        }, 1000);
+
         const handler = () => {
+            video.src = '';
             modal.style.display = 'none';
             closeBtn.removeEventListener('click', handler);
             resolve();
         };
         closeBtn.addEventListener('click', handler);
-        modal.style.display = 'block';
     });
 }
 
@@ -1078,13 +1096,8 @@ function setDraggablePoints(displayPoints) {
 function setupImage(imageUrl) {
     imageModal.style.display = 'none';
     modalImage.src = '#';
-    imageElement.src = imageUrl;
-    imageElement.style.display = 'block';
-    wrapperElement.style.display = 'block';
-    if (autoDetectHint) autoDetectHint.style.display = 'block';
     processedImageElement.style.display = 'none';
-    statusMessageElement.textContent = 'Loading image...';
-
+    processedImageElement.src = '#';
     imageElement.onload = () => {
         origW = imageElement.naturalWidth;
         origH = imageElement.naturalHeight;
@@ -1169,6 +1182,12 @@ function setupImage(imageUrl) {
         if (autoDetectHint) autoDetectHint.style.display = 'none';
         adjustControls.style.display = 'none';
     };
+
+    imageElement.src = imageUrl;
+    imageElement.style.display = 'block';
+    wrapperElement.style.display = 'block';
+    if (autoDetectHint) autoDetectHint.style.display = 'block';
+    statusMessageElement.textContent = 'Loading image...';
 }
 
 
