@@ -761,6 +761,8 @@ function convertColor(index, mode) {
             if (imageModal.style.display === 'block') {
                 openModal(processedImages[index]);
             }
+            // keep the latest color version for future edits
+            originalImages[index] = processedImages[index];
         }
         return;
     }
