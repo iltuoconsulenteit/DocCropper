@@ -87,8 +87,6 @@ const addSignatureBtn = document.getElementById('addSignatureBtn');
 const discardSignatureBtn = document.getElementById('discardSignatureBtn');
 const loadingOverlay = document.getElementById('loadingOverlay');
 const saveSignatureBtn = document.getElementById('saveSignatureBtn');
-const qrSignBtn = document.getElementById('qrSignBtn');
-const qrSignPageBtn = document.getElementById('qrSignPageBtn');
 const digitalSignBtn = document.getElementById('remoteSignBtn');
 const signQR = document.getElementById('signQR');
 const signQrImg = document.getElementById('signQrImg');
@@ -496,7 +494,6 @@ function applySettings(cfg) {
         digitalSignBtn.disabled = !docusealEnabled || currentLicenseLevel === 'free' || !remoteSignEnabled;
     }
     if (mobileSignBtn) mobileSignBtn.style.display = mobileSignEnabled ? 'inline-block' : 'none';
-    if (qrSignBtn) qrSignBtn.style.display = mobileSignEnabled ? 'inline-block' : 'none';
     if (signBtn && !signEnabled) signBtn.style.display = 'none';
     if (demoNotice) demoNotice.style.display = demoFullMode ? 'block' : 'none';
 }
