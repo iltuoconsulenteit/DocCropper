@@ -128,6 +128,7 @@ const CAPTURE_QUALITY = 0.8;
 let isLicensed = false;
 let licenseName = '';
 let appVersion = '';
+let appVersionDate = '';
 let userInfo = null;
 let currentLicenseLevel = 'free';
 let demoFullMode = false;
@@ -499,6 +500,9 @@ function applySettings(cfg) {
     if (cfg.version) {
         appVersion = cfg.version;
     }
+    if (cfg.version_date) {
+        appVersionDate = cfg.version_date;
+    }
     docusealEnabled = !!cfg.docuseal_api_url;
     signEnabled = cfg.enable_sign !== false;
     mobileSignEnabled = !!cfg.enable_mobilesign;
@@ -590,7 +594,12 @@ function applyTranslations() {
         }
     });
     if (versionBox && appVersion) {
-        versionBox.textContent = translations['version'] ? `${translations['version']} ${appVersion}` : `Version ${appVersion}`;
+        const txt = translations['version'] ? `${translations['version']} ${appVersion}` : `Version ${appVersion}`;
+        if (appVersionDate) {
+            versionBox.innerHTML = txt + '<br>' + appVersionDate;
+        } else {
+            versionBox.textContent = txt;
+        }
     }
     if (sloganImg) {
         sloganImg.src = `/static/logos/DocCropper_slogan_${currentLang}.png`;

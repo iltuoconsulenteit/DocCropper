@@ -66,8 +66,14 @@ try:
         cwd=os.path.dirname(__file__),
         stderr=subprocess.DEVNULL,
     ).decode().strip()
+    VERSION_DATE = subprocess.check_output(
+        ["git", "log", "-1", "--format=%cd", "--date=short"],
+        cwd=os.path.dirname(__file__),
+        stderr=subprocess.DEVNULL,
+    ).decode().strip()
 except Exception:
     VERSION = "unknown"
+    VERSION_DATE = ""
 
 SESSIONS_ROOT = "sessions"
 SIGNATURES_DIR = "signatures"
@@ -423,6 +429,7 @@ async def get_settings():
         data["license_key"] = "FREE"
         data["license_name"] = "Free Edition"
     data["version"] = VERSION
+    data["version_date"] = VERSION_DATE
     if "stripe_secret_key" in data:
         data.pop("stripe_secret_key")
     return data
@@ -440,6 +447,7 @@ async def get_user_settings_endpoint(request: Request):
         return JSONResponse(status_code=401, content={"message": "Not logged in"})
     data = load_user_settings(email)
     data["version"] = VERSION
+    data["version_date"] = VERSION_DATE
     return data
 
 
@@ -450,6 +458,7 @@ async def update_user_settings_endpoint(request: Request, settings: dict = Body(
         return JSONResponse(status_code=401, content={"message": "Not logged in"})
     data = save_user_settings(email, settings)
     data["version"] = VERSION
+    data["version_date"] = VERSION_DATE
     return data
 
 
