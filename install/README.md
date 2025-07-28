@@ -20,3 +20,7 @@ persists for the next run.
 
 After pulling or cloning, each installer logs the last 10 commits and lets you
 enter a commit hash to restore that specific version if needed.
+
+When updating an existing installation the scripts fetch the selected branch and
+hard reset to `origin/branch` so local changes or incomplete merges do not
+cause conflicts.

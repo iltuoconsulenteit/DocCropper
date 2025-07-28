@@ -104,6 +104,7 @@ pip install -r requirements.txt
 - Ask for an optional license key
 - Write a log file named `install.log` in the installation folder (falling back to `%TEMP%` on Windows or `/tmp` on Linux/macOS)
 - After cloning or updating, list the last 10 commits and optionally restore one by its hash
+- When updating, the scripts fetch the selected branch and hard reset to avoid merge conflicts
 - On Linux the installer now requests administrative privileges via `sudo` and installs under `/opt/DocCropper` by default. On macOS the script will similarly relaunch with `sudo` if installing to `/Applications`. If the directory cannot be created, the script exits with a permissions error. The script uses `tee` to create the initial `settings.json` so root permissions are required when installing to system locations. Existing `settings.json` files are backed up to `settings.local.json.bak` and merged back after updating so your license and other custom values are preserved.
 - Matching `uninstall_DocCropper` scripts are provided to remove the application later.
 You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer branch or `DOCROPPER_BRANCH` to force a specific branch.
