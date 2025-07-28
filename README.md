@@ -97,7 +97,9 @@ pip install -r requirements.txt
 ### 🛠 Installer Scripts
 
 - Clone the repo
- - Offer a numbered menu to choose `main` or the developer branch (default `work`)
+- Offer a numbered menu to choose `main` or the developer branch (default `work`)
+- The last developer branch is stored in `install/dev_branch`. Edit this file to
+  change the default or set `DOCROPPER_DEV_BRANCH` when running the script.
 - Set up the environment and install Python dependencies in a virtualenv
 - Ask for an optional license key
 - Write a log file named `install.log` in the installation folder (falling back to `%TEMP%` on Windows or `/tmp` on Linux/macOS)

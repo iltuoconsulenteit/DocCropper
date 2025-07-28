@@ -17,11 +17,16 @@ fi
 
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-}"
-if [ -z "$DOCROPPER_DEV_BRANCH" ]; then
-  DEV_BRANCH="work"
-else
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BRANCH_FILE="$SCRIPT_DIR/dev_branch"
+if [ -n "$DOCROPPER_DEV_BRANCH" ]; then
   DEV_BRANCH="$DOCROPPER_DEV_BRANCH"
+elif [ -f "$BRANCH_FILE" ]; then
+  DEV_BRANCH="$(cat "$BRANCH_FILE")"
+else
+  DEV_BRANCH="work"
 fi
+echo "$DEV_BRANCH" > "$BRANCH_FILE"
 # configuration file handling
 CONFIG_FILE="settings.json"
 BACKUP_FILE="settings.local.json.bak"
@@ -95,6 +100,10 @@ if [ -d "$TARGET_DIR/.git" ]; then
       git -C "$TARGET_DIR" restore "$CONFIG_FILE" >/dev/null 2>&1 || true
     fi
     echo "📥 Aggiornamento repository..."
+    git -C "$TARGET_DIR" merge --abort >/dev/null 2>&1 || true
+    git -C "$TARGET_DIR" rebase --abort >/dev/null 2>&1 || true
+    git -C "$TARGET_DIR" reset --hard
+    git -C "$TARGET_DIR" clean -fd
     git -C "$TARGET_DIR" pull --rebase --autostash origin "$BRANCH"
   fi
 else
@@ -178,6 +187,10 @@ PY
       echo "🔀 Switching to developer branch $DEV_BRANCH"
       git -C "$TARGET_DIR" fetch origin "$DEV_BRANCH"
       git -C "$TARGET_DIR" checkout "$DEV_BRANCH"
+      git -C "$TARGET_DIR" merge --abort >/dev/null 2>&1 || true
+      git -C "$TARGET_DIR" rebase --abort >/dev/null 2>&1 || true
+      git -C "$TARGET_DIR" reset --hard
+      git -C "$TARGET_DIR" clean -fd
       git -C "$TARGET_DIR" pull --rebase --autostash origin "$DEV_BRANCH"
     fi
   else
