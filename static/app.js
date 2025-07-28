@@ -606,6 +606,10 @@ function hideLoading() {
     if (loadingOverlay) loadingOverlay.style.display = 'none';
 }
 
+// expose loading helpers for other modules
+window.showLoading = showLoading;
+window.hideLoading = hideLoading;
+
 function calculateGrid() {
     const layout = parseInt(layoutSelect.value || '1');
     const orientation = orientationSelect.value || 'portrait';

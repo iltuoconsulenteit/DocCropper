@@ -44,6 +44,7 @@ export function initSignaturePlugin(translations, enabled = true) {
     }
 
     async function startQrSign() {
+        if (window.showLoading) window.showLoading(translations['loading'] || 'Loading...');
         try {
             const images = window.processedImages || [];
             if (!images.length) return;
@@ -80,6 +81,8 @@ export function initSignaturePlugin(translations, enabled = true) {
             }
         } catch (e) {
             console.error('start sign error', e);
+        } finally {
+            if (window.hideLoading) window.hideLoading();
         }
     }
     if (qrSignBtn) {
