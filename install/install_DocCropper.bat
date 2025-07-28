@@ -32,11 +32,16 @@ call :log "Installation directory: !APP_DIR!"
 set "REPO_URL=https://github.com/iltuoconsulenteit/DocCropper.git"
 
 rem Default developer branch
+set "SCRIPT_DIR=%~dp0"
+set "BRANCH_FILE=%SCRIPT_DIR%dev_branch"
 if defined DOCROPPER_DEV_BRANCH (
     set "DEV_BRANCH=%DOCROPPER_DEV_BRANCH%"
+) else if exist "%BRANCH_FILE%" (
+    set /p DEV_BRANCH=<"%BRANCH_FILE%"
 ) else (
-    set "DEV_BRANCH=codex/add-license-specific-settings-menu"
+    set "DEV_BRANCH=work"
 )
+echo %DEV_BRANCH%>"%BRANCH_FILE%"
 
 if not defined DOCROPPER_BRANCH (
     echo.
