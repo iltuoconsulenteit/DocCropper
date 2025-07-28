@@ -136,6 +136,7 @@
   "signaturesSent": "Firme inviate. Puoi chiudere la pagina.",
   "pageToSign": "Pagina da firmare:",
   "loading": "Caricamento...",
-  "fileTroppoGrande": "File troppo grande (max {mb} MB)"
+  "fileTroppoGrande": "File troppo grande (max {mb} MB)",
+  "demoLicenseDisabled": "La modifica della licenza è disabilitata nella versione demo"
 }
 

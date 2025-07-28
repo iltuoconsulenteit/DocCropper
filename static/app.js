@@ -527,6 +527,9 @@ function applySettings(cfg) {
             donateBox.innerHTML = '';
         }
     }
+    if (settingsBtn) {
+        settingsBtn.style.display = demoFullMode ? 'none' : 'inline-block';
+    }
 }
 
 async function loadTranslations(lang) {
@@ -2095,13 +2098,20 @@ function renderPaymentBox(cfg) {
 }
 
 function renderLicenseBox() {
-    const html = `
+    let html = `
     <h3>${t('licenseOptions')}</h3>
     <ul>
         <li><strong>${t('freeEdition')}</strong> - ${t('freeFeatures')}</li>
         <li><strong>${t('proEdition')}</strong> - ${t('proFeatures')}</li>
         <li><strong>${t('fullEdition')}</strong> - ${t('fullFeatures')}</li>
-    </ul>
+    </ul>`;
+    if (demoFullMode) {
+        html += `
+    <p>${t('demoLicenseDisabled')}</p>
+    <p><strong>${t('licenseKey')}</strong> ${currentSettings.license_key || ''}</p>
+    <p><strong>${t('licenseName')}</strong> ${currentSettings.license_name || ''}</p>`;
+    } else {
+        html += `
     <div class="licenseForm">
         <label>${t('licenseKey')}</label>
         <input type="text" id="licenseKeyInput" value="${currentSettings.license_key || ''}"><br>
@@ -2109,18 +2119,21 @@ function renderLicenseBox() {
         <input type="text" id="licenseNameInput" value="${currentSettings.license_name || ''}"><br>
         <button id="saveLicenseBtn">${t('saveLicense')}</button>
     </div>`;
+    }
     licenseBox.innerHTML = html;
     licenseBox.style.display = 'block';
-    const btn = document.getElementById('saveLicenseBtn');
-    btn.addEventListener('click', async () => {
-        const key = document.getElementById('licenseKeyInput').value.trim();
-        const name = document.getElementById('licenseNameInput').value.trim();
-        await saveSettings({license_key: key, license_name: name});
-        await fetch('/restart/', {method: 'POST'});
-        alert(t('licenseSaved'));
-        licenseBox.classList.remove('visible');
-        setTimeout(() => { location.reload(); }, 1000);
-    });
+    if (!demoFullMode) {
+        const btn = document.getElementById('saveLicenseBtn');
+        btn.addEventListener('click', async () => {
+            const key = document.getElementById('licenseKeyInput').value.trim();
+            const name = document.getElementById('licenseNameInput').value.trim();
+            await saveSettings({license_key: key, license_name: name});
+            await fetch('/restart/', {method: 'POST'});
+            alert(t('licenseSaved'));
+            licenseBox.classList.remove('visible');
+            setTimeout(() => { location.reload(); }, 1000);
+        });
+    }
 }
 
 function renderSettingsBox() {

@@ -136,5 +136,6 @@
   "signaturesSent": "Signatures sent. You may close this page.",
   "pageToSign": "Page to sign:",
   "loading": "Loading...",
-  "fileTooLarge": "File too large (max {mb} MB)"
+  "fileTooLarge": "File too large (max {mb} MB)",
+  "demoLicenseDisabled": "License editing is disabled in the demo version"
 }
