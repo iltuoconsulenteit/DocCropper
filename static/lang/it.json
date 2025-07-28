@@ -137,6 +137,7 @@
   "pageToSign": "Pagina da firmare:",
   "loading": "Caricamento...",
   "fileTroppoGrande": "File troppo grande (max {mb} MB)",
-  "demoLicenseDisabled": "La modifica della licenza è disabilitata nella versione demo"
+  "demoLicenseDisabled": "La modifica della licenza è disabilitata nella versione demo",
+  "sponsorMessage": "Video sponsorizzato - chiudi per continuare"
 }
 

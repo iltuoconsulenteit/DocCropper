@@ -592,3 +592,8 @@ button:hover {
     color: #a00;
     margin: 10px 0;
 }
+
+#sponsorContent iframe {
+    width: 100%;
+    height: 360px;
+}

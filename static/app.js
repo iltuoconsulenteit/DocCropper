@@ -689,6 +689,20 @@ function openModal(src) {
     imageModal.style.display = 'block';
 }
 
+function showSponsorModal() {
+    return new Promise(resolve => {
+        const modal = document.getElementById('sponsorModal');
+        const closeBtn = document.getElementById('closeSponsor');
+        const handler = () => {
+            modal.style.display = 'none';
+            closeBtn.removeEventListener('click', handler);
+            resolve();
+        };
+        closeBtn.addEventListener('click', handler);
+        modal.style.display = 'block';
+    });
+}
+
 function rotateImage(index) {
     const img = new Image();
     img.onload = () => {
@@ -1053,6 +1067,8 @@ function setDraggablePoints(displayPoints) {
 }
 
 function setupImage(imageUrl) {
+    imageModal.style.display = 'none';
+    modalImage.src = '#';
     imageElement.src = imageUrl;
     imageElement.style.display = 'block';
     wrapperElement.style.display = 'block';
@@ -1357,6 +1373,10 @@ submitBtn.addEventListener('click', () => {
                 originalImages.push(data.processed_image);
                 processedFiles.push(currentFile);
                 addThumbnail(data.processed_image, processedImages.length - 1);
+                exportPdfBtn.style.display = 'inline-block';
+                if (signBtn && signEnabled) signBtn.style.display = 'inline-block';
+                if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
+                if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                 currentFileIndex++;
                 if (currentFileIndex < files.length) {
                     statusMessageElement.textContent = 'Image processed. Load next...';
@@ -1397,7 +1417,7 @@ submitBtn.addEventListener('click', () => {
     });
 });
 
-exportPdfBtn.addEventListener('click', () => {
+function generatePdf() {
     if (processedImages.length === 0) {
         statusMessageElement.textContent = 'No processed images to export.';
         return;
@@ -1440,6 +1460,11 @@ exportPdfBtn.addEventListener('click', () => {
         console.error('Error creating PDF:', error);
         statusMessageElement.textContent = `Error: ${error.message}`;
     });
+}
+
+exportPdfBtn.addEventListener('click', async () => {
+    await showSponsorModal();
+    generatePdf();
 });
 
 if (OCR_ENABLED) {

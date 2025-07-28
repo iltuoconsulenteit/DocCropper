@@ -137,5 +137,6 @@
   "pageToSign": "Page to sign:",
   "loading": "Loading...",
   "fileTooLarge": "File too large (max {mb} MB)",
-  "demoLicenseDisabled": "License editing is disabled in the demo version"
+  "demoLicenseDisabled": "License editing is disabled in the demo version",
+  "sponsorMessage": "Sponsored video - close to continue"
 }
