@@ -27,6 +27,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🧭 Touchscreen-friendly interface
 - 🌐 Works offline or over LAN (no internet required)
 - 👤 Multi-user environment support (optional)
+- 🔒 Uploaded files are encrypted and wiped after your session
 
 ---
 
@@ -76,6 +77,7 @@ Built with **FastAPI + Uvicorn**, the backend:
 - Optionally sharpens the image
 - Compiles all processed images into a PDF with layout control
 - Handles per-session temporary folders
+- Uploaded files are encrypted on disk and sessions are automatically removed after a short time
 
 ---
 
@@ -193,6 +195,8 @@ DocCropper ships with three editions. A **Licenses** button in the header opens 
 - **Full** – Unlocks LAN access so DocCropper can run on an office server
 - *Demo Full* is a hidden license that behaves like the Full edition but keeps
   the watermark, enables mobile signing, and shows a demo notice.
+  When this license is active the **Purchase** button turns into a PayPal
+  donation link.
 
 DocCropper itself is released under the [MIT](LICENSE.txt) license. See [Terms of Use](TERMS_OF_USE.md) for additional conditions.
 

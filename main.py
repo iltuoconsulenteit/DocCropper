@@ -17,6 +17,7 @@ from PIL import Image, ImageDraw, ImageFont
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from cryptography.fernet import Fernet
 import subprocess
 import sys
 import tempfile
@@ -71,6 +72,8 @@ except Exception:
 SESSIONS_ROOT = "sessions"
 SIGNATURES_DIR = "signatures"
 PID_FILE = os.path.join(tempfile.gettempdir(), "doccropper.pid")
+ENC_SUFFIX = ".enc"
+SESSION_KEYS: dict[str, bytes] = {}
 
 DEFAULT_SETTINGS = {
     "language": "en",
@@ -127,9 +130,11 @@ def get_session_dir(session_id: str) -> str:
         return None
     path = os.path.join(SESSIONS_ROOT, session_id)
     os.makedirs(path, exist_ok=True)
+    if session_id not in SESSION_KEYS:
+        SESSION_KEYS[session_id] = Fernet.generate_key()
     return path
 
-def cleanup_old_sessions(max_age: int = 3600):
+def cleanup_old_sessions(max_age: int = 600):
     if not os.path.exists(SESSIONS_ROOT):
         return
     now = time.time()
@@ -138,8 +143,30 @@ def cleanup_old_sessions(max_age: int = 3600):
         try:
             if os.path.isdir(p) and now - os.path.getmtime(p) > max_age:
                 shutil.rmtree(p, ignore_errors=True)
+                SESSION_KEYS.pop(name, None)
         except Exception:
             pass
+
+def encrypt_bytes(session_id: str, data: bytes) -> bytes:
+    key = SESSION_KEYS.get(session_id)
+    if not key:
+        key = Fernet.generate_key()
+        SESSION_KEYS[session_id] = key
+    f = Fernet(key)
+    return f.encrypt(data)
+
+def decrypt_file(session_id: str, path: str) -> bytes | None:
+    if not os.path.exists(path):
+        return None
+    key = SESSION_KEYS.get(session_id)
+    if not key:
+        return None
+    try:
+        with open(path, 'rb') as fh:
+            enc = fh.read()
+        return Fernet(key).decrypt(enc)
+    except Exception:
+        return None
 
 def get_lan_ip() -> str:
     try:
@@ -346,6 +373,9 @@ plugin_utils = {
     'get_session_dir': get_session_dir,
     'get_lan_ip': get_lan_ip,
     'SIGNATURES_DIR': SIGNATURES_DIR,
+    'decrypt_file': decrypt_file,
+    'encrypt_bytes': encrypt_bytes,
+    'ENC_SUFFIX': ENC_SUFFIX,
 }
 
 settings = load_settings()
@@ -603,9 +633,10 @@ async def process_image(
 
         if session_dir:
             try:
-                fname = os.path.join(session_dir, f"{uuid.uuid4().hex}.png")
+                fname = os.path.join(session_dir, f"{uuid.uuid4().hex}.png{ENC_SUFFIX}")
+                enc = encrypt_bytes(session_id, img_encoded_buffer)
                 with open(fname, "wb") as fh:
-                    fh.write(img_encoded_buffer)
+                    fh.write(enc)
             except Exception:
                 logger.exception("Failed to save processed image to session dir")
 
@@ -887,14 +918,15 @@ async def create_pdf(
             except Exception:
                 logger.exception("PDF signing failed")
 
-        pdf_path = os.path.join(session_dir, "output.pdf")
+        pdf_path = os.path.join(session_dir, "output.pdf" + ENC_SUFFIX)
         try:
+            enc = encrypt_bytes(session_id, pdf_bytes)
             with open(pdf_path, "wb") as fh:
-                fh.write(pdf_bytes)
+                fh.write(enc)
         except Exception:
             logger.exception("Failed to save PDF")
         pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
-        # Do not delete the session immediately so the user can re-export if needed
+        cleanup_old_sessions()
         return JSONResponse(content={"pdf": "data:application/pdf;base64," + pdf_base64})
     except Exception as e:
         logger.exception("Failed to create PDF")

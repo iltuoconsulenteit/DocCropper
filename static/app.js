@@ -58,6 +58,7 @@ const helpBtn = document.getElementById('helpBtn');
 const purchaseBtn = document.getElementById('purchaseBtn');
 const licenseBtn = document.getElementById('licenseBtn');
 const settingsBtn = document.getElementById('settingsBtn');
+const DEFAULT_PAYPAL = 'https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY';
 const bannerBox = document.getElementById('bannerBox');
 const closeBanner = document.getElementById('closeBanner');
 const sloganImg = document.getElementById('sloganImg');
@@ -496,6 +497,14 @@ function applySettings(cfg) {
     if (mobileSignBtn) mobileSignBtn.style.display = mobileSignEnabled ? 'inline-block' : 'none';
     if (signBtn && !signEnabled) signBtn.style.display = 'none';
     if (demoNotice) demoNotice.style.display = demoFullMode ? 'block' : 'none';
+    if (purchaseBtn) {
+        if (demoFullMode) {
+            purchaseBtn.dataset.i18n = 'donatePaypal';
+            purchaseBox.style.display = 'none';
+        } else {
+            purchaseBtn.dataset.i18n = 'purchase';
+        }
+    }
 }
 
 async function loadTranslations(lang) {
@@ -1453,9 +1462,14 @@ helpBtn.addEventListener('click', () => {
     instructionsBox.classList.toggle('visible');
 });
 purchaseBtn.addEventListener('click', () => {
-    const rect = purchaseBtn.getBoundingClientRect();
-    purchaseBox.style.top = (rect.bottom + window.scrollY) + 'px';
-    purchaseBox.classList.toggle('visible');
+    if (demoFullMode) {
+        const link = currentSettings.paypal_link || DEFAULT_PAYPAL;
+        window.open(link, '_blank');
+    } else {
+        const rect = purchaseBtn.getBoundingClientRect();
+        purchaseBox.style.top = (rect.bottom + window.scrollY) + 'px';
+        purchaseBox.classList.toggle('visible');
+    }
 });
 licenseBtn.addEventListener('click', () => {
     const rect = licenseBtn.getBoundingClientRect();

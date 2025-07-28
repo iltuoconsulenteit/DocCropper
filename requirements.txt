@@ -12,4 +12,5 @@ pyhanko
 pytesseract
 PyMuPDF
 qrcode
+cryptography
 stripe
