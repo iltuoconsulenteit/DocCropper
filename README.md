@@ -211,6 +211,12 @@ To activate Pro or Full editions:
 
 For inquiries: **doccropper@iltuoconsulenteit.it**
 
+## 💖 Supporta DocCropper
+
+Se trovi utile DocCropper, puoi supportarne lo sviluppo con una donazione:
+
+[![Donate](https://www.paypalobjects.com/it_IT/IT/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY)
+
 ### Optional PDF Signing
 
 Simple image or drawn signatures are available in all editions, but the Free edition keeps the watermark on exported PDFs.

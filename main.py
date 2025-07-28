@@ -238,6 +238,8 @@ def load_settings():
             if not merged.get("license_name"):
                 merged["license_name"] = "Demo User"
             merged["enable_mobilesign"] = True
+            if not merged.get("paypal_link"):
+                merged["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
             if not merged.get("public_url"):
                 merged["public_url"] = "https://doccropper.iltuoconsulenteit.it"
         elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
@@ -263,6 +265,8 @@ def save_settings(update: dict):
         if not data.get("license_name"):
             data["license_name"] = "Demo User"
         data["enable_mobilesign"] = True
+        if not data.get("paypal_link"):
+            data["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
         if not data.get("public_url"):
             data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
     elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
