@@ -51,6 +51,10 @@ fi
 echo "Logging to $LOG_FILE"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
+LAST_FILE="$LAST_FILE"
+PREV_FILE="$TARGET_DIR/previous_commit"
+
+
 
 BRANCH="${DOCROPPER_BRANCH}"
 if [ -z "$BRANCH" ]; then
@@ -83,6 +87,11 @@ if [ -d "$TARGET_DIR/.git" ]; then
   echo "📁 Repository già presente in $TARGET_DIR"
   read -r -p "🔄 Vuoi aggiornare il repository da GitHub? [s/N] " ans
   if [[ "$ans" =~ ^[sS]$ ]]; then
+    if [ -f "$LAST_FILE" ]; then
+      cp "$LAST_FILE" "$PREV_FILE"
+    else
+      git -C "$TARGET_DIR" rev-parse HEAD > "$PREV_FILE" 2>/dev/null || true
+    fi
     if [ -f "$TARGET_DIR/$CONFIG_FILE" ]; then
       echo "🗄  Backup $CONFIG_FILE in $BACKUP_FILE"
       cp "$TARGET_DIR/$CONFIG_FILE" "$TARGET_DIR/$BACKUP_FILE"
@@ -94,6 +103,7 @@ if [ -d "$TARGET_DIR/.git" ]; then
     git -C "$TARGET_DIR" fetch origin "$BRANCH"
     git -C "$TARGET_DIR" reset --hard "origin/$BRANCH"
     git -C "$TARGET_DIR" clean -fd
+    git -C "$TARGET_DIR" rev-parse HEAD > "$LAST_FILE" 2>/dev/null || true
   fi
 else
   if [ "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then
@@ -108,6 +118,7 @@ else
   fi
   echo "📥 Clonazione repository in $TARGET_DIR..."
   git clone --branch "$BRANCH" "$REPO_URL" "$TARGET_DIR"
+  git -C "$TARGET_DIR" rev-parse HEAD > "$LAST_FILE" 2>/dev/null || true
 fi
 
 echo "📜 Ultimi 10 commit:" | tee -a "$LOG_FILE"
@@ -116,6 +127,7 @@ read -r -p "Vuoi ripristinare un commit specifico? (lascia vuoto per continuare)
 if [ -n "$COMMIT_HASH" ]; then
   echo "🔄 Checkout del commit $COMMIT_HASH..." | tee -a "$LOG_FILE"
   git -C "$TARGET_DIR" checkout "$COMMIT_HASH" >>"$LOG_FILE" 2>&1
+  git -C "$TARGET_DIR" rev-parse HEAD > "$LAST_FILE" 2>/dev/null || true
 fi
 
 printf '\xE2\x9C\x85 Operazione completata.\n'

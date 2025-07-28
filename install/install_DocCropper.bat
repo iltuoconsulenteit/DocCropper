@@ -19,6 +19,8 @@ if defined TEMP (
 )
 echo Logging to %LOG_FILE%
 echo DocCropper installer log - %DATE% %TIME% > "%LOG_FILE%"
+set "LAST_FILE=%APP_DIR%\last_commit"
+set "PREV_FILE=%APP_DIR%\previous_commit"
 
 rem Default installation directory
 if defined DOCROPPER_HOME (
@@ -139,6 +141,7 @@ if not exist "!APP_DIR!\.git" (
     )
     call :log "Cloning repository..."
     git clone --branch !BRANCH! %REPO_URL% "!APP_DIR!" >>"%LOG_FILE%" 2>&1
+    for /f %%h in ('git -C "!APP_DIR!" rev-parse HEAD') do echo %%h>"!LAST_FILE!"
     if errorlevel 1 (
         call :log "Clone failed. Check your network connection, permissions, and that !APP_DIR! is empty."
         exit /b 1
@@ -148,6 +151,11 @@ if not exist "!APP_DIR!\.git" (
     set /p update_choice=Vuoi aggiornare il repository da GitHub? [s/N] 
     if /I "!update_choice!"=="s" (
         cd /d "!APP_DIR!"
+        if exist "!LAST_FILE!" (
+            copy /Y "!LAST_FILE!" "!PREV_FILE!" >nul 2>&1
+        ) else (
+            for /f %%h in ('git rev-parse HEAD') do echo %%h>"!PREV_FILE!"
+        )
         if exist "!CONFIG_FILE!" (
             git status --porcelain | findstr "!CONFIG_FILE!" >nul && (
                 call :log "Backup di !CONFIG_FILE! in !BACKUP_FILE!..."
@@ -165,6 +173,7 @@ if not exist "!APP_DIR!\.git" (
         git checkout !BRANCH! >>"%LOG_FILE%" 2>&1 || git checkout -B !BRANCH! origin/!BRANCH! >>"%LOG_FILE%" 2>&1
         git reset --hard origin/!BRANCH! >>"%LOG_FILE%" 2>&1
         git clean -fd >>"%LOG_FILE%" 2>&1
+        for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
         git pull --ff-only >>"%LOG_FILE%" 2>&1
         if exist "!BACKUP_FILE!" (
             call :log "Merge !BACKUP_FILE! in !CONFIG_FILE! (manual merge suggested)"
@@ -184,6 +193,7 @@ set /p commit_hash=Vuoi ripristinare un commit specifico? (lascia vuoto per cont
 if not "!commit_hash!"=="" (
     call :log "Checkout del commit !commit_hash!..."
     git checkout !commit_hash! >>"%LOG_FILE%" 2>&1
+    for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
 )
 
 if not exist "venv\Scripts\activate.bat" (

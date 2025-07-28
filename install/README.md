@@ -21,6 +21,12 @@ persists for the next run.
 After pulling or cloning, each installer logs the last 10 commits and lets you
 enter a commit hash to restore that specific version if needed.
 
+The installer also records the previously installed commit in a file named
+`previous_commit` inside the installation directory and writes the current
+commit to `last_commit`. If an update causes issues you can run the matching
+`rollback_DocCropper` script from the `scripts/` folder to reset the repository
+to the commit stored in `previous_commit`.
+
 Developer licenses ending with `-DEV` are recognized automatically. When you
 enter such a key the installer writes `env/developer.env` with
 `DOCROPPER_LICENSE_LEVEL=full` so future runs start in developer mode without
