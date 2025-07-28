@@ -66,6 +66,8 @@ const wikiFrame = document.getElementById('wikiFrame');
 const openWikiLink = document.getElementById('openWikiLink');
 const clientLogo = document.getElementById('clientLogo');
 const sponsorLogo = document.getElementById('sponsorLogo');
+const headerLogo = document.getElementById('headerLogo');
+const footerLogo = document.getElementById('footerLogo');
 const autoDetectHint = document.getElementById('autoDetectHint');
 const adjustControls = document.getElementById('adjustControls');
 const brightnessRange = document.getElementById('brightnessRange');
@@ -1492,6 +1494,16 @@ settingsBtn.addEventListener('click', () => {
 if (closeBanner) {
     closeBanner.addEventListener('click', () => {
         bannerBox.style.display = 'none';
+    });
+}
+if (headerLogo) {
+    headerLogo.addEventListener('click', () => {
+        location.reload();
+    });
+}
+if (footerLogo) {
+    footerLogo.addEventListener('click', () => {
+        window.location.href = 'https://www.iltuoconsulenteit.it/site/index.php/applicazioni/doccropper';
     });
 }
 
