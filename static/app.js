@@ -1467,12 +1467,6 @@ if (signBtn) {
         openSignatureForPage(0);
     });
 }
-if (mobileSignBtn) {
-    mobileSignBtn.addEventListener('click', () => {
-        const msBtn = document.getElementById('qrSignBtn');
-        if (msBtn) msBtn.click();
-    });
-}
 settingsBtn.addEventListener('click', () => {
     const rect = settingsBtn.getBoundingClientRect();
     settingsBox.style.display = 'block';

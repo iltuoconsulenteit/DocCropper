@@ -45,9 +45,18 @@ export function initSignaturePlugin(translations, enabled = true) {
 
     async function startQrSign() {
         try {
-            const page = parseInt(signaturePage?.value || '0');
             const images = window.processedImages || [];
             if (!images.length) return;
+            if (signaturePage && signaturePage.options.length === 0) {
+                signaturePage.innerHTML = '';
+                for (let i = 0; i < images.length; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = (i + 1).toString();
+                    signaturePage.appendChild(opt);
+                }
+            }
+            const page = parseInt(signaturePage?.value || '0');
             const payload = { page, images };
             payload.image = images[page];
             if (window.mobileSignPoints && Object.keys(window.mobileSignPoints).length) {
