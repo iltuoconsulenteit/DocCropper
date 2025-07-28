@@ -107,8 +107,26 @@ if [ -d "$TARGET_DIR/.git" ]; then
     git -C "$TARGET_DIR" pull --rebase --autostash origin "$BRANCH"
   fi
 else
+  if [ "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then
+    read -r -p "Directory $TARGET_DIR not empty. Delete contents and continue? [y/N] " wipe
+    if [[ "$wipe" =~ ^[yY]$ ]]; then
+      rm -rf "$TARGET_DIR"
+      mkdir -p "$TARGET_DIR"
+    else
+      echo "Please choose another directory." >&2
+      exit 1
+    fi
+  fi
   echo "📥 Clonazione repository in $TARGET_DIR..."
   git clone --branch "$BRANCH" "$REPO_URL" "$TARGET_DIR"
+fi
+
+echo "📜 Ultimi 10 commit:" | tee -a "$LOG_FILE"
+git -C "$TARGET_DIR" log -n 10 --pretty=format:"%h | %ad | %s" --date=short | tee -a "$LOG_FILE"
+read -r -p "Vuoi ripristinare un commit specifico? (lascia vuoto per continuare): " COMMIT_HASH
+if [ -n "$COMMIT_HASH" ]; then
+  echo "🔄 Checkout del commit $COMMIT_HASH..." | tee -a "$LOG_FILE"
+  git -C "$TARGET_DIR" checkout "$COMMIT_HASH" >>"$LOG_FILE" 2>&1
 fi
 
 printf '\xE2\x9C\x85 Operazione completata.\n'

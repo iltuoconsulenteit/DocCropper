@@ -17,3 +17,6 @@ During installation the scripts read `dev_branch` to determine the branch to clo
 If you set `DOCROPPER_DEV_BRANCH` when running an installer, that value
 overrides the file and the branch name is written back to `dev_branch` so it
 persists for the next run.
+
+After pulling or cloning, each installer logs the last 10 commits and lets you
+enter a commit hash to restore that specific version if needed.
