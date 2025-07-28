@@ -34,6 +34,7 @@
             <button id="settingsBtn" data-i18n="settings" data-i18n-title="settings" title="Settings">Settings</button>
         </div>
     </header>
+    <div id="demoNotice" class="demo-notice" data-i18n="demoTestPage" style="display:none;"></div>
     <div id="instructionsBox">
         <strong data-i18n="instructionsTitle">Instructions</strong><br>
         <span data-i18n="instructionsComing">Browse the wiki below.</span>
@@ -174,6 +175,10 @@
     <div id="imageModal" class="modal" style="display:none;">
         <span id="closeModal" class="close">&times;</span>
         <img class="modal-content" id="modalImage" src="#" alt="Full size">
+    </div>
+    <div id="loadingOverlay" style="display:none;">
+        <div class="loader"></div>
+        <span data-i18n="loading">Loading...</span>
     </div>
     <p id="statusMessage"></p>
 

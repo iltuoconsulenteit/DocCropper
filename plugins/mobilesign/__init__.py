@@ -7,7 +7,6 @@ __all__ = ['register']
 def register(app, utils):
     load_settings = utils['load_settings']
     get_session_dir = utils['get_session_dir']
-    get_lan_ip = utils['get_lan_ip']
     signatures_dir = utils['SIGNATURES_DIR']
 
     @app.post('/start-sign/')
@@ -40,9 +39,10 @@ def register(app, utils):
         os.makedirs(signatures_dir, exist_ok=True)
         with open(os.path.join(signatures_dir, f'{token}.json'), 'w') as fh:
             json.dump(info, fh)
-        port = int(settings.get('port', 8765))
-        host = get_lan_ip()
-        url = f'http://{host}:{port}/sign/{token}'
+        base = str(request.base_url)
+        if base.endswith('/'):
+            base = base[:-1]
+        url = f'{base}/sign/{token}'
         qr_img = qrcode.make(url)
         buf = io.BytesIO()
         qr_img.save(buf, format='PNG')

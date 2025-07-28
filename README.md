@@ -97,10 +97,17 @@ pip install -r requirements.txt
 ### 🛠 Installer Scripts
 
 - Clone the repo
- - Offer a numbered menu to choose `main` or the developer branch (default `work`)
+- Offer a numbered menu to choose `main` or the developer branch (default `work`)
+- The last developer branch is stored in `install/dev_branch`. Edit this file to
+  change the default or set `DOCROPPER_DEV_BRANCH` when running the script.
 - Set up the environment and install Python dependencies in a virtualenv
-- Ask for an optional license key
+- Stop any running instance using the appropriate `stop_DocCropper` script
+- Windows and macOS installers ask for an optional license key
 - Write a log file named `install.log` in the installation folder (falling back to `%TEMP%` on Windows or `/tmp` on Linux/macOS)
+- After cloning or updating, list the last 10 commits and optionally restore one by its hash
+- The previous commit is saved to `previous_commit` so you can run the new
+  `rollback_DocCropper` script to revert if an update fails
+- When updating, the scripts fetch the selected branch and hard reset to avoid merge conflicts
 - On Linux the installer now requests administrative privileges via `sudo` and installs under `/opt/DocCropper` by default. On macOS the script will similarly relaunch with `sudo` if installing to `/Applications`. If the directory cannot be created, the script exits with a permissions error. The script uses `tee` to create the initial `settings.json` so root permissions are required when installing to system locations. Existing `settings.json` files are backed up to `settings.local.json.bak` and merged back after updating so your license and other custom values are preserved.
 - Matching `uninstall_DocCropper` scripts are provided to remove the application later.
 You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer branch or `DOCROPPER_BRANCH` to force a specific branch.
@@ -114,10 +121,12 @@ The `.env` files may also define `LICENSE_CHECK=true` to enforce license validat
 To quickly create an environment file for testing you can run one of the
 `scripts/setup_license` helpers. The script for your platform (`.bat`, `.sh` or
 `.command`) asks for your license key and name then writes `env/developer.env`
-with `DOCROPPER_LICENSE_KEY`, `DOCROPPER_LICENSE_NAME` and
-`DOCROPPER_DEV_LICENSE` so all features are unlocked. Set
+with `DOCROPPER_LICENSE_KEY`, `DOCROPPER_LICENSE_NAME`,
+`DOCROPPER_DEV_LICENSE` and `DOCROPPER_LICENSE_LEVEL=full` so all
+features are unlocked. Set
 `DOCROPPER_DEV_WATERMARK=true` if you want to keep the watermark while
 testing with a developer key.
+The hidden `DEMO-FULL-DC` license provides Full features and mobile signing but always keeps the watermark for demonstrations.
 If you see **Access denied** when running the script, launch it with administrator
 privileges ("Run as Administrator" on Windows). After writing the
 `env/developer.env` file, restart DocCropper so the new license is applied.
@@ -182,13 +191,20 @@ DocCropper ships with three editions. A **Licenses** button in the header opens 
 - **Free** – Watermark applied, up to five images per project, LAN access disabled
 - **Pro** – No watermark and unlimited images, but still restricted to local access
 - **Full** – Unlocks LAN access so DocCropper can run on an office server
+- *DEMO-FULL-DC* is a hidden key that behaves like the Full edition but keeps
+  the watermark, enables mobile signing, and shows a demo notice.
 
 DocCropper itself is released under the [MIT](LICENSE.txt) license. See [Terms of Use](TERMS_OF_USE.md) for additional conditions.
 
 To activate Pro or Full editions:
 - Provide a valid license key in `settings.json`, `.env`, or the Licenses panel
-- Developer keys unlock all features for testing when `DOCROPPER_DEV_LICENSE` matches your `license_key`
-- Mobile signing is enabled automatically when a developer key is used
+  - Developer keys unlock all features when `DOCROPPER_DEV_LICENSE` matches your `license_key`
+    or the key ends with `-DEV`. Saving such a key through the Licenses panel now
+    automatically sets the edition to **Full** and enables mobile signing. The
+    installers store developer keys in `env/developer.env` with
+    `DOCROPPER_LICENSE_LEVEL=full` so subsequent runs start in developer mode.
+    When a developer key is active the tray menu includes an **Update Branch** option.
+ - Mobile signing is enabled automatically when a developer key is used
 - You can generate a suitable `.env` by running `scripts/setup_license.bat` (or
   `.sh` / `.command`) and entering your details
 - Set `LICENSE_CHECK=true` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
