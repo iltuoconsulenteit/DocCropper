@@ -10,3 +10,5 @@ doccropper.pid
 .env
 google-credentials.json
 *.p12
+install/dev_branch
+previous_commit

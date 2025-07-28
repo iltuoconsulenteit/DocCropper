@@ -17,5 +17,6 @@ ENVFILE="env/developer.env"
 echo "DOCROPPER_LICENSE_KEY=$KEY" > "$ENVFILE"
 echo "DOCROPPER_LICENSE_NAME=$NAME" >> "$ENVFILE"
 echo "DOCROPPER_DEV_LICENSE=$KEY" >> "$ENVFILE"
+echo "DOCROPPER_LICENSE_LEVEL=full" >> "$ENVFILE"
 
 echo "Developer license saved to $ENVFILE"

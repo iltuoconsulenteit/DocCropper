@@ -21,6 +21,7 @@
   "delete": "Delete",
   "toGray": "Gray",
   "toBW": "B/W",
+  "toColor": "Color",
   "sign": "Sign",
   "chooseAction": "Select action",
   "discardSignature": "Discard",
@@ -29,6 +30,7 @@
   "english": "English",
   "italian": "Italiano",
   "demoVersion": "DEMO - PRO features disabled",
+  "demoTestPage": "DEMO Test Page",
   "licensedTo": "Licensed to",
   "support": "Support",
   "donatePaypal": "Donate with PayPal",
@@ -90,7 +92,7 @@
   "licenseKey": "License key:",
   "licenseName": "License name:",
   "saveLicense": "Save license",
-  "licenseSaved": "License saved. Restart required",
+  "licenseSaved": "License saved. Restarting...",
   "freeEdition": "Free Edition",
   "proEdition": "Pro Edition",
   "fullEdition": "Full Edition",
@@ -132,4 +134,5 @@
   "legalDisclaimer": "DocCropper and its authors accept no liability for illegal use.",
   "signaturesSent": "Signatures sent. You may close this page.",
   "pageToSign": "Page to sign:"
+  ,"loading": "Loading..."
 }

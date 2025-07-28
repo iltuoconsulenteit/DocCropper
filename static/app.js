@@ -52,6 +52,7 @@ const settingsBox = document.getElementById('settingsBox');
 const loginArea = document.getElementById('loginArea');
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
+const demoNotice = document.getElementById('demoNotice');
 const instructionsBox = document.getElementById('instructionsBox');
 const helpBtn = document.getElementById('helpBtn');
 const purchaseBtn = document.getElementById('purchaseBtn');
@@ -84,6 +85,7 @@ const clearDrawBtn = document.getElementById('clearDrawBtn');
 const useDrawBtn = document.getElementById('useDrawBtn');
 const addSignatureBtn = document.getElementById('addSignatureBtn');
 const discardSignatureBtn = document.getElementById('discardSignatureBtn');
+const loadingOverlay = document.getElementById('loadingOverlay');
 const saveSignatureBtn = document.getElementById('saveSignatureBtn');
 const qrSignBtn = document.getElementById('qrSignBtn');
 const qrSignPageBtn = document.getElementById('qrSignPageBtn');
@@ -126,12 +128,14 @@ let licenseName = '';
 let appVersion = '';
 let userInfo = null;
 let currentLicenseLevel = 'free';
+let demoFullMode = false;
 const MAX_IMAGES_FREE = 5;
 
 let files = [];
 let currentFileIndex = 0;
 let processedImages = [];
 window.processedImages = processedImages;
+let originalImages = [];
 let processedFiles = [];
 let editingIndex = null;
 let cameraStream = null;
@@ -339,7 +343,13 @@ async function importPdfPages(file) {
         statusMessageElement.textContent = t('pdfImportPro');
         return;
     }
-    const pages = await convertPdfToImages(file);
+    showLoading(t('loading'));
+    let pages;
+    try {
+        pages = await convertPdfToImages(file);
+    } finally {
+        hideLoading();
+    }
     let toAdd = pages;
     for (const p of toAdd) {
         let imgFile = p;
@@ -351,6 +361,7 @@ async function importPdfPages(file) {
         processedFiles.push(imgFile);
         const dataUrl = await fileToDataURL(imgFile);
         processedImages.push(dataUrl);
+        originalImages.push(dataUrl);
         addThumbnail(dataUrl, processedImages.length - 1);
     }
     if (processedImages.length > 0) {
@@ -432,6 +443,7 @@ function applySettings(cfg) {
     } else {
         currentLicenseLevel = 'free';
     }
+    demoFullMode = !!cfg.demo_full_mode;
     isLicensed = false;
     licenseName = '';
     if (cfg.license_key && cfg.license_key.trim()) {
@@ -483,6 +495,7 @@ function applySettings(cfg) {
     if (mobileSignBtn) mobileSignBtn.style.display = mobileSignEnabled ? 'inline-block' : 'none';
     if (qrSignBtn) qrSignBtn.style.display = mobileSignEnabled ? 'inline-block' : 'none';
     if (signBtn && !signEnabled) signBtn.style.display = 'none';
+    if (demoNotice) demoNotice.style.display = demoFullMode ? 'block' : 'none';
 }
 
 async function loadTranslations(lang) {
@@ -579,6 +592,17 @@ function startBannerRotation() {
     }
 }
 
+function showLoading(message) {
+    if (!loadingOverlay) return;
+    const span = loadingOverlay.querySelector('span');
+    span.textContent = message || t('loading');
+    loadingOverlay.style.display = 'block';
+}
+
+function hideLoading() {
+    if (loadingOverlay) loadingOverlay.style.display = 'none';
+}
+
 function calculateGrid() {
     const layout = parseInt(layoutSelect.value || '1');
     const orientation = orientationSelect.value || 'portrait';
@@ -639,16 +663,28 @@ function rotateImage(index) {
         ctx.drawImage(img, -img.width / 2, -img.height / 2);
         const rotatedData = canvas.toDataURL('image/png');
         processedImages[index] = rotatedData;
+        if (originalImages[index]) originalImages[index] = rotatedData;
         const container = processedGallery.children[index];
         container.querySelector('img').src = rotatedData;
         if (imageModal.style.display === 'block') {
             openModal(rotatedData);
         }
     };
-    img.src = processedImages[index];
+    img.src = originalImages[index] || processedImages[index];
 }
 
 function convertColor(index, mode) {
+    if (mode === 'color') {
+        if (originalImages[index]) {
+            processedImages[index] = originalImages[index];
+            const container = processedGallery.children[index];
+            container.querySelector('img').src = processedImages[index];
+            if (imageModal.style.display === 'block') {
+                openModal(processedImages[index]);
+            }
+        }
+        return;
+    }
     const img = new Image();
     img.onload = () => {
         const canvas = document.createElement('canvas');
@@ -672,6 +708,7 @@ function convertColor(index, mode) {
         }
         ctx.putImageData(data, 0, 0);
         const out = canvas.toDataURL('image/png');
+        if (!originalImages[index]) originalImages[index] = processedImages[index];
         processedImages[index] = out;
         const container = processedGallery.children[index];
         container.querySelector('img').src = out;
@@ -679,11 +716,12 @@ function convertColor(index, mode) {
             openModal(out);
         }
     };
-    img.src = processedImages[index];
+    img.src = originalImages[index] || processedImages[index];
 }
 
 function deleteImage(index) {
     processedImages.splice(index, 1);
+    originalImages.splice(index, 1);
     processedFiles.splice(index, 1);
     processedGallery.removeChild(processedGallery.children[index]);
     refreshThumbnailIndexes();
@@ -803,6 +841,7 @@ function addThumbnail(src, index) {
     if (isLicensed && currentLicenseLevel !== 'free') {
         addOption('gray', 'toGray');
         addOption('bw', 'toBW');
+        addOption('color', 'toColor');
     }
     addOption('edit', 'edit');
     addOption('delete', 'delete');
@@ -820,6 +859,9 @@ function addThumbnail(src, index) {
             case 'bw':
                 convertColor(idx, 'bw');
                 break;
+            case 'color':
+                convertColor(idx, 'color');
+                break;
             case 'edit':
                 editImage(idx);
                 break;
@@ -832,6 +874,7 @@ function addThumbnail(src, index) {
 
     container.appendChild(menu);
     processedGallery.appendChild(container);
+    originalImages[index] = src;
 }
 
 function refreshThumbnailIndexes() {
@@ -843,14 +886,17 @@ function refreshThumbnailIndexes() {
 function updateProcessedArrays() {
     const newImages = [];
     const newFiles = [];
+    const newOriginals = [];
     Array.from(processedGallery.children).forEach(c => {
         const idx = parseInt(c.dataset.index);
         newImages.push(processedImages[idx]);
         newFiles.push(processedFiles[idx]);
+        newOriginals.push(originalImages[idx]);
     });
     processedImages = newImages;
     window.processedImages = processedImages;
     processedFiles = newFiles;
+    originalImages = newOriginals;
     refreshThumbnailIndexes();
 }
 
@@ -1064,10 +1110,12 @@ function setupImage(imageUrl) {
 
 
 async function addFiles(newFiles) {
+    showLoading(t('loading'));
     if (currentLicenseLevel === 'free') {
         const allowed = MAX_IMAGES_FREE - files.length;
         if (allowed <= 0) {
             statusMessageElement.textContent = t('maxImagesFree');
+            hideLoading();
             return;
         }
         newFiles = Array.from(newFiles).slice(0, allowed);
@@ -1087,6 +1135,7 @@ async function addFiles(newFiles) {
         currentFileIndex = 0;
         processedImages = [];
         window.processedImages = processedImages;
+        originalImages = [];
         processedFiles = [];
         editingIndex = null;
         processedGallery.innerHTML = '';
@@ -1116,7 +1165,7 @@ async function addFiles(newFiles) {
             reader.readAsDataURL(files[currentFileIndex]);
         }
     }
-
+    hideLoading();
 }
 
 imageUploadElement.addEventListener('change', async (event) => {
@@ -1137,7 +1186,7 @@ imageUploadElement.addEventListener('change', async (event) => {
             toProcess.push(f);
         }
     }
-    if (toProcess.length) addFiles(toProcess);
+    if (toProcess.length) await addFiles(toProcess);
 });
 
 async function handleDrop(event) {
@@ -1160,7 +1209,7 @@ async function handleDrop(event) {
                 toProcess.push(f);
             }
         }
-        if (toProcess.length) addFiles(toProcess);
+        if (toProcess.length) await addFiles(toProcess);
     }
 }
 
@@ -1243,6 +1292,7 @@ submitBtn.addEventListener('click', () => {
             openModal(data.processed_image);
             if (editingIndex !== null) {
                 processedImages[editingIndex] = data.processed_image;
+                originalImages[editingIndex] = data.processed_image;
                 const container = processedGallery.children[editingIndex];
                 container.querySelector('img').src = data.processed_image;
                 editingIndex = null;
@@ -1259,6 +1309,7 @@ submitBtn.addEventListener('click', () => {
                 updateLayoutPreview();
             } else {
                 processedImages.push(data.processed_image);
+                originalImages.push(data.processed_image);
                 processedFiles.push(currentFile);
                 addThumbnail(data.processed_image, processedImages.length - 1);
                 currentFileIndex++;
@@ -1711,6 +1762,7 @@ if (discardSignatureBtn) {
             stamps.forEach(drawOne);
             const url = canvas.toDataURL('image/png');
             processedImages[pageIdx] = url;
+            if (originalImages[pageIdx]) originalImages[pageIdx] = url;
             const container = processedGallery.children[pageIdx];
             if (container) container.querySelector('img').src = url;
             try {
@@ -1747,6 +1799,7 @@ async function applyRemoteSignature(data) {
     }
     const url = canvas.toDataURL('image/png');
     processedImages[pageIdx] = url;
+    if (originalImages[pageIdx]) originalImages[pageIdx] = url;
     const cont = processedGallery.children[pageIdx];
     if (cont) cont.querySelector('img').src = url;
     try {
@@ -1887,7 +1940,13 @@ function applyProStatus() {
         imageUploadElement.accept = 'image/*,application/pdf';
         document.querySelectorAll('.shareBtn').forEach(btn => btn.style.display = 'inline-block');
         if (!sortable && typeof Sortable !== 'undefined') {
-            sortable = Sortable.create(processedGallery, { animation: 150, onEnd: updateProcessedArrays });
+            sortable = Sortable.create(processedGallery, {
+                animation: 150,
+                onEnd: updateProcessedArrays,
+                handle: 'img',
+                filter: 'select',
+                preventOnFilter: false
+            });
         }
         if (reorderHint) reorderHint.style.display = 'block';
         if (colorModeSelect) colorModeSelect.style.display = 'inline-block';
@@ -1999,11 +2058,10 @@ function renderLicenseBox() {
         const key = document.getElementById('licenseKeyInput').value.trim();
         const name = document.getElementById('licenseNameInput').value.trim();
         await saveSettings({license_key: key, license_name: name});
-        const cfg = await loadSettings();
-        applySettings(cfg);
-        licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
+        await fetch('/restart/', {method: 'POST'});
         alert(t('licenseSaved'));
         licenseBox.classList.remove('visible');
+        setTimeout(() => { location.reload(); }, 1000);
     });
 }
 

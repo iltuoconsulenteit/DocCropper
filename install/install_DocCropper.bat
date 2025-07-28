@@ -20,6 +20,8 @@ if defined TEMP (
 echo Logging to %LOG_FILE%
 echo DocCropper installer log - %DATE% %TIME% > "%LOG_FILE%"
 
+rem We'll define these after APP_DIR is known
+
 rem Default installation directory
 if defined DOCROPPER_HOME (
     set "APP_DIR=%DOCROPPER_HOME%"
@@ -31,12 +33,21 @@ if not "!TARGET_DIR!"=="" set "APP_DIR=!TARGET_DIR!"
 call :log "Installation directory: !APP_DIR!"
 set "REPO_URL=https://github.com/iltuoconsulenteit/DocCropper.git"
 
+rem Now that APP_DIR is known, store commit markers
+set "LAST_FILE=!APP_DIR!\last_commit"
+set "PREV_FILE=!APP_DIR!\previous_commit"
+
 rem Default developer branch
+set "SCRIPT_DIR=%~dp0"
+set "BRANCH_FILE=%SCRIPT_DIR%dev_branch"
 if defined DOCROPPER_DEV_BRANCH (
     set "DEV_BRANCH=%DOCROPPER_DEV_BRANCH%"
+) else if exist "%BRANCH_FILE%" (
+    set /p DEV_BRANCH=<"%BRANCH_FILE%"
 ) else (
-    set "DEV_BRANCH=codex/add-license-specific-settings-menu"
+    set "DEV_BRANCH=work"
 )
+echo %DEV_BRANCH%>"%BRANCH_FILE%"
 
 if not defined DOCROPPER_BRANCH (
     echo.
@@ -113,6 +124,11 @@ if errorlevel 1 (
     )
 )
 
+if exist "!APP_DIR!\scripts\stop_DocCropper.bat" (
+    call :log "Stopping running DocCropper..."
+    call "!APP_DIR!\scripts\stop_DocCropper.bat" >nul 2>&1
+)
+
 if not exist "!APP_DIR!\.git" (
     dir /b "!APP_DIR!" | findstr . >nul 2>&1
     if not errorlevel 1 (
@@ -129,6 +145,7 @@ if not exist "!APP_DIR!\.git" (
     )
     call :log "Cloning repository..."
     git clone --branch !BRANCH! %REPO_URL% "!APP_DIR!" >>"%LOG_FILE%" 2>&1
+    for /f %%h in ('git -C "!APP_DIR!" rev-parse HEAD') do echo %%h>"!LAST_FILE!"
     if errorlevel 1 (
         call :log "Clone failed. Check your network connection, permissions, and that !APP_DIR! is empty."
         exit /b 1
@@ -138,6 +155,11 @@ if not exist "!APP_DIR!\.git" (
     set /p update_choice=Vuoi aggiornare il repository da GitHub? [s/N] 
     if /I "!update_choice!"=="s" (
         cd /d "!APP_DIR!"
+        if exist "!LAST_FILE!" (
+            copy /Y "!LAST_FILE!" "!PREV_FILE!" >nul 2>&1
+        ) else (
+            for /f %%h in ('git rev-parse HEAD') do echo %%h>"!PREV_FILE!"
+        )
         if exist "!CONFIG_FILE!" (
             git status --porcelain | findstr "!CONFIG_FILE!" >nul && (
                 call :log "Backup di !CONFIG_FILE! in !BACKUP_FILE!..."
@@ -150,9 +172,12 @@ if not exist "!APP_DIR!\.git" (
             call :log "Failed to fetch branch !BRANCH! from origin"
             exit /b 1
         )
+        git merge --abort >nul 2>&1
+        git rebase --abort >nul 2>&1
         git checkout !BRANCH! >>"%LOG_FILE%" 2>&1 || git checkout -B !BRANCH! origin/!BRANCH! >>"%LOG_FILE%" 2>&1
         git reset --hard origin/!BRANCH! >>"%LOG_FILE%" 2>&1
         git clean -fd >>"%LOG_FILE%" 2>&1
+        for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
         git pull --ff-only >>"%LOG_FILE%" 2>&1
         if exist "!BACKUP_FILE!" (
             call :log "Merge !BACKUP_FILE! in !CONFIG_FILE! (manual merge suggested)"
@@ -172,6 +197,7 @@ set /p commit_hash=Vuoi ripristinare un commit specifico? (lascia vuoto per cont
 if not "!commit_hash!"=="" (
     call :log "Checkout del commit !commit_hash!..."
     git checkout !commit_hash! >>"%LOG_FILE%" 2>&1
+    for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
 )
 
 if not exist "venv\Scripts\activate.bat" (
