@@ -21,6 +21,7 @@
   "delete": "Delete",
   "toGray": "Gray",
   "toBW": "B/W",
+  "toColor": "Color",
   "sign": "Sign",
   "chooseAction": "Select action",
   "discardSignature": "Discard",

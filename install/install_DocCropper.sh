@@ -17,11 +17,16 @@ fi
 
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-}"
-if [ -z "$DOCROPPER_DEV_BRANCH" ]; then
-  DEV_BRANCH="work"
-else
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BRANCH_FILE="$SCRIPT_DIR/dev_branch"
+if [ -n "$DOCROPPER_DEV_BRANCH" ]; then
   DEV_BRANCH="$DOCROPPER_DEV_BRANCH"
+elif [ -f "$BRANCH_FILE" ]; then
+  DEV_BRANCH="$(cat "$BRANCH_FILE")"
+else
+  DEV_BRANCH="work"
 fi
+echo "$DEV_BRANCH" > "$BRANCH_FILE"
 # configuration file handling
 CONFIG_FILE="settings.json"
 BACKUP_FILE="settings.local.json.bak"

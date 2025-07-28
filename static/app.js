@@ -132,6 +132,7 @@ let files = [];
 let currentFileIndex = 0;
 let processedImages = [];
 window.processedImages = processedImages;
+let originalImages = [];
 let processedFiles = [];
 let editingIndex = null;
 let cameraStream = null;
@@ -351,6 +352,7 @@ async function importPdfPages(file) {
         processedFiles.push(imgFile);
         const dataUrl = await fileToDataURL(imgFile);
         processedImages.push(dataUrl);
+        originalImages.push(dataUrl);
         addThumbnail(dataUrl, processedImages.length - 1);
     }
     if (processedImages.length > 0) {
@@ -639,16 +641,28 @@ function rotateImage(index) {
         ctx.drawImage(img, -img.width / 2, -img.height / 2);
         const rotatedData = canvas.toDataURL('image/png');
         processedImages[index] = rotatedData;
+        if (originalImages[index]) originalImages[index] = rotatedData;
         const container = processedGallery.children[index];
         container.querySelector('img').src = rotatedData;
         if (imageModal.style.display === 'block') {
             openModal(rotatedData);
         }
     };
-    img.src = processedImages[index];
+    img.src = originalImages[index] || processedImages[index];
 }
 
 function convertColor(index, mode) {
+    if (mode === 'color') {
+        if (originalImages[index]) {
+            processedImages[index] = originalImages[index];
+            const container = processedGallery.children[index];
+            container.querySelector('img').src = processedImages[index];
+            if (imageModal.style.display === 'block') {
+                openModal(processedImages[index]);
+            }
+        }
+        return;
+    }
     const img = new Image();
     img.onload = () => {
         const canvas = document.createElement('canvas');
@@ -672,6 +686,7 @@ function convertColor(index, mode) {
         }
         ctx.putImageData(data, 0, 0);
         const out = canvas.toDataURL('image/png');
+        if (!originalImages[index]) originalImages[index] = processedImages[index];
         processedImages[index] = out;
         const container = processedGallery.children[index];
         container.querySelector('img').src = out;
@@ -679,11 +694,12 @@ function convertColor(index, mode) {
             openModal(out);
         }
     };
-    img.src = processedImages[index];
+    img.src = originalImages[index] || processedImages[index];
 }
 
 function deleteImage(index) {
     processedImages.splice(index, 1);
+    originalImages.splice(index, 1);
     processedFiles.splice(index, 1);
     processedGallery.removeChild(processedGallery.children[index]);
     refreshThumbnailIndexes();
@@ -803,6 +819,7 @@ function addThumbnail(src, index) {
     if (isLicensed && currentLicenseLevel !== 'free') {
         addOption('gray', 'toGray');
         addOption('bw', 'toBW');
+        addOption('color', 'toColor');
     }
     addOption('edit', 'edit');
     addOption('delete', 'delete');
@@ -820,6 +837,9 @@ function addThumbnail(src, index) {
             case 'bw':
                 convertColor(idx, 'bw');
                 break;
+            case 'color':
+                convertColor(idx, 'color');
+                break;
             case 'edit':
                 editImage(idx);
                 break;
@@ -832,6 +852,7 @@ function addThumbnail(src, index) {
 
     container.appendChild(menu);
     processedGallery.appendChild(container);
+    originalImages[index] = src;
 }
 
 function refreshThumbnailIndexes() {
@@ -843,14 +864,17 @@ function refreshThumbnailIndexes() {
 function updateProcessedArrays() {
     const newImages = [];
     const newFiles = [];
+    const newOriginals = [];
     Array.from(processedGallery.children).forEach(c => {
         const idx = parseInt(c.dataset.index);
         newImages.push(processedImages[idx]);
         newFiles.push(processedFiles[idx]);
+        newOriginals.push(originalImages[idx]);
     });
     processedImages = newImages;
     window.processedImages = processedImages;
     processedFiles = newFiles;
+    originalImages = newOriginals;
     refreshThumbnailIndexes();
 }
 
@@ -1087,6 +1111,7 @@ async function addFiles(newFiles) {
         currentFileIndex = 0;
         processedImages = [];
         window.processedImages = processedImages;
+        originalImages = [];
         processedFiles = [];
         editingIndex = null;
         processedGallery.innerHTML = '';
@@ -1243,6 +1268,7 @@ submitBtn.addEventListener('click', () => {
             openModal(data.processed_image);
             if (editingIndex !== null) {
                 processedImages[editingIndex] = data.processed_image;
+                originalImages[editingIndex] = data.processed_image;
                 const container = processedGallery.children[editingIndex];
                 container.querySelector('img').src = data.processed_image;
                 editingIndex = null;
@@ -1259,6 +1285,7 @@ submitBtn.addEventListener('click', () => {
                 updateLayoutPreview();
             } else {
                 processedImages.push(data.processed_image);
+                originalImages.push(data.processed_image);
                 processedFiles.push(currentFile);
                 addThumbnail(data.processed_image, processedImages.length - 1);
                 currentFileIndex++;
@@ -1711,6 +1738,7 @@ if (discardSignatureBtn) {
             stamps.forEach(drawOne);
             const url = canvas.toDataURL('image/png');
             processedImages[pageIdx] = url;
+            if (originalImages[pageIdx]) originalImages[pageIdx] = url;
             const container = processedGallery.children[pageIdx];
             if (container) container.querySelector('img').src = url;
             try {
@@ -1747,6 +1775,7 @@ async function applyRemoteSignature(data) {
     }
     const url = canvas.toDataURL('image/png');
     processedImages[pageIdx] = url;
+    if (originalImages[pageIdx]) originalImages[pageIdx] = url;
     const cont = processedGallery.children[pageIdx];
     if (cont) cont.querySelector('img').src = url;
     try {
