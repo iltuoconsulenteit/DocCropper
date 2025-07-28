@@ -51,7 +51,7 @@ fi
 echo "Logging to $LOG_FILE"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
-LAST_FILE="$LAST_FILE"
+LAST_FILE="$TARGET_DIR/last_commit"
 PREV_FILE="$TARGET_DIR/previous_commit"
 
 

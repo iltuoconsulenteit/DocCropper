@@ -19,8 +19,8 @@ if defined TEMP (
 )
 echo Logging to %LOG_FILE%
 echo DocCropper installer log - %DATE% %TIME% > "%LOG_FILE%"
-set "LAST_FILE=%APP_DIR%\last_commit"
-set "PREV_FILE=%APP_DIR%\previous_commit"
+
+rem We'll define these after APP_DIR is known
 
 rem Default installation directory
 if defined DOCROPPER_HOME (
@@ -32,6 +32,10 @@ set /p TARGET_DIR=Installation directory [%APP_DIR%]:
 if not "!TARGET_DIR!"=="" set "APP_DIR=!TARGET_DIR!"
 call :log "Installation directory: !APP_DIR!"
 set "REPO_URL=https://github.com/iltuoconsulenteit/DocCropper.git"
+
+rem Now that APP_DIR is known, store commit markers
+set "LAST_FILE=!APP_DIR!\last_commit"
+set "PREV_FILE=!APP_DIR!\previous_commit"
 
 rem Default developer branch
 set "SCRIPT_DIR=%~dp0"
