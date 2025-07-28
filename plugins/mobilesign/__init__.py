@@ -39,12 +39,20 @@ def register(app, utils):
         os.makedirs(signatures_dir, exist_ok=True)
         with open(os.path.join(signatures_dir, f'{token}.json'), 'w') as fh:
             json.dump(info, fh)
-        host = request.headers.get('host')
-        scheme = request.headers.get('x-forwarded-proto', request.url.scheme)
-        if host:
-            base = f'{scheme}://{host}'
-        else:
-            base = str(request.base_url).rstrip('/')
+        base = os.getenv('DOCROPPER_PUBLIC_URL')
+        if not base:
+            host = request.headers.get('x-forwarded-host') or request.headers.get('host')
+            scheme = request.headers.get('x-forwarded-proto') or request.url.scheme
+            visitor = request.headers.get('cf-visitor')
+            if visitor:
+                try:
+                    scheme = json.loads(visitor).get('scheme', scheme)
+                except Exception:
+                    pass
+            if host:
+                base = f'{scheme}://{host}'
+            else:
+                base = str(request.base_url).rstrip('/')
         url = f'{base}/sign/{token}'
         qr_img = qrcode.make(url)
         buf = io.BytesIO()

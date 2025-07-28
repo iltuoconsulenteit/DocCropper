@@ -256,9 +256,12 @@ LAN. The public URL is written to the log.
 
 Set `DOCROPPER_OPEN_URL` if you want the start scripts and tray helper to open a
 custom address (for example your Cloudflare tunnel) instead of
-`http://localhost:PORT`. The server also accepts cross-origin requests when you
-set `DOCROPPER_CORS_ORIGINS` to a comma-separated list of allowed origins or `*`
-to permit any origin.
+`http://localhost:PORT`.
+Use `DOCROPPER_PUBLIC_URL` to force the mobile signing QR link to point to a
+specific domain when proxy headers are missing.
+The server also accepts cross-origin requests when you set
+`DOCROPPER_CORS_ORIGINS` to a comma-separated list of allowed origins or `*` to
+permit any origin.
 
 ### Pro OCR (coming soon)
 
