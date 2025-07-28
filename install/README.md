@@ -22,8 +22,9 @@ After pulling or cloning, each installer logs the last 10 commits and lets you
 enter a commit hash to restore that specific version if needed.
 
 Developer licenses ending with `-DEV` are recognized automatically. When you
-enter such a key the installer writes `env/developer.env` so future runs start in
-developer mode without re-entering the key.
+enter such a key the installer writes `env/developer.env` with
+`DOCROPPER_LICENSE_LEVEL=full` so future runs start in developer mode without
+re-entering the key.
 
 When updating an existing installation the scripts fetch the selected branch and
 hard reset to `origin/branch` so local changes or incomplete merges do not

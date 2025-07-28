@@ -118,8 +118,9 @@ The `.env` files may also define `LICENSE_CHECK=true` to enforce license validat
 To quickly create an environment file for testing you can run one of the
 `scripts/setup_license` helpers. The script for your platform (`.bat`, `.sh` or
 `.command`) asks for your license key and name then writes `env/developer.env`
-with `DOCROPPER_LICENSE_KEY`, `DOCROPPER_LICENSE_NAME` and
-`DOCROPPER_DEV_LICENSE` so all features are unlocked. Set
+with `DOCROPPER_LICENSE_KEY`, `DOCROPPER_LICENSE_NAME`,
+`DOCROPPER_DEV_LICENSE` and `DOCROPPER_LICENSE_LEVEL=full` so all
+features are unlocked. Set
 `DOCROPPER_DEV_WATERMARK=true` if you want to keep the watermark while
 testing with a developer key.
 If you see **Access denied** when running the script, launch it with administrator
@@ -193,7 +194,7 @@ To activate Pro or Full editions:
 - Provide a valid license key in `settings.json`, `.env`, or the Licenses panel
  - Developer keys unlock all features when `DOCROPPER_DEV_LICENSE` matches your `license_key`
    or the key ends with `-DEV`. The installers store such keys in `env/developer.env`
-   automatically so subsequent runs start in developer mode.
+   with `DOCROPPER_LICENSE_LEVEL=full` so subsequent runs start in developer mode.
  - Mobile signing is enabled automatically when a developer key is used
 - You can generate a suitable `.env` by running `scripts/setup_license.bat` (or
   `.sh` / `.command`) and entering your details

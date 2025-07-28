@@ -223,7 +223,8 @@ def load_settings():
             merged["stripe_cancel_url"] = stripe_cancel
 
         dev_env = DEV_LICENSE_KEY_UPPER
-        if dev_env and merged.get("license_key", "").strip().upper() == dev_env:
+        key_upper = merged.get("license_key", "").strip().upper()
+        if (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
             merged["license_level"] = "full"
             if not merged.get("license_name"):
                 merged["license_name"] = "Developer"
