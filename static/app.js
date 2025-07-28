@@ -1095,9 +1095,9 @@ function setDraggablePoints(displayPoints) {
 
 function setupImage(imageUrl) {
     imageModal.style.display = 'none';
-    modalImage.src = '#';
+    modalImage.src = '';
     processedImageElement.style.display = 'none';
-    processedImageElement.src = '#';
+    processedImageElement.src = '';
     imageElement.onload = () => {
         origW = imageElement.naturalWidth;
         origH = imageElement.naturalHeight;
@@ -1183,7 +1183,10 @@ function setupImage(imageUrl) {
         adjustControls.style.display = 'none';
     };
 
-    imageElement.src = imageUrl;
+    imageElement.src = '';
+    setTimeout(() => {
+        imageElement.src = imageUrl;
+    }, 0);
     imageElement.style.display = 'block';
     wrapperElement.style.display = 'block';
     if (autoDetectHint) autoDetectHint.style.display = 'block';
