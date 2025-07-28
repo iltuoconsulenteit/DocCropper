@@ -25,6 +25,9 @@ Developer licenses ending with `-DEV` are recognized automatically. When you
 enter such a key the installer writes `env/developer.env` with
 `DOCROPPER_LICENSE_LEVEL=full` so future runs start in developer mode without
 re-entering the key.
+Saving a developer key from the Licenses panel also sets the edition to **Full**
+and restarts the app automatically so PDF import and other features are enabled
+immediately.
 
 When updating an existing installation the scripts fetch the selected branch and
 hard reset to `origin/branch` so local changes or incomplete merges do not

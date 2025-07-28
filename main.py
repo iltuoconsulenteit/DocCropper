@@ -238,6 +238,13 @@ def load_settings():
 def save_settings(update: dict):
     data = load_settings()
     data.update(update)
+    key_upper = data.get("license_key", "").strip().upper()
+    dev_env = DEV_LICENSE_KEY_UPPER
+    if (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
+        data["license_level"] = "full"
+        if not data.get("license_name"):
+            data["license_name"] = "Developer"
+        data["enable_mobilesign"] = True
     with open(SETTINGS_FILE, "w") as fh:
         json.dump(data, fh)
     return data
