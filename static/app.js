@@ -1798,11 +1798,11 @@ async function applyRemoteSignature(data) {
     canvas.height = base.height;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(base, 0, 0);
-    const list = data.signatures || [{image:data.image, x:data.x, y:data.y}];
+    const list = data.signatures || [{image:data.image, x:data.x, y:data.y, scale:1}];
     for (const sigData of list) {
         const img = new Image();
         await new Promise(res => { img.onload = res; img.src = sigData.image; });
-        const baseRatio = (canvas.height / 10) / img.height;
+        const baseRatio = (canvas.height / 10) * (sigData.scale || 1) / img.height;
         const w = img.width * baseRatio;
         const h = img.height * baseRatio;
         const x = sigData.x * canvas.width - w / 2;
