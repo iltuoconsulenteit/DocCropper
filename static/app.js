@@ -1185,10 +1185,7 @@ function setupImage(imageUrl) {
         adjustControls.style.display = 'none';
     };
 
-    imageElement.src = '';
-    setTimeout(() => {
-        imageElement.src = imageUrl;
-    }, 0);
+    imageElement.src = imageUrl;
     imageElement.style.display = 'block';
     wrapperElement.style.display = 'block';
     if (autoDetectHint) autoDetectHint.style.display = 'block';
