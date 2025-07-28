@@ -17,6 +17,7 @@ from PIL import Image, ImageDraw, ImageFont
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import subprocess
+import sys
 import tempfile
 from dotenv import load_dotenv
 import urllib.request
@@ -873,6 +874,18 @@ async def shutdown():
     if server:
         server.should_exit = True
         return {"message": "Shutting down"}
+    return {"message": "Server not running"}
+
+
+@app.post("/restart/")
+async def restart():
+    server = getattr(app.state, "server", None)
+    python = sys.executable
+    args = [python] + sys.argv
+    subprocess.Popen(args)
+    if server:
+        server.should_exit = True
+        return {"message": "Restarting"}
     return {"message": "Server not running"}
 
 if __name__ == "__main__":

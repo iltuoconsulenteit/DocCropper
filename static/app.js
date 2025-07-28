@@ -2028,11 +2028,10 @@ function renderLicenseBox() {
         const key = document.getElementById('licenseKeyInput').value.trim();
         const name = document.getElementById('licenseNameInput').value.trim();
         await saveSettings({license_key: key, license_name: name});
-        const cfg = await loadSettings();
-        applySettings(cfg);
-        licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
+        await fetch('/restart/', {method: 'POST'});
         alert(t('licenseSaved'));
         licenseBox.classList.remove('visible');
+        setTimeout(() => { location.reload(); }, 1000);
     });
 }
 

@@ -16,7 +16,6 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
-DEV_KEY="${DOCROPPER_DEV_LICENSE:-}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BRANCH_FILE="$SCRIPT_DIR/dev_branch"
 if [ -n "$DOCROPPER_DEV_BRANCH" ]; then
@@ -52,22 +51,7 @@ fi
 echo "Logging to $LOG_FILE"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
-DEFAULT_KEY=""
-if [ -f "$TARGET_DIR/$CONFIG_FILE" ]; then
-  DEFAULT_KEY=$(python3 - "$TARGET_DIR/$CONFIG_FILE" <<'PY'
-import json,sys
-try:
-    with open(sys.argv[1]) as fh:
-        print(json.load(fh).get('license_key',''))
-except Exception:
-    pass
-PY
-  )
-fi
-read -r -p "🔑 Enter license key (leave blank for demo) [${DEFAULT_KEY}]: " LIC_KEY
-[ -z "$LIC_KEY" ] && LIC_KEY="$DEFAULT_KEY"
-UPPER_KEY=$(echo "$LIC_KEY" | tr '[:lower:]' '[:upper:]')
-DEV_UPPER=$(echo "$DEV_KEY" | tr '[:lower:]' '[:upper:]')
+
 BRANCH="${DOCROPPER_BRANCH}"
 if [ -z "$BRANCH" ]; then
   echo "Choose branch to install:"
@@ -161,7 +145,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 cd - >/dev/null
 
-# Ask for license key and name
+# Create default settings file if needed
 SETTINGS_FILE="$TARGET_DIR/$CONFIG_FILE"
 if [ ! -f "$SETTINGS_FILE" ]; then
   if ! cat <<'EOF' | tee "$SETTINGS_FILE" >/dev/null
@@ -181,59 +165,6 @@ EOF
     echo "Cannot create $SETTINGS_FILE. Check permissions." >&2
     exit 1
   fi
-fi
-
-if [ -n "$LIC_KEY" ]; then
-  UPPER_KEY="$(echo "$LIC_KEY" | tr '[:lower:]' '[:upper:]')"
-  DEV_KEY="${DOCROPPER_DEV_LICENSE:-}"
-  DEV_KEY_UPPER="$(echo "$DEV_KEY" | tr '[:lower:]' '[:upper:]')"
-  VALID=0
-  if [ "$UPPER_KEY" = "VALID" ] || [ "$UPPER_KEY" = "$DEV_KEY_UPPER" ]; then
-    VALID=1
-  elif [[ "$UPPER_KEY" == *-DEV ]]; then
-    VALID=1
-    DEV_KEY="$LIC_KEY"
-    DEV_KEY_UPPER="$UPPER_KEY"
-    export DOCROPPER_DEV_LICENSE="$LIC_KEY"
-  fi
-  if [ $VALID -eq 1 ]; then
-    read -r -p "👤 Licensed to: " LIC_NAME
-    if [[ "$UPPER_KEY" == *-DEV ]] && [ ! -f "$TARGET_DIR/env/developer.env" ]; then
-      mkdir -p "$TARGET_DIR/env"
-      cat > "$TARGET_DIR/env/developer.env" <<EOF
-DOCROPPER_LICENSE_KEY=$LIC_KEY
-DOCROPPER_LICENSE_NAME=$LIC_NAME
-DOCROPPER_DEV_LICENSE=$LIC_KEY
-DOCROPPER_LICENSE_LEVEL=full
-EOF
-    fi
-    python3 - "$SETTINGS_FILE" "$LIC_KEY" "$LIC_NAME" <<'PY'
-import json, sys
-f, key, name = sys.argv[1:]
-with open(f) as fh:
-    data = json.load(fh)
-data['license_key'] = key
-data['license_name'] = name
-with open(f, 'w') as fh:
-    json.dump(data, fh)
-PY
-    echo "✅ License saved"
-    DEV_UP=$(echo "$DEV_KEY" | tr '[:lower:]' '[:upper:]')
-    if [ "$UPPER_KEY" = "$DEV_UP" ]; then
-      echo "🔀 Switching to developer branch $DEV_BRANCH"
-      git -C "$TARGET_DIR" fetch origin "$DEV_BRANCH"
-      git -C "$TARGET_DIR" checkout "$DEV_BRANCH"
-      git -C "$TARGET_DIR" merge --abort >/dev/null 2>&1 || true
-      git -C "$TARGET_DIR" rebase --abort >/dev/null 2>&1 || true
-      git -C "$TARGET_DIR" reset --hard
-      git -C "$TARGET_DIR" clean -fd
-      git -C "$TARGET_DIR" pull --rebase --autostash origin "$DEV_BRANCH"
-    fi
-  else
-    echo "❌ License key invalid. Continuing in demo mode."
-  fi
-else
-echo "ℹ️  Demo mode enabled"
 fi
 
 read -r -p "🚀 Launch DocCropper with tray icon now? [Y/n] " RUN_APP

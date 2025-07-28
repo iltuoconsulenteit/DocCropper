@@ -91,7 +91,7 @@
   "licenseKey": "License key:",
   "licenseName": "License name:",
   "saveLicense": "Save license",
-  "licenseSaved": "License saved. Restart required",
+  "licenseSaved": "License saved. Restarting...",
   "freeEdition": "Free Edition",
   "proEdition": "Pro Edition",
   "fullEdition": "Full Edition",
