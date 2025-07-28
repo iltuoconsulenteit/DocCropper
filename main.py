@@ -14,7 +14,7 @@ import fitz
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, Body, Request
 from PIL import Image, ImageDraw, ImageFont
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from cryptography.fernet import Fernet
@@ -389,6 +389,11 @@ if enable_mobilesign:
     register_mobilesign(app, plugin_utils)
 if enable_remotesign:
     register_remotesign(app, plugin_utils)
+
+@app.get('/favicon.ico')
+async def favicon():
+    icon_path = os.path.join(os.path.dirname(__file__), 'static', 'logos', 'header_logo.png')
+    return FileResponse(icon_path)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
