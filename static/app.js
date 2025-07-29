@@ -23,6 +23,7 @@ const downloadPdfBtn = document.getElementById('downloadPdfBtn');
 const waShareBtn = document.getElementById('waShareBtn');
 const emailShareBtn = document.getElementById('emailShareBtn');
 const layoutControls = document.getElementById('layoutControls');
+const blankControls = document.getElementById('blankControls');
 const layoutSelect = document.getElementById('layoutSelect');
 const orientationSelect = document.getElementById('orientationSelect');
 const arrangeSelect = document.getElementById('arrangeSelect');
@@ -386,7 +387,7 @@ async function importPdfPages(file) {
         if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
         if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
         layoutControls.style.display = 'block';
-        signatureControls.style.display = 'block';
+        if (blankControls) blankControls.style.display = 'block';
         if (signatureImg) {
             signaturePreview.style.display = 'block';
             signatureHint.style.display = 'block';
@@ -816,6 +817,7 @@ function deleteImage(index) {
         ocrBtn.style.display = 'none';
         ocrOutput.style.display = 'none';
         layoutControls.style.display = 'none';
+        if (blankControls) blankControls.style.display = 'none';
         signatureControls.style.display = 'none';
         signaturePreview.style.display = 'none';
         signatureHint.style.display = 'none';
@@ -852,6 +854,7 @@ function cropImage(index) {
     ocrBtn.style.display = 'none';
     ocrOutput.style.display = 'none';
     layoutControls.style.display = 'none';
+    if (blankControls) blankControls.style.display = 'none';
     signatureControls.style.display = 'none';
     statusMessageElement.textContent = t('cropHint') || 'Crop image and press Process Image to save.';
 }
@@ -1405,7 +1408,7 @@ async function addFiles(newFiles) {
         if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
         if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
         layoutControls.style.display = 'block';
-        signatureControls.style.display = 'block';
+        if (blankControls) blankControls.style.display = 'block';
         if (signatureImg) {
             signaturePreview.style.display = 'block';
             signatureHint.style.display = 'block';
@@ -1558,7 +1561,7 @@ submitBtn.addEventListener('click', () => {
                 if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
                 if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                 layoutControls.style.display = 'block';
-                signatureControls.style.display = 'block';
+                if (blankControls) blankControls.style.display = 'block';
                 updateLayoutPreview();
             } else {
                 processedImages[currentFileIndex] = data.processed_image;
@@ -1589,7 +1592,7 @@ submitBtn.addEventListener('click', () => {
                     if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
                     if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                     layoutControls.style.display = 'block';
-                    signatureControls.style.display = 'block';
+                    if (blankControls) blankControls.style.display = 'block';
                     if (signatureImg) {
                         signaturePreview.style.display = 'block';
                         signatureHint.style.display = 'block';

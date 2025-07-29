@@ -100,7 +100,15 @@
     </div>
     <button id="ocrBtn" style="display:none;" data-i18n="extractText" data-i18n-title="extractText" title="Extract Text">Extract Text</button>
     <textarea id="ocrOutput" readonly style="display:none;width:100%;height:150px;"></textarea>
+    <div id="blankControls" style="display:none;">
+        <label for="blankThreshold" data-i18n="blankThreshold">Blank page threshold (%):</label>
+        <input type="number" id="blankThreshold" value="95" min="80" max="100" step="1" style="width:60px;">
+        <label><input type="checkbox" id="skipBlank" checked> <span data-i18n="skipBlank"></span></label>
+        <button id="removeBlankBtn" data-i18n="removeBlank">Remove blank pages</button>
+        <button id="restoreBlankBtn" data-i18n="restoreBlank" style="display:none;">Restore pages</button>
+    </div>
     <div id="layoutControls" style="display:none;">
+        <button id="togglePreviewBtn" data-i18n="togglePreview">Preview layout</button>
         <label for="layoutSelect" data-i18n="imagesPerPage">Images per page:</label>
         <select id="layoutSelect">
             <option value="1">1</option>
@@ -119,7 +127,6 @@
             <option value="vertical" data-i18n="vertical">Vertical</option>
             <option value="grid" data-i18n="grid">Grid</option>
         </select>
-        <button id="togglePreviewBtn" data-i18n="togglePreview">Preview layout</button>
         <label for="scaleMode" data-i18n="scaleLabel">Image size:</label>
         <select id="scaleMode">
             <option value="fit" data-i18n="fill">Fill cell</option>
@@ -133,11 +140,6 @@
             <option value="gray" data-i18n="gray">Grayscale</option>
             <option value="bw" data-i18n="bw">B/W</option>
         </select>
-        <label for="blankThreshold" data-i18n="blankThreshold">Blank page threshold (%):</label>
-        <input type="number" id="blankThreshold" value="95" min="80" max="100" step="1" style="width:60px;">
-        <label><input type="checkbox" id="skipBlank" checked> <span data-i18n="skipBlank"></span></label>
-        <button id="removeBlankBtn" data-i18n="removeBlank">Remove blank pages</button>
-        <button id="restoreBlankBtn" data-i18n="restoreBlank" style="display:none;">Restore pages</button>
     </div>
     <div id="layoutPreview"></div>
 
