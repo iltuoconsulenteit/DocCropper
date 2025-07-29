@@ -897,6 +897,14 @@ async function shareWhatsApp(phone) {
     window.open(url, '_blank');
 }
 
+function shareWhatsAppLink(phone, link) {
+    if (!link) return;
+    phone = phone ? phone.replace(/[^0-9]/g, '') : '';
+    const wa = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(link)}` :
+        `https://wa.me/?text=${encodeURIComponent(link)}`;
+    window.open(wa, '_blank');
+}
+
 async function shareEmail(email) {
     if (!currentPdfBlob) return;
     const file = new File([currentPdfBlob], 'DocCropper.pdf', { type: 'application/pdf' });
@@ -915,6 +923,13 @@ async function shareEmail(email) {
     const subject = encodeURIComponent('DocCropper PDF');
     const body = encodeURIComponent(translations['shareText'] || 'See attached document.');
     const mailto = `mailto:${email}?subject=${subject}&body=${body}`;
+    window.open(mailto, '_blank');
+}
+
+function shareEmailLink(email, link) {
+    if (!link) return;
+    const mail = email ? encodeURIComponent(email) : '';
+    const mailto = `mailto:${mail}?body=${encodeURIComponent(link)}`;
     window.open(mailto, '_blank');
 }
 
@@ -1688,13 +1703,20 @@ function generatePdf() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ pdf: data.pdf })
+                })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.url) window.lastSignedUrl = d.url;
+                    if (window.lastSignPhone) shareWhatsAppLink(window.lastSignPhone, d.url);
+                    if (window.lastSignEmail) shareEmailLink(window.lastSignEmail, d.url);
                 });
-            }
-            if (window.lastSignPhone) {
-                shareWhatsApp(window.lastSignPhone);
-            }
-            if (window.lastSignEmail) {
-                shareEmail(window.lastSignEmail);
+            } else {
+                if (window.lastSignPhone) {
+                    shareWhatsApp(window.lastSignPhone);
+                }
+                if (window.lastSignEmail) {
+                    shareEmail(window.lastSignEmail);
+                }
             }
         } else {
             statusMessageElement.textContent = data.message || 'Failed to create PDF.';

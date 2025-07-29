@@ -197,8 +197,8 @@ def register(app, utils):
                 const r=await fetch('/signed-pdf/{token}');
                 if(r.status===200){
                     const d=await r.json();
-                    if(d.pdf){
-                        pdfLink.href=d.pdf;
+                    if(d.url){
+                        pdfLink.href=d.url;
                         pdfLink.style.display='block';
                         finishMsg.textContent='Signatures sent. Download your PDF:';
                         return;
@@ -312,28 +312,46 @@ def register(app, utils):
         return result
 
     @app.post('/store-signed-pdf/{token}')
-    async def store_signed_pdf(token: str, data: dict = Body(...)):
+    async def store_signed_pdf(request: Request, token: str, data: dict = Body(...)):
         pdf_b64 = data.get('pdf')
         if not pdf_b64:
             return JSONResponse(status_code=400, content={'message': 'No PDF'})
+        if pdf_b64.startswith('data:'):
+            pdf_b64 = pdf_b64.split(',', 1)[1]
+        try:
+            pdf_bytes = base64.b64decode(pdf_b64)
+        except Exception:
+            return JSONResponse(status_code=400, content={'message': 'Invalid PDF'})
         info_path = os.path.join(signatures_dir, f'{token}.json')
         if not os.path.exists(info_path):
             return JSONResponse(status_code=404, content={'message': 'Not found'})
         with open(info_path, 'r') as fh:
             info = json.load(fh)
-        info['pdf'] = pdf_b64
+        pdf_path = os.path.join(signatures_dir, f'signed_{token}.pdf')
+        with open(pdf_path, 'wb') as fh:
+            fh.write(pdf_bytes)
+        info['pdf_file'] = pdf_path
         with open(info_path, 'w') as fh:
             json.dump(info, fh)
-        return {'status': 'ok'}
+        url = request.url_for('download_signed_pdf', token=token)
+        return {'status': 'ok', 'url': str(url)}
 
     @app.get('/signed-pdf/{token}')
-    async def signed_pdf(token: str):
+    async def signed_pdf(request: Request, token: str):
         info_path = os.path.join(signatures_dir, f'{token}.json')
         if not os.path.exists(info_path):
             return JSONResponse(status_code=404, content={'message': 'Not found'})
         with open(info_path, 'r') as fh:
             info = json.load(fh)
-        pdf_b64 = info.get('pdf')
-        if not pdf_b64:
+        pdf_path = info.get('pdf_file')
+        if not pdf_path or not os.path.exists(pdf_path):
             return JSONResponse(status_code=202, content={'message': 'Pending'})
-        return {'pdf': pdf_b64}
+        url = request.url_for('download_signed_pdf', token=token)
+        return {'url': str(url)}
+
+    @app.get('/download-signed/{token}.pdf', name='download_signed_pdf')
+    async def download_signed_pdf(token: str):
+        pdf_path = os.path.join(signatures_dir, f'signed_{token}.pdf')
+        if not os.path.exists(pdf_path):
+            return JSONResponse(status_code=404, content={'message': 'Not found'})
+        return FileResponse(pdf_path, media_type='application/pdf', filename=f'signed_{token}.pdf', headers={"Cache-Control": "no-cache"})

@@ -695,7 +695,7 @@ button:hover {
     padding: 2px 0;
     width: 100%;
     flex-basis: 100%;
-    order: 103;
+    order: -1;
 }
 
 #sponsorContent iframe {
