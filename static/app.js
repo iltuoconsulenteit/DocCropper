@@ -71,6 +71,7 @@ const wikiFrame = document.getElementById('wikiFrame');
 const openWikiLink = document.getElementById('openWikiLink');
 const clientLogo = document.getElementById('clientLogo');
 const sponsorLogo = document.getElementById('sponsorLogo');
+const sponsorBadge = document.getElementById('sponsorBadge');
 const headerLogo = document.getElementById('headerLogo');
 const footerLogo = document.getElementById('footerLogo');
 const autoDetectHint = document.getElementById('autoDetectHint');
@@ -489,6 +490,14 @@ function applySettings(cfg) {
             sponsorLogo.style.display = 'block';
         } else {
             sponsorLogo.style.display = 'none';
+        }
+    }
+    if (sponsorBadge) {
+        if (cfg.sponsor_logo) {
+            sponsorBadge.src = `/static/logos/${cfg.sponsor_logo}`;
+            sponsorBadge.style.display = 'block';
+        } else {
+            sponsorBadge.style.display = 'none';
         }
     }
     if (Array.isArray(cfg.banner_images)) {

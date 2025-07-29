@@ -18,7 +18,7 @@ h1, h2 {
     text-align: center;
     position: sticky;
     top: 0;
-    background: #fff;
+    background: #f4f4f4;
     z-index: 500;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
@@ -104,6 +104,13 @@ h1, h2 {
 #versionBox {
     font-style: italic;
     margin-left: auto;
+}
+
+#sponsorBadge {
+    position: absolute;
+    right: 10px;
+    bottom: 60px;
+    max-height: 50px;
 }
 
 #wrapper {
@@ -611,7 +618,7 @@ button:hover {
     justify-content: center;
     align-items: center;
     position: relative;
-    background: #fff;
+    background: #f4f4f4;
     border: 1px solid #888;
     padding: 4px;
     margin-top: 5px;
@@ -667,7 +674,8 @@ button:hover {
     text-align: center;
     font-weight: bold;
     color: #a00;
-    margin: 10px 0;
+    margin-top: 20px;
+    margin-bottom: 10px;
 }
 
 #sponsorContent iframe {
