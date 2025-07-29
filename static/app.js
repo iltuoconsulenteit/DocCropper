@@ -969,6 +969,19 @@ function addThumbnail(src, index) {
     });
     actions.appendChild(rotateBtnEl);
 
+    if (signEnabled) {
+        const signPageBtn = document.createElement('button');
+        signPageBtn.className = 'thumbBtn signPageBtn';
+        signPageBtn.textContent = '✒';
+        signPageBtn.title = t('sign');
+        signPageBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            openSignatureForPage(idx);
+        });
+        actions.appendChild(signPageBtn);
+    }
+
     if (isLicensed && currentLicenseLevel !== 'free') {
         const grayBtn = document.createElement('button');
         grayBtn.className = 'thumbBtn thumbCircle grayBtn';
