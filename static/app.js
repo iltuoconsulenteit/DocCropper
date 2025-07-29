@@ -838,13 +838,8 @@ function openSignatureForPage(idx) {
     signaturePage.value = idx;
     signatureControls.style.display = 'block';
     signatureExtra.style.display = 'block';
-    if (signatureImg) {
-        signaturePreview.style.display = 'block';
-        signatureHint.style.display = 'block';
-    } else {
-        signaturePreview.style.display = 'none';
-        signatureHint.style.display = 'none';
-    }
+    signaturePreview.style.display = 'block';
+    signatureHint.style.display = 'block';
     renderSignaturePreview();
 }
 

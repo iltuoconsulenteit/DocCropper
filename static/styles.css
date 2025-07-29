@@ -291,6 +291,11 @@ button:hover {
     position: static;
 }
 
+.signPageBtn {
+    transform: rotate(-30deg);
+    font-size: 1.2em;
+}
+
 .grayBtn {
     background: linear-gradient(45deg, #aaa, #ddd);
 }
@@ -622,6 +627,7 @@ button:hover {
     border: 1px solid #888;
     padding: 4px;
     margin-top: 5px;
+    margin-bottom: 20px;
     order: 100; /* before help button */
 }
 
@@ -674,8 +680,9 @@ button:hover {
     text-align: center;
     font-weight: bold;
     color: #a00;
-    margin-top: 20px;
-    margin-bottom: 10px;
+    display: block;
+    margin-top: 30px;
+    margin-bottom: 20px;
 }
 
 #sponsorContent iframe {
