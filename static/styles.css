@@ -20,6 +20,7 @@ h1, h2 {
     top: 0;
     background: #fff;
     z-index: 500;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 #languageChoice,
@@ -194,6 +195,7 @@ button:hover {
     display: inline-flex;
     flex-wrap: nowrap;
     gap: 16px;
+    margin-top: 24px;
 }
 
 #sloganImg {
@@ -617,7 +619,7 @@ button:hover {
 
 #bannerBox img {
     display: block;
-    max-height: 140px;
+    max-height: 100px;
 }
 
 #bannerBox .close {
