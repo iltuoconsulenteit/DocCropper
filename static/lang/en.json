@@ -55,6 +55,8 @@
   "shareText": "See attached document.",
   "digitalSign": "Digital Sign",
   "mobileSign": "Mobile Sign",
+  "startSign": "Start",
+  "cancel": "Cancel",
   "comingSoon": "Coming soon",
   "docusealError": "Docuseal request failed",
   "docusealLink": "Open the Docuseal link to sign",

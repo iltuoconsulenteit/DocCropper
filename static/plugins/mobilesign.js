@@ -6,6 +6,12 @@ export function initSignaturePlugin(translations, enabled = true) {
     const signQrLink = document.getElementById('signQrLink');
     const copySignLink = document.getElementById('copySignLink');
     const waSignLink = document.getElementById('waSignLink');
+    const emailSignLink = document.getElementById('emailSignLink');
+    const detailsModal = document.getElementById('mobileDetailsModal');
+    const detailsEmail = document.getElementById('mobileEmailInput');
+    const detailsPhone = document.getElementById('mobilePhoneInput');
+    const detailsStart = document.getElementById('mobileDetailsStart');
+    const detailsCancel = document.getElementById('mobileDetailsCancel');
     const signaturePage = document.getElementById('signaturePage');
     window.lastSignToken = '';
 
@@ -87,8 +93,27 @@ export function initSignaturePlugin(translations, enabled = true) {
             if (window.hideLoading) window.hideLoading();
         }
     }
+    function openDetailsModal() {
+        if (!detailsModal) { startQrSign(); return; }
+        if (detailsEmail) detailsEmail.value = window.lastSignEmail || '';
+        if (detailsPhone) detailsPhone.value = window.lastSignPhone || '';
+        detailsModal.style.display = 'block';
+    }
     if (mobileSignBtn) {
-        mobileSignBtn.addEventListener('click', startQrSign);
+        mobileSignBtn.addEventListener('click', openDetailsModal);
+    }
+    if (detailsStart) {
+        detailsStart.addEventListener('click', () => {
+            window.lastSignEmail = detailsEmail ? detailsEmail.value.trim() : '';
+            window.lastSignPhone = detailsPhone ? detailsPhone.value.trim() : '';
+            if (detailsModal) detailsModal.style.display = 'none';
+            startQrSign();
+        });
+    }
+    if (detailsCancel) {
+        detailsCancel.addEventListener('click', () => {
+            if (detailsModal) detailsModal.style.display = 'none';
+        });
     }
     if (signQR) {
         signQR.addEventListener('click', () => { signQR.style.display = 'none'; });
@@ -103,7 +128,19 @@ export function initSignaturePlugin(translations, enabled = true) {
         waSignLink.addEventListener('click', (e) => {
             e.stopPropagation();
             const url = signQrLink ? signQrLink.href : '';
-            window.open('https://wa.me/?text=' + encodeURIComponent(url), '_blank');
+            const phone = window.lastSignPhone ? window.lastSignPhone.replace(/[^0-9]/g, '') : '';
+            const wa = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(url)}` :
+                `https://wa.me/?text=${encodeURIComponent(url)}`;
+            window.open(wa, '_blank');
+        });
+    }
+    if (emailSignLink) {
+        emailSignLink.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const url = signQrLink ? signQrLink.href : '';
+            const mail = window.lastSignEmail ? encodeURIComponent(window.lastSignEmail) : '';
+            const mailto = `mailto:${mail}?body=${encodeURIComponent(url)}`;
+            window.open(mailto, '_blank');
         });
     }
 }

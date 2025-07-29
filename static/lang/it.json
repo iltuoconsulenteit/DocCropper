@@ -55,6 +55,8 @@
   "shareText": "In allegato il documento.",
   "digitalSign": "Firma digitale",
   "mobileSign": "Firma da mobile",
+  "startSign": "Avvia",
+  "cancel": "Annulla",
   "comingSoon": "Prossimamente",
   "docusealError": "Richiesta Docuseal fallita",
   "docusealLink": "Apri il link Docuseal per firmare",
