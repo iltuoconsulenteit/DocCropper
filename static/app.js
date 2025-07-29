@@ -2428,6 +2428,10 @@ function renderSettingsBox() {
 }
 
 function renderLogin(cfg) {
+    if (demoFullMode) {
+        loginArea.style.display = 'none';
+        return;
+    }
     if (!cfg || !cfg.google_client_id) {
         loginArea.style.display = 'block';
         loginArea.textContent = t('loginDisabled');

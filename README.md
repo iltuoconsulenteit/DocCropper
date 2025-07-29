@@ -26,6 +26,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 📝 Extract text via OCR (future Pro feature)
 - 🗂️ Persistent user settings
 - 🧭 Touchscreen-friendly interface
+- 🎨 Material design look with Roboto fonts and raised buttons
 - 🌐 Works offline or over LAN (no internet required)
 - 👤 Multi-user environment support (optional)
 - 🔒 Uploaded files are encrypted and wiped after your session
@@ -186,6 +187,8 @@ To enable optional Google authentication, set `google_client_id` in
 `DOCROPPER_GOOGLE_CLIENT_ID`. When configured, a sign-in button will appear in
 the web interface and tokens will be verified by the backend. Google login is
 only used to identify users and is not tied to licensing.
+When the hidden Demo Full license is active the login button is hidden even if
+`google_client_id` is set.
 
 ---
 
