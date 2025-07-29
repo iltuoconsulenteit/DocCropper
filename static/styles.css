@@ -302,17 +302,21 @@ button:hover {
 }
 
 #layoutPreview {
-    width: 200px;
-    height: 250px;
+    width: 180px;
+    height: 220px;
     border: 1px dashed #666;
     margin-bottom: 10px;
     display: none;
     gap: 4px;
 }
 
+#layoutPreview.visible {
+    display: grid;
+}
+
 #layoutPreview .cell {
     border: 1px solid #aaa;
-    background: repeating-linear-gradient(45deg, #f0f0f0, #f0f0f0 10px, #e0e0e0 10px, #e0e0e0 20px);
+    background: repeating-linear-gradient(45deg, #f9f9f9, #f9f9f9 10px, #efefef 10px, #efefef 20px);
 }
 
 #adjustControls {

@@ -15,6 +15,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🖱️ Double click or tap to auto-detect page edges
 - 🎚️ Adjust brightness and contrast with live preview
 - 🖌️ Convert images to grayscale or black & white to reduce PDF size (Pro)
+- 🎨 Restore color later with a dedicated button
  - 🧹 Skip blank pages when importing PDFs using a configurable threshold (Pro)
 - 📄 Create PDFs ready for download or sharing
 - 🔏 Optional digital signature on exported PDFs. Drag and add multiple stamps per page before export (Free - watermark applied)
@@ -47,7 +48,7 @@ The frontend allows the user to:
 - Export all processed images to PDF
 - Choose how many processed images appear on each PDF page
 - Select portrait or landscape orientation for the PDF
-- Choose whether images are arranged horizontally, vertically or in a grid and preview the layout before exporting
+- Choose whether images are arranged horizontally, vertically or in a grid and preview the layout only when needed
 - Control how images are scaled on each page: fill the cell, keep original size or apply a custom percentage
 - A small margin is applied around each image so nothing touches the page edges
 - Change the interface language (Italian translation included)

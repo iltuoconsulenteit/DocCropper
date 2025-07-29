@@ -45,6 +45,7 @@ const modalImage = document.getElementById('modalImage');
 const closeModal = document.getElementById('closeModal');
 const langSelect = document.getElementById('langSelect');
 const layoutPreview = document.getElementById('layoutPreview');
+const togglePreviewBtn = document.getElementById('togglePreviewBtn');
 const licenseInfo = document.getElementById('licenseInfo');
 const purchaseBox = document.getElementById('purchaseBox');
 const licenseBox = document.getElementById('licenseBox');
@@ -676,13 +677,12 @@ function calculateGrid() {
 }
 
 function updateLayoutPreview() {
+    if (!layoutPreview.classList.contains('visible')) return;
     const {cols, rows} = calculateGrid();
     layoutPreview.innerHTML = '';
     const orientation = orientationSelect.value || 'portrait';
-    layoutPreview.style.display = 'block';
-    layoutPreview.style.width = orientation === 'portrait' ? '200px' : '250px';
-    layoutPreview.style.height = orientation === 'portrait' ? '250px' : '200px';
-    layoutPreview.style.display = 'grid';
+    layoutPreview.style.width = orientation === 'portrait' ? '180px' : '220px';
+    layoutPreview.style.height = orientation === 'portrait' ? '220px' : '180px';
     layoutPreview.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
     layoutPreview.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
     const total = cols * rows;
@@ -1836,6 +1836,13 @@ arrangeSelect.addEventListener('change', () => {
     updateLayoutPreview();
     saveSettings({ arrangement: arrangeSelect.value });
 });
+
+if (togglePreviewBtn) {
+    togglePreviewBtn.addEventListener('click', () => {
+        layoutPreview.classList.toggle('visible');
+        updateLayoutPreview();
+    });
+}
 
 scaleMode.addEventListener('change', () => {
     scalePercent.style.display = scaleMode.value === 'percent' ? 'inline-block' : 'none';
