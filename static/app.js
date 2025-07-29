@@ -156,6 +156,8 @@ let editingIndex = null;
 let cameraStream = null;
 let cameraAvailable = false;
 let currentPdfBlob = null;
+window.lastSignEmail = '';
+window.lastSignPhone = '';
 let sortable = null;
 let currentFile = null;
 let docusealEnabled = false;
@@ -872,7 +874,7 @@ function cropImage(index) {
 }
 
 
-async function shareWhatsApp() {
+async function shareWhatsApp(phone) {
     if (!currentPdfBlob) return;
     const file = new File([currentPdfBlob], 'DocCropper.pdf', { type: 'application/pdf' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -883,7 +885,9 @@ async function shareWhatsApp() {
             console.error('Web Share failed', e);
         }
     }
-    let phone = prompt(translations['enterPhone'] || 'Enter phone number (optional)');
+    if (!phone) {
+        phone = prompt(translations['enterPhone'] || 'Enter phone number (optional)');
+    }
     phone = phone ? phone.replace(/[^0-9]/g, '') : '';
     const encoded = encodeURIComponent(translations['shareText'] || 'See attached document.');
     const url = phone ?
@@ -892,7 +896,7 @@ async function shareWhatsApp() {
     window.open(url, '_blank');
 }
 
-async function shareEmail() {
+async function shareEmail(email) {
     if (!currentPdfBlob) return;
     const file = new File([currentPdfBlob], 'DocCropper.pdf', { type: 'application/pdf' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -903,7 +907,9 @@ async function shareEmail() {
             console.error('Web Share failed', e);
         }
     }
-    let email = prompt(translations['enterEmail'] || 'Enter email address (optional)');
+    if (!email) {
+        email = prompt(translations['enterEmail'] || 'Enter email address (optional)');
+    }
     email = email ? encodeURIComponent(email) : '';
     const subject = encodeURIComponent('DocCropper PDF');
     const body = encodeURIComponent(translations['shareText'] || 'See attached document.');
@@ -1650,6 +1656,9 @@ function generatePdf() {
     const scale_mode = scaleMode.value || 'fit';
     const scale_percent = parseInt(scalePercent.value || '100');
     const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures };
+    if (window.lastSignEmail || window.lastSignPhone) {
+        payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone };
+    }
     fetch('/create-pdf/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1673,6 +1682,12 @@ function generatePdf() {
             currentPdfBlob = new Blob([byteArray], {type: 'application/pdf'});
             exportOptions.style.display = 'block';
             statusMessageElement.textContent = 'PDF ready.';
+            if (window.lastSignPhone) {
+                shareWhatsApp(window.lastSignPhone);
+            }
+            if (window.lastSignEmail) {
+                shareEmail(window.lastSignEmail);
+            }
         } else {
             statusMessageElement.textContent = data.message || 'Failed to create PDF.';
         }
@@ -1798,14 +1813,14 @@ if (downloadPdfBtn) {
 
 if (waShareBtn) {
     waShareBtn.addEventListener('click', async () => {
-        await shareWhatsApp();
+        await shareWhatsApp(window.lastSignPhone);
         exportOptions.style.display = 'none';
     });
 }
 
 if (emailShareBtn) {
     emailShareBtn.addEventListener('click', async () => {
-        await shareEmail();
+        await shareEmail(window.lastSignEmail);
         exportOptions.style.display = 'none';
     });
 }

@@ -1,6 +1,7 @@
 from fastapi import Request, Body
 from fastapi.responses import HTMLResponse, JSONResponse
 import uuid, qrcode, io, base64, os, json
+from datetime import datetime
 
 __all__ = ['register']
 
@@ -260,6 +261,7 @@ def register(app, utils):
         info['email'] = data.get('email','')
         info['phone'] = data.get('phone','')
         info['consent'] = bool(data.get('consent', False))
+        info['timestamp'] = datetime.utcnow().isoformat()
         with open(info_path, 'w') as fh:
             json.dump(info, fh)
         return {'status': 'ok'}
@@ -279,4 +281,8 @@ def register(app, utils):
                 b64 = base64.b64encode(fh.read()).decode()
             page = sig.get('page', info.get('page', 0))
             pages.setdefault(page, []).append({'image': 'data:image/png;base64,' + b64, 'x': sig['x'], 'y': sig['y'], 'scale': sig.get('scale', 1.0)})
-        return {'signatures': pages}
+        result = {'signatures': pages}
+        for key in ('email', 'phone', 'timestamp', 'consent'):
+            if key in info:
+                result[key] = info[key]
+        return result

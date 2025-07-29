@@ -18,6 +18,8 @@ export function initSignaturePlugin(translations, enabled = true) {
             const resp = await fetch(`/signature-result/${token}`);
             if (resp.status === 200) {
                 const data = await resp.json();
+                window.lastSignEmail = data.email || '';
+                window.lastSignPhone = data.phone || '';
                 if (data.signatures && typeof data.signatures === 'object') {
                     Object.keys(data.signatures).forEach(p => {
                         window.dispatchEvent(new CustomEvent('remoteSignature', {detail: {page: p, signatures: data.signatures[p]}}));
