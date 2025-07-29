@@ -1780,6 +1780,7 @@ cameraSelect.addEventListener('change', () => {
     }
 });
 let lastTap = 0;
+let lastSigTap = 0;
 imageElement.addEventListener('dblclick', autoDetectCorners);
 imageElement.addEventListener('touchend', (e) => {
     const now = Date.now();
@@ -1974,10 +1975,10 @@ if (signaturePreview) {
         if (draggingSig) updateSigPosition(e);
     });
     document.addEventListener('mouseup', () => { draggingSig = false; });
-    signaturePreview.addEventListener('dblclick', (e) => {
+    const handleSigPos = (clientX, clientY) => {
         const rect = signaturePreview.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / signaturePreview.width;
-        const y = (e.clientY - rect.top) / signaturePreview.height;
+        const x = (clientX - rect.left) / signaturePreview.width;
+        const y = (clientY - rect.top) / signaturePreview.height;
         if (signatureImg) {
             signaturePosition.x = x;
             signaturePosition.y = y;
@@ -1986,6 +1987,18 @@ if (signaturePreview) {
             pendingSigPos = { x, y };
             signatureModal.style.display = 'block';
         }
+    };
+    signaturePreview.addEventListener('dblclick', (e) => {
+        handleSigPos(e.clientX, e.clientY);
+    });
+    signaturePreview.addEventListener('touchend', (e) => {
+        const now = Date.now();
+        if (now - lastSigTap < 300) {
+            e.preventDefault();
+            const touch = e.changedTouches[0];
+            handleSigPos(touch.clientX, touch.clientY);
+        }
+        lastSigTap = now;
     });
 }
 
