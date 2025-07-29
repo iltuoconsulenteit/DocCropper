@@ -88,6 +88,7 @@ const signatureExtra = document.getElementById('signatureExtra');
 const signaturePage = document.getElementById('signaturePage');
 const signatureScaleInput = document.getElementById('signatureScale');
 const drawSignatureBtn = document.getElementById('drawSignatureBtn');
+const signatureModal = document.getElementById('signatureModal');
 const drawArea = document.getElementById('drawArea');
 const signatureDrawCanvas = document.getElementById('signatureDrawCanvas');
 const clearDrawBtn = document.getElementById('clearDrawBtn');
@@ -1880,7 +1881,7 @@ if (drawSignatureBtn && signatureDrawCanvas) {
         signatureImageData = signatureDrawCanvas.toDataURL('image/png');
         signatureImg = new Image();
         signatureImg.onload = () => {
-            drawArea.style.display = 'none';
+            signatureModal.style.display = 'none';
             if (pendingSigPos) {
                 signaturePosition.x = pendingSigPos.x;
                 signaturePosition.y = pendingSigPos.y;
@@ -1896,8 +1897,13 @@ if (drawSignatureBtn && signatureDrawCanvas) {
         };
         signatureImg.src = signatureImageData;
     });
+    if (signatureModal) {
+        signatureModal.addEventListener('click', (e) => {
+            if (e.target === signatureModal) signatureModal.style.display = 'none';
+        });
+    }
     drawSignatureBtn.addEventListener('click', () => {
-        drawArea.style.display = drawArea.style.display === 'none' ? 'block' : 'none';
+        signatureModal.style.display = signatureModal.style.display === 'none' ? 'block' : 'none';
     });
 }
 
@@ -1920,7 +1926,7 @@ if (signaturePreview) {
             renderSignaturePreview();
         } else {
             pendingSigPos = { x, y };
-            drawArea.style.display = 'block';
+            signatureModal.style.display = 'block';
         }
     });
 }

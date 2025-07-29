@@ -338,10 +338,10 @@ button:hover {
 }
 
 #drawArea {
-    margin-top: 5px;
-    padding: 5px;
-    border: 1px dashed #888;
-    display: inline-block;
+    margin: auto;
+    padding: 10px;
+    background: #fff;
+    border: none;
 }
 
 #signatureDrawCanvas {
@@ -557,6 +557,10 @@ button:hover {
     align-items: center;
     gap: 4px;
 }
+.iconTextBtn img.icon {
+    width: 1em;
+    height: 1em;
+}
 
 @media (max-width: 600px) {
     #pageHeader {
@@ -687,8 +691,10 @@ button:hover {
     font-weight: bold;
     color: #a00;
     display: block;
-    margin-top: 30px;
-    margin-bottom: 20px;
+    margin: 10px 0;
+    width: 100%;
+    flex-basis: 100%;
+    order: 103;
 }
 
 #sponsorContent iframe {
