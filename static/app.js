@@ -834,7 +834,7 @@ function openSignatureForPage(idx) {
     renderSignaturePreview();
 }
 
-function editImage(index) {
+function cropImage(index) {
     editingIndex = index;
     const file = processedFiles[index];
     currentFile = file;
@@ -850,7 +850,7 @@ function editImage(index) {
     ocrOutput.style.display = 'none';
     layoutControls.style.display = 'none';
     signatureControls.style.display = 'none';
-    statusMessageElement.textContent = 'Edit image and press Process Image to save.';
+    statusMessageElement.textContent = t('cropHint') || 'Crop image and press Process Image to save.';
 }
 
 
@@ -908,6 +908,7 @@ function addThumbnail(src, index) {
 
     const menu = document.createElement('select');
     menu.className = 'thumbMenu';
+    menu.style.display = 'none';
 
     function addOption(val, key) {
         const opt = document.createElement('option');
@@ -927,6 +928,74 @@ function addThumbnail(src, index) {
     addOption('edit', 'edit');
     addOption('delete', 'delete');
 
+    const cropBtnEl = document.createElement('button');
+    cropBtnEl.className = 'thumbBtn cropBtn';
+    cropBtnEl.textContent = '✂';
+    cropBtnEl.title = t('edit');
+    cropBtnEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(container.dataset.index);
+        cropImage(idx);
+    });
+    container.appendChild(cropBtnEl);
+
+    const delBtnEl = document.createElement('button');
+    delBtnEl.className = 'thumbBtn deleteBtn';
+    delBtnEl.textContent = '✖';
+    delBtnEl.title = t('delete');
+    delBtnEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(container.dataset.index);
+        deleteImage(idx);
+    });
+    container.appendChild(delBtnEl);
+
+    const rotateBtnEl = document.createElement('button');
+    rotateBtnEl.className = 'thumbBtn rotateBtn';
+    rotateBtnEl.textContent = '↻';
+    rotateBtnEl.title = t('rotate');
+    rotateBtnEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(container.dataset.index);
+        rotateImage(idx);
+    });
+    container.appendChild(rotateBtnEl);
+
+    if (isLicensed && currentLicenseLevel !== 'free') {
+        const grayBtn = document.createElement('button');
+        grayBtn.className = 'thumbBtn grayBtn';
+        grayBtn.textContent = 'G';
+        grayBtn.title = t('toGray');
+        grayBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            convertColor(idx, 'gray');
+        });
+        container.appendChild(grayBtn);
+
+        const bwBtn = document.createElement('button');
+        bwBtn.className = 'thumbBtn bwBtn';
+        bwBtn.textContent = 'B';
+        bwBtn.title = t('toBW');
+        bwBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            convertColor(idx, 'bw');
+        });
+        container.appendChild(bwBtn);
+
+        const colBtn = document.createElement('button');
+        colBtn.className = 'thumbBtn colorBtn';
+        colBtn.textContent = 'C';
+        colBtn.title = t('toColor');
+        colBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            convertColor(idx, 'color');
+        });
+        container.appendChild(colBtn);
+    }
+
     menu.addEventListener('change', (e) => {
         const val = menu.value;
         const idx = Array.from(processedGallery.children).indexOf(container);
@@ -944,7 +1013,7 @@ function addThumbnail(src, index) {
                 convertColor(idx, 'color');
                 break;
             case 'edit':
-                editImage(idx);
+                cropImage(idx);
                 break;
             case 'delete':
                 deleteImage(idx);
