@@ -361,7 +361,7 @@ button:hover {
 .legalWarning {
     color: #a00;
     font-weight: bold;
-    margin-top: 5px;
+    margin-top: 1px;
 }
 
 #signatureHint {

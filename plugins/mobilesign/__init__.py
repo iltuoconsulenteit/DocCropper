@@ -88,6 +88,9 @@ def register(app, utils):
         </head><body>
         <img src='/static/logos/header_logo.png' style='max-width:150px;margin-top:10px' alt='DocCropper'>
         <p style='font-size:small;color:#a00;margin-top:5px;font-weight:bold'>DocCropper e i suoi autori declinano ogni responsabilità per un uso non conforme alla legge.<br>DocCropper and its authors accept no liability for illegal use.</p>
+        <label style='display:block;margin-top:5px;'><input type='checkbox' id='consentFlag'> Consento il trattamento dei dati</label>
+        <input id='emailInput' type='email' placeholder='Email' style='width:90%;max-width:300px;margin-top:5px;'>
+        <input id='phoneInput' type='tel' placeholder='Cellulare' style='width:90%;max-width:300px;margin-top:5px;'>
         <p id='finishMsg' style='display:none;color:green;font-weight:bold'></p>
         <p>Tap the document then draw your signature</p>
         <select id='pageSelect' style='margin-top:10px'></select>
@@ -114,6 +117,9 @@ def register(app, utils):
         const submitBtn=document.getElementById('submit');
         const clearBtn=document.getElementById('clear');
         const finishBtn=document.getElementById('finish');
+        const emailInput=document.getElementById('emailInput');
+        const phoneInput=document.getElementById('phoneInput');
+        const consentFlag=document.getElementById('consentFlag');
         const scaleInput=document.getElementById('scaleRange');
         let scale=1;
         if(scaleInput){
@@ -182,7 +188,7 @@ def register(app, utils):
             if(!pad.isEmpty()) await submitCurrent();
             finishMsg.textContent='Sending signatures...';
             finishMsg.style.display='block';
-            await fetch('/finish-signing/{token}',{method:'POST'});
+            await fetch('/finish-signing/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:emailInput.value||'',phone:phoneInput.value||'',consent:consentFlag.checked})});
             finishMsg.textContent='Signatures sent. You may close this page.';
             finished=true;
             finishBtn.disabled=true;
@@ -244,13 +250,16 @@ def register(app, utils):
         return {'status': 'ok'}
 
     @app.post('/finish-signing/{token}')
-    async def finish_signing(token: str):
+    async def finish_signing(token: str, data: dict = Body(default_factory=dict)):
         info_path = os.path.join(signatures_dir, f'{token}.json')
         if not os.path.exists(info_path):
             return JSONResponse(status_code=404, content={'message': 'Not found'})
         with open(info_path, 'r') as fh:
             info = json.load(fh)
         info['signed'] = True
+        info['email'] = data.get('email','')
+        info['phone'] = data.get('phone','')
+        info['consent'] = bool(data.get('consent', False))
         with open(info_path, 'w') as fh:
             json.dump(info, fh)
         return {'status': 'ok'}
