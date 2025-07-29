@@ -964,6 +964,8 @@ async def create_pdf(
                 lines.append(f"Email: {sign_info['email']}")
             if sign_info.get("phone"):
                 lines.append(f"Phone: {sign_info['phone']}")
+            if 'consent' in sign_info:
+                lines.append(f"Consent: {bool(sign_info['consent'])}")
             for idx, sig in enumerate(signatures, 1):
                 lines.append(
                     f"Signature {idx}: page {sig.get('page', 0)+1} x={sig.get('x',0):.2f} y={sig.get('y',0):.2f} scale={sig.get('scale',1)}"

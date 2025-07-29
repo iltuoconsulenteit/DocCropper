@@ -100,6 +100,8 @@ def register(app, utils):
         <input id='phoneInput' type='tel' placeholder='Cellulare' value='{phone}' style='width:90%;max-width:300px;margin-top:5px;'>
         <p id='finishMsg' style='display:none;color:green;font-weight:bold'></p>
         <a id='pdfLink' style='display:none;margin-top:5px;' download='signed.pdf'>Download PDF</a>
+        <button id='waPdfBtn' style='display:none;margin-left:10px;'>WhatsApp</button>
+        <button id='emailPdfBtn' style='display:none;margin-left:10px;'>Email</button>
         <p>Tap the document then draw your signature</p>
         <select id='pageSelect' style='margin-top:10px'></select>
         <div id='container'>
@@ -192,6 +194,8 @@ def register(app, utils):
         submitBtn.onclick=submitCurrent;
         const finishMsg=document.getElementById('finishMsg');
         const pdfLink=document.getElementById('pdfLink');
+        const waPdfBtn=document.getElementById('waPdfBtn');
+        const emailPdfBtn=document.getElementById('emailPdfBtn');
         async function pollPdf(){
             try{
                 const r=await fetch('/signed-pdf/{token}',{cache:'no-store'});
@@ -202,6 +206,22 @@ def register(app, utils):
                         pdfLink.textContent='Download PDF';
                         pdfLink.style.display='block';
                         finishMsg.textContent='Signatures sent. Download your PDF:';
+                        if(waPdfBtn){
+                            waPdfBtn.onclick=()=>{
+                                const p=(d.phone||'').replace(/[^0-9]/g,'');
+                                const u=p?`https://wa.me/${p}?text=${encodeURIComponent(d.url)}`:`https://wa.me/?text=${encodeURIComponent(d.url)}`;
+                                window.open(u,'_blank');
+                            };
+                            waPdfBtn.style.display='inline';
+                        }
+                        if(emailPdfBtn){
+                            emailPdfBtn.onclick=()=>{
+                                const m=d.email?encodeURIComponent(d.email):'';
+                                const mailto=`mailto:${m}?body=${encodeURIComponent(d.url)}`;
+                                window.open(mailto,'_blank');
+                            };
+                            emailPdfBtn.style.display='inline';
+                        }
                         return;
                     }
                 }
@@ -346,13 +366,19 @@ def register(app, utils):
         with open(info_path, 'r') as fh:
             info = json.load(fh)
         pdf_url = info.get('pdf_url')
+        result = {}
         if pdf_url:
-            return {'url': pdf_url}
-        pdf_path = info.get('pdf_file')
-        if not pdf_path or not os.path.exists(pdf_path):
-            return JSONResponse(status_code=202, content={'message': 'Pending'})
-        url = request.url_for('download_signed_pdf', token=token)
-        return {'url': str(url)}
+            result['url'] = pdf_url
+        else:
+            pdf_path = info.get('pdf_file')
+            if not pdf_path or not os.path.exists(pdf_path):
+                return JSONResponse(status_code=202, content={'message': 'Pending'})
+            url = request.url_for('download_signed_pdf', token=token)
+            result['url'] = str(url)
+        for key in ('email', 'phone'):
+            if key in info:
+                result[key] = info[key]
+        return result
 
     @app.get('/download-signed/{token}.pdf', name='download_signed_pdf')
     async def download_signed_pdf(token: str):
