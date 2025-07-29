@@ -1991,9 +1991,9 @@ if (signaturePreview) {
     signaturePreview.addEventListener('dblclick', (e) => {
         handleSigPos(e.clientX, e.clientY);
     });
-    signaturePreview.addEventListener('touchstart', (e) => {
+    signaturePreview.addEventListener('touchend', (e) => {
         const now = Date.now();
-        const touch = e.touches[0];
+        const touch = e.changedTouches[0];
         if (now - lastSigTap < 300) {
             e.preventDefault();
             handleSigPos(touch.clientX, touch.clientY);
