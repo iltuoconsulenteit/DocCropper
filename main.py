@@ -972,7 +972,15 @@ async def create_pdf(
                 )
             for line in lines:
                 draw.text((100, y), line, fill="black", font=log_font)
-                y += log_font.getsize(line)[1] + 20
+                if hasattr(draw, "textbbox"):
+                    bbox = draw.textbbox((100, y), line, font=log_font)
+                    line_h = bbox[3] - bbox[1]
+                elif hasattr(log_font, "getbbox"):
+                    bbox = log_font.getbbox(line)
+                    line_h = bbox[3] - bbox[1]
+                else:
+                    line_h = log_font.size
+                y += line_h + 20
             pages.append(log_page)
 
         pdf_bytes_io = io.BytesIO()
