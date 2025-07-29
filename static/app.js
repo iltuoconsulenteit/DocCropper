@@ -1217,7 +1217,7 @@ async function addFiles(newFiles) {
             compressed.push(f);
         }
     }
-    if (processedImages.length === 0) {
+    if (processedImages.length === 0 && files.length === 0) {
         files = [];
         currentFileIndex = 0;
         processedGallery.innerHTML = '';
@@ -1226,13 +1226,22 @@ async function addFiles(newFiles) {
         editingIndex = null;
     }
     for (const f of compressed) {
-        const dataUrl = await fileToDataURL(f);
+        files.push(f);
         processedFiles.push(f);
+        const dataUrl = await fileToDataURL(f);
         processedImages.push(dataUrl);
         originalImages.push(dataUrl);
         addThumbnail(dataUrl, processedImages.length - 1);
     }
-    if (processedImages.length > 0) {
+    if (files.length > processedImages.length && wrapperElement.style.display === 'none') {
+        currentFile = files[currentFileIndex];
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            setupImage(e.target.result);
+        };
+        reader.readAsDataURL(currentFile);
+    }
+    if (files.length > 0) {
         exportPdfBtn.style.display = 'inline-block';
         if (signBtn && signEnabled) signBtn.style.display = 'inline-block';
         if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
@@ -1394,10 +1403,11 @@ submitBtn.addEventListener('click', () => {
                 signatureControls.style.display = 'block';
                 updateLayoutPreview();
             } else {
-                processedImages.push(data.processed_image);
-                originalImages.push(data.processed_image);
-                processedFiles.push(currentFile);
-                addThumbnail(data.processed_image, processedImages.length - 1);
+                processedImages[currentFileIndex] = data.processed_image;
+                originalImages[currentFileIndex] = data.processed_image;
+                processedFiles[currentFileIndex] = currentFile;
+                const container = processedGallery.children[currentFileIndex];
+                if (container) container.querySelector('img').src = data.processed_image;
                 exportPdfBtn.style.display = 'inline-block';
                 if (signBtn && signEnabled) signBtn.style.display = 'inline-block';
                 if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
