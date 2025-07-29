@@ -15,6 +15,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🖱️ Double click or tap to auto-detect page edges
 - 🎚️ Adjust brightness and contrast with live preview
 - 🖌️ Convert images to grayscale or black & white to reduce PDF size (Pro)
+- 🎨 Restore color later with a dedicated button
  - 🧹 Skip blank pages when importing PDFs using a configurable threshold (Pro)
 - 📄 Create PDFs ready for download or sharing
 - 🔏 Optional digital signature on exported PDFs. Drag and add multiple stamps per page before export (Free - watermark applied)
@@ -25,8 +26,12 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 📝 Extract text via OCR (future Pro feature)
 - 🗂️ Persistent user settings
 - 🧭 Touchscreen-friendly interface
+- 🎨 Material design look with Roboto fonts and raised buttons
 - 🌐 Works offline or over LAN (no internet required)
 - 👤 Multi-user environment support (optional)
+- 🔒 Uploaded files are encrypted and wiped after your session
+- 📏 Uploads larger than 20&nbsp;MB are rejected (adjust with `DOCROPPER_MAX_UPLOAD_MB`)
+- 🚀 Cache busting (`?v=<commit>`) ensures browsers fetch updated files
 
 ---
 
@@ -44,7 +49,7 @@ The frontend allows the user to:
 - Export all processed images to PDF
 - Choose how many processed images appear on each PDF page
 - Select portrait or landscape orientation for the PDF
-- Choose whether images are arranged horizontally, vertically or in a grid and preview the layout before exporting
+- Choose whether images are arranged horizontally, vertically or in a grid and preview the layout only when needed
 - Control how images are scaled on each page: fill the cell, keep original size or apply a custom percentage
 - A small margin is applied around each image so nothing touches the page edges
 - Change the interface language (Italian translation included)
@@ -76,6 +81,7 @@ Built with **FastAPI + Uvicorn**, the backend:
 - Optionally sharpens the image
 - Compiles all processed images into a PDF with layout control
 - Handles per-session temporary folders
+- Uploaded files are encrypted on disk and sessions are automatically removed after a short time
 
 ---
 
@@ -97,10 +103,17 @@ pip install -r requirements.txt
 ### 🛠 Installer Scripts
 
 - Clone the repo
- - Offer a numbered menu to choose `main` or the developer branch (default `work`)
+- Offer a numbered menu to choose `main` or the developer branch (default `work`)
+- The last developer branch is stored in `install/dev_branch`. Edit this file to
+  change the default or set `DOCROPPER_DEV_BRANCH` when running the script.
 - Set up the environment and install Python dependencies in a virtualenv
-- Ask for an optional license key
+- Stop any running instance using the appropriate `stop_DocCropper` script
+- Windows and macOS installers ask for an optional license key
 - Write a log file named `install.log` in the installation folder (falling back to `%TEMP%` on Windows or `/tmp` on Linux/macOS)
+- After cloning or updating, list the last 10 commits and optionally restore one by its hash
+- The previous commit is saved to `previous_commit` so you can run the new
+  `rollback_DocCropper` script to revert if an update fails
+- When updating, the scripts fetch the selected branch and hard reset to avoid merge conflicts
 - On Linux the installer now requests administrative privileges via `sudo` and installs under `/opt/DocCropper` by default. On macOS the script will similarly relaunch with `sudo` if installing to `/Applications`. If the directory cannot be created, the script exits with a permissions error. The script uses `tee` to create the initial `settings.json` so root permissions are required when installing to system locations. Existing `settings.json` files are backed up to `settings.local.json.bak` and merged back after updating so your license and other custom values are preserved.
 - Matching `uninstall_DocCropper` scripts are provided to remove the application later.
 You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer branch or `DOCROPPER_BRANCH` to force a specific branch.
@@ -114,10 +127,12 @@ The `.env` files may also define `LICENSE_CHECK=true` to enforce license validat
 To quickly create an environment file for testing you can run one of the
 `scripts/setup_license` helpers. The script for your platform (`.bat`, `.sh` or
 `.command`) asks for your license key and name then writes `env/developer.env`
-with `DOCROPPER_LICENSE_KEY`, `DOCROPPER_LICENSE_NAME` and
-`DOCROPPER_DEV_LICENSE` so all features are unlocked. Set
+with `DOCROPPER_LICENSE_KEY`, `DOCROPPER_LICENSE_NAME`,
+`DOCROPPER_DEV_LICENSE` and `DOCROPPER_LICENSE_LEVEL=full` so all
+features are unlocked. Set
 `DOCROPPER_DEV_WATERMARK=true` if you want to keep the watermark while
 testing with a developer key.
+A hidden demo license provides Full features and mobile signing but always keeps the watermark for demonstrations.
 If you see **Access denied** when running the script, launch it with administrator
 privileges ("Run as Administrator" on Windows). After writing the
 `env/developer.env` file, restart DocCropper so the new license is applied.
@@ -162,8 +177,8 @@ without it.
 An offline copy of the documentation is included under the `/wiki` path. The
 web interface displays this wiki in a sidebar on the right beneath the Help
 button. A language-specific page is loaded based on your selection. You can
-also open it in a new tab at `http://localhost:8765/wiki/&lt;lang&gt;/` or view
-the online version on GitHub.
+also open it in a new tab at `http://<host>:<port>/wiki/<lang>/` (by default
+`http://localhost:8765/wiki/<lang>/`) or view the online version on GitHub.
 
 ### Google Sign-In
 
@@ -172,6 +187,8 @@ To enable optional Google authentication, set `google_client_id` in
 `DOCROPPER_GOOGLE_CLIENT_ID`. When configured, a sign-in button will appear in
 the web interface and tokens will be verified by the backend. Google login is
 only used to identify users and is not tied to licensing.
+When the hidden Demo Full license is active the login button is hidden even if
+`google_client_id` is set.
 
 ---
 
@@ -182,18 +199,33 @@ DocCropper ships with three editions. A **Licenses** button in the header opens 
 - **Free** – Watermark applied, up to five images per project, LAN access disabled
 - **Pro** – No watermark and unlimited images, but still restricted to local access
 - **Full** – Unlocks LAN access so DocCropper can run on an office server
+- *Demo Full* is a hidden license that behaves like the Full edition but keeps
+  the watermark, enables mobile signing, and shows a demo notice.
+  When this license is active the **Purchase** button turns into a PayPal
+  donation link.
 
 DocCropper itself is released under the [MIT](LICENSE.txt) license. See [Terms of Use](TERMS_OF_USE.md) for additional conditions.
 
 To activate Pro or Full editions:
 - Provide a valid license key in `settings.json`, `.env`, or the Licenses panel
-- Developer keys unlock all features for testing when `DOCROPPER_DEV_LICENSE` matches your `license_key`
-- Mobile signing is enabled automatically when a developer key is used
+  - Developer keys unlock all features when `DOCROPPER_DEV_LICENSE` matches your `license_key`
+    or the key ends with `-DEV`. Saving such a key through the Licenses panel now
+    automatically sets the edition to **Full** and enables mobile signing. The
+    installers store developer keys in `env/developer.env` with
+    `DOCROPPER_LICENSE_LEVEL=full` so subsequent runs start in developer mode.
+    When a developer key is active the tray menu includes an **Update Branch** option.
+ - Mobile signing is enabled automatically when a developer key is used
 - You can generate a suitable `.env` by running `scripts/setup_license.bat` (or
   `.sh` / `.command`) and entering your details
 - Set `LICENSE_CHECK=true` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
 
 For inquiries: **doccropper@iltuoconsulenteit.it**
+
+## 💖 Supporta DocCropper
+
+Se trovi utile DocCropper, puoi supportarne lo sviluppo con una donazione:
+
+[![Donate](https://www.paypalobjects.com/it_IT/IT/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY)
 
 ### Optional PDF Signing
 
@@ -237,6 +269,17 @@ Alternatively, you may set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` t
 When `DOCROPPER_TUNNEL=true` and `cloudflared` is installed, the start scripts
 launch a temporary Cloudflare Tunnel so the signing link works from outside your
 LAN. The public URL is written to the log.
+
+Set `DOCROPPER_OPEN_URL` if you want the start scripts and tray helper to open a
+custom address (for example your Cloudflare tunnel) instead of
+`http://localhost:PORT`.
+You may configure the public domain used for mobile signing either through the
+Settings panel or by setting `DOCROPPER_PUBLIC_URL`. When the demo license is
+active the default domain is `https://doccropper.iltuoconsulenteit.it`.
+The server also accepts cross-origin requests when you set
+`DOCROPPER_CORS_ORIGINS` to a comma-separated list of allowed origins or `*` to
+permit any origin.
+Uploads larger than the configured `DOCROPPER_MAX_UPLOAD_MB` (20&nbsp;MB by default) will be rejected to avoid excessive disk usage.
 
 ### Pro OCR (coming soon)
 

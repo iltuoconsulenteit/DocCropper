@@ -75,13 +75,14 @@ UNINSTALL_SCRIPTS = {
 }.get(SYSTEM, 'uninstall_DocCropper.sh')
 
 def is_developer():
+    """Return True if a developer license is active."""
     settings_file = BASE_DIR / 'settings.json'
     try:
         with open(settings_file) as fh:
             data = json.load(fh)
         key = data.get('license_key', '').strip().upper()
         dev = os.environ.get('DOCROPPER_DEV_LICENSE', '').upper()
-        return bool(dev) and key == dev
+        return (dev and key == dev) or key.endswith('-DEV')
     except Exception:
         return False
 
@@ -129,7 +130,10 @@ def uninstall_app():
 
 def open_browser():
     port = get_port()
-    webbrowser.open(f'http://127.0.0.1:{port}/')
+    url = os.environ.get('DOCROPPER_OPEN_URL')
+    if not url:
+        url = f'http://127.0.0.1:{port}/'
+    webbrowser.open(url)
 
 def get_port():
     try:

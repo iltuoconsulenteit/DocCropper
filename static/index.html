@@ -4,7 +4,10 @@
     <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0">
     <meta name="description" content="DocCropper is a web-based app for batch document perspective correction, multi-image cropping, mobile signing, and PDF export.">
     <title>DocCropper</title>
+    <link rel="icon" type="image/png" href="/static/logos/app_logo.png">
     <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
     <header id="pageHeader">
@@ -33,6 +36,7 @@
             <button id="licenseBtn" data-i18n="licenses" data-i18n-title="licenses" title="Licenses">Licenses</button>
             <button id="settingsBtn" data-i18n="settings" data-i18n-title="settings" title="Settings">Settings</button>
         </div>
+        <div id="demoNotice" class="demo-notice" data-i18n="demoTestPage" style="display:none;"></div>
     </header>
     <div id="instructionsBox">
         <strong data-i18n="instructionsTitle">Instructions</strong><br>
@@ -92,12 +96,19 @@
         <button id="downloadPdfBtn" class="iconTextBtn" data-i18n-title="downloadPdf" title="PDF">📥 <span data-i18n="downloadPdf"></span></button>
         <button id="waShareBtn" class="iconTextBtn" data-i18n-title="shareWhatsapp" title="WhatsApp">🟢 <span data-i18n="shareWhatsapp"></span></button>
         <button id="emailShareBtn" class="iconTextBtn" data-i18n-title="shareEmail" title="Email">✉️ <span data-i18n="shareEmail"></span></button>
-        <button id="qrSignBtn" class="iconTextBtn" data-i18n-title="mobileSign" title="Mobile Sign">📱 <span data-i18n="mobileSign"></span></button>
         <button id="remoteSignBtn" class="iconTextBtn" data-i18n-title="digitalSign" title="Digital Sign" disabled>🔏 <span data-i18n="digitalSign"></span></button>
     </div>
     <button id="ocrBtn" style="display:none;" data-i18n="extractText" data-i18n-title="extractText" title="Extract Text">Extract Text</button>
     <textarea id="ocrOutput" readonly style="display:none;width:100%;height:150px;"></textarea>
+    <div id="blankControls" style="display:none;">
+        <label for="blankThreshold" data-i18n="blankThreshold">Blank page threshold (%):</label>
+        <input type="number" id="blankThreshold" value="95" min="80" max="100" step="1" style="width:60px;">
+        <label><input type="checkbox" id="skipBlank" checked> <span data-i18n="skipBlank"></span></label>
+        <button id="removeBlankBtn" data-i18n="removeBlank">Remove blank pages</button>
+        <button id="restoreBlankBtn" data-i18n="restoreBlank" style="display:none;">Restore pages</button>
+    </div>
     <div id="layoutControls" style="display:none;">
+        <button id="togglePreviewBtn" data-i18n="togglePreview">Preview layout</button>
         <label for="layoutSelect" data-i18n="imagesPerPage">Images per page:</label>
         <select id="layoutSelect">
             <option value="1">1</option>
@@ -129,11 +140,8 @@
             <option value="gray" data-i18n="gray">Grayscale</option>
             <option value="bw" data-i18n="bw">B/W</option>
         </select>
-        <label for="blankThreshold" data-i18n="blankThreshold">Blank page threshold (%):</label>
-        <input type="number" id="blankThreshold" value="95" min="80" max="100" step="1" style="width:60px;">
-        <label><input type="checkbox" id="skipBlank" checked> <span data-i18n="skipBlank"></span></label>
     </div>
-    <div id="layoutPreview" style="display:none;"></div>
+    <div id="layoutPreview"></div>
 
     <div id="signatureControls" style="display:none;">
         <div id="signatureExtra" style="display:none;">
@@ -147,7 +155,6 @@
             <button id="addSignatureBtn" data-i18n="addSignature" data-i18n-title="addSignature" title="Add signature">Add</button>
             <button id="discardSignatureBtn" data-i18n="discardSignature" data-i18n-title="discardSignature" title="Discard signature">Discard</button>
             <button id="saveSignatureBtn" data-i18n="saveSigned" data-i18n-title="saveSigned" title="Save">Save</button>
-            <button id="qrSignPageBtn" class="iconTextBtn" data-i18n-title="mobileSign" title="Mobile Sign">📱 <span data-i18n="mobileSign"></span></button>
         </div>
         <div id="drawArea" style="display:none;">
             <canvas id="signatureDrawCanvas" width="300" height="150"></canvas>
@@ -156,13 +163,14 @@
         </div>
         <canvas id="signaturePreview" width="420" height="595" style="display:none;"></canvas>
         <div id="signatureHint" data-i18n="dragSignature" style="display:none;"></div>
-        <div id="signQR" style="display:none;text-align:center;">
-            <img id="signQrImg" alt="QR" style="max-width:200px;">
-            <p id="signQrHint"></p>
-            <a id="signQrLink" href="#" target="_blank"></a><br>
-            <button id="copySignLink" data-i18n="copyLink" data-i18n-title="copyLink" title="Copy link">Copy link</button>
-            <button id="waSignLink" data-i18n="shareWhatsapp" data-i18n-title="shareWhatsapp" title="WhatsApp">WhatsApp</button>
-        </div>
+    </div>
+
+    <div id="signQR" style="display:none;text-align:center;">
+        <img id="signQrImg" alt="QR" style="max-width:200px;">
+        <p id="signQrHint"></p>
+        <a id="signQrLink" href="#" target="_blank"></a><br>
+        <button id="copySignLink" data-i18n="copyLink" data-i18n-title="copyLink" title="Copy link">Copy link</button>
+        <button id="waSignLink" data-i18n="shareWhatsapp" data-i18n-title="shareWhatsapp" title="WhatsApp">WhatsApp</button>
     </div>
 
     <h2 data-i18n="processedImages">Processed Images:</h2>
@@ -175,6 +183,18 @@
         <span id="closeModal" class="close">&times;</span>
         <img class="modal-content" id="modalImage" src="#" alt="Full size">
     </div>
+    <div id="sponsorModal" class="modal" style="display:none;">
+        <span id="closeSponsor" class="close" style="display:none;">&times;</span>
+        <span id="sponsorCountdown" class="countdown"></span>
+        <div class="modal-content" id="sponsorContent" style="text-align:center;max-width:720px;">
+            <iframe id="sponsorVideo" width="700" height="394" src="https://www.youtube.com/embed/DerpUM0uK9g" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            <p data-i18n="sponsorMessage"></p>
+        </div>
+    </div>
+    <div id="loadingOverlay" style="display:none;">
+        <div class="loader"></div>
+        <span data-i18n="loading">Loading...</span>
+    </div>
     <p id="statusMessage"></p>
 
     <footer id="pageFooter">
@@ -182,8 +202,10 @@
             <span data-i18n="realizzato">Powered by IlTuoConsulenteIT</span>
             <img id="footerLogo" src="/static/logos/footer_logo.png" onerror="this.onerror=null;this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO3RqqEAAAAASUVORK5CYII='" alt="IlTuoConsulenteIT logo">
         </div>
+        <img id="sponsorBadge" src="/static/logos/sponsor_logo.png" alt="Sponsor logo" style="display:none;">
+        <div id="donateBox" style="display:none;"></div>
         <span id="versionBox"></span>
-    </footer>
+      </footer>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>

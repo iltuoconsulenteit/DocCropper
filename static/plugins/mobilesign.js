@@ -1,6 +1,4 @@
 export function initSignaturePlugin(translations, enabled = true) {
-    const qrSignBtn = document.getElementById('qrSignBtn');
-    const qrSignPageBtn = document.getElementById('qrSignPageBtn');
     const mobileSignBtn = document.getElementById('mobileSignBtn');
     const signQR = document.getElementById('signQR');
     const signQrImg = document.getElementById('signQrImg');
@@ -11,8 +9,6 @@ export function initSignaturePlugin(translations, enabled = true) {
     const signaturePage = document.getElementById('signaturePage');
 
     if (!enabled) {
-        if (qrSignBtn) qrSignBtn.style.display = 'none';
-        if (qrSignPageBtn) qrSignPageBtn.style.display = 'none';
         if (mobileSignBtn) mobileSignBtn.style.display = 'none';
         return;
     }
@@ -44,10 +40,20 @@ export function initSignaturePlugin(translations, enabled = true) {
     }
 
     async function startQrSign() {
+        if (window.showLoading) window.showLoading(translations['loading'] || 'Loading...');
         try {
-            const page = parseInt(signaturePage?.value || '0');
             const images = window.processedImages || [];
             if (!images.length) return;
+            if (signaturePage && signaturePage.options.length === 0) {
+                signaturePage.innerHTML = '';
+                for (let i = 0; i < images.length; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = (i + 1).toString();
+                    signaturePage.appendChild(opt);
+                }
+            }
+            const page = parseInt(signaturePage?.value || '0');
             const payload = { page, images };
             payload.image = images[page];
             if (window.mobileSignPoints && Object.keys(window.mobileSignPoints).length) {
@@ -71,20 +77,12 @@ export function initSignaturePlugin(translations, enabled = true) {
             }
         } catch (e) {
             console.error('start sign error', e);
+        } finally {
+            if (window.hideLoading) window.hideLoading();
         }
-    }
-    if (qrSignBtn) {
-        qrSignBtn.addEventListener('click', async () => {
-            await startQrSign();
-            const exportOptions = document.getElementById('exportOptions');
-            if (exportOptions) exportOptions.style.display = 'none';
-        });
     }
     if (mobileSignBtn) {
         mobileSignBtn.addEventListener('click', startQrSign);
-    }
-    if (qrSignPageBtn) {
-        qrSignPageBtn.addEventListener('click', startQrSign);
     }
     if (signQR) {
         signQR.addEventListener('click', () => { signQR.style.display = 'none'; });

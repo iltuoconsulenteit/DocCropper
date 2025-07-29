@@ -7,7 +7,6 @@ __all__ = ['register']
 def register(app, utils):
     load_settings = utils['load_settings']
     get_session_dir = utils['get_session_dir']
-    get_lan_ip = utils['get_lan_ip']
     signatures_dir = utils['SIGNATURES_DIR']
 
     @app.post('/start-sign/')
@@ -40,9 +39,25 @@ def register(app, utils):
         os.makedirs(signatures_dir, exist_ok=True)
         with open(os.path.join(signatures_dir, f'{token}.json'), 'w') as fh:
             json.dump(info, fh)
-        port = int(settings.get('port', 8765))
-        host = get_lan_ip()
-        url = f'http://{host}:{port}/sign/{token}'
+        settings_data = load_settings()
+        settings_public = settings_data.get('public_url')
+        base = os.getenv('DOCROPPER_PUBLIC_URL') or settings_public
+        if not base and settings_data.get('demo_full_mode'):
+            base = 'https://doccropper.iltuoconsulenteit.it'
+        if not base:
+            host = request.headers.get('x-forwarded-host') or request.headers.get('host')
+            scheme = request.headers.get('x-forwarded-proto') or request.url.scheme
+            visitor = request.headers.get('cf-visitor')
+            if visitor:
+                try:
+                    scheme = json.loads(visitor).get('scheme', scheme)
+                except Exception:
+                    pass
+            if host:
+                base = f'{scheme}://{host}'
+            else:
+                base = str(request.base_url).rstrip('/')
+        url = f'{base}/sign/{token}'
         qr_img = qrcode.make(url)
         buf = io.BytesIO()
         qr_img.save(buf, format='PNG')
@@ -84,6 +99,9 @@ def register(app, utils):
         <div id='controls' style='display:none;'>
             <button id='clear'>Clear</button>
             <button id='submit'>Add</button>
+            <label style='margin-left:10px;'>Scale:
+                <input type='range' id='scaleRange' min='0.5' max='2' step='0.1' value='1'>
+            </label>
             <button id='finish'>Finish</button>
         </div>
         <div style='margin-top:20px;'><img src='/static/logos/footer_logo.png' style='max-width:120px' alt='IlTuoConsulenteIT'></div>
@@ -96,6 +114,11 @@ def register(app, utils):
         const submitBtn=document.getElementById('submit');
         const clearBtn=document.getElementById('clear');
         const finishBtn=document.getElementById('finish');
+        const scaleInput=document.getElementById('scaleRange');
+        let scale=1;
+        if(scaleInput){
+            scaleInput.oninput=()=>{ scale=parseFloat(scaleInput.value); };
+        }
         const images={images_json};
         const spots={spots_json};
         async function loadPages(){
@@ -136,12 +159,12 @@ def register(app, utils):
         async function submitCurrent(){
             if(!pos||pad.isEmpty())return false;
             const img=pad.toDataURL('image/png');
-            await fetch('/submit-signature/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:img,x:pos.x,y:pos.y,page:parseInt(pageSelect.value)})});
+            await fetch('/submit-signature/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:img,x:pos.x,y:pos.y,page:parseInt(pageSelect.value),scale})});
             const ctx=overlay.getContext('2d');
             const tmp=new Image();
             tmp.onload=()=>{
-                const w=tmp.width*(overlay.height/10)/tmp.height;
-                const h=overlay.height/10;
+                const w=tmp.width*(overlay.height/10)*scale/tmp.height;
+                const h=overlay.height/10*scale;
                 const x=pos.x*overlay.width - w/2;
                 const y=pos.y*overlay.height - h/2;
                 ctx.drawImage(tmp,x,y,w,h);
@@ -211,7 +234,8 @@ def register(app, utils):
             'image_path': img_path,
             'x': float(data.get('x', 0.5)),
             'y': float(data.get('y', 0.5)),
-            'page': int(data.get('page', info.get('page', 0)))
+            'page': int(data.get('page', info.get('page', 0))),
+            'scale': float(data.get('scale', 1.0))
         }
         info.setdefault('signatures', []).append(sig_entry)
         info['signed'] = False
@@ -245,5 +269,5 @@ def register(app, utils):
             with open(sig['image_path'], 'rb') as fh:
                 b64 = base64.b64encode(fh.read()).decode()
             page = sig.get('page', info.get('page', 0))
-            pages.setdefault(page, []).append({'image': 'data:image/png;base64,' + b64, 'x': sig['x'], 'y': sig['y']})
+            pages.setdefault(page, []).append({'image': 'data:image/png;base64,' + b64, 'x': sig['x'], 'y': sig['y'], 'scale': sig.get('scale', 1.0)})
         return {'signatures': pages}

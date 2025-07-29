@@ -14,11 +14,16 @@ fi
 
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-}"
-if [ -z "$DOCROPPER_DEV_BRANCH" ]; then
-  DEV_BRANCH="work"
-else
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BRANCH_FILE="$SCRIPT_DIR/dev_branch"
+if [ -n "$DOCROPPER_DEV_BRANCH" ]; then
   DEV_BRANCH="$DOCROPPER_DEV_BRANCH"
+elif [ -f "$BRANCH_FILE" ]; then
+  DEV_BRANCH="$(cat "$BRANCH_FILE")"
+else
+  DEV_BRANCH="work"
 fi
+echo "$DEV_BRANCH" > "$BRANCH_FILE"
 
 DEFAULT_DIR="/Applications/DocCropper"
 read -r -p "Installation directory [$DEFAULT_DIR]: " TARGET_DIR
@@ -34,6 +39,10 @@ if ! touch "$LOG_FILE" >/dev/null 2>&1; then
 fi
 echo "Logging to $LOG_FILE"
 exec > >(tee -a "$LOG_FILE") 2>&1
+
+LAST_FILE="$TARGET_DIR/last_commit"
+PREV_FILE="$TARGET_DIR/previous_commit"
+
 
 DEFAULT_KEY=""
 if [ -f "$TARGET_DIR/settings.json" ]; then
@@ -73,16 +82,51 @@ for cmd in git python3 pip3; do
   fi
 done
 
+if [ -f "$TARGET_DIR/scripts/stop_DocCropper.command" ]; then
+  echo "🛑 Stopping running DocCropper..."
+  bash "$TARGET_DIR/scripts/stop_DocCropper.command" >/dev/null 2>&1 || true
+fi
+
 if [ -d "$TARGET_DIR/.git" ]; then
   echo "📁 Repository già presente in $TARGET_DIR"
   read -r -p "🔄 Vuoi aggiornare il repository da GitHub? [s/N] " ans
   if [[ "$ans" =~ ^[sS]$ ]]; then
+    if [ -f "$LAST_FILE" ]; then
+      cp "$LAST_FILE" "$PREV_FILE"
+    else
+      git -C "$TARGET_DIR" rev-parse HEAD > "$PREV_FILE" 2>/dev/null || true
+    fi
     echo "📥 Aggiornamento repository..."
-    git -C "$TARGET_DIR" pull --rebase --autostash origin "$BRANCH"
+    git -C "$TARGET_DIR" merge --abort >/dev/null 2>&1 || true
+    git -C "$TARGET_DIR" rebase --abort >/dev/null 2>&1 || true
+    git -C "$TARGET_DIR" fetch origin "$BRANCH"
+    git -C "$TARGET_DIR" reset --hard "origin/$BRANCH"
+    git -C "$TARGET_DIR" clean -fd
+    git -C "$TARGET_DIR" rev-parse HEAD > "$LAST_FILE" 2>/dev/null || true
   fi
 else
+  if [ "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then
+    read -r -p "Directory $TARGET_DIR not empty. Delete contents and continue? [y/N] " wipe
+    if [[ "$wipe" =~ ^[yY]$ ]]; then
+      rm -rf "$TARGET_DIR"
+      mkdir -p "$TARGET_DIR"
+    else
+      echo "Please choose another directory." >&2
+      exit 1
+    fi
+  fi
   echo "📥 Clonazione repository in $TARGET_DIR..."
   git clone --branch "$BRANCH" "$REPO_URL" "$TARGET_DIR"
+  git -C "$TARGET_DIR" rev-parse HEAD > "$LAST_FILE" 2>/dev/null || true
+fi
+
+echo "📜 Ultimi 10 commit:" | tee -a "$LOG_FILE"
+git -C "$TARGET_DIR" log -n 10 --pretty=format:"%h | %ad | %s" --date=short | tee -a "$LOG_FILE"
+read -r -p "Vuoi ripristinare un commit specifico? (lascia vuoto per continuare): " COMMIT_HASH
+if [ -n "$COMMIT_HASH" ]; then
+  echo "🔄 Checkout del commit $COMMIT_HASH..." | tee -a "$LOG_FILE"
+  git -C "$TARGET_DIR" checkout "$COMMIT_HASH" >>"$LOG_FILE" 2>&1
+  git -C "$TARGET_DIR" rev-parse HEAD > "$LAST_FILE" 2>/dev/null || true
 fi
 
 printf '\xE2\x9C\x85 Operazione completata.\n'
@@ -118,8 +162,26 @@ if [ -n "$LIC_KEY" ]; then
   UPPER_KEY="$(echo "$LIC_KEY" | tr '[:lower:]' '[:upper:]')"
   DEV_KEY="${DOCROPPER_DEV_LICENSE:-}"
   DEV_KEY_UPPER="$(echo "$DEV_KEY" | tr '[:lower:]' '[:upper:]')"
+  VALID=0
   if [ "$UPPER_KEY" = "VALID" ] || [ "$UPPER_KEY" = "$DEV_KEY_UPPER" ]; then
+    VALID=1
+  elif [[ "$UPPER_KEY" == *-DEV ]]; then
+    VALID=1
+    DEV_KEY="$LIC_KEY"
+    DEV_KEY_UPPER="$UPPER_KEY"
+    export DOCROPPER_DEV_LICENSE="$LIC_KEY"
+  fi
+  if [ $VALID -eq 1 ]; then
     read -r -p "👤 Licensed to: " LIC_NAME
+    if [[ "$UPPER_KEY" == *-DEV ]] && [ ! -f "$TARGET_DIR/env/developer.env" ]; then
+      mkdir -p "$TARGET_DIR/env"
+      cat > "$TARGET_DIR/env/developer.env" <<EOF
+DOCROPPER_LICENSE_KEY=$LIC_KEY
+DOCROPPER_LICENSE_NAME=$LIC_NAME
+DOCROPPER_DEV_LICENSE=$LIC_KEY
+DOCROPPER_LICENSE_LEVEL=full
+EOF
+    fi
     python3 - "$SETTINGS_FILE" "$LIC_KEY" "$LIC_NAME" <<'PY'
 import json, sys
 f, key, name = sys.argv[1:]
@@ -136,6 +198,10 @@ PY
       echo "🔀 Switching to developer branch $DEV_BRANCH"
       git -C "$TARGET_DIR" fetch origin "$DEV_BRANCH"
       git -C "$TARGET_DIR" checkout "$DEV_BRANCH"
+      git -C "$TARGET_DIR" merge --abort >/dev/null 2>&1 || true
+      git -C "$TARGET_DIR" rebase --abort >/dev/null 2>&1 || true
+      git -C "$TARGET_DIR" reset --hard
+      git -C "$TARGET_DIR" clean -fd
       git -C "$TARGET_DIR" pull --rebase --autostash origin "$DEV_BRANCH"
     fi
   else

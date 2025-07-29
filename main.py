@@ -14,9 +14,23 @@ import fitz
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, Body, Request
 from PIL import Image, ImageDraw, ImageFont
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+
+
+class NoCacheStaticFiles(StaticFiles):
+    """StaticFiles that sets no-cache headers to avoid proxy caching."""
+
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = "no-cache"
+            response.headers["Pragma"] = "no-cache"
+        return response
+from fastapi.middleware.cors import CORSMiddleware
+from cryptography.fernet import Fernet
 import subprocess
+import sys
 import tempfile
 from dotenv import load_dotenv
 import urllib.request
@@ -55,6 +69,7 @@ USERS_DIR = "users"
 # Developer license key for demonstration (case-insensitive)
 DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "")
 DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
+DEMO_FULL_LICENSE_KEY = "DEMO-FULL-DC"
 
 try:
     VERSION = subprocess.check_output(
@@ -62,12 +77,24 @@ try:
         cwd=os.path.dirname(__file__),
         stderr=subprocess.DEVNULL,
     ).decode().strip()
+    VERSION_DATE = subprocess.check_output(
+        ["git", "log", "-1", "--format=%cd", "--date=short"],
+        cwd=os.path.dirname(__file__),
+        stderr=subprocess.DEVNULL,
+    ).decode().strip()
 except Exception:
     VERSION = "unknown"
+    VERSION_DATE = ""
+
+CACHE_BUST = f"?v={VERSION}"
 
 SESSIONS_ROOT = "sessions"
 SIGNATURES_DIR = "signatures"
 PID_FILE = os.path.join(tempfile.gettempdir(), "doccropper.pid")
+ENC_SUFFIX = ".enc"
+SESSION_KEYS: dict[str, bytes] = {}
+MAX_UPLOAD_MB = int(os.getenv("DOCROPPER_MAX_UPLOAD_MB", "20"))
+MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 
 DEFAULT_SETTINGS = {
     "language": "en",
@@ -103,8 +130,10 @@ DEFAULT_SETTINGS = {
     "skip_blank": True,
     "banner_images": ["DocCropper_slogan_{{lang}}.png"],
     "developer_watermark": False,
+    "demo_full_mode": False,
     "docuseal_api_url": "",
     "docuseal_api_key": "",
+    "public_url": "",
 }
 
 def verify_license_server(key: str) -> bool:
@@ -122,9 +151,11 @@ def get_session_dir(session_id: str) -> str:
         return None
     path = os.path.join(SESSIONS_ROOT, session_id)
     os.makedirs(path, exist_ok=True)
+    if session_id not in SESSION_KEYS:
+        SESSION_KEYS[session_id] = Fernet.generate_key()
     return path
 
-def cleanup_old_sessions(max_age: int = 3600):
+def cleanup_old_sessions(max_age: int = 600):
     if not os.path.exists(SESSIONS_ROOT):
         return
     now = time.time()
@@ -133,8 +164,30 @@ def cleanup_old_sessions(max_age: int = 3600):
         try:
             if os.path.isdir(p) and now - os.path.getmtime(p) > max_age:
                 shutil.rmtree(p, ignore_errors=True)
+                SESSION_KEYS.pop(name, None)
         except Exception:
             pass
+
+def encrypt_bytes(session_id: str, data: bytes) -> bytes:
+    key = SESSION_KEYS.get(session_id)
+    if not key:
+        key = Fernet.generate_key()
+        SESSION_KEYS[session_id] = key
+    f = Fernet(key)
+    return f.encrypt(data)
+
+def decrypt_file(session_id: str, path: str) -> bytes | None:
+    if not os.path.exists(path):
+        return None
+    key = SESSION_KEYS.get(session_id)
+    if not key:
+        return None
+    try:
+        with open(path, 'rb') as fh:
+            enc = fh.read()
+        return Fernet(key).decrypt(enc)
+    except Exception:
+        return None
 
 def get_lan_ip() -> str:
     try:
@@ -193,6 +246,7 @@ def load_settings():
         stripe_full = os.getenv("STRIPE_PRICE_FULL")
         stripe_success = os.getenv("STRIPE_SUCCESS_URL")
         stripe_cancel = os.getenv("STRIPE_CANCEL_URL")
+        public_url_env = os.getenv("DOCROPPER_PUBLIC_URL")
         if env_key:
             merged["license_key"] = env_key
         if env_name:
@@ -221,9 +275,22 @@ def load_settings():
             merged["stripe_success_url"] = stripe_success
         if stripe_cancel:
             merged["stripe_cancel_url"] = stripe_cancel
+        if public_url_env:
+            merged["public_url"] = public_url_env
 
         dev_env = DEV_LICENSE_KEY_UPPER
-        if dev_env and merged.get("license_key", "").strip().upper() == dev_env:
+        key_upper = merged.get("license_key", "").strip().upper()
+        if key_upper == DEMO_FULL_LICENSE_KEY:
+            merged["license_level"] = "full"
+            merged["demo_full_mode"] = True
+            if not merged.get("license_name"):
+                merged["license_name"] = "Demo User"
+            merged["enable_mobilesign"] = True
+            if not merged.get("paypal_link"):
+                merged["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
+            if not merged.get("public_url"):
+                merged["public_url"] = "https://doccropper.iltuoconsulenteit.it"
+        elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
             merged["license_level"] = "full"
             if not merged.get("license_name"):
                 merged["license_name"] = "Developer"
@@ -236,6 +303,25 @@ def load_settings():
 def save_settings(update: dict):
     data = load_settings()
     data.update(update)
+    if os.getenv("DOCROPPER_PUBLIC_URL"):
+        data["public_url"] = os.getenv("DOCROPPER_PUBLIC_URL")
+    key_upper = data.get("license_key", "").strip().upper()
+    dev_env = DEV_LICENSE_KEY_UPPER
+    if key_upper == DEMO_FULL_LICENSE_KEY:
+        data["license_level"] = "full"
+        data["demo_full_mode"] = True
+        if not data.get("license_name"):
+            data["license_name"] = "Demo User"
+        data["enable_mobilesign"] = True
+        if not data.get("paypal_link"):
+            data["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
+        if not data.get("public_url"):
+            data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
+    elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
+        data["license_level"] = "full"
+        if not data.get("license_name"):
+            data["license_name"] = "Developer"
+        data["enable_mobilesign"] = True
     with open(SETTINGS_FILE, "w") as fh:
         json.dump(data, fh)
     return data
@@ -279,14 +365,38 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# Mount static files directory and local wiki
-app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/wiki", StaticFiles(directory="wiki", html=True), name="wiki")
+# Enable cross-origin requests if needed
+origins = os.getenv("DOCROPPER_CORS_ORIGINS", "*")
+if origins == "*":
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    allowed = [o.strip() for o in origins.split(",") if o.strip()]
+    if allowed:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=allowed,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
+# Mount static files directory and local wiki with no-cache headers
+app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
+app.mount("/wiki", NoCacheStaticFiles(directory="wiki", html=True), name="wiki")
 plugin_utils = {
     'load_settings': load_settings,
     'get_session_dir': get_session_dir,
     'get_lan_ip': get_lan_ip,
     'SIGNATURES_DIR': SIGNATURES_DIR,
+    'decrypt_file': decrypt_file,
+    'encrypt_bytes': encrypt_bytes,
+    'ENC_SUFFIX': ENC_SUFFIX,
 }
 
 settings = load_settings()
@@ -301,6 +411,11 @@ if enable_mobilesign:
 if enable_remotesign:
     register_remotesign(app, plugin_utils)
 
+@app.get('/favicon.ico')
+async def favicon():
+    icon_path = os.path.join(os.path.dirname(__file__), 'static', 'logos', 'app_logo.png')
+    return FileResponse(icon_path, headers={"Cache-Control": "no-cache"})
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     cleanup_old_sessions()
@@ -312,10 +427,21 @@ async def read_root(request: Request):
         index_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
         with open(index_path, "r", encoding="utf-8") as f:
             content = f.read()
+        if CACHE_BUST:
+            content = content.replace("styles.css", f"styles.css{CACHE_BUST}")
+            content = content.replace("app.js", f"app.js{CACHE_BUST}")
+            content = content.replace("mobilesign.js", f"mobilesign.js{CACHE_BUST}")
+            content = content.replace("app_logo.png", f"app_logo.png{CACHE_BUST}")
+            content = content.replace("header_logo.png", f"header_logo.png{CACHE_BUST}")
+            content = content.replace("footer_logo.png", f"footer_logo.png{CACHE_BUST}")
+            content = content.replace("DocCropper_slogan_en.png", f"DocCropper_slogan_en.png{CACHE_BUST}")
+            content = content.replace("DocCropper_slogan_it.png", f"DocCropper_slogan_it.png{CACHE_BUST}")
     except FileNotFoundError:
         logger.error("static/index.html not found")
         return HTMLResponse(content="Frontend not found.", status_code=500)
     response = HTMLResponse(content=content, status_code=200)
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["Pragma"] = "no-cache"
     response.set_cookie("session_id", session_id, httponly=True)
     return response
 
@@ -327,6 +453,7 @@ async def get_settings():
         data["license_key"] = "FREE"
         data["license_name"] = "Free Edition"
     data["version"] = VERSION
+    data["version_date"] = VERSION_DATE
     if "stripe_secret_key" in data:
         data.pop("stripe_secret_key")
     return data
@@ -344,6 +471,7 @@ async def get_user_settings_endpoint(request: Request):
         return JSONResponse(status_code=401, content={"message": "Not logged in"})
     data = load_user_settings(email)
     data["version"] = VERSION
+    data["version_date"] = VERSION_DATE
     return data
 
 
@@ -354,6 +482,7 @@ async def update_user_settings_endpoint(request: Request, settings: dict = Body(
         return JSONResponse(status_code=401, content={"message": "Not logged in"})
     data = save_user_settings(email, settings)
     data["version"] = VERSION
+    data["version_date"] = VERSION_DATE
     return data
 
 
@@ -406,6 +535,8 @@ async def google_login(token: str = Body(...)):
 async def detect_corners(image_file: UploadFile = File(...)):
     try:
         contents = await image_file.read()
+        if len(contents) > MAX_UPLOAD_BYTES:
+            return JSONResponse(status_code=413, content={"message": "File too large"})
         nparr = np.frombuffer(contents, np.uint8)
         img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if img_cv is None:
@@ -436,6 +567,8 @@ async def process_image(
     try:
         # Read image
         contents = await image_file.read()
+        if len(contents) > MAX_UPLOAD_BYTES:
+            return JSONResponse(status_code=413, content={"message": "File too large"})
         nparr = np.frombuffer(contents, np.uint8)
         img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
@@ -544,9 +677,10 @@ async def process_image(
 
         if session_dir:
             try:
-                fname = os.path.join(session_dir, f"{uuid.uuid4().hex}.png")
+                fname = os.path.join(session_dir, f"{uuid.uuid4().hex}.png{ENC_SUFFIX}")
+                enc = encrypt_bytes(session_id, img_encoded_buffer)
                 with open(fname, "wb") as fh:
-                    fh.write(img_encoded_buffer)
+                    fh.write(enc)
             except Exception:
                 logger.exception("Failed to save processed image to session dir")
 
@@ -575,6 +709,8 @@ async def pdf_to_images(
         return JSONResponse(status_code=403, content={"message": "PDF import requires Pro license"})
     try:
         pdf_bytes = await pdf_file.read()
+        if len(pdf_bytes) > MAX_UPLOAD_BYTES:
+            return JSONResponse(status_code=413, content={"message": "File too large"})
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         thr = max(0, min(100, int(threshold))) / 100.0
         images_b64: list[str] = []
@@ -612,15 +748,19 @@ async def create_pdf(
         license_check = settings.get("license_check", False)
         dev_env = DEV_LICENSE_KEY_UPPER
         dev_key_valid = dev_env and key == dev_env
+        demo_key = key == DEMO_FULL_LICENSE_KEY
         if license_check:
-            licensed = False
-            if dev_key_valid:
+            if demo_key:
+                licensed = False
+            elif dev_key_valid:
                 licensed = True
             elif key:
                 licensed = verify_license_server(key)
+            else:
+                licensed = False
         else:
             licensed = True
-            if dev_key_valid and settings.get("developer_watermark", False):
+            if demo_key or (dev_key_valid and settings.get("developer_watermark", False)):
                 licensed = False
         session_id = request.cookies.get("session_id")
         session_dir = get_session_dir(session_id)
@@ -824,14 +964,15 @@ async def create_pdf(
             except Exception:
                 logger.exception("PDF signing failed")
 
-        pdf_path = os.path.join(session_dir, "output.pdf")
+        pdf_path = os.path.join(session_dir, "output.pdf" + ENC_SUFFIX)
         try:
+            enc = encrypt_bytes(session_id, pdf_bytes)
             with open(pdf_path, "wb") as fh:
-                fh.write(pdf_bytes)
+                fh.write(enc)
         except Exception:
             logger.exception("Failed to save PDF")
         pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
-        # Do not delete the session immediately so the user can re-export if needed
+        cleanup_old_sessions()
         return JSONResponse(content={"pdf": "data:application/pdf;base64," + pdf_base64})
     except Exception as e:
         logger.exception("Failed to create PDF")
@@ -874,6 +1015,18 @@ async def shutdown():
         return {"message": "Shutting down"}
     return {"message": "Server not running"}
 
+
+@app.post("/restart/")
+async def restart():
+    server = getattr(app.state, "server", None)
+    python = sys.executable
+    args = [python] + sys.argv
+    subprocess.Popen(args)
+    if server:
+        server.should_exit = True
+        return {"message": "Restarting"}
+    return {"message": "Server not running"}
+
 if __name__ == "__main__":
     import argparse
     import signal
@@ -907,7 +1060,7 @@ if __name__ == "__main__":
         if not (dev_env and key == dev_env):
             host = "127.0.0.1"
 
-    config = uvicorn.Config(app, host=host, port=port)
+    config = uvicorn.Config(app, host=host, port=port, forwarded_allow_ips="*")
     server = uvicorn.Server(config)
     app.state.server = server
     with open(PID_FILE, "w") as fh:

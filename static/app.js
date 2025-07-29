@@ -23,6 +23,7 @@ const downloadPdfBtn = document.getElementById('downloadPdfBtn');
 const waShareBtn = document.getElementById('waShareBtn');
 const emailShareBtn = document.getElementById('emailShareBtn');
 const layoutControls = document.getElementById('layoutControls');
+const blankControls = document.getElementById('blankControls');
 const layoutSelect = document.getElementById('layoutSelect');
 const orientationSelect = document.getElementById('orientationSelect');
 const arrangeSelect = document.getElementById('arrangeSelect');
@@ -33,6 +34,8 @@ const colorModeLabel = document.querySelector("label[for='colorModeSelect']");
 const blankThresholdInput = document.getElementById('blankThreshold');
 const blankThresholdLabel = document.querySelector("label[for='blankThreshold']");
 const skipBlankCheckbox = document.getElementById('skipBlank');
+const removeBlankBtn = document.getElementById('removeBlankBtn');
+const restoreBlankBtn = document.getElementById('restoreBlankBtn');
 let globalColorMode = 'color';
 let blankThreshold = 95;
 let skipBlank = true;
@@ -45,6 +48,7 @@ const modalImage = document.getElementById('modalImage');
 const closeModal = document.getElementById('closeModal');
 const langSelect = document.getElementById('langSelect');
 const layoutPreview = document.getElementById('layoutPreview');
+const togglePreviewBtn = document.getElementById('togglePreviewBtn');
 const licenseInfo = document.getElementById('licenseInfo');
 const purchaseBox = document.getElementById('purchaseBox');
 const licenseBox = document.getElementById('licenseBox');
@@ -52,11 +56,14 @@ const settingsBox = document.getElementById('settingsBox');
 const loginArea = document.getElementById('loginArea');
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
+const donateBox = document.getElementById('donateBox');
+const demoNotice = document.getElementById('demoNotice');
 const instructionsBox = document.getElementById('instructionsBox');
 const helpBtn = document.getElementById('helpBtn');
 const purchaseBtn = document.getElementById('purchaseBtn');
 const licenseBtn = document.getElementById('licenseBtn');
 const settingsBtn = document.getElementById('settingsBtn');
+const DEFAULT_PAYPAL = 'https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY';
 const bannerBox = document.getElementById('bannerBox');
 const closeBanner = document.getElementById('closeBanner');
 const sloganImg = document.getElementById('sloganImg');
@@ -64,6 +71,9 @@ const wikiFrame = document.getElementById('wikiFrame');
 const openWikiLink = document.getElementById('openWikiLink');
 const clientLogo = document.getElementById('clientLogo');
 const sponsorLogo = document.getElementById('sponsorLogo');
+const sponsorBadge = document.getElementById('sponsorBadge');
+const headerLogo = document.getElementById('headerLogo');
+const footerLogo = document.getElementById('footerLogo');
 const autoDetectHint = document.getElementById('autoDetectHint');
 const adjustControls = document.getElementById('adjustControls');
 const brightnessRange = document.getElementById('brightnessRange');
@@ -84,9 +94,8 @@ const clearDrawBtn = document.getElementById('clearDrawBtn');
 const useDrawBtn = document.getElementById('useDrawBtn');
 const addSignatureBtn = document.getElementById('addSignatureBtn');
 const discardSignatureBtn = document.getElementById('discardSignatureBtn');
+const loadingOverlay = document.getElementById('loadingOverlay');
 const saveSignatureBtn = document.getElementById('saveSignatureBtn');
-const qrSignBtn = document.getElementById('qrSignBtn');
-const qrSignPageBtn = document.getElementById('qrSignPageBtn');
 const digitalSignBtn = document.getElementById('remoteSignBtn');
 const signQR = document.getElementById('signQR');
 const signQrImg = document.getElementById('signQrImg');
@@ -124,15 +133,21 @@ const CAPTURE_QUALITY = 0.8;
 let isLicensed = false;
 let licenseName = '';
 let appVersion = '';
+let appVersionDate = '';
 let userInfo = null;
 let currentLicenseLevel = 'free';
+let demoFullMode = false;
 const MAX_IMAGES_FREE = 5;
+const MAX_FILE_MB = 20;
+const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 
 let files = [];
 let currentFileIndex = 0;
 let processedImages = [];
 window.processedImages = processedImages;
+let originalImages = [];
 let processedFiles = [];
+let removedPages = [];
 let editingIndex = null;
 let cameraStream = null;
 let cameraAvailable = false;
@@ -321,6 +336,9 @@ async function convertPdfToImages(file) {
     form.append('skip_blank', skipBlank ? '1' : '0');
     const resp = await fetch('/pdf-to-images/', { method: 'POST', body: form });
     if (!resp.ok) {
+        if (resp.status === 413) {
+            statusMessageElement.textContent = t('fileTooLarge').replace('{mb}', MAX_FILE_MB);
+        }
         throw new Error('PDF conversion failed');
     }
     const data = await resp.json();
@@ -339,7 +357,17 @@ async function importPdfPages(file) {
         statusMessageElement.textContent = t('pdfImportPro');
         return;
     }
-    const pages = await convertPdfToImages(file);
+    if (file.size > MAX_FILE_BYTES) {
+        statusMessageElement.textContent = t('fileTooLarge').replace('{mb}', MAX_FILE_MB);
+        return;
+    }
+    showLoading(t('loading'));
+    let pages;
+    try {
+        pages = await convertPdfToImages(file);
+    } finally {
+        hideLoading();
+    }
     let toAdd = pages;
     for (const p of toAdd) {
         let imgFile = p;
@@ -351,6 +379,7 @@ async function importPdfPages(file) {
         processedFiles.push(imgFile);
         const dataUrl = await fileToDataURL(imgFile);
         processedImages.push(dataUrl);
+        originalImages.push(dataUrl);
         addThumbnail(dataUrl, processedImages.length - 1);
     }
     if (processedImages.length > 0) {
@@ -359,7 +388,7 @@ async function importPdfPages(file) {
         if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
         if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
         layoutControls.style.display = 'block';
-        signatureControls.style.display = 'block';
+        if (blankControls) blankControls.style.display = 'block';
         if (signatureImg) {
             signaturePreview.style.display = 'block';
             signatureHint.style.display = 'block';
@@ -432,6 +461,7 @@ function applySettings(cfg) {
     } else {
         currentLicenseLevel = 'free';
     }
+    demoFullMode = !!cfg.demo_full_mode;
     isLicensed = false;
     licenseName = '';
     if (cfg.license_key && cfg.license_key.trim()) {
@@ -439,6 +469,9 @@ function applySettings(cfg) {
     }
     if (cfg.license_name) {
         licenseName = cfg.license_name;
+    }
+    if (cfg.public_url !== undefined) {
+        currentSettings.public_url = cfg.public_url;
     }
     if (brandBox) {
         brandBox.innerHTML = cfg.brand_html || '';
@@ -459,6 +492,14 @@ function applySettings(cfg) {
             sponsorLogo.style.display = 'none';
         }
     }
+    if (sponsorBadge) {
+        if (cfg.sponsor_logo) {
+            sponsorBadge.src = `/static/logos/${cfg.sponsor_logo}`;
+            sponsorBadge.style.display = 'block';
+        } else {
+            sponsorBadge.style.display = 'none';
+        }
+    }
     if (Array.isArray(cfg.banner_images)) {
         bannerImages = cfg.banner_images;
     } else {
@@ -473,6 +514,9 @@ function applySettings(cfg) {
     if (cfg.version) {
         appVersion = cfg.version;
     }
+    if (cfg.version_date) {
+        appVersionDate = cfg.version_date;
+    }
     docusealEnabled = !!cfg.docuseal_api_url;
     signEnabled = cfg.enable_sign !== false;
     mobileSignEnabled = !!cfg.enable_mobilesign;
@@ -481,8 +525,29 @@ function applySettings(cfg) {
         digitalSignBtn.disabled = !docusealEnabled || currentLicenseLevel === 'free' || !remoteSignEnabled;
     }
     if (mobileSignBtn) mobileSignBtn.style.display = mobileSignEnabled ? 'inline-block' : 'none';
-    if (qrSignBtn) qrSignBtn.style.display = mobileSignEnabled ? 'inline-block' : 'none';
     if (signBtn && !signEnabled) signBtn.style.display = 'none';
+    if (demoNotice) demoNotice.style.display = demoFullMode ? 'block' : 'none';
+    if (purchaseBtn) {
+        if (demoFullMode) {
+            purchaseBtn.style.display = 'none';
+        } else {
+            purchaseBtn.style.display = 'inline-block';
+            purchaseBtn.dataset.i18n = 'purchase';
+        }
+    }
+    if (donateBox) {
+        if (demoFullMode) {
+            const link = currentSettings.paypal_link || DEFAULT_PAYPAL;
+            donateBox.innerHTML = `<a href="${link}" target="_blank"><img src="https://www.paypalobjects.com/it_IT/IT/i/btn/btn_donateCC_LG.gif" alt="Donate"></a>`;
+            donateBox.style.display = 'block';
+        } else {
+            donateBox.style.display = 'none';
+            donateBox.innerHTML = '';
+        }
+    }
+    if (settingsBtn) {
+        settingsBtn.style.display = demoFullMode ? 'none' : 'inline-block';
+    }
 }
 
 async function loadTranslations(lang) {
@@ -543,7 +608,12 @@ function applyTranslations() {
         }
     });
     if (versionBox && appVersion) {
-        versionBox.textContent = translations['version'] ? `${translations['version']} ${appVersion}` : `Version ${appVersion}`;
+        const txt = translations['version'] ? `${translations['version']} ${appVersion}` : `Version ${appVersion}`;
+        if (appVersionDate) {
+            versionBox.innerHTML = txt + '<br>' + appVersionDate;
+        } else {
+            versionBox.textContent = txt;
+        }
     }
     if (sloganImg) {
         sloganImg.src = `/static/logos/DocCropper_slogan_${currentLang}.png`;
@@ -579,6 +649,21 @@ function startBannerRotation() {
     }
 }
 
+function showLoading(message) {
+    if (!loadingOverlay) return;
+    const span = loadingOverlay.querySelector('span');
+    span.textContent = message || t('loading');
+    loadingOverlay.style.display = 'block';
+}
+
+function hideLoading() {
+    if (loadingOverlay) loadingOverlay.style.display = 'none';
+}
+
+// expose loading helpers for other modules
+window.showLoading = showLoading;
+window.hideLoading = hideLoading;
+
 function calculateGrid() {
     const layout = parseInt(layoutSelect.value || '1');
     const orientation = orientationSelect.value || 'portrait';
@@ -605,13 +690,12 @@ function calculateGrid() {
 }
 
 function updateLayoutPreview() {
+    if (!layoutPreview.classList.contains('visible')) return;
     const {cols, rows} = calculateGrid();
     layoutPreview.innerHTML = '';
     const orientation = orientationSelect.value || 'portrait';
-    layoutPreview.style.display = 'block';
-    layoutPreview.style.width = orientation === 'portrait' ? '200px' : '250px';
-    layoutPreview.style.height = orientation === 'portrait' ? '250px' : '200px';
-    layoutPreview.style.display = 'grid';
+    layoutPreview.style.width = orientation === 'portrait' ? '180px' : '220px';
+    layoutPreview.style.height = orientation === 'portrait' ? '220px' : '180px';
     layoutPreview.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
     layoutPreview.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
     const total = cols * rows;
@@ -627,6 +711,38 @@ function openModal(src) {
     imageModal.style.display = 'block';
 }
 
+function showSponsorModal() {
+    return new Promise(resolve => {
+        const modal = document.getElementById('sponsorModal');
+        const closeBtn = document.getElementById('closeSponsor');
+        const countdownEl = document.getElementById('sponsorCountdown');
+        const video = document.getElementById('sponsorVideo');
+
+        video.src = 'https://www.youtube.com/embed/DerpUM0uK9g?autoplay=1';
+        modal.style.display = 'block';
+        closeBtn.style.display = 'none';
+        let remaining = 15;
+        countdownEl.textContent = remaining;
+        const timer = setInterval(() => {
+            remaining--;
+            countdownEl.textContent = remaining;
+            if (remaining <= 0) {
+                clearInterval(timer);
+                countdownEl.style.display = 'none';
+                closeBtn.style.display = 'block';
+            }
+        }, 1000);
+
+        const handler = () => {
+            video.src = '';
+            modal.style.display = 'none';
+            closeBtn.removeEventListener('click', handler);
+            resolve();
+        };
+        closeBtn.addEventListener('click', handler);
+    });
+}
+
 function rotateImage(index) {
     const img = new Image();
     img.onload = () => {
@@ -639,16 +755,30 @@ function rotateImage(index) {
         ctx.drawImage(img, -img.width / 2, -img.height / 2);
         const rotatedData = canvas.toDataURL('image/png');
         processedImages[index] = rotatedData;
+        if (originalImages[index]) originalImages[index] = rotatedData;
         const container = processedGallery.children[index];
         container.querySelector('img').src = rotatedData;
         if (imageModal.style.display === 'block') {
             openModal(rotatedData);
         }
     };
-    img.src = processedImages[index];
+    img.src = originalImages[index] || processedImages[index];
 }
 
 function convertColor(index, mode) {
+    if (mode === 'color') {
+        if (originalImages[index]) {
+            processedImages[index] = originalImages[index];
+            const container = processedGallery.children[index];
+            container.querySelector('img').src = processedImages[index];
+            if (imageModal.style.display === 'block') {
+                openModal(processedImages[index]);
+            }
+            // keep the latest color version for future edits
+            originalImages[index] = processedImages[index];
+        }
+        return;
+    }
     const img = new Image();
     img.onload = () => {
         const canvas = document.createElement('canvas');
@@ -672,6 +802,7 @@ function convertColor(index, mode) {
         }
         ctx.putImageData(data, 0, 0);
         const out = canvas.toDataURL('image/png');
+        if (!originalImages[index]) originalImages[index] = processedImages[index];
         processedImages[index] = out;
         const container = processedGallery.children[index];
         container.querySelector('img').src = out;
@@ -679,11 +810,12 @@ function convertColor(index, mode) {
             openModal(out);
         }
     };
-    img.src = processedImages[index];
+    img.src = originalImages[index] || processedImages[index];
 }
 
 function deleteImage(index) {
     processedImages.splice(index, 1);
+    originalImages.splice(index, 1);
     processedFiles.splice(index, 1);
     processedGallery.removeChild(processedGallery.children[index]);
     refreshThumbnailIndexes();
@@ -694,6 +826,7 @@ function deleteImage(index) {
         ocrBtn.style.display = 'none';
         ocrOutput.style.display = 'none';
         layoutControls.style.display = 'none';
+        if (blankControls) blankControls.style.display = 'none';
         signatureControls.style.display = 'none';
         signaturePreview.style.display = 'none';
         signatureHint.style.display = 'none';
@@ -705,17 +838,12 @@ function openSignatureForPage(idx) {
     signaturePage.value = idx;
     signatureControls.style.display = 'block';
     signatureExtra.style.display = 'block';
-    if (signatureImg) {
-        signaturePreview.style.display = 'block';
-        signatureHint.style.display = 'block';
-    } else {
-        signaturePreview.style.display = 'none';
-        signatureHint.style.display = 'none';
-    }
+    signaturePreview.style.display = 'block';
+    signatureHint.style.display = 'block';
     renderSignaturePreview();
 }
 
-function editImage(index) {
+function cropImage(index) {
     editingIndex = index;
     const file = processedFiles[index];
     currentFile = file;
@@ -730,8 +858,9 @@ function editImage(index) {
     ocrBtn.style.display = 'none';
     ocrOutput.style.display = 'none';
     layoutControls.style.display = 'none';
+    if (blankControls) blankControls.style.display = 'none';
     signatureControls.style.display = 'none';
-    statusMessageElement.textContent = 'Edit image and press Process Image to save.';
+    statusMessageElement.textContent = t('cropHint') || 'Crop image and press Process Image to save.';
 }
 
 
@@ -789,6 +918,7 @@ function addThumbnail(src, index) {
 
     const menu = document.createElement('select');
     menu.className = 'thumbMenu';
+    menu.style.display = 'none';
 
     function addOption(val, key) {
         const opt = document.createElement('option');
@@ -803,9 +933,90 @@ function addThumbnail(src, index) {
     if (isLicensed && currentLicenseLevel !== 'free') {
         addOption('gray', 'toGray');
         addOption('bw', 'toBW');
+        addOption('color', 'toColor');
     }
     addOption('edit', 'edit');
     addOption('delete', 'delete');
+
+    const cropBtnEl = document.createElement('button');
+    cropBtnEl.className = 'thumbBtn cropBtn';
+    cropBtnEl.textContent = '✂';
+    cropBtnEl.title = t('edit');
+    cropBtnEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(container.dataset.index);
+        cropImage(idx);
+    });
+    container.appendChild(cropBtnEl);
+
+    const delBtnEl = document.createElement('button');
+    delBtnEl.className = 'thumbBtn deleteBtn';
+    delBtnEl.textContent = '✖';
+    delBtnEl.title = t('delete');
+    delBtnEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(container.dataset.index);
+        deleteImage(idx);
+    });
+    container.appendChild(delBtnEl);
+    const actions = document.createElement('div');
+    actions.className = 'thumbActions';
+
+    const rotateBtnEl = document.createElement('button');
+    rotateBtnEl.className = 'thumbBtn rotateBtn';
+    rotateBtnEl.textContent = '↻';
+    rotateBtnEl.title = t('rotate');
+    rotateBtnEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(container.dataset.index);
+        rotateImage(idx);
+    });
+    actions.appendChild(rotateBtnEl);
+
+    if (signEnabled) {
+        const signPageBtn = document.createElement('button');
+        signPageBtn.className = 'thumbBtn signPageBtn';
+        signPageBtn.textContent = '✒';
+        signPageBtn.title = t('sign');
+        signPageBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            openSignatureForPage(idx);
+        });
+        actions.appendChild(signPageBtn);
+    }
+
+    if (isLicensed && currentLicenseLevel !== 'free') {
+        const grayBtn = document.createElement('button');
+        grayBtn.className = 'thumbBtn thumbCircle grayBtn';
+        grayBtn.title = t('toGray');
+        grayBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            convertColor(idx, 'gray');
+        });
+        actions.appendChild(grayBtn);
+
+        const bwBtn = document.createElement('button');
+        bwBtn.className = 'thumbBtn thumbCircle bwBtn';
+        bwBtn.title = t('toBW');
+        bwBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            convertColor(idx, 'bw');
+        });
+        actions.appendChild(bwBtn);
+
+        const colBtn = document.createElement('button');
+        colBtn.className = 'thumbBtn thumbCircle colorBtn';
+        colBtn.title = t('toColor');
+        colBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            convertColor(idx, 'color');
+        });
+        actions.appendChild(colBtn);
+    }
 
     menu.addEventListener('change', (e) => {
         const val = menu.value;
@@ -820,8 +1031,11 @@ function addThumbnail(src, index) {
             case 'bw':
                 convertColor(idx, 'bw');
                 break;
+            case 'color':
+                convertColor(idx, 'color');
+                break;
             case 'edit':
-                editImage(idx);
+                cropImage(idx);
                 break;
             case 'delete':
                 deleteImage(idx);
@@ -830,8 +1044,10 @@ function addThumbnail(src, index) {
         menu.value = '';
     });
 
+    container.appendChild(actions);
     container.appendChild(menu);
     processedGallery.appendChild(container);
+    originalImages[index] = src;
 }
 
 function refreshThumbnailIndexes() {
@@ -843,15 +1059,104 @@ function refreshThumbnailIndexes() {
 function updateProcessedArrays() {
     const newImages = [];
     const newFiles = [];
+    const newOriginals = [];
     Array.from(processedGallery.children).forEach(c => {
         const idx = parseInt(c.dataset.index);
         newImages.push(processedImages[idx]);
         newFiles.push(processedFiles[idx]);
+        newOriginals.push(originalImages[idx]);
     });
     processedImages = newImages;
     window.processedImages = processedImages;
     processedFiles = newFiles;
+    originalImages = newOriginals;
     refreshThumbnailIndexes();
+}
+
+function rebuildGallery() {
+    processedGallery.innerHTML = '';
+    processedImages.forEach((img, idx) => addThumbnail(img, idx));
+    if (sortable) {
+        sortable.destroy();
+        sortable = null;
+    }
+    if (typeof Sortable !== 'undefined') {
+        sortable = Sortable.create(processedGallery, {
+            animation: 150,
+            onEnd: updateProcessedArrays,
+            handle: 'img',
+            filter: '.thumbMenu, .thumbBtn',
+            preventOnFilter: false
+        });
+    }
+    refreshThumbnailIndexes();
+}
+
+async function isBlankImage(src, thr) {
+    return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const scale = Math.min(100 / img.width, 100 / img.height, 1);
+            canvas.width = Math.floor(img.width * scale);
+            canvas.height = Math.floor(img.height * scale);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let white = 0;
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i] > 240 && data[i + 1] > 240 && data[i + 2] > 240) white++;
+            }
+            const ratio = white / (data.length / 4);
+            resolve(ratio >= thr);
+        };
+        img.src = src;
+    });
+}
+
+async function removeBlankPages() {
+    await showSponsorModal();
+    showLoading(t('loading'));
+    const thr = blankThreshold / 100;
+    removedPages = [];
+    const keepImages = [];
+    const keepFiles = [];
+    const keepOriginals = [];
+    for (let i = 0; i < processedImages.length; i++) {
+        const blank = await isBlankImage(processedImages[i], thr);
+        if (blank) {
+            removedPages.push({ index: i, image: processedImages[i], file: processedFiles[i], original: originalImages[i] });
+        } else {
+            keepImages.push(processedImages[i]);
+            keepFiles.push(processedFiles[i]);
+            keepOriginals.push(originalImages[i]);
+        }
+    }
+    processedImages = keepImages;
+    window.processedImages = processedImages;
+    processedFiles = keepFiles;
+    originalImages = keepOriginals;
+    rebuildGallery();
+    hideLoading();
+    if (removedPages.length > 0) {
+        restoreBlankBtn.style.display = 'inline-block';
+        statusMessageElement.textContent = t('pagesRemoved').replace('{n}', removedPages.length);
+    }
+}
+
+function restoreBlankPages() {
+    if (removedPages.length === 0) return;
+    removedPages.sort((a, b) => a.index - b.index);
+    for (const p of removedPages) {
+        const idx = Math.min(p.index, processedImages.length);
+        processedImages.splice(idx, 0, p.image);
+        processedFiles.splice(idx, 0, p.file);
+        originalImages.splice(idx, 0, p.original);
+    }
+    removedPages = [];
+    rebuildGallery();
+    restoreBlankBtn.style.display = 'none';
+    statusMessageElement.textContent = t('pagesRestored');
 }
 
 closeModal.addEventListener('click', () => {
@@ -969,13 +1274,10 @@ function setDraggablePoints(displayPoints) {
 }
 
 function setupImage(imageUrl) {
-    imageElement.src = imageUrl;
-    imageElement.style.display = 'block';
-    wrapperElement.style.display = 'block';
-    if (autoDetectHint) autoDetectHint.style.display = 'block';
+    imageModal.style.display = 'none';
+    modalImage.src = '';
     processedImageElement.style.display = 'none';
-    statusMessageElement.textContent = 'Loading image...';
-
+    processedImageElement.src = '';
     imageElement.onload = () => {
         origW = imageElement.naturalWidth;
         origH = imageElement.naturalHeight;
@@ -1060,20 +1362,32 @@ function setupImage(imageUrl) {
         if (autoDetectHint) autoDetectHint.style.display = 'none';
         adjustControls.style.display = 'none';
     };
+
+    imageElement.src = imageUrl;
+    imageElement.style.display = 'block';
+    wrapperElement.style.display = 'block';
+    if (autoDetectHint) autoDetectHint.style.display = 'block';
+    statusMessageElement.textContent = 'Loading image...';
 }
 
 
 async function addFiles(newFiles) {
+    showLoading(t('loading'));
     if (currentLicenseLevel === 'free') {
-        const allowed = MAX_IMAGES_FREE - files.length;
+        const allowed = MAX_IMAGES_FREE - processedImages.length;
         if (allowed <= 0) {
             statusMessageElement.textContent = t('maxImagesFree');
+            hideLoading();
             return;
         }
         newFiles = Array.from(newFiles).slice(0, allowed);
     }
     const compressed = [];
     for (const f of Array.from(newFiles)) {
+        if (f.size > MAX_FILE_BYTES) {
+            statusMessageElement.textContent = t('fileTooLarge').replace('{mb}', MAX_FILE_MB);
+            continue;
+        }
         try {
             compressed.push(await compressImageFile(f));
         } catch (e) {
@@ -1081,42 +1395,47 @@ async function addFiles(newFiles) {
             compressed.push(f);
         }
     }
-    if (files.length === 0 && processedImages.length === 0) {
-        // first batch of files
-        files = compressed;
+    if (processedImages.length === 0 && files.length === 0) {
+        files = [];
         currentFileIndex = 0;
-        processedImages = [];
-        window.processedImages = processedImages;
-        processedFiles = [];
-        editingIndex = null;
         processedGallery.innerHTML = '';
-        exportPdfBtn.style.display = 'none';
-        if (signBtn) signBtn.style.display = 'none';
-        if (mobileSignBtn) mobileSignBtn.style.display = 'none';
-        layoutControls.style.display = 'none';
-        signatureControls.style.display = 'none';
-        if (files.length > 0) {
-            currentFile = files[0];
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setupImage(e.target.result);
-            };
-            reader.readAsDataURL(files[0]);
-        }
-    } else {
-        // add new files to existing queue
-        const startProcessing = currentFileIndex >= files.length;
-        files = files.concat(compressed);
-        if (startProcessing && newFiles.length > 0) {
-            currentFile = files[currentFileIndex];
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setupImage(e.target.result);
-            };
-            reader.readAsDataURL(files[currentFileIndex]);
-        }
+        processedFiles = [];
+        originalImages = [];
+        editingIndex = null;
     }
-
+    for (const f of compressed) {
+        files.push(f);
+        processedFiles.push(f);
+        const dataUrl = await fileToDataURL(f);
+        processedImages.push(dataUrl);
+        originalImages.push(dataUrl);
+        addThumbnail(dataUrl, processedImages.length - 1);
+    }
+    if (files.length > processedImages.length && wrapperElement.style.display === 'none') {
+        currentFile = files[currentFileIndex];
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            setupImage(e.target.result);
+        };
+        reader.readAsDataURL(currentFile);
+    }
+    if (files.length > 0) {
+        exportPdfBtn.style.display = 'inline-block';
+        if (signBtn && signEnabled) signBtn.style.display = 'inline-block';
+        if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
+        if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
+        layoutControls.style.display = 'block';
+        if (blankControls) blankControls.style.display = 'block';
+        if (signatureImg) {
+            signaturePreview.style.display = 'block';
+            signatureHint.style.display = 'block';
+            signatureExtra.style.display = 'block';
+            populateSignaturePages();
+            renderSignaturePreview();
+        }
+        updateLayoutPreview();
+    }
+    hideLoading();
 }
 
 imageUploadElement.addEventListener('change', async (event) => {
@@ -1137,7 +1456,7 @@ imageUploadElement.addEventListener('change', async (event) => {
             toProcess.push(f);
         }
     }
-    if (toProcess.length) addFiles(toProcess);
+    if (toProcess.length) await addFiles(toProcess);
 });
 
 async function handleDrop(event) {
@@ -1160,7 +1479,7 @@ async function handleDrop(event) {
                 toProcess.push(f);
             }
         }
-        if (toProcess.length) addFiles(toProcess);
+        if (toProcess.length) await addFiles(toProcess);
     }
 }
 
@@ -1233,6 +1552,9 @@ submitBtn.addEventListener('click', () => {
     })
     .then(response => {
         if (!response.ok) {
+            if (response.status === 413) {
+                statusMessageElement.textContent = t('fileTooLarge').replace('{mb}', MAX_FILE_MB);
+            }
             return response.json().then(err => { throw new Error(err.detail || err.message || `HTTP error! status: ${response.status}`) });
         }
         return response.json();
@@ -1243,6 +1565,7 @@ submitBtn.addEventListener('click', () => {
             openModal(data.processed_image);
             if (editingIndex !== null) {
                 processedImages[editingIndex] = data.processed_image;
+                originalImages[editingIndex] = data.processed_image;
                 const container = processedGallery.children[editingIndex];
                 container.querySelector('img').src = data.processed_image;
                 editingIndex = null;
@@ -1255,12 +1578,18 @@ submitBtn.addEventListener('click', () => {
                 if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
                 if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                 layoutControls.style.display = 'block';
-                signatureControls.style.display = 'block';
+                if (blankControls) blankControls.style.display = 'block';
                 updateLayoutPreview();
             } else {
-                processedImages.push(data.processed_image);
-                processedFiles.push(currentFile);
-                addThumbnail(data.processed_image, processedImages.length - 1);
+                processedImages[currentFileIndex] = data.processed_image;
+                originalImages[currentFileIndex] = data.processed_image;
+                processedFiles[currentFileIndex] = currentFile;
+                const container = processedGallery.children[currentFileIndex];
+                if (container) container.querySelector('img').src = data.processed_image;
+                exportPdfBtn.style.display = 'inline-block';
+                if (signBtn && signEnabled) signBtn.style.display = 'inline-block';
+                if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
+                if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                 currentFileIndex++;
                 if (currentFileIndex < files.length) {
                     statusMessageElement.textContent = 'Image processed. Load next...';
@@ -1280,7 +1609,7 @@ submitBtn.addEventListener('click', () => {
                     if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
                     if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                     layoutControls.style.display = 'block';
-                    signatureControls.style.display = 'block';
+                    if (blankControls) blankControls.style.display = 'block';
                     if (signatureImg) {
                         signaturePreview.style.display = 'block';
                         signatureHint.style.display = 'block';
@@ -1301,7 +1630,7 @@ submitBtn.addEventListener('click', () => {
     });
 });
 
-exportPdfBtn.addEventListener('click', () => {
+function generatePdf() {
     if (processedImages.length === 0) {
         statusMessageElement.textContent = 'No processed images to export.';
         return;
@@ -1344,6 +1673,11 @@ exportPdfBtn.addEventListener('click', () => {
         console.error('Error creating PDF:', error);
         statusMessageElement.textContent = `Error: ${error.message}`;
     });
+}
+
+exportPdfBtn.addEventListener('click', async () => {
+    await showSponsorModal();
+    generatePdf();
 });
 
 if (OCR_ENABLED) {
@@ -1398,9 +1732,14 @@ helpBtn.addEventListener('click', () => {
     instructionsBox.classList.toggle('visible');
 });
 purchaseBtn.addEventListener('click', () => {
-    const rect = purchaseBtn.getBoundingClientRect();
-    purchaseBox.style.top = (rect.bottom + window.scrollY) + 'px';
-    purchaseBox.classList.toggle('visible');
+    if (demoFullMode) {
+        const link = currentSettings.paypal_link || DEFAULT_PAYPAL;
+        window.open(link, '_blank');
+    } else {
+        const rect = purchaseBtn.getBoundingClientRect();
+        purchaseBox.style.top = (rect.bottom + window.scrollY) + 'px';
+        purchaseBox.classList.toggle('visible');
+    }
 });
 licenseBtn.addEventListener('click', () => {
     const rect = licenseBtn.getBoundingClientRect();
@@ -1413,12 +1752,6 @@ if (signBtn) {
         openSignatureForPage(0);
     });
 }
-if (mobileSignBtn) {
-    mobileSignBtn.addEventListener('click', () => {
-        const msBtn = document.getElementById('qrSignBtn');
-        if (msBtn) msBtn.click();
-    });
-}
 settingsBtn.addEventListener('click', () => {
     const rect = settingsBtn.getBoundingClientRect();
     settingsBox.style.display = 'block';
@@ -1429,6 +1762,16 @@ settingsBtn.addEventListener('click', () => {
 if (closeBanner) {
     closeBanner.addEventListener('click', () => {
         bannerBox.style.display = 'none';
+    });
+}
+if (headerLogo) {
+    headerLogo.addEventListener('click', () => {
+        location.reload();
+    });
+}
+if (footerLogo) {
+    footerLogo.addEventListener('click', () => {
+        window.location.href = 'https://www.iltuoconsulenteit.it/site/index.php/applicazioni/doccropper';
     });
 }
 
@@ -1603,6 +1946,13 @@ arrangeSelect.addEventListener('change', () => {
     saveSettings({ arrangement: arrangeSelect.value });
 });
 
+if (togglePreviewBtn) {
+    togglePreviewBtn.addEventListener('click', () => {
+        layoutPreview.classList.toggle('visible');
+        updateLayoutPreview();
+    });
+}
+
 scaleMode.addEventListener('change', () => {
     scalePercent.style.display = scaleMode.value === 'percent' ? 'inline-block' : 'none';
     saveSettings({ scale_mode: scaleMode.value, scale_percent: parseInt(scalePercent.value || '100') });
@@ -1626,6 +1976,12 @@ if (skipBlankCheckbox) {
         skipBlank = skipBlankCheckbox.checked;
         saveSettings({ skip_blank: skipBlank });
     });
+}
+if (removeBlankBtn) {
+    removeBlankBtn.addEventListener('click', removeBlankPages);
+}
+if (restoreBlankBtn) {
+    restoreBlankBtn.addEventListener('click', restoreBlankPages);
 }
 
 brightnessRange.addEventListener('input', () => {
@@ -1711,6 +2067,7 @@ if (discardSignatureBtn) {
             stamps.forEach(drawOne);
             const url = canvas.toDataURL('image/png');
             processedImages[pageIdx] = url;
+            if (originalImages[pageIdx]) originalImages[pageIdx] = url;
             const container = processedGallery.children[pageIdx];
             if (container) container.querySelector('img').src = url;
             try {
@@ -1734,11 +2091,11 @@ async function applyRemoteSignature(data) {
     canvas.height = base.height;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(base, 0, 0);
-    const list = data.signatures || [{image:data.image, x:data.x, y:data.y}];
+    const list = data.signatures || [{image:data.image, x:data.x, y:data.y, scale:1}];
     for (const sigData of list) {
         const img = new Image();
         await new Promise(res => { img.onload = res; img.src = sigData.image; });
-        const baseRatio = (canvas.height / 10) / img.height;
+        const baseRatio = (canvas.height / 10) * (sigData.scale || 1) / img.height;
         const w = img.width * baseRatio;
         const h = img.height * baseRatio;
         const x = sigData.x * canvas.width - w / 2;
@@ -1747,6 +2104,7 @@ async function applyRemoteSignature(data) {
     }
     const url = canvas.toDataURL('image/png');
     processedImages[pageIdx] = url;
+    if (originalImages[pageIdx]) originalImages[pageIdx] = url;
     const cont = processedGallery.children[pageIdx];
     if (cont) cont.querySelector('img').src = url;
     try {
@@ -1839,7 +2197,14 @@ function autoDetectCorners() {
     const formData = new FormData();
     formData.append('image_file', currentFile);
     fetch('/detect-corners/', { method: 'POST', body: formData })
-        .then(resp => resp.json())
+        .then(resp => {
+            if (!resp.ok) {
+                if (resp.status === 413) {
+                    statusMessageElement.textContent = t('fileTooLarge').replace('{mb}', MAX_FILE_MB);
+                }
+            }
+            return resp.json();
+        })
         .then(data => {
             if (data.points && data.points.length === 8) {
                 const disp = data.points.map((v,i)=> v / (i%2===0 ? scaling_factor_w : scaling_factor_h));
@@ -1887,7 +2252,13 @@ function applyProStatus() {
         imageUploadElement.accept = 'image/*,application/pdf';
         document.querySelectorAll('.shareBtn').forEach(btn => btn.style.display = 'inline-block');
         if (!sortable && typeof Sortable !== 'undefined') {
-            sortable = Sortable.create(processedGallery, { animation: 150, onEnd: updateProcessedArrays });
+            sortable = Sortable.create(processedGallery, {
+                animation: 150,
+                onEnd: updateProcessedArrays,
+                handle: 'img',
+                filter: '.thumbMenu, .thumbBtn',
+                preventOnFilter: false
+            });
         }
         if (reorderHint) reorderHint.style.display = 'block';
         if (colorModeSelect) colorModeSelect.style.display = 'inline-block';
@@ -1978,13 +2349,20 @@ function renderPaymentBox(cfg) {
 }
 
 function renderLicenseBox() {
-    const html = `
+    let html = `
     <h3>${t('licenseOptions')}</h3>
     <ul>
         <li><strong>${t('freeEdition')}</strong> - ${t('freeFeatures')}</li>
         <li><strong>${t('proEdition')}</strong> - ${t('proFeatures')}</li>
         <li><strong>${t('fullEdition')}</strong> - ${t('fullFeatures')}</li>
-    </ul>
+    </ul>`;
+    if (demoFullMode) {
+        html += `
+    <p>${t('demoLicenseDisabled')}</p>
+    <p><strong>${t('licenseKey')}</strong> ${currentSettings.license_key || ''}</p>
+    <p><strong>${t('licenseName')}</strong> ${currentSettings.license_name || ''}</p>`;
+    } else {
+        html += `
     <div class="licenseForm">
         <label>${t('licenseKey')}</label>
         <input type="text" id="licenseKeyInput" value="${currentSettings.license_key || ''}"><br>
@@ -1992,19 +2370,21 @@ function renderLicenseBox() {
         <input type="text" id="licenseNameInput" value="${currentSettings.license_name || ''}"><br>
         <button id="saveLicenseBtn">${t('saveLicense')}</button>
     </div>`;
+    }
     licenseBox.innerHTML = html;
     licenseBox.style.display = 'block';
-    const btn = document.getElementById('saveLicenseBtn');
-    btn.addEventListener('click', async () => {
-        const key = document.getElementById('licenseKeyInput').value.trim();
-        const name = document.getElementById('licenseNameInput').value.trim();
-        await saveSettings({license_key: key, license_name: name});
-        const cfg = await loadSettings();
-        applySettings(cfg);
-        licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
-        alert(t('licenseSaved'));
-        licenseBox.classList.remove('visible');
-    });
+    if (!demoFullMode) {
+        const btn = document.getElementById('saveLicenseBtn');
+        btn.addEventListener('click', async () => {
+            const key = document.getElementById('licenseKeyInput').value.trim();
+            const name = document.getElementById('licenseNameInput').value.trim();
+            await saveSettings({license_key: key, license_name: name});
+            await fetch('/restart/', {method: 'POST'});
+            alert(t('licenseSaved'));
+            licenseBox.classList.remove('visible');
+            setTimeout(() => { location.reload(); }, 1000);
+        });
+    }
 }
 
 function renderSettingsBox() {
@@ -2026,6 +2406,10 @@ function renderSettingsBox() {
             <input type="text" id="docusealUrlInput" value="${currentSettings.docuseal_api_url || ''}">
             <label>${t('docusealKey')}</label>
             <input type="text" id="docusealKeyInput" value="${currentSettings.docuseal_api_key || ''}">
+        </div>
+        <div>
+            <label>${t('publicUrl')}</label>
+            <input type="text" id="publicUrlInput" value="${currentSettings.public_url || ''}">
         </div>
         <button id="saveSettingsBtn">${t('saveSettings')}</button>
     </div>`;
@@ -2054,6 +2438,7 @@ function renderSettingsBox() {
             update.docuseal_api_url = '';
             update.docuseal_api_key = '';
         }
+        update.public_url = document.getElementById('publicUrlInput').value.trim();
         await saveSettings(update);
         const cfg = await loadSettings();
         applySettings(cfg);
@@ -2063,6 +2448,10 @@ function renderSettingsBox() {
 }
 
 function renderLogin(cfg) {
+    if (demoFullMode) {
+        loginArea.style.display = 'none';
+        return;
+    }
     if (!cfg || !cfg.google_client_id) {
         loginArea.style.display = 'block';
         loginArea.textContent = t('loginDisabled');
