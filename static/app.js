@@ -87,6 +87,7 @@ const signatureHint = document.getElementById('signatureHint');
 const signatureExtra = document.getElementById('signatureExtra');
 const signaturePage = document.getElementById('signaturePage');
 const signatureScaleInput = document.getElementById('signatureScale');
+const signatureTargetSelect = document.getElementById('signatureTarget');
 const drawSignatureBtn = document.getElementById('drawSignatureBtn');
 const signatureModal = document.getElementById('signatureModal');
 const drawArea = document.getElementById('drawArea');
@@ -107,6 +108,7 @@ let signatureImg = null;
 let signaturePosition = { x: 0.85, y: 0.85 };
 let signatureScale = 1;
 let signatures = [];
+let scaleTarget = 'current';
 let mobileSignPoints = {};
 window.mobileSignPoints = mobileSignPoints;
 let pendingSigPos = null;
@@ -839,6 +841,7 @@ function deleteImage(index) {
 function openSignatureForPage(idx) {
     populateSignaturePages();
     signaturePage.value = idx;
+    updateSignatureTargetOptions();
     signatureControls.style.display = 'block';
     signatureExtra.style.display = 'block';
     signaturePreview.style.display = 'block';
@@ -2004,7 +2007,33 @@ contrastRange.addEventListener('input', () => {
 
 if (signatureScaleInput) {
     signatureScaleInput.addEventListener('input', () => {
-        signatureScale = parseFloat(signatureScaleInput.value || '1');
+        const val = parseFloat(signatureScaleInput.value || '1');
+        const pageIdx = parseInt(signaturePage.value || '0');
+        if (scaleTarget === 'current') {
+            signatureScale = val;
+        } else if (scaleTarget === 'all') {
+            for (const sig of signatures) {
+                if (sig.page === pageIdx) sig.scale = val;
+            }
+            signatureScale = val;
+        } else {
+            const idx = parseInt(scaleTarget);
+            let count = -1;
+            for (const sig of signatures) {
+                if (sig.page === pageIdx) {
+                    count++;
+                    if (count === idx) { sig.scale = val; break; }
+                }
+            }
+        }
+        renderSignaturePreview();
+    });
+}
+
+if (signatureTargetSelect) {
+    signatureTargetSelect.addEventListener('change', () => {
+        scaleTarget = signatureTargetSelect.value;
+        updateSignatureTargetOptions();
         renderSignaturePreview();
     });
 }
@@ -2012,6 +2041,7 @@ if (signatureScaleInput) {
 if (signaturePage) {
     signaturePage.addEventListener('change', () => {
         renderSignaturePreview();
+        updateSignatureTargetOptions();
     });
 }
 
@@ -2029,6 +2059,7 @@ function addCurrentSignature() {
     signaturePosition.y += OFFSET;
     if (signaturePosition.y > 0.95) signaturePosition.y = OFFSET;
     renderSignaturePreview();
+    updateSignatureTargetOptions();
 }
 
 if (addSignatureBtn) {
@@ -2044,6 +2075,7 @@ if (discardSignatureBtn) {
         signaturePreview.style.display = 'none';
         signatureHint.style.display = 'none';
         if (legalDisclaimerEl) legalDisclaimerEl.style.display = 'none';
+        updateSignatureTargetOptions();
     });
 }
 
@@ -2086,6 +2118,7 @@ if (discardSignatureBtn) {
                 processedFiles[pageIdx] = new File([blob], processedFiles[pageIdx]?.name || `image_${pageIdx}.png`, { type: 'image/png' });
             } catch {}
             signatures = signatures.filter(s => s.page !== pageIdx);
+            updateSignatureTargetOptions();
             renderSignaturePreview();
             statusMessageElement.textContent = translations['imageSaved'] || 'Image updated';
         };
@@ -2238,6 +2271,41 @@ function populateSignaturePages() {
         opt.value = i;
         opt.textContent = (i + 1).toString();
         signaturePage.appendChild(opt);
+    }
+}
+
+function updateSignatureTargetOptions() {
+    if (!signatureTargetSelect) return;
+    const pageIdx = parseInt(signaturePage.value || '0');
+    signatureTargetSelect.innerHTML = '';
+    const optCurr = document.createElement('option');
+    optCurr.value = 'current';
+    optCurr.textContent = translations['currentSig'] || 'Current';
+    signatureTargetSelect.appendChild(optCurr);
+    const pageSigs = signatures.filter(s => s.page === pageIdx);
+    pageSigs.forEach((s, i) => {
+        const opt = document.createElement('option');
+        opt.value = i.toString();
+        const label = (translations['sigLabel'] || 'Signature {n}').replace('{n}', i + 1);
+        opt.textContent = label;
+        signatureTargetSelect.appendChild(opt);
+    });
+    if (pageSigs.length > 1) {
+        const optAll = document.createElement('option');
+        optAll.value = 'all';
+        optAll.textContent = translations['allSigs'] || 'All';
+        signatureTargetSelect.appendChild(optAll);
+    }
+    signatureTargetSelect.value = scaleTarget;
+    if (signatureScaleInput) {
+        if (scaleTarget === 'current') {
+            signatureScaleInput.value = signatureScale;
+        } else if (scaleTarget === 'all') {
+            if (pageSigs[0]) signatureScaleInput.value = pageSigs[0].scale;
+        } else {
+            const idx = parseInt(scaleTarget);
+            if (pageSigs[idx]) signatureScaleInput.value = pageSigs[idx].scale;
+        }
     }
 }
 
