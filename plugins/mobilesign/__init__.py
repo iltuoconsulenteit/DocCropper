@@ -189,7 +189,32 @@ Il dominio doccropper.iltuoconsulenteit.it è utilizzato esclusivamente a scopo 
             list.forEach(pt=>{const x=pt.x*overlay.width;const y=pt.y*overlay.height;ctx.beginPath();ctx.moveTo(x-10,y);ctx.lineTo(x+10,y);ctx.moveTo(x,y-10);ctx.lineTo(x,y+10);ctx.stroke();});
         }
         pageSelect.onchange=()=>{ docImg.src=images[pageSelect.value]; drawSpots(); pos=null; };
-        docImg.onclick=e=>{ if(finished) return; const r=e.target.getBoundingClientRect(); pos={x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}; padEl.style.display='block'; controls.style.display='block'; };
+        let lastTap=0;
+        function openPad(x,y){
+            pos={x,y};
+            padEl.style.display='block';
+            controls.style.display='block';
+        }
+        docImg.ondblclick=e=>{
+            if(finished) return;
+            const r=e.target.getBoundingClientRect();
+            openPad((e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);
+        };
+        docImg.addEventListener('touchend',e=>{
+            if(finished) return;
+            const now=Date.now();
+            const t=e.changedTouches[0];
+            const r=e.target.getBoundingClientRect();
+            const x=(t.clientX-r.left)/r.width;
+            const y=(t.clientY-r.top)/r.height;
+            if(now-lastTap<300){
+                e.preventDefault();
+                openPad(x,y);
+            }else{
+                pos={x,y};
+            }
+            lastTap=now;
+        });
         clearBtn.onclick=()=>pad.clear();
         async function submitCurrent(){
             if(!pos||pad.isEmpty())return false;
