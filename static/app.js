@@ -949,6 +949,8 @@ function addThumbnail(src, index) {
         deleteImage(idx);
     });
     container.appendChild(delBtnEl);
+    const actions = document.createElement('div');
+    actions.className = 'thumbActions';
 
     const rotateBtnEl = document.createElement('button');
     rotateBtnEl.className = 'thumbBtn rotateBtn';
@@ -959,41 +961,38 @@ function addThumbnail(src, index) {
         const idx = parseInt(container.dataset.index);
         rotateImage(idx);
     });
-    container.appendChild(rotateBtnEl);
+    actions.appendChild(rotateBtnEl);
 
     if (isLicensed && currentLicenseLevel !== 'free') {
         const grayBtn = document.createElement('button');
-        grayBtn.className = 'thumbBtn grayBtn';
-        grayBtn.textContent = 'G';
+        grayBtn.className = 'thumbBtn thumbCircle grayBtn';
         grayBtn.title = t('toGray');
         grayBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             const idx = parseInt(container.dataset.index);
             convertColor(idx, 'gray');
         });
-        container.appendChild(grayBtn);
+        actions.appendChild(grayBtn);
 
         const bwBtn = document.createElement('button');
-        bwBtn.className = 'thumbBtn bwBtn';
-        bwBtn.textContent = 'B';
+        bwBtn.className = 'thumbBtn thumbCircle bwBtn';
         bwBtn.title = t('toBW');
         bwBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             const idx = parseInt(container.dataset.index);
             convertColor(idx, 'bw');
         });
-        container.appendChild(bwBtn);
+        actions.appendChild(bwBtn);
 
         const colBtn = document.createElement('button');
-        colBtn.className = 'thumbBtn colorBtn';
-        colBtn.textContent = 'C';
+        colBtn.className = 'thumbBtn thumbCircle colorBtn';
         colBtn.title = t('toColor');
         colBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             const idx = parseInt(container.dataset.index);
             convertColor(idx, 'color');
         });
-        container.appendChild(colBtn);
+        actions.appendChild(colBtn);
     }
 
     menu.addEventListener('change', (e) => {
@@ -1022,6 +1021,7 @@ function addThumbnail(src, index) {
         menu.value = '';
     });
 
+    container.appendChild(actions);
     container.appendChild(menu);
     processedGallery.appendChild(container);
     originalImages[index] = src;
@@ -2141,7 +2141,7 @@ function applyProStatus() {
                 animation: 150,
                 onEnd: updateProcessedArrays,
                 handle: 'img',
-                filter: 'select',
+                filter: '.thumbMenu, .thumbBtn',
                 preventOnFilter: false
             });
         }
