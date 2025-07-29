@@ -1,7 +1,8 @@
 from fastapi import Request, Body
-from fastapi.responses import HTMLResponse, JSONResponse
-import uuid, qrcode, io, base64, os, json
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+import uuid, qrcode, io, base64, os, json, hashlib, logging
 from datetime import datetime
+import fitz
 
 __all__ = ['register']
 
@@ -20,6 +21,7 @@ def register(app, utils):
         page = int(data.get('page', 0))
         images = data.get('images') if isinstance(data.get('images'), list) else None
         points = data.get('points') if isinstance(data.get('points'), dict) else {}
+        name = data.get('name', '')
         email = data.get('email', '')
         phone = data.get('phone', '')
         if images:
@@ -38,6 +40,7 @@ def register(app, utils):
             'points': points,
             'signed': False,
             'signatures': [],
+            'name': name,
             'email': email,
             'phone': phone,
         }
@@ -81,6 +84,7 @@ def register(app, utils):
         page_index = int(info.get('page', 0))
         email = info.get('email', '')
         phone = info.get('phone', '')
+        name = info.get('name', '')
         html = """
         <html><head>
         <meta name='viewport' content='width=device-width,initial-scale=1.0'>
@@ -96,6 +100,7 @@ def register(app, utils):
         <img src='/static/logos/header_logo.png' style='max-width:150px;margin-top:10px' alt='DocCropper'>
         <p style='font-size:small;color:#a00;margin-top:5px;font-weight:bold'>DocCropper e i suoi autori declinano ogni responsabilità per un uso non conforme alla legge.<br>DocCropper and its authors accept no liability for illegal use.</p>
         <label style='display:block;margin-top:5px;'><input type='checkbox' id='consentFlag'> Consento il trattamento dei dati</label>
+        <input id='nameInput' type='text' placeholder='Nome' value='{name}' style='width:90%;max-width:300px;margin-top:5px;'>
         <input id='emailInput' type='email' placeholder='Email' value='{email}' style='width:90%;max-width:300px;margin-top:5px;'>
         <input id='phoneInput' type='tel' placeholder='Cellulare' value='{phone}' style='width:90%;max-width:300px;margin-top:5px;'>
         <p id='finishMsg' style='display:none;color:green;font-weight:bold'></p>
@@ -127,6 +132,7 @@ def register(app, utils):
         const submitBtn=document.getElementById('submit');
         const clearBtn=document.getElementById('clear');
         const finishBtn=document.getElementById('finish');
+        const nameInput=document.getElementById('nameInput');
         const emailInput=document.getElementById('emailInput');
         const phoneInput=document.getElementById('phoneInput');
         const consentFlag=document.getElementById('consentFlag');
@@ -233,7 +239,7 @@ def register(app, utils):
             if(!pad.isEmpty()) await submitCurrent();
             finishMsg.textContent='Sending signatures...';
             finishMsg.style.display='block';
-            await fetch('/finish-signing/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:emailInput.value||'',phone:phoneInput.value||'',consent:consentFlag.checked})});
+            await fetch('/finish-signing/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:nameInput.value||'',email:emailInput.value||'',phone:phoneInput.value||'',consent:consentFlag.checked})});
             finishMsg.textContent='Signatures sent. Waiting for PDF...';
             finished=true;
             finishBtn.disabled=true;
@@ -244,7 +250,7 @@ def register(app, utils):
         };
         </script>
         </body></html>
-        """.replace('{token}', token).replace('{img}', img_b64).replace('{images_json}', json.dumps(images)).replace('{spots_json}', json.dumps(points)).replace('{page}', str(page_index)).replace('{email}', email).replace('{phone}', phone)
+        """.replace('{token}', token).replace('{img}', img_b64).replace('{images_json}', json.dumps(images)).replace('{spots_json}', json.dumps(points)).replace('{page}', str(page_index)).replace('{email}', email).replace('{phone}', phone).replace('{name}', name)
         return HTMLResponse(content=html)
 
     @app.get('/sign-pages/{token}')
@@ -303,6 +309,7 @@ def register(app, utils):
         with open(info_path, 'r') as fh:
             info = json.load(fh)
         info['signed'] = True
+        info['name'] = data.get('name','')
         info['email'] = data.get('email','')
         info['phone'] = data.get('phone','')
         info['consent'] = bool(data.get('consent', False))
@@ -327,10 +334,38 @@ def register(app, utils):
             page = sig.get('page', info.get('page', 0))
             pages.setdefault(page, []).append({'image': 'data:image/png;base64,' + b64, 'x': sig['x'], 'y': sig['y'], 'scale': sig.get('scale', 1.0)})
         result = {'signatures': pages}
-        for key in ('email', 'phone', 'timestamp', 'consent'):
+        for key in ('name', 'email', 'phone', 'timestamp', 'consent'):
             if key in info:
                 result[key] = info[key]
         return result
+
+    def send_mail(to_addr: str, subject: str, body: str, attachment: str | None = None):
+        settings = load_settings()
+        server = os.getenv('SMTP_SERVER') or settings.get('smtp_server')
+        user = os.getenv('SMTP_USER') or settings.get('smtp_user')
+        password = os.getenv('SMTP_PASS') or settings.get('smtp_pass')
+        port = int(os.getenv('SMTP_PORT') or settings.get('smtp_port', 587))
+        sender = os.getenv('SMTP_FROM') or settings.get('smtp_from', user)
+        if not (server and user and password and to_addr):
+            return
+        import smtplib
+        from email.message import EmailMessage
+        msg = EmailMessage()
+        msg['Subject'] = subject
+        msg['From'] = sender
+        msg['To'] = to_addr
+        msg.set_content(body)
+        if attachment:
+            with open(attachment, 'rb') as fh:
+                data = fh.read()
+            msg.add_attachment(data, maintype='application', subtype='pdf', filename=os.path.basename(attachment))
+        try:
+            with smtplib.SMTP(server, port) as s:
+                s.starttls()
+                s.login(user, password)
+                s.send_message(msg)
+        except Exception:
+            logging.exception('Email send failed')
 
     @app.post('/store-signed-pdf/{token}')
     async def store_signed_pdf(request: Request, token: str, data: dict = Body(...)):
@@ -348,14 +383,46 @@ def register(app, utils):
             return JSONResponse(status_code=404, content={'message': 'Not found'})
         with open(info_path, 'r') as fh:
             info = json.load(fh)
+        hash_hex = hashlib.sha256(pdf_bytes).hexdigest()
+        ts = info.get('timestamp') or datetime.utcnow().isoformat()
+        name = info.get('name', '')
+        ip = request.client.host or ''
+        email = info.get('email', '')
+        legal = f"Firmato elettronicamente in data {ts} da {name} con firma elettronica semplice ai sensi del Regolamento eIDAS (UE 910/2014). IP: {ip} | Email: {email} | SHA256: {hash_hex}"
+        try:
+            doc = fitz.open(stream=pdf_bytes, filetype='pdf')
+            page = doc[-1]
+            rect = fitz.Rect(50, page.rect.height - 40, page.rect.width - 50, page.rect.height - 10)
+            page.insert_textbox(rect, legal, fontsize=8, align=1)
+            pdf_bytes = doc.tobytes()
+            doc.close()
+        except Exception:
+            logging.exception('Failed to append legal text')
         pdf_path = os.path.join(signatures_dir, f'signed_{token}.pdf')
         with open(pdf_path, 'wb') as fh:
             fh.write(pdf_bytes)
         url = request.url_for('download_signed_pdf', token=token)
         info['pdf_file'] = pdf_path
         info['pdf_url'] = str(url)
+        info['pdf_hash'] = hash_hex
         with open(info_path, 'w') as fh:
             json.dump(info, fh)
+        log_entry = {
+            'token': token,
+            'pdf_file': os.path.basename(pdf_path),
+            'hash': hash_hex,
+            'timestamp': ts,
+            'ip': ip,
+            'user_agent': request.headers.get('user-agent', ''),
+            'email': email,
+            'name': name,
+            'consent': info.get('consent', False)
+        }
+        os.makedirs('log_firme', exist_ok=True)
+        with open(os.path.join('log_firme', f'firma_{token}.json'), 'w') as fh:
+            json.dump(log_entry, fh, indent=2)
+        if email:
+            send_mail(email, 'Documento firmato', f'SHA256: {hash_hex}', pdf_path)
         return {'status': 'ok', 'url': str(url)}
 
     @app.get('/signed-pdf/{token}')
@@ -375,7 +442,7 @@ def register(app, utils):
                 return JSONResponse(status_code=202, content={'message': 'Pending'})
             url = request.url_for('download_signed_pdf', token=token)
             result['url'] = str(url)
-        for key in ('email', 'phone'):
+        for key in ('name', 'email', 'phone'):
             if key in info:
                 result[key] = info[key]
         return result

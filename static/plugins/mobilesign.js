@@ -8,6 +8,7 @@ export function initSignaturePlugin(translations, enabled = true) {
     const waSignLink = document.getElementById('waSignLink');
     const emailSignLink = document.getElementById('emailSignLink');
     const detailsModal = document.getElementById('mobileDetailsModal');
+    const detailsName = document.getElementById('mobileNameInput');
     const detailsEmail = document.getElementById('mobileEmailInput');
     const detailsPhone = document.getElementById('mobilePhoneInput');
     const detailsStart = document.getElementById('mobileDetailsStart');
@@ -25,6 +26,7 @@ export function initSignaturePlugin(translations, enabled = true) {
             const resp = await fetch(`/signature-result/${token}`);
             if (resp.status === 200) {
                 const data = await resp.json();
+                window.lastSignName = data.name || '';
                 window.lastSignEmail = data.email || '';
                 window.lastSignPhone = data.phone || '';
                 if (data.signatures && typeof data.signatures === 'object') {
@@ -68,6 +70,7 @@ export function initSignaturePlugin(translations, enabled = true) {
             if (window.mobileSignPoints && Object.keys(window.mobileSignPoints).length) {
                 payload.points = window.mobileSignPoints;
             }
+            if (window.lastSignName) payload.name = window.lastSignName;
             if (window.lastSignEmail) payload.email = window.lastSignEmail;
             if (window.lastSignPhone) payload.phone = window.lastSignPhone;
             const resp = await fetch('/start-sign/', {
@@ -95,6 +98,7 @@ export function initSignaturePlugin(translations, enabled = true) {
     }
     function openDetailsModal() {
         if (!detailsModal) { startQrSign(); return; }
+        if (detailsName) detailsName.value = window.lastSignName || '';
         if (detailsEmail) detailsEmail.value = window.lastSignEmail || '';
         if (detailsPhone) detailsPhone.value = window.lastSignPhone || '';
         detailsModal.style.display = 'block';
@@ -104,6 +108,7 @@ export function initSignaturePlugin(translations, enabled = true) {
     }
     if (detailsStart) {
         detailsStart.addEventListener('click', () => {
+            window.lastSignName = detailsName ? detailsName.value.trim() : '';
             window.lastSignEmail = detailsEmail ? detailsEmail.value.trim() : '';
             window.lastSignPhone = detailsPhone ? detailsPhone.value.trim() : '';
             if (detailsModal) detailsModal.style.display = 'none';
