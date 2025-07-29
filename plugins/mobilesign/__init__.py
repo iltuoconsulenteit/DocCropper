@@ -20,6 +20,8 @@ def register(app, utils):
         page = int(data.get('page', 0))
         images = data.get('images') if isinstance(data.get('images'), list) else None
         points = data.get('points') if isinstance(data.get('points'), dict) else {}
+        email = data.get('email', '')
+        phone = data.get('phone', '')
         if images:
             if len(images) == 0:
                 return JSONResponse(status_code=400, content={'message': 'No image supplied'})
@@ -36,6 +38,8 @@ def register(app, utils):
             'points': points,
             'signed': False,
             'signatures': [],
+            'email': email,
+            'phone': phone,
         }
         os.makedirs(signatures_dir, exist_ok=True)
         with open(os.path.join(signatures_dir, f'{token}.json'), 'w') as fh:
@@ -75,6 +79,8 @@ def register(app, utils):
         images = info.get('images') or [img_b64]
         points = info.get('points') or {}
         page_index = int(info.get('page', 0))
+        email = info.get('email', '')
+        phone = info.get('phone', '')
         html = """
         <html><head>
         <meta name='viewport' content='width=device-width,initial-scale=1.0'>
@@ -90,9 +96,10 @@ def register(app, utils):
         <img src='/static/logos/header_logo.png' style='max-width:150px;margin-top:10px' alt='DocCropper'>
         <p style='font-size:small;color:#a00;margin-top:5px;font-weight:bold'>DocCropper e i suoi autori declinano ogni responsabilità per un uso non conforme alla legge.<br>DocCropper and its authors accept no liability for illegal use.</p>
         <label style='display:block;margin-top:5px;'><input type='checkbox' id='consentFlag'> Consento il trattamento dei dati</label>
-        <input id='emailInput' type='email' placeholder='Email' style='width:90%;max-width:300px;margin-top:5px;'>
-        <input id='phoneInput' type='tel' placeholder='Cellulare' style='width:90%;max-width:300px;margin-top:5px;'>
+        <input id='emailInput' type='email' placeholder='Email' value='{email}' style='width:90%;max-width:300px;margin-top:5px;'>
+        <input id='phoneInput' type='tel' placeholder='Cellulare' value='{phone}' style='width:90%;max-width:300px;margin-top:5px;'>
         <p id='finishMsg' style='display:none;color:green;font-weight:bold'></p>
+        <a id='pdfLink' style='display:none;margin-top:5px;' download='signed.pdf'>Download PDF</a>
         <p>Tap the document then draw your signature</p>
         <select id='pageSelect' style='margin-top:10px'></select>
         <div id='container'>
@@ -184,22 +191,39 @@ def register(app, utils):
         }
         submitBtn.onclick=submitCurrent;
         const finishMsg=document.getElementById('finishMsg');
+        const pdfLink=document.getElementById('pdfLink');
+        async function pollPdf(){
+            try{
+                const r=await fetch('/signed-pdf/{token}');
+                if(r.status===200){
+                    const d=await r.json();
+                    if(d.pdf){
+                        pdfLink.href=d.pdf;
+                        pdfLink.style.display='block';
+                        finishMsg.textContent='Signatures sent. Download your PDF:';
+                        return;
+                    }
+                }
+            }catch{}
+            setTimeout(pollPdf,3000);
+        }
         finishBtn.onclick=async()=>{
             if(finished) return;
             if(!pad.isEmpty()) await submitCurrent();
             finishMsg.textContent='Sending signatures...';
             finishMsg.style.display='block';
             await fetch('/finish-signing/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:emailInput.value||'',phone:phoneInput.value||'',consent:consentFlag.checked})});
-            finishMsg.textContent='Signatures sent. You may close this page.';
+            finishMsg.textContent='Signatures sent. Waiting for PDF...';
             finished=true;
             finishBtn.disabled=true;
             submitBtn.disabled=true;
             clearBtn.disabled=true;
             docImg.onclick=null;
+            pollPdf();
         };
         </script>
         </body></html>
-        """.replace('{token}', token).replace('{img}', img_b64).replace('{images_json}', json.dumps(images)).replace('{spots_json}', json.dumps(points)).replace('{page}', str(page_index))
+        """.replace('{token}', token).replace('{img}', img_b64).replace('{images_json}', json.dumps(images)).replace('{spots_json}', json.dumps(points)).replace('{page}', str(page_index)).replace('{email}', email).replace('{phone}', phone)
         return HTMLResponse(content=html)
 
     @app.get('/sign-pages/{token}')
@@ -286,3 +310,30 @@ def register(app, utils):
             if key in info:
                 result[key] = info[key]
         return result
+
+    @app.post('/store-signed-pdf/{token}')
+    async def store_signed_pdf(token: str, data: dict = Body(...)):
+        pdf_b64 = data.get('pdf')
+        if not pdf_b64:
+            return JSONResponse(status_code=400, content={'message': 'No PDF'})
+        info_path = os.path.join(signatures_dir, f'{token}.json')
+        if not os.path.exists(info_path):
+            return JSONResponse(status_code=404, content={'message': 'Not found'})
+        with open(info_path, 'r') as fh:
+            info = json.load(fh)
+        info['pdf'] = pdf_b64
+        with open(info_path, 'w') as fh:
+            json.dump(info, fh)
+        return {'status': 'ok'}
+
+    @app.get('/signed-pdf/{token}')
+    async def signed_pdf(token: str):
+        info_path = os.path.join(signatures_dir, f'{token}.json')
+        if not os.path.exists(info_path):
+            return JSONResponse(status_code=404, content={'message': 'Not found'})
+        with open(info_path, 'r') as fh:
+            info = json.load(fh)
+        pdf_b64 = info.get('pdf')
+        if not pdf_b64:
+            return JSONResponse(status_code=202, content={'message': 'Pending'})
+        return {'pdf': pdf_b64}

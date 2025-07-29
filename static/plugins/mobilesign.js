@@ -7,6 +7,7 @@ export function initSignaturePlugin(translations, enabled = true) {
     const copySignLink = document.getElementById('copySignLink');
     const waSignLink = document.getElementById('waSignLink');
     const signaturePage = document.getElementById('signaturePage');
+    window.lastSignToken = '';
 
     if (!enabled) {
         if (mobileSignBtn) mobileSignBtn.style.display = 'none';
@@ -61,6 +62,8 @@ export function initSignaturePlugin(translations, enabled = true) {
             if (window.mobileSignPoints && Object.keys(window.mobileSignPoints).length) {
                 payload.points = window.mobileSignPoints;
             }
+            if (window.lastSignEmail) payload.email = window.lastSignEmail;
+            if (window.lastSignPhone) payload.phone = window.lastSignPhone;
             const resp = await fetch('/start-sign/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -75,6 +78,7 @@ export function initSignaturePlugin(translations, enabled = true) {
                     signQrLink.href = data.url;
                 }
                 signQR.style.display = 'block';
+                window.lastSignToken = data.token;
                 pollSignature(data.token);
             }
         } catch (e) {

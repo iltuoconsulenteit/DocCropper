@@ -158,6 +158,7 @@ let cameraAvailable = false;
 let currentPdfBlob = null;
 window.lastSignEmail = '';
 window.lastSignPhone = '';
+window.lastSignToken = '';
 let sortable = null;
 let currentFile = null;
 let docusealEnabled = false;
@@ -1682,6 +1683,13 @@ function generatePdf() {
             currentPdfBlob = new Blob([byteArray], {type: 'application/pdf'});
             exportOptions.style.display = 'block';
             statusMessageElement.textContent = 'PDF ready.';
+            if (window.lastSignToken) {
+                fetch('/store-signed-pdf/' + window.lastSignToken, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pdf: data.pdf })
+                });
+            }
             if (window.lastSignPhone) {
                 shareWhatsApp(window.lastSignPhone);
             }
