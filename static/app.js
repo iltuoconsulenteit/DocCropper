@@ -42,6 +42,7 @@ let skipBlank = true;
 const processedImageElement = document.getElementById('processedImage');
 const processedGallery = document.getElementById('processedGallery');
 const statusMessageElement = document.getElementById('statusMessage');
+const signedPdfLink = document.getElementById('signedPdfLink');
 const reorderHint = document.getElementById('reorderHint');
 const imageModal = document.getElementById('imageModal');
 const modalImage = document.getElementById('modalImage');
@@ -159,6 +160,7 @@ let currentPdfBlob = null;
 window.lastSignEmail = '';
 window.lastSignPhone = '';
 window.lastSignToken = '';
+window.lastSignedUrl = '';
 let sortable = null;
 let currentFile = null;
 let docusealEnabled = false;
@@ -1665,6 +1667,7 @@ function generatePdf() {
         statusMessageElement.textContent = 'No processed images to export.';
         return;
     }
+    if (signedPdfLink) signedPdfLink.style.display = 'none';
     statusMessageElement.textContent = 'Generating PDF...';
     const layout = parseInt(layoutSelect.value || '1');
     const orientation = orientationSelect.value || 'portrait';
@@ -1706,7 +1709,14 @@ function generatePdf() {
                 })
                 .then(r => r.json())
                 .then(d => {
-                    if (d.url) window.lastSignedUrl = d.url;
+                    if (d.url) {
+                        window.lastSignedUrl = d.url;
+                        if (signedPdfLink) {
+                            signedPdfLink.href = d.url;
+                            signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
+                            signedPdfLink.style.display = 'inline';
+                        }
+                    }
                     if (window.lastSignPhone) shareWhatsAppLink(window.lastSignPhone, d.url);
                     if (window.lastSignEmail) shareEmailLink(window.lastSignEmail, d.url);
                 });
@@ -1716,6 +1726,12 @@ function generatePdf() {
                 }
                 if (window.lastSignEmail) {
                     shareEmail(window.lastSignEmail);
+                }
+                if (signedPdfLink) {
+                    const url = URL.createObjectURL(currentPdfBlob);
+                    signedPdfLink.href = url;
+                    signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
+                    signedPdfLink.style.display = 'inline';
                 }
             }
         } else {

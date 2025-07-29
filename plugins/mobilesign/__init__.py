@@ -194,11 +194,12 @@ def register(app, utils):
         const pdfLink=document.getElementById('pdfLink');
         async function pollPdf(){
             try{
-                const r=await fetch('/signed-pdf/{token}');
+                const r=await fetch('/signed-pdf/{token}',{cache:'no-store'});
                 if(r.status===200){
                     const d=await r.json();
                     if(d.url){
                         pdfLink.href=d.url;
+                        pdfLink.textContent='Download PDF';
                         pdfLink.style.display='block';
                         finishMsg.textContent='Signatures sent. Download your PDF:';
                         return;
@@ -330,10 +331,11 @@ def register(app, utils):
         pdf_path = os.path.join(signatures_dir, f'signed_{token}.pdf')
         with open(pdf_path, 'wb') as fh:
             fh.write(pdf_bytes)
+        url = request.url_for('download_signed_pdf', token=token)
         info['pdf_file'] = pdf_path
+        info['pdf_url'] = str(url)
         with open(info_path, 'w') as fh:
             json.dump(info, fh)
-        url = request.url_for('download_signed_pdf', token=token)
         return {'status': 'ok', 'url': str(url)}
 
     @app.get('/signed-pdf/{token}')
@@ -343,6 +345,9 @@ def register(app, utils):
             return JSONResponse(status_code=404, content={'message': 'Not found'})
         with open(info_path, 'r') as fh:
             info = json.load(fh)
+        pdf_url = info.get('pdf_url')
+        if pdf_url:
+            return {'url': pdf_url}
         pdf_path = info.get('pdf_file')
         if not pdf_path or not os.path.exists(pdf_path):
             return JSONResponse(status_code=202, content={'message': 'Pending'})
