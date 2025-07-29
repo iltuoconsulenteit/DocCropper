@@ -166,9 +166,15 @@ Il dominio doccropper.iltuoconsulenteit.it è utilizzato esclusivamente a scopo 
                     }
                 }
             }catch{}
-            images.forEach((img,idx)=>{const opt=document.createElement('option');opt.value=idx;opt.textContent=(idx+1);pageSelect.appendChild(opt);});
+            pageSelect.innerHTML='';
+            images.forEach((img,idx)=>{
+                const opt=document.createElement('option');
+                opt.value=idx;
+                opt.textContent=(idx+1);
+                pageSelect.appendChild(opt);
+            });
             pageSelect.value={page};
-            docImg.src=images[pageSelect.value];
+            docImg.src=images[pageSelect.value]||'';
             drawSpots();
         }
         loadPages();
@@ -200,10 +206,10 @@ Il dominio doccropper.iltuoconsulenteit.it è utilizzato esclusivamente a scopo 
             const r=e.target.getBoundingClientRect();
             openPad((e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);
         };
-        docImg.addEventListener('touchend',e=>{
+        docImg.addEventListener('touchstart',e=>{
             if(finished) return;
             const now=Date.now();
-            const t=e.changedTouches[0];
+            const t=e.touches[0];
             const r=e.target.getBoundingClientRect();
             const x=(t.clientX-r.left)/r.width;
             const y=(t.clientY-r.top)/r.height;
