@@ -33,6 +33,8 @@ const colorModeLabel = document.querySelector("label[for='colorModeSelect']");
 const blankThresholdInput = document.getElementById('blankThreshold');
 const blankThresholdLabel = document.querySelector("label[for='blankThreshold']");
 const skipBlankCheckbox = document.getElementById('skipBlank');
+const removeBlankBtn = document.getElementById('removeBlankBtn');
+const restoreBlankBtn = document.getElementById('restoreBlankBtn');
 let globalColorMode = 'color';
 let blankThreshold = 95;
 let skipBlank = true;
@@ -143,6 +145,7 @@ let processedImages = [];
 window.processedImages = processedImages;
 let originalImages = [];
 let processedFiles = [];
+let removedPages = [];
 let editingIndex = null;
 let cameraStream = null;
 let cameraAvailable = false;
@@ -1050,6 +1053,92 @@ function updateProcessedArrays() {
     refreshThumbnailIndexes();
 }
 
+function rebuildGallery() {
+    processedGallery.innerHTML = '';
+    processedImages.forEach((img, idx) => addThumbnail(img, idx));
+    if (sortable) {
+        sortable.destroy();
+        sortable = null;
+    }
+    if (typeof Sortable !== 'undefined') {
+        sortable = Sortable.create(processedGallery, {
+            animation: 150,
+            onEnd: updateProcessedArrays,
+            handle: 'img',
+            filter: '.thumbMenu, .thumbBtn',
+            preventOnFilter: false
+        });
+    }
+    refreshThumbnailIndexes();
+}
+
+async function isBlankImage(src, thr) {
+    return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const scale = Math.min(100 / img.width, 100 / img.height, 1);
+            canvas.width = Math.floor(img.width * scale);
+            canvas.height = Math.floor(img.height * scale);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let white = 0;
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i] > 240 && data[i + 1] > 240 && data[i + 2] > 240) white++;
+            }
+            const ratio = white / (data.length / 4);
+            resolve(ratio >= thr);
+        };
+        img.src = src;
+    });
+}
+
+async function removeBlankPages() {
+    await showSponsorModal();
+    showLoading(t('loading'));
+    const thr = blankThreshold / 100;
+    removedPages = [];
+    const keepImages = [];
+    const keepFiles = [];
+    const keepOriginals = [];
+    for (let i = 0; i < processedImages.length; i++) {
+        const blank = await isBlankImage(processedImages[i], thr);
+        if (blank) {
+            removedPages.push({ index: i, image: processedImages[i], file: processedFiles[i], original: originalImages[i] });
+        } else {
+            keepImages.push(processedImages[i]);
+            keepFiles.push(processedFiles[i]);
+            keepOriginals.push(originalImages[i]);
+        }
+    }
+    processedImages = keepImages;
+    window.processedImages = processedImages;
+    processedFiles = keepFiles;
+    originalImages = keepOriginals;
+    rebuildGallery();
+    hideLoading();
+    if (removedPages.length > 0) {
+        restoreBlankBtn.style.display = 'inline-block';
+        statusMessageElement.textContent = t('pagesRemoved').replace('{n}', removedPages.length);
+    }
+}
+
+function restoreBlankPages() {
+    if (removedPages.length === 0) return;
+    removedPages.sort((a, b) => a.index - b.index);
+    for (const p of removedPages) {
+        const idx = Math.min(p.index, processedImages.length);
+        processedImages.splice(idx, 0, p.image);
+        processedFiles.splice(idx, 0, p.file);
+        originalImages.splice(idx, 0, p.original);
+    }
+    removedPages = [];
+    rebuildGallery();
+    restoreBlankBtn.style.display = 'none';
+    statusMessageElement.textContent = t('pagesRestored');
+}
+
 closeModal.addEventListener('click', () => {
     imageModal.style.display = 'none';
 });
@@ -1867,6 +1956,12 @@ if (skipBlankCheckbox) {
         skipBlank = skipBlankCheckbox.checked;
         saveSettings({ skip_blank: skipBlank });
     });
+}
+if (removeBlankBtn) {
+    removeBlankBtn.addEventListener('click', removeBlankPages);
+}
+if (restoreBlankBtn) {
+    restoreBlankBtn.addEventListener('click', restoreBlankPages);
 }
 
 brightnessRange.addEventListener('input', () => {

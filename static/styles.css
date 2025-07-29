@@ -260,14 +260,14 @@ button:hover {
 
 .deleteBtn {
     position: absolute;
-    top: -12px;
-    right: -12px;
+    top: -24px;
+    right: 0;
 }
 
 .cropBtn {
     position: absolute;
-    top: -12px;
-    left: -12px;
+    top: -24px;
+    left: 0;
 }
 
 .rotateBtn,

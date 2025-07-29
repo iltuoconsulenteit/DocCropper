@@ -117,6 +117,7 @@
             <option value="vertical" data-i18n="vertical">Vertical</option>
             <option value="grid" data-i18n="grid">Grid</option>
         </select>
+        <button id="togglePreviewBtn" data-i18n="togglePreview">Preview layout</button>
         <label for="scaleMode" data-i18n="scaleLabel">Image size:</label>
         <select id="scaleMode">
             <option value="fit" data-i18n="fill">Fill cell</option>
@@ -133,7 +134,8 @@
         <label for="blankThreshold" data-i18n="blankThreshold">Blank page threshold (%):</label>
         <input type="number" id="blankThreshold" value="95" min="80" max="100" step="1" style="width:60px;">
         <label><input type="checkbox" id="skipBlank" checked> <span data-i18n="skipBlank"></span></label>
-        <button id="togglePreviewBtn" data-i18n="togglePreview">Preview layout</button>
+        <button id="removeBlankBtn" data-i18n="removeBlank">Remove blank pages</button>
+        <button id="restoreBlankBtn" data-i18n="restoreBlank" style="display:none;">Restore pages</button>
     </div>
     <div id="layoutPreview"></div>
 
