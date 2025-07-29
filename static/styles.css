@@ -44,6 +44,7 @@ h1, h2 {
     min-width: 80px;
     text-align: center;
     margin: 0 auto;
+    order: 2;
 }
 
 #brandBox img {
@@ -292,7 +293,6 @@ button:hover {
 }
 
 .signPageBtn {
-    transform: rotate(-30deg);
     font-size: 1.2em;
 }
 
@@ -335,6 +335,7 @@ button:hover {
     border: 1px dashed #666;
     max-width: 100%;
     margin-top: 5px;
+    touch-action: manipulation;
 }
 
 #drawArea {
@@ -361,7 +362,7 @@ button:hover {
 .legalWarning {
     color: #a00;
     font-weight: bold;
-    margin-top: 5px;
+    margin-top: 1px;
 }
 
 #signatureHint {
@@ -695,7 +696,16 @@ button:hover {
     padding: 2px 0;
     width: 100%;
     flex-basis: 100%;
-    order: 103;
+    order: 1;
+}
+
+#mobileDetailsModal .modal-content {
+    background: #fff;
+    color: #333;
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 6px;
 }
 
 #sponsorContent iframe {

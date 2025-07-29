@@ -1,6 +1,8 @@
 from fastapi import Request, Body
-from fastapi.responses import HTMLResponse, JSONResponse
-import uuid, qrcode, io, base64, os, json
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+import uuid, qrcode, io, base64, os, json, hashlib, logging
+from datetime import datetime
+import fitz
 
 __all__ = ['register']
 
@@ -19,6 +21,9 @@ def register(app, utils):
         page = int(data.get('page', 0))
         images = data.get('images') if isinstance(data.get('images'), list) else None
         points = data.get('points') if isinstance(data.get('points'), dict) else {}
+        name = data.get('name', '')
+        email = data.get('email', '')
+        phone = data.get('phone', '')
         if images:
             if len(images) == 0:
                 return JSONResponse(status_code=400, content={'message': 'No image supplied'})
@@ -35,6 +40,9 @@ def register(app, utils):
             'points': points,
             'signed': False,
             'signatures': [],
+            'name': name,
+            'email': email,
+            'phone': phone,
         }
         os.makedirs(signatures_dir, exist_ok=True)
         with open(os.path.join(signatures_dir, f'{token}.json'), 'w') as fh:
@@ -74,21 +82,44 @@ def register(app, utils):
         images = info.get('images') or [img_b64]
         points = info.get('points') or {}
         page_index = int(info.get('page', 0))
+        email = info.get('email', '')
+        phone = info.get('phone', '')
+        name = info.get('name', '')
         html = """
         <html><head>
         <meta name='viewport' content='width=device-width,initial-scale=1.0'>
         <style>
         body{ text-align:center;font-family:sans-serif; }
         #container{ position:relative; display:inline-block; }
-        #docImg{ max-width:100%; height:auto; display:block; }
+        #docImg{ max-width:100%; height:auto; display:block; touch-action: manipulation; }
         #overlay{ position:absolute; left:0; top:0; pointer-events:none; }
         #pad{ border:1px solid #000; display:none; margin-top:10px; width:100%; height:200px }
         </style>
         <script src='https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js'></script>
         </head><body>
         <img src='/static/logos/header_logo.png' style='max-width:150px;margin-top:10px' alt='DocCropper'>
-        <p style='font-size:small;color:#a00;margin-top:5px;font-weight:bold'>DocCropper e i suoi autori declinano ogni responsabilità per un uso non conforme alla legge.<br>DocCropper and its authors accept no liability for illegal use.</p>
+        <p style='font-size:small;color:#a00;margin-top:5px;font-weight:bold;text-align:left;'>⚠️ Avvertenza legale – Firma elettronica semplice (FES)<br>
+Il sistema di firma Mobile Sign, integrato in DocCropper, consente la raccolta di firme elettroniche grafiche in modalità conforme ai requisiti della firma elettronica semplice (FES), come definita dal Regolamento UE 910/2014 eIDAS e dal Codice dell'Amministrazione Digitale (CAD).<br><br>
+La firma avviene tramite consenso esplicito e tracciabile da parte del firmatario, ed è tecnicamente associata al documento firmato.<br><br>
+Tuttavia, DocCropper e il sito doccropper.iltuoconsulenteit.it:<br>
+- non sono prestatori di servizi fiduciari qualificati (QTSP) ai sensi della normativa europea;<br>
+- non garantiscono la validità legale delle firme raccolte in tutti i contesti giuridici o amministrativi;<br>
+- non conservano copie dei documenti né dei log firma se non con integrazione personalizzata;<br>
+- non si assumono alcuna responsabilità per usi impropri, illeciti o non consentiti dalla legge del sistema Mobile Sign.<br><br>
+Il dominio doccropper.iltuoconsulenteit.it è utilizzato esclusivamente a scopo dimostrativo e di test: non costituisce un servizio di firma elettronica centralizzato, certificato o destinato a produzione.<br><br>
+È responsabilità esclusiva dell’utente o del richiedente garantire che l’uso del sistema avvenga:<br>
+- nel rispetto della normativa applicabile;<br>
+- con adeguata identificazione e informazione del firmatario;<br>
+- in contesti compatibili con l’uso della firma elettronica semplice.</p>
+        <label style='display:block;margin-top:5px;'><input type='checkbox' id='consentFlag'> Consento il trattamento dei dati</label>
+        <input id='nameInput' type='text' placeholder='Nome' value='{name}' style='width:90%;max-width:300px;margin-top:5px;'>
+        <input id='emailInput' type='email' placeholder='Email' value='{email}' style='width:90%;max-width:300px;margin-top:5px;'>
+        <input id='phoneInput' type='tel' placeholder='Cellulare' value='{phone}' style='width:90%;max-width:300px;margin-top:5px;'>
         <p id='finishMsg' style='display:none;color:green;font-weight:bold'></p>
+        <a id='pdfLink' style='display:none;margin-top:5px;' download='signed.pdf'>Download PDF</a>
+        <button id='waPdfBtn' style='display:none;margin-left:10px;'>WhatsApp</button>
+        <button id='emailPdfBtn' style='display:none;margin-left:10px;'>Email</button>
+        <pre id='signInfo' style='display:none;font-size:small;text-align:left;margin-top:10px;'></pre>
         <p>Tap the document then draw your signature</p>
         <select id='pageSelect' style='margin-top:10px'></select>
         <div id='container'>
@@ -114,6 +145,10 @@ def register(app, utils):
         const submitBtn=document.getElementById('submit');
         const clearBtn=document.getElementById('clear');
         const finishBtn=document.getElementById('finish');
+        const nameInput=document.getElementById('nameInput');
+        const emailInput=document.getElementById('emailInput');
+        const phoneInput=document.getElementById('phoneInput');
+        const consentFlag=document.getElementById('consentFlag');
         const scaleInput=document.getElementById('scaleRange');
         let scale=1;
         if(scaleInput){
@@ -131,9 +166,15 @@ def register(app, utils):
                     }
                 }
             }catch{}
-            images.forEach((img,idx)=>{const opt=document.createElement('option');opt.value=idx;opt.textContent=(idx+1);pageSelect.appendChild(opt);});
+            pageSelect.innerHTML='';
+            images.forEach((img,idx)=>{
+                const opt=document.createElement('option');
+                opt.value=idx;
+                opt.textContent=(idx+1);
+                pageSelect.appendChild(opt);
+            });
             pageSelect.value={page};
-            docImg.src=images[pageSelect.value];
+            docImg.src=images[pageSelect.value]||'';
             drawSpots();
         }
         loadPages();
@@ -154,7 +195,32 @@ def register(app, utils):
             list.forEach(pt=>{const x=pt.x*overlay.width;const y=pt.y*overlay.height;ctx.beginPath();ctx.moveTo(x-10,y);ctx.lineTo(x+10,y);ctx.moveTo(x,y-10);ctx.lineTo(x,y+10);ctx.stroke();});
         }
         pageSelect.onchange=()=>{ docImg.src=images[pageSelect.value]; drawSpots(); pos=null; };
-        docImg.onclick=e=>{ if(finished) return; const r=e.target.getBoundingClientRect(); pos={x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}; padEl.style.display='block'; controls.style.display='block'; };
+        let lastTap=0;
+        function openPad(x,y){
+            pos={x,y};
+            padEl.style.display='block';
+            controls.style.display='block';
+        }
+        docImg.ondblclick=e=>{
+            if(finished) return;
+            const r=e.target.getBoundingClientRect();
+            openPad((e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);
+        };
+        docImg.addEventListener('touchstart',e=>{
+            if(finished) return;
+            const now=Date.now();
+            const t=e.touches[0];
+            const r=e.target.getBoundingClientRect();
+            const x=(t.clientX-r.left)/r.width;
+            const y=(t.clientY-r.top)/r.height;
+            if(now-lastTap<300){
+                e.preventDefault();
+                openPad(x,y);
+            }else{
+                pos={x,y};
+            }
+            lastTap=now;
+        });
         clearBtn.onclick=()=>pad.clear();
         async function submitCurrent(){
             if(!pos||pad.isEmpty())return false;
@@ -177,22 +243,69 @@ def register(app, utils):
         }
         submitBtn.onclick=submitCurrent;
         const finishMsg=document.getElementById('finishMsg');
+        const pdfLink=document.getElementById('pdfLink');
+        const waPdfBtn=document.getElementById('waPdfBtn');
+        const emailPdfBtn=document.getElementById('emailPdfBtn');
+        const signInfo=document.getElementById('signInfo');
+        async function pollPdf(){
+            try{
+                const r=await fetch('/signed-pdf/{token}',{cache:'no-store'});
+                if(r.status===200){
+                    const d=await r.json();
+                    if(d.url){
+                        pdfLink.href=d.url;
+                        pdfLink.textContent='Download PDF';
+                        pdfLink.style.display='block';
+                        finishMsg.textContent='Signatures sent. Download your PDF:';
+                        if(signInfo){
+                            const lines=[];
+                            if(d.name) lines.push('Nome firmatario: '+d.name);
+                            if(d.email) lines.push('Email: '+d.email);
+                            if(d.timestamp) lines.push('Data/ora: '+d.timestamp);
+                            if(d.ip) lines.push('IP: '+d.ip);
+                            if(d.pdf_hash) lines.push('Hash: '+d.pdf_hash);
+                            signInfo.textContent=lines.join('\n');
+                            signInfo.style.display='block';
+                        }
+                        if(waPdfBtn){
+                            waPdfBtn.onclick=()=>{
+                                const p=(d.phone||'').replace(/[^0-9]/g,'');
+                                const u=p?`https://wa.me/${p}?text=${encodeURIComponent(d.url)}`:`https://wa.me/?text=${encodeURIComponent(d.url)}`;
+                                window.open(u,'_blank');
+                            };
+                            waPdfBtn.style.display='inline';
+                        }
+                        if(emailPdfBtn){
+                            emailPdfBtn.onclick=()=>{
+                                const m=d.email?encodeURIComponent(d.email):'';
+                                const mailto=`mailto:${m}?body=${encodeURIComponent(d.url)}`;
+                                window.open(mailto,'_blank');
+                            };
+                            emailPdfBtn.style.display='inline';
+                        }
+                        return;
+                    }
+                }
+            }catch{}
+            setTimeout(pollPdf,3000);
+        }
         finishBtn.onclick=async()=>{
             if(finished) return;
             if(!pad.isEmpty()) await submitCurrent();
             finishMsg.textContent='Sending signatures...';
             finishMsg.style.display='block';
-            await fetch('/finish-signing/{token}',{method:'POST'});
-            finishMsg.textContent='Signatures sent. You may close this page.';
+            await fetch('/finish-signing/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:nameInput.value||'',email:emailInput.value||'',phone:phoneInput.value||'',consent:consentFlag.checked})});
+            finishMsg.textContent='Signatures sent. Waiting for PDF...';
             finished=true;
             finishBtn.disabled=true;
             submitBtn.disabled=true;
             clearBtn.disabled=true;
             docImg.onclick=null;
+            pollPdf();
         };
         </script>
         </body></html>
-        """.replace('{token}', token).replace('{img}', img_b64).replace('{images_json}', json.dumps(images)).replace('{spots_json}', json.dumps(points)).replace('{page}', str(page_index))
+        """.replace('{token}', token).replace('{img}', img_b64).replace('{images_json}', json.dumps(images)).replace('{spots_json}', json.dumps(points)).replace('{page}', str(page_index)).replace('{email}', email).replace('{phone}', phone).replace('{name}', name)
         return HTMLResponse(content=html)
 
     @app.get('/sign-pages/{token}')
@@ -244,13 +357,18 @@ def register(app, utils):
         return {'status': 'ok'}
 
     @app.post('/finish-signing/{token}')
-    async def finish_signing(token: str):
+    async def finish_signing(token: str, data: dict = Body(default_factory=dict)):
         info_path = os.path.join(signatures_dir, f'{token}.json')
         if not os.path.exists(info_path):
             return JSONResponse(status_code=404, content={'message': 'Not found'})
         with open(info_path, 'r') as fh:
             info = json.load(fh)
         info['signed'] = True
+        info['name'] = data.get('name','')
+        info['email'] = data.get('email','')
+        info['phone'] = data.get('phone','')
+        info['consent'] = bool(data.get('consent', False))
+        info['timestamp'] = datetime.utcnow().isoformat()
         with open(info_path, 'w') as fh:
             json.dump(info, fh)
         return {'status': 'ok'}
@@ -270,4 +388,139 @@ def register(app, utils):
                 b64 = base64.b64encode(fh.read()).decode()
             page = sig.get('page', info.get('page', 0))
             pages.setdefault(page, []).append({'image': 'data:image/png;base64,' + b64, 'x': sig['x'], 'y': sig['y'], 'scale': sig.get('scale', 1.0)})
-        return {'signatures': pages}
+        result = {'signatures': pages}
+        for key in ('name', 'email', 'phone', 'timestamp', 'consent'):
+            if key in info:
+                result[key] = info[key]
+        return result
+
+    def send_mail(to_addr: str, subject: str, body: str, attachment: str | None = None):
+        settings = load_settings()
+        server = os.getenv('SMTP_SERVER') or settings.get('smtp_server')
+        user = os.getenv('SMTP_USER') or settings.get('smtp_user')
+        password = os.getenv('SMTP_PASS') or settings.get('smtp_pass')
+        port = int(os.getenv('SMTP_PORT') or settings.get('smtp_port', 587))
+        sender = os.getenv('SMTP_FROM') or settings.get('smtp_from', user)
+        if not (server and user and password and to_addr):
+            return
+        import smtplib
+        from email.message import EmailMessage
+        msg = EmailMessage()
+        msg['Subject'] = subject
+        msg['From'] = sender
+        msg['To'] = to_addr
+        msg.set_content(body)
+        if attachment:
+            with open(attachment, 'rb') as fh:
+                data = fh.read()
+            msg.add_attachment(data, maintype='application', subtype='pdf', filename=os.path.basename(attachment))
+        try:
+            with smtplib.SMTP(server, port) as s:
+                s.starttls()
+                s.login(user, password)
+                s.send_message(msg)
+        except Exception:
+            logging.exception('Email send failed')
+
+    @app.post('/store-signed-pdf/{token}')
+    async def store_signed_pdf(request: Request, token: str, data: dict = Body(...)):
+        pdf_b64 = data.get('pdf')
+        if not pdf_b64:
+            return JSONResponse(status_code=400, content={'message': 'No PDF'})
+        if pdf_b64.startswith('data:'):
+            pdf_b64 = pdf_b64.split(',', 1)[1]
+        try:
+            pdf_bytes = base64.b64decode(pdf_b64)
+        except Exception:
+            return JSONResponse(status_code=400, content={'message': 'Invalid PDF'})
+        info_path = os.path.join(signatures_dir, f'{token}.json')
+        if not os.path.exists(info_path):
+            return JSONResponse(status_code=404, content={'message': 'Not found'})
+        with open(info_path, 'r') as fh:
+            info = json.load(fh)
+        hash_hex = hashlib.sha256(pdf_bytes).hexdigest()
+        ts = info.get('timestamp') or datetime.utcnow().isoformat()
+        name = info.get('name', '')
+        ip = request.client.host or ''
+        email = info.get('email', '')
+        legal = f"Firmato elettronicamente in data {ts} da {name} con firma elettronica semplice ai sensi del Regolamento eIDAS (UE 910/2014). IP: {ip} | Email: {email} | SHA256: {hash_hex}"
+        try:
+            doc = fitz.open(stream=pdf_bytes, filetype='pdf')
+            page = doc[-1]
+            rect = fitz.Rect(50, page.rect.height - 40, page.rect.width - 50, page.rect.height - 10)
+            page.insert_textbox(rect, legal, fontsize=8, align=1)
+            info_lines = [
+                f"Nome firmatario: {name}",
+                f"Email: {email}",
+                f"Data/ora: {ts}",
+                f"IP: {ip}",
+                f"Token firma: {token}",
+                f"Hash documento: {hash_hex}",
+            ]
+            info_page = doc.new_page(-1)
+            info_page.insert_textbox(
+                fitz.Rect(50, 50, info_page.rect.width - 50, info_page.rect.height - 50),
+                "\n".join(info_lines),
+                fontsize=12,
+            )
+            pdf_bytes = doc.tobytes()
+            doc.close()
+        except Exception:
+            logging.exception('Failed to append legal text')
+        pdf_path = os.path.join(signatures_dir, f'signed_{token}.pdf')
+        with open(pdf_path, 'wb') as fh:
+            fh.write(pdf_bytes)
+        url = request.url_for('download_signed_pdf', token=token)
+        info['pdf_file'] = pdf_path
+        info['pdf_url'] = str(url)
+        info['pdf_hash'] = hash_hex
+        info['ip'] = ip
+        info['timestamp'] = ts
+        with open(info_path, 'w') as fh:
+            json.dump(info, fh)
+        log_entry = {
+            'token': token,
+            'pdf_file': os.path.basename(pdf_path),
+            'hash': hash_hex,
+            'timestamp': ts,
+            'ip': ip,
+            'user_agent': request.headers.get('user-agent', ''),
+            'email': email,
+            'name': name,
+            'consent': info.get('consent', False)
+        }
+        os.makedirs('log_firme', exist_ok=True)
+        with open(os.path.join('log_firme', f'firma_{token}.json'), 'w') as fh:
+            json.dump(log_entry, fh, indent=2)
+        if email:
+            send_mail(email, 'Documento firmato', f'SHA256: {hash_hex}', pdf_path)
+        return {'status': 'ok', 'url': str(url), 'pdf_hash': hash_hex, 'name': name, 'email': email, 'timestamp': ts, 'ip': ip}
+
+    @app.get('/signed-pdf/{token}')
+    async def signed_pdf(request: Request, token: str):
+        info_path = os.path.join(signatures_dir, f'{token}.json')
+        if not os.path.exists(info_path):
+            return JSONResponse(status_code=404, content={'message': 'Not found'})
+        with open(info_path, 'r') as fh:
+            info = json.load(fh)
+        pdf_url = info.get('pdf_url')
+        result = {}
+        if pdf_url:
+            result['url'] = pdf_url
+        else:
+            pdf_path = info.get('pdf_file')
+            if not pdf_path or not os.path.exists(pdf_path):
+                return JSONResponse(status_code=202, content={'message': 'Pending'})
+            url = request.url_for('download_signed_pdf', token=token)
+            result['url'] = str(url)
+        for key in ('name', 'email', 'phone', 'timestamp', 'ip', 'pdf_hash'):
+            if key in info:
+                result[key] = info[key]
+        return result
+
+    @app.get('/download-signed/{token}.pdf', name='download_signed_pdf')
+    async def download_signed_pdf(token: str):
+        pdf_path = os.path.join(signatures_dir, f'signed_{token}.pdf')
+        if not os.path.exists(pdf_path):
+            return JSONResponse(status_code=404, content={'message': 'Not found'})
+        return FileResponse(pdf_path, media_type='application/pdf', filename=f'signed_{token}.pdf', headers={"Cache-Control": "no-cache"})

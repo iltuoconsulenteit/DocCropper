@@ -176,7 +176,27 @@
         <a id="signQrLink" href="#" target="_blank"></a><br>
         <button id="copySignLink" data-i18n="copyLink" data-i18n-title="copyLink" title="Copy link">Copy link</button>
         <button id="waSignLink" data-i18n="shareWhatsapp" data-i18n-title="shareWhatsapp" title="WhatsApp">WhatsApp</button>
-        <p data-i18n="legalDisclaimer" class="legalWarning"></p>
+        <button id="emailSignLink" data-i18n="shareEmail" data-i18n-title="shareEmail" title="Email">Email</button>
+        <p data-i18n="mobileLegalNotice" class="legalWarning"></p>
+    </div>
+
+    <div id="mobileDetailsModal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:320px;text-align:center;padding:10px;">
+            <label style="display:block;margin-bottom:5px;">
+                <span data-i18n="enterName"></span><br>
+                <input id="mobileNameInput" type="text" style="width:95%;">
+            </label>
+            <label style="display:block;margin-bottom:5px;">
+                <span data-i18n="enterEmail"></span><br>
+                <input id="mobileEmailInput" type="email" style="width:95%;">
+            </label>
+            <label style="display:block;margin-bottom:5px;">
+                <span data-i18n="enterPhone"></span><br>
+                <input id="mobilePhoneInput" type="tel" style="width:95%;">
+            </label>
+            <button id="mobileDetailsStart" data-i18n="startSign" style="margin-right:5px;">Start</button>
+            <button id="mobileDetailsCancel" data-i18n="cancel">Cancel</button>
+        </div>
     </div>
 
     <h2 data-i18n="processedImages">Processed Images:</h2>
@@ -202,6 +222,8 @@
         <span data-i18n="loading">Loading...</span>
     </div>
     <p id="statusMessage"></p>
+    <a id="signedPdfLink" style="display:none;" download="signed.pdf"></a>
+    <pre id="signedInfo" style="display:none;font-size:small;text-align:left;"></pre>
 
     <footer id="pageFooter">
         <div id="footerBrand">

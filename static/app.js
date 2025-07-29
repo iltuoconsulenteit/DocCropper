@@ -42,6 +42,8 @@ let skipBlank = true;
 const processedImageElement = document.getElementById('processedImage');
 const processedGallery = document.getElementById('processedGallery');
 const statusMessageElement = document.getElementById('statusMessage');
+const signedPdfLink = document.getElementById('signedPdfLink');
+const signedInfo = document.getElementById('signedInfo');
 const reorderHint = document.getElementById('reorderHint');
 const imageModal = document.getElementById('imageModal');
 const modalImage = document.getElementById('modalImage');
@@ -156,6 +158,11 @@ let editingIndex = null;
 let cameraStream = null;
 let cameraAvailable = false;
 let currentPdfBlob = null;
+window.lastSignEmail = '';
+window.lastSignPhone = '';
+window.lastSignName = '';
+window.lastSignToken = '';
+window.lastSignedUrl = '';
 let sortable = null;
 let currentFile = null;
 let docusealEnabled = false;
@@ -872,42 +879,42 @@ function cropImage(index) {
 }
 
 
-async function shareWhatsApp() {
+async function shareWhatsApp(phone) {
     if (!currentPdfBlob) return;
-    const file = new File([currentPdfBlob], 'DocCropper.pdf', { type: 'application/pdf' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-            await navigator.share({ files: [file], title: 'DocCropper PDF' });
-            return;
-        } catch (e) {
-            console.error('Web Share failed', e);
-        }
+    if (!phone) {
+        phone = prompt(translations['enterPhone'] || 'Enter phone number (optional)');
     }
-    let phone = prompt(translations['enterPhone'] || 'Enter phone number (optional)');
     phone = phone ? phone.replace(/[^0-9]/g, '') : '';
-    const encoded = encodeURIComponent(translations['shareText'] || 'See attached document.');
-    const url = phone ?
-        `https://web.whatsapp.com/send?phone=${phone}&text=${encoded}` :
-        `https://web.whatsapp.com/send?text=${encoded}`;
-    window.open(url, '_blank');
+    const url = window.lastSignedUrl || URL.createObjectURL(currentPdfBlob);
+    const wa = phone ?
+        `https://wa.me/${phone}?text=${encodeURIComponent(url)}` :
+        `https://wa.me/?text=${encodeURIComponent(url)}`;
+    window.open(wa, '_blank');
 }
 
-async function shareEmail() {
+function shareWhatsAppLink(phone, link) {
+    if (!link) return;
+    phone = phone ? phone.replace(/[^0-9]/g, '') : '';
+    const wa = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(link)}` :
+        `https://wa.me/?text=${encodeURIComponent(link)}`;
+    window.open(wa, '_blank');
+}
+
+async function shareEmail(email) {
     if (!currentPdfBlob) return;
-    const file = new File([currentPdfBlob], 'DocCropper.pdf', { type: 'application/pdf' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-            await navigator.share({ files: [file], title: 'DocCropper PDF' });
-            return;
-        } catch (e) {
-            console.error('Web Share failed', e);
-        }
+    if (!email) {
+        email = prompt(translations['enterEmail'] || 'Enter email address (optional)');
     }
-    let email = prompt(translations['enterEmail'] || 'Enter email address (optional)');
     email = email ? encodeURIComponent(email) : '';
-    const subject = encodeURIComponent('DocCropper PDF');
-    const body = encodeURIComponent(translations['shareText'] || 'See attached document.');
-    const mailto = `mailto:${email}?subject=${subject}&body=${body}`;
+    const url = window.lastSignedUrl || URL.createObjectURL(currentPdfBlob);
+    const mailto = `mailto:${email}?body=${encodeURIComponent(url)}`;
+    window.open(mailto, '_blank');
+}
+
+function shareEmailLink(email, link) {
+    if (!link) return;
+    const mail = email ? encodeURIComponent(email) : '';
+    const mailto = `mailto:${mail}?body=${encodeURIComponent(link)}`;
     window.open(mailto, '_blank');
 }
 
@@ -1643,6 +1650,7 @@ function generatePdf() {
         statusMessageElement.textContent = 'No processed images to export.';
         return;
     }
+    if (signedPdfLink) signedPdfLink.style.display = 'none';
     statusMessageElement.textContent = 'Generating PDF...';
     const layout = parseInt(layoutSelect.value || '1');
     const orientation = orientationSelect.value || 'portrait';
@@ -1650,6 +1658,10 @@ function generatePdf() {
     const scale_mode = scaleMode.value || 'fit';
     const scale_percent = parseInt(scalePercent.value || '100');
     const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures };
+    if (window.lastSignEmail || window.lastSignPhone || window.lastSignName || window.lastSignToken) {
+        payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
+        if (window.lastSignToken) payload.sign_info.token = window.lastSignToken;
+    }
     fetch('/create-pdf/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1673,6 +1685,49 @@ function generatePdf() {
             currentPdfBlob = new Blob([byteArray], {type: 'application/pdf'});
             exportOptions.style.display = 'block';
             statusMessageElement.textContent = 'PDF ready.';
+            if (window.lastSignToken) {
+                fetch('/store-signed-pdf/' + window.lastSignToken, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pdf: data.pdf })
+                })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.url) {
+                        window.lastSignedUrl = d.url;
+                        if (signedPdfLink) {
+                            signedPdfLink.href = d.url;
+                            signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
+                            signedPdfLink.style.display = 'inline';
+                        }
+                        if (signedInfo) {
+                            const lines = [];
+                            if (d.name) lines.push(`Nome firmatario: ${d.name}`);
+                            if (d.email) lines.push(`Email: ${d.email}`);
+                            if (d.timestamp) lines.push(`Data/ora: ${d.timestamp}`);
+                            if (d.ip) lines.push(`IP: ${d.ip}`);
+                            if (d.pdf_hash) lines.push(`Hash: ${d.pdf_hash}`);
+                            signedInfo.textContent = lines.join('\n');
+                            signedInfo.style.display = 'block';
+                        }
+                    }
+                    if (window.lastSignPhone) shareWhatsAppLink(window.lastSignPhone, d.url);
+                    if (window.lastSignEmail) shareEmailLink(window.lastSignEmail, d.url);
+                });
+            } else {
+                if (window.lastSignPhone) {
+                    shareWhatsApp(window.lastSignPhone);
+                }
+                if (window.lastSignEmail) {
+                    shareEmail(window.lastSignEmail);
+                }
+                if (signedPdfLink) {
+                    const url = URL.createObjectURL(currentPdfBlob);
+                    signedPdfLink.href = url;
+                    signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
+                    signedPdfLink.style.display = 'inline';
+                }
+            }
         } else {
             statusMessageElement.textContent = data.message || 'Failed to create PDF.';
         }
@@ -1725,6 +1780,7 @@ cameraSelect.addEventListener('change', () => {
     }
 });
 let lastTap = 0;
+let lastSigTap = 0;
 imageElement.addEventListener('dblclick', autoDetectCorners);
 imageElement.addEventListener('touchend', (e) => {
     const now = Date.now();
@@ -1798,14 +1854,14 @@ if (downloadPdfBtn) {
 
 if (waShareBtn) {
     waShareBtn.addEventListener('click', async () => {
-        await shareWhatsApp();
+        await shareWhatsApp(window.lastSignPhone);
         exportOptions.style.display = 'none';
     });
 }
 
 if (emailShareBtn) {
     emailShareBtn.addEventListener('click', async () => {
-        await shareEmail();
+        await shareEmail(window.lastSignEmail);
         exportOptions.style.display = 'none';
     });
 }
@@ -1919,10 +1975,10 @@ if (signaturePreview) {
         if (draggingSig) updateSigPosition(e);
     });
     document.addEventListener('mouseup', () => { draggingSig = false; });
-    signaturePreview.addEventListener('dblclick', (e) => {
+    const handleSigPos = (clientX, clientY) => {
         const rect = signaturePreview.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / signaturePreview.width;
-        const y = (e.clientY - rect.top) / signaturePreview.height;
+        const x = (clientX - rect.left) / signaturePreview.width;
+        const y = (clientY - rect.top) / signaturePreview.height;
         if (signatureImg) {
             signaturePosition.x = x;
             signaturePosition.y = y;
@@ -1931,6 +1987,18 @@ if (signaturePreview) {
             pendingSigPos = { x, y };
             signatureModal.style.display = 'block';
         }
+    };
+    signaturePreview.addEventListener('dblclick', (e) => {
+        handleSigPos(e.clientX, e.clientY);
+    });
+    signaturePreview.addEventListener('touchend', (e) => {
+        const now = Date.now();
+        const touch = e.changedTouches[0];
+        if (now - lastSigTap < 300) {
+            e.preventDefault();
+            handleSigPos(touch.clientX, touch.clientY);
+        }
+        lastSigTap = now;
     });
 }
 

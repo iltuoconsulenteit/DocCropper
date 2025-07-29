@@ -6,7 +6,15 @@ export function initSignaturePlugin(translations, enabled = true) {
     const signQrLink = document.getElementById('signQrLink');
     const copySignLink = document.getElementById('copySignLink');
     const waSignLink = document.getElementById('waSignLink');
+    const emailSignLink = document.getElementById('emailSignLink');
+    const detailsModal = document.getElementById('mobileDetailsModal');
+    const detailsName = document.getElementById('mobileNameInput');
+    const detailsEmail = document.getElementById('mobileEmailInput');
+    const detailsPhone = document.getElementById('mobilePhoneInput');
+    const detailsStart = document.getElementById('mobileDetailsStart');
+    const detailsCancel = document.getElementById('mobileDetailsCancel');
     const signaturePage = document.getElementById('signaturePage');
+    window.lastSignToken = '';
 
     if (!enabled) {
         if (mobileSignBtn) mobileSignBtn.style.display = 'none';
@@ -18,6 +26,9 @@ export function initSignaturePlugin(translations, enabled = true) {
             const resp = await fetch(`/signature-result/${token}`);
             if (resp.status === 200) {
                 const data = await resp.json();
+                window.lastSignName = data.name || '';
+                window.lastSignEmail = data.email || '';
+                window.lastSignPhone = data.phone || '';
                 if (data.signatures && typeof data.signatures === 'object') {
                     Object.keys(data.signatures).forEach(p => {
                         window.dispatchEvent(new CustomEvent('remoteSignature', {detail: {page: p, signatures: data.signatures[p]}}));
@@ -59,6 +70,9 @@ export function initSignaturePlugin(translations, enabled = true) {
             if (window.mobileSignPoints && Object.keys(window.mobileSignPoints).length) {
                 payload.points = window.mobileSignPoints;
             }
+            if (window.lastSignName) payload.name = window.lastSignName;
+            if (window.lastSignEmail) payload.email = window.lastSignEmail;
+            if (window.lastSignPhone) payload.phone = window.lastSignPhone;
             const resp = await fetch('/start-sign/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -73,6 +87,7 @@ export function initSignaturePlugin(translations, enabled = true) {
                     signQrLink.href = data.url;
                 }
                 signQR.style.display = 'block';
+                window.lastSignToken = data.token;
                 pollSignature(data.token);
             }
         } catch (e) {
@@ -81,8 +96,29 @@ export function initSignaturePlugin(translations, enabled = true) {
             if (window.hideLoading) window.hideLoading();
         }
     }
+    function openDetailsModal() {
+        if (!detailsModal) { startQrSign(); return; }
+        if (detailsName) detailsName.value = window.lastSignName || '';
+        if (detailsEmail) detailsEmail.value = window.lastSignEmail || '';
+        if (detailsPhone) detailsPhone.value = window.lastSignPhone || '';
+        detailsModal.style.display = 'block';
+    }
     if (mobileSignBtn) {
-        mobileSignBtn.addEventListener('click', startQrSign);
+        mobileSignBtn.addEventListener('click', openDetailsModal);
+    }
+    if (detailsStart) {
+        detailsStart.addEventListener('click', () => {
+            window.lastSignName = detailsName ? detailsName.value.trim() : '';
+            window.lastSignEmail = detailsEmail ? detailsEmail.value.trim() : '';
+            window.lastSignPhone = detailsPhone ? detailsPhone.value.trim() : '';
+            if (detailsModal) detailsModal.style.display = 'none';
+            startQrSign();
+        });
+    }
+    if (detailsCancel) {
+        detailsCancel.addEventListener('click', () => {
+            if (detailsModal) detailsModal.style.display = 'none';
+        });
     }
     if (signQR) {
         signQR.addEventListener('click', () => { signQR.style.display = 'none'; });
@@ -97,7 +133,19 @@ export function initSignaturePlugin(translations, enabled = true) {
         waSignLink.addEventListener('click', (e) => {
             e.stopPropagation();
             const url = signQrLink ? signQrLink.href : '';
-            window.open('https://wa.me/?text=' + encodeURIComponent(url), '_blank');
+            const phone = window.lastSignPhone ? window.lastSignPhone.replace(/[^0-9]/g, '') : '';
+            const wa = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(url)}` :
+                `https://wa.me/?text=${encodeURIComponent(url)}`;
+            window.open(wa, '_blank');
+        });
+    }
+    if (emailSignLink) {
+        emailSignLink.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const url = signQrLink ? signQrLink.href : '';
+            const mail = window.lastSignEmail ? encodeURIComponent(window.lastSignEmail) : '';
+            const mailto = `mailto:${mail}?body=${encodeURIComponent(url)}`;
+            window.open(mailto, '_blank');
         });
     }
 }

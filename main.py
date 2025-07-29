@@ -7,6 +7,7 @@ import os
 import shutil
 import time
 import uuid
+from datetime import datetime
 
 import cv2
 import numpy as np
@@ -740,7 +741,8 @@ async def create_pdf(
     scale_percent: int = Body(100),
     color_mode: str = Body("color"),
     signature_image: str | None = Body(None),
-    signatures: list[dict] = Body(default_factory=list)
+    signatures: list[dict] = Body(default_factory=list),
+    sign_info: dict | None = Body(default_factory=dict)
 ):
     try:
         settings = load_settings()
@@ -947,6 +949,39 @@ async def create_pdf(
                         sy = page_h - margin - footer_h - h
                     page.paste(stamp, (sx, sy), stamp)
             pages.append(page)
+
+        if sign_info:
+            log_page = Image.new("RGB", (page_w, page_h), "white")
+            draw = ImageDraw.Draw(log_page)
+            try:
+                log_font = ImageFont.truetype("DejaVuSans.ttf", 40)
+            except Exception:
+                log_font = ImageFont.load_default()
+            y = 100
+            ts = sign_info.get("timestamp") or datetime.utcnow().isoformat()
+            lines = [f"Signed on: {ts}"]
+            if sign_info.get("email"):
+                lines.append(f"Email: {sign_info['email']}")
+            if sign_info.get("phone"):
+                lines.append(f"Phone: {sign_info['phone']}")
+            if 'consent' in sign_info:
+                lines.append(f"Consent: {bool(sign_info['consent'])}")
+            for idx, sig in enumerate(signatures, 1):
+                lines.append(
+                    f"Signature {idx}: page {sig.get('page', 0)+1} x={sig.get('x',0):.2f} y={sig.get('y',0):.2f} scale={sig.get('scale',1)}"
+                )
+            for line in lines:
+                draw.text((100, y), line, fill="black", font=log_font)
+                if hasattr(draw, "textbbox"):
+                    bbox = draw.textbbox((100, y), line, font=log_font)
+                    line_h = bbox[3] - bbox[1]
+                elif hasattr(log_font, "getbbox"):
+                    bbox = log_font.getbbox(line)
+                    line_h = bbox[3] - bbox[1]
+                else:
+                    line_h = log_font.size
+                y += line_h + 20
+            pages.append(log_page)
 
         pdf_bytes_io = io.BytesIO()
         pages[0].save(pdf_bytes_io, format="PDF", save_all=True, append_images=pages[1:])
