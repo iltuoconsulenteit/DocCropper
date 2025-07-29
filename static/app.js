@@ -1196,7 +1196,7 @@ function setupImage(imageUrl) {
 async function addFiles(newFiles) {
     showLoading(t('loading'));
     if (currentLicenseLevel === 'free') {
-        const allowed = MAX_IMAGES_FREE - files.length;
+        const allowed = MAX_IMAGES_FREE - processedImages.length;
         if (allowed <= 0) {
             statusMessageElement.textContent = t('maxImagesFree');
             hideLoading();
@@ -1217,41 +1217,36 @@ async function addFiles(newFiles) {
             compressed.push(f);
         }
     }
-    if (files.length === 0 && processedImages.length === 0) {
-        // first batch of files
-        files = compressed;
+    if (processedImages.length === 0) {
+        files = [];
         currentFileIndex = 0;
-        processedImages = [];
-        window.processedImages = processedImages;
-        originalImages = [];
-        processedFiles = [];
-        editingIndex = null;
         processedGallery.innerHTML = '';
-        exportPdfBtn.style.display = 'none';
-        if (signBtn) signBtn.style.display = 'none';
-        if (mobileSignBtn) mobileSignBtn.style.display = 'none';
-        layoutControls.style.display = 'none';
-        signatureControls.style.display = 'none';
-        if (files.length > 0) {
-            currentFile = files[0];
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setupImage(e.target.result);
-            };
-            reader.readAsDataURL(files[0]);
+        processedFiles = [];
+        originalImages = [];
+        editingIndex = null;
+    }
+    for (const f of compressed) {
+        const dataUrl = await fileToDataURL(f);
+        processedFiles.push(f);
+        processedImages.push(dataUrl);
+        originalImages.push(dataUrl);
+        addThumbnail(dataUrl, processedImages.length - 1);
+    }
+    if (processedImages.length > 0) {
+        exportPdfBtn.style.display = 'inline-block';
+        if (signBtn && signEnabled) signBtn.style.display = 'inline-block';
+        if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
+        if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
+        layoutControls.style.display = 'block';
+        signatureControls.style.display = 'block';
+        if (signatureImg) {
+            signaturePreview.style.display = 'block';
+            signatureHint.style.display = 'block';
+            signatureExtra.style.display = 'block';
+            populateSignaturePages();
+            renderSignaturePreview();
         }
-    } else {
-        // add new files to existing queue
-        const startProcessing = currentFileIndex >= files.length;
-        files = files.concat(compressed);
-        if (startProcessing && newFiles.length > 0) {
-            currentFile = files[currentFileIndex];
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setupImage(e.target.result);
-            };
-            reader.readAsDataURL(files[currentFileIndex]);
-        }
+        updateLayoutPreview();
     }
     hideLoading();
 }
