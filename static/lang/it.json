@@ -146,6 +146,7 @@
   "docusealKey": "Chiave Docuseal:",
   "publicUrl": "Dominio pubblico:",
   "legalDisclaimer": "DocCropper e i suoi autori declinano ogni responsabilità per un uso non conforme alla legge.",
+  "mobileLegalNotice": "\u26a0\ufe0f Avvertenza legale \u2013 Firma elettronica semplice (FES)\nIl sistema di firma Mobile Sign, integrato in DocCropper, consente la raccolta di firme elettroniche grafiche in modalit\u00e0 conforme ai requisiti della FES, come definita dal Regolamento UE 910/2014 eIDAS e dal Codice dell'Amministrazione Digitale. La firma avviene con consenso esplicito e tracciabile ed \u00e8 associata al documento firmato. DocCropper e il sito doccropper.iltuoconsulenteit.it non sono prestatori di servizi fiduciari qualificati, non garantiscono la validit\u00e0 legale delle firme in ogni contesto, non conservano copie dei documenti o dei log se non con integrazione personalizzata e non assumono responsabilit\u00e0 per usi impropri. Il dominio \u00e8 destinato esclusivamente a scopi dimostrativi e di test. L'utente deve assicurarsi che l'uso avvenga nel rispetto della legge, con adeguata identificazione del firmatario e in contesti compatibili con la FES.",
   "signaturesSent": "Firme inviate. Puoi chiudere la pagina.",
   "pageToSign": "Pagina da firmare:",
   "loading": "Caricamento...",

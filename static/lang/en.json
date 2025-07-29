@@ -146,6 +146,7 @@
   "docusealKey": "Docuseal key:",
   "publicUrl": "Public URL:",
   "legalDisclaimer": "DocCropper and its authors accept no liability for illegal use.",
+  "mobileLegalNotice": "\u26a0\ufe0f Legal warning \u2013 Simple Electronic Signature (SES)\nThe Mobile Sign system in DocCropper collects graphical signatures compliant with SES requirements under EU Regulation 910/2014 eIDAS and the Italian CAD. The signature is provided with explicit, traceable consent and is bound to the document. DocCropper and doccropper.iltuoconsulenteit.it are not qualified trust service providers, do not guarantee legal validity of collected signatures, do not store documents or logs unless customized, and accept no liability for improper use. The domain is for demo and testing only. Users must ensure compliance with applicable law, proper signer identification and use in contexts suitable for SES.",
   "signaturesSent": "Signatures sent. You may close this page.",
   "pageToSign": "Page to sign:",
   "loading": "Loading...",

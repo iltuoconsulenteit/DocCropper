@@ -98,7 +98,19 @@ def register(app, utils):
         <script src='https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js'></script>
         </head><body>
         <img src='/static/logos/header_logo.png' style='max-width:150px;margin-top:10px' alt='DocCropper'>
-        <p style='font-size:small;color:#a00;margin-top:5px;font-weight:bold'>DocCropper e i suoi autori declinano ogni responsabilità per un uso non conforme alla legge.<br>DocCropper and its authors accept no liability for illegal use.</p>
+        <p style='font-size:small;color:#a00;margin-top:5px;font-weight:bold;text-align:left;'>⚠️ Avvertenza legale – Firma elettronica semplice (FES)<br>
+Il sistema di firma Mobile Sign, integrato in DocCropper, consente la raccolta di firme elettroniche grafiche in modalità conforme ai requisiti della firma elettronica semplice (FES), come definita dal Regolamento UE 910/2014 eIDAS e dal Codice dell'Amministrazione Digitale (CAD).<br><br>
+La firma avviene tramite consenso esplicito e tracciabile da parte del firmatario, ed è tecnicamente associata al documento firmato.<br><br>
+Tuttavia, DocCropper e il sito doccropper.iltuoconsulenteit.it:<br>
+- non sono prestatori di servizi fiduciari qualificati (QTSP) ai sensi della normativa europea;<br>
+- non garantiscono la validità legale delle firme raccolte in tutti i contesti giuridici o amministrativi;<br>
+- non conservano copie dei documenti né dei log firma se non con integrazione personalizzata;<br>
+- non si assumono alcuna responsabilità per usi impropri, illeciti o non consentiti dalla legge del sistema Mobile Sign.<br><br>
+Il dominio doccropper.iltuoconsulenteit.it è utilizzato esclusivamente a scopo dimostrativo e di test: non costituisce un servizio di firma elettronica centralizzato, certificato o destinato a produzione.<br><br>
+È responsabilità esclusiva dell’utente o del richiedente garantire che l’uso del sistema avvenga:<br>
+- nel rispetto della normativa applicabile;<br>
+- con adeguata identificazione e informazione del firmatario;<br>
+- in contesti compatibili con l’uso della firma elettronica semplice.</p>
         <label style='display:block;margin-top:5px;'><input type='checkbox' id='consentFlag'> Consento il trattamento dei dati</label>
         <input id='nameInput' type='text' placeholder='Nome' value='{name}' style='width:90%;max-width:300px;margin-top:5px;'>
         <input id='emailInput' type='email' placeholder='Email' value='{email}' style='width:90%;max-width:300px;margin-top:5px;'>
