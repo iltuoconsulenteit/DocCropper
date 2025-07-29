@@ -87,7 +87,7 @@ def register(app, utils):
         <script src='https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js'></script>
         </head><body>
         <img src='/static/logos/header_logo.png' style='max-width:150px;margin-top:10px' alt='DocCropper'>
-        <p style='font-size:small;color:#a00;margin-top:5px'>DocCropper and its authors accept no liability for illegal use.</p>
+        <p style='font-size:small;color:#a00;margin-top:5px;font-weight:bold'>DocCropper e i suoi autori declinano ogni responsabilità per un uso non conforme alla legge.<br>DocCropper and its authors accept no liability for illegal use.</p>
         <p id='finishMsg' style='display:none;color:green;font-weight:bold'></p>
         <p>Tap the document then draw your signature</p>
         <select id='pageSelect' style='margin-top:10px'></select>

@@ -100,6 +100,7 @@ const digitalSignBtn = document.getElementById('remoteSignBtn');
 const signQR = document.getElementById('signQR');
 const signQrImg = document.getElementById('signQrImg');
 const signQrHint = document.getElementById('signQrHint');
+const legalDisclaimerEl = document.getElementById('legalDisclaimer');
 let signatureImageData = null;
 let signatureImg = null;
 let signaturePosition = { x: 0.85, y: 0.85 };
@@ -830,6 +831,7 @@ function deleteImage(index) {
         signatureControls.style.display = 'none';
         signaturePreview.style.display = 'none';
         signatureHint.style.display = 'none';
+        if (legalDisclaimerEl) legalDisclaimerEl.style.display = 'none';
     }
 }
 
@@ -840,6 +842,7 @@ function openSignatureForPage(idx) {
     signatureExtra.style.display = 'block';
     signaturePreview.style.display = 'block';
     signatureHint.style.display = 'block';
+    if (legalDisclaimerEl) legalDisclaimerEl.style.display = 'block';
     renderSignaturePreview();
 }
 
@@ -860,6 +863,7 @@ function cropImage(index) {
     layoutControls.style.display = 'none';
     if (blankControls) blankControls.style.display = 'none';
     signatureControls.style.display = 'none';
+    if (legalDisclaimerEl) legalDisclaimerEl.style.display = 'none';
     statusMessageElement.textContent = t('cropHint') || 'Crop image and press Process Image to save.';
 }
 
@@ -2033,6 +2037,7 @@ if (discardSignatureBtn) {
         signatureControls.style.display = 'none';
         signaturePreview.style.display = 'none';
         signatureHint.style.display = 'none';
+        if (legalDisclaimerEl) legalDisclaimerEl.style.display = 'none';
     });
 }
 

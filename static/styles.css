@@ -358,6 +358,12 @@ button:hover {
     margin-right: 4px;
 }
 
+.legalWarning {
+    color: #a00;
+    font-weight: bold;
+    margin-top: 5px;
+}
+
 #signatureHint {
     font-size: 0.9em;
     text-align: center;
