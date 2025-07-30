@@ -31,5 +31,6 @@
   "enable_sign": true,
   "enable_mobilesign": false,
   "enable_remotesign": false,
-  "banner_images": ["DocCropper_slogan_{{lang}}.png"]
+  "banner_images": ["DocCropper_slogan_{{lang}}.png"],
+  "banner_interval": 5000
 }

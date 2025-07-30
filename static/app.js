@@ -65,7 +65,7 @@ const purchaseBtn = document.getElementById('purchaseBtn');
 const licenseBtn = document.getElementById('licenseBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 const DEFAULT_PAYPAL = 'https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY';
-const bannerBox = document.getElementById('bannerBox');
+const bannerBox = document.getElementById('brandArea');
 const closeBanner = document.getElementById('closeBanner');
 const sloganImg = document.getElementById('sloganImg');
 const wikiFrame = document.getElementById('wikiFrame');
@@ -120,6 +120,7 @@ const OCR_ENABLED = false;
 let bannerImages = [];
 let bannerIndex = 0;
 let bannerTimer;
+let bannerInterval = 5000;
 if (!OCR_ENABLED) {
     if (ocrBtn) ocrBtn.style.display = 'none';
     if (ocrOutput) ocrOutput.style.display = 'none';
@@ -515,12 +516,9 @@ function applySettings(cfg) {
     } else {
         bannerImages = ['DocCropper_slogan_{{lang}}.png'];
     }
+    bannerInterval = parseInt(cfg.banner_interval || 5000);
     bannerIndex = 0;
     startBannerRotation();
-    if (sloganImg) {
-        const scale = parseFloat(cfg.sponsor_scale || 100) / 100;
-        sloganImg.style.maxHeight = (200 * scale) + 'px';
-    }
     if (cfg.version) {
         appVersion = cfg.version;
     }
@@ -655,7 +653,7 @@ function startBannerRotation() {
         bannerTimer = setInterval(() => {
             bannerIndex = (bannerIndex + 1) % bannerImages.length;
             updateBannerImage();
-        }, 5000);
+        }, bannerInterval);
     }
 }
 
