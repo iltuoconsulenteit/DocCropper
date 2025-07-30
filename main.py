@@ -38,6 +38,8 @@ import urllib.request
 import urllib.parse
 import socket
 from plugins.sign import register as register_sign
+from fastapi import Depends, HTTPException
+from app.licensing.check import verify_license
 from plugins.mobilesign import register as register_mobilesign
 from plugins.remotesign import register as register_remotesign
 
@@ -389,6 +391,15 @@ else:
             allow_headers=["*"],
         )
 
+# Dependency used to enforce that the configured license is valid
+async def require_valid_license():
+    settings = load_settings()
+    email = settings.get("license_name", "")
+    level = settings.get("license_level", "free")
+    if not await verify_license(email, level):
+        raise HTTPException(status_code=403, detail="Licenza non valida o scaduta")
+    return True
+
 # Mount static files directory and local wiki with no-cache headers
 app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
 app.mount("/wiki", NoCacheStaticFiles(directory="wiki", html=True), name="wiki")
@@ -732,7 +743,7 @@ async def pdf_to_images(
         return JSONResponse(status_code=500, content={"message": f"PDF conversion failed: {str(e)}"})
 
 
-@app.post("/create-pdf/")
+@app.post("/create-pdf/", dependencies=[Depends(require_valid_license)])
 async def create_pdf(
     request: Request,
     images: list[str] = Body(...),

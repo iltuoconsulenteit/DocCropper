@@ -189,7 +189,58 @@ To activate Pro or Full editions:
  - Mobile signing is enabled automatically when a developer key is used
 - You can generate a suitable `.env` by running `scripts/setup_license.bat` (or
   `.sh` / `.command`) and entering your details
-- Set `LICENSE_CHECK=true` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
+  - Set `LICENSE_CHECK=true` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
+
+### Verifica licenze tramite Joomla + Fabrik
+
+Per abilitare il controllo licenze remoto, è possibile collegare DocCropper a un sito Joomla con Fabrik configurato.
+
+**Requisiti lato Joomla:**
+
+- Estensione Fabrik installata
+- Creare una tabella Fabrik chiamata *licenze* con almeno i campi `email`, `license` e `valida`
+
+**Configurazioni Fabrik:**
+
+- Abilitare filtro da querystring su email e license
+- Abilitare la vista RAW della lista
+- Creare un override del template nella directory:
+
+  `templates/tuo_template/html/com_fabrik/list/licenze/default_raw.php`
+
+  con questo codice:
+
+```php
+<?php
+defined('_JEXEC') or die();
+header('Content-Type: application/json');
+
+$rows = $this->rows;
+$valid = false;
+
+if (count($rows) > 0) {
+  $row = $rows[0];
+  $valid = ($row->valida == '1' || strtolower($row->valida) == 'sì');
+  echo json_encode([
+    'email' => $row->email,
+    'license' => $row->license,
+    'valid' => $valid
+  ]);
+} else {
+  echo json_encode([
+    'valid' => false,
+    'reason' => 'not found'
+  ]);
+}
+```
+
+Configura nel file `.env` di DocCropper:
+
+```
+LICENSE_CHECK_URL=https://tuodominio.it/index.php?option=com_fabrik&view=list&listid=XXX&format=raw
+```
+
+(Sostituisci `XXX` con l'ID reale della tabella Fabrik delle licenze)
 
 For inquiries: **doccropper@iltuoconsulenteit.it**
 
