@@ -485,8 +485,14 @@ async def read_root(request: Request):
     return response
 
 
+async def require_superuser(user: User = Depends(fastapi_users.current_user())):
+    if not user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+
 @app.get("/admin", response_class=HTMLResponse)
-async def admin_page():
+async def admin_page(user: User = Depends(require_superuser)):
     try:
         path = os.path.join(os.path.dirname(__file__), "static", "admin.html")
         with open(path, "r", encoding="utf-8") as f:

@@ -178,10 +178,11 @@ also open it in a new tab at `http://<host>:<port>/wiki/<lang>/` (by default
 ### Admin Page
 
 Developers can manage global settings and user accounts from a dedicated admin
-interface available at `/admin`. This page exposes the same options found in the
-settings panel and lists all registered users with the ability to create or
-remove them. It relies on the REST endpoints under `/settings/`, `/auth/` and
-`/users/` so you may customize the behavior or secure access as needed.
+interface available at `/admin`. Access to this page requires authentication as a
+superuser using the `/auth/jwt/login` endpoint. Once logged in, the page exposes
+the same options found in the settings panel and lists all registered users with
+the ability to create or remove them. It relies on the REST endpoints under
+`/settings/`, `/auth/` and `/users/`.
 
 ### Google Sign-In
 
