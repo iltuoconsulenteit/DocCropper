@@ -56,10 +56,7 @@ h1, h2 {
     justify-content: center;
     align-items: center;
     gap: 10px;
-    margin-top: 10px;
-    margin-left: auto; /* keep to the right of header */
-    order: 101; /* after banner */
-    flex-basis: 100%; /* occupy full row so Help button sits below */
+    margin: 10px auto;
 }
 
 #brandArea img {
@@ -638,7 +635,6 @@ button:hover {
     padding: 4px;
     margin-top: 5px;
     margin-bottom: 20px;
-    order: 100; /* before help button */
 }
 
 #bannerBox img {
