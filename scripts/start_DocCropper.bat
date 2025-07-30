@@ -13,6 +13,15 @@ if exist "!SCRIPT_DIR!main.py" (
 
 cd /d "!APP_DIR!"
 
+rem Copy default environment files if missing
+if not exist "!APP_DIR!\.env" if exist "!APP_DIR!\.env.example" copy "!APP_DIR!\.env.example" "!APP_DIR!\.env" >nul
+if not exist "!APP_DIR!\env\auth.env" (
+    if exist "!APP_DIR!\env\auth.env.example" (
+        if not exist "!APP_DIR!\env" mkdir "!APP_DIR!\env"
+        copy "!APP_DIR!\env\auth.env.example" "!APP_DIR!\env\auth.env" >nul
+    )
+)
+
 if not exist main.py (
     echo [ERROR] main.py not found in !APP_DIR!
     pause

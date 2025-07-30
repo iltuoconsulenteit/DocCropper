@@ -193,11 +193,20 @@ call :log "Ultimi 10 commit:"
 git log -n 10 --pretty=format:"%%h | %%ad | %%s" --date=short >>"%LOG_FILE%" 2>&1
 
 echo.
-set /p commit_hash=Vuoi ripristinare un commit specifico? (lascia vuoto per continuare): 
+set /p commit_hash=Vuoi ripristinare un commit specifico? (lascia vuoto per continuare):
 if not "!commit_hash!"=="" (
     call :log "Checkout del commit !commit_hash!..."
     git checkout !commit_hash! >>"%LOG_FILE%" 2>&1
     for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
+)
+
+rem Copy default environment files if missing
+if not exist "!APP_DIR!\.env" if exist "!APP_DIR!\.env.example" copy "!APP_DIR!\.env.example" "!APP_DIR!\.env" >nul
+if not exist "!APP_DIR!\env\auth.env" (
+    if exist "!APP_DIR!\env\auth.env.example" (
+        if not exist "!APP_DIR!\env" mkdir "!APP_DIR!\env"
+        copy "!APP_DIR!\env\auth.env.example" "!APP_DIR!\env\auth.env" >nul
+    )
 )
 
 if not exist "venv\Scripts\activate.bat" (
