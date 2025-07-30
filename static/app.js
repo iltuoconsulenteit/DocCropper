@@ -121,6 +121,8 @@ let bannerImages = [];
 let bannerIndex = 0;
 let bannerTimer;
 let bannerInterval = 5000;
+let brandHeight = 80;
+let brandGap = 20;
 if (!OCR_ENABLED) {
     if (ocrBtn) ocrBtn.style.display = 'none';
     if (ocrOutput) ocrOutput.style.display = 'none';
@@ -519,6 +521,10 @@ function applySettings(cfg) {
     bannerInterval = parseInt(cfg.banner_interval || 5000);
     bannerIndex = 0;
     startBannerRotation();
+    brandHeight = parseInt(cfg.brand_height || 80);
+    brandGap = parseInt(cfg.brand_gap || 20);
+    if (bannerBox) bannerBox.style.gap = brandGap + 'px';
+    updateBrandSize();
     if (cfg.version) {
         appVersion = cfg.version;
     }
@@ -656,6 +662,15 @@ function startBannerRotation() {
         }, bannerInterval);
     }
 }
+
+function updateBrandSize() {
+    const maxH = Math.min(brandHeight, window.innerHeight * 0.25);
+    [clientLogo, sloganImg, sponsorLogo].forEach(el => {
+        if (el) el.style.maxHeight = maxH + 'px';
+    });
+}
+
+window.addEventListener('resize', updateBrandSize);
 
 function showLoading(message) {
     if (!loadingOverlay) return;

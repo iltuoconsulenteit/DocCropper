@@ -127,6 +127,8 @@ DEFAULT_SETTINGS = {
     "sponsor_logo": "sponsor_logo.png",
     "sponsor_scale": 100,
     "sponsor_bottom": 80,
+    "brand_height": 80,
+    "brand_gap": 20,
     "blank_threshold": 95,
     "skip_blank": True,
     "banner_images": ["DocCropper_slogan_{{lang}}.png"],
