@@ -401,8 +401,12 @@ else:
 
 # Dependency used to enforce that the configured license is valid
 async def require_valid_license(user: User = Depends(fastapi_users.current_user())):
-    if not await verify_license(user.email, user.license_type):
-        raise HTTPException(status_code=403, detail="Licenza non valida o scaduta")
+    if not user.license_token:
+        raise HTTPException(status_code=403, detail="Token licenza mancante")
+
+    if not await verify_license(user.email, user.license_type, user.license_token):
+        raise HTTPException(status_code=403, detail="Licenza non valida")
+
     return user
 
 # Mount static files directory and local wiki with no-cache headers

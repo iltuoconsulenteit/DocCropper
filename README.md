@@ -195,22 +195,22 @@ To activate Pro or Full editions:
 - Mobile signing is enabled automatically when a developer key is used
 - Set `LICENSE_CHECK=true` in your `.env` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
 
-### Verifica licenze tramite Joomla + Fabrik
+### Verifica licenze tramite Joomla + Fabrik con token utente
 
-Per abilitare il controllo licenze remoto, è possibile collegare DocCropper a un sito Joomla con Fabrik configurato.
+Per abilitare il controllo licenze remoto, è possibile collegare DocCropper a un sito Joomla con Fabrik configurato. Ogni licenza deve possedere un token segreto per una verifica più sicura.
 
 **Requisiti lato Joomla:**
 
 - Estensione Fabrik installata
-- Creare una tabella Fabrik chiamata *licenze* con almeno i campi `email`, `license` e `valida`
+- Creare una tabella Fabrik chiamata *licenze* con i campi `email`, `license`, `valida` e `token`
 
 **Configurazioni Fabrik:**
 
-- Abilitare filtro da querystring su email e license
+- Abilitare filtro da querystring su `email`, `license` e `token`
 - Abilitare la vista RAW della lista
 - Creare un override del template nella directory:
 
-  `templates/tuo_template/html/com_fabrik/list/licenze/default_raw.php`
+  `templates/tuotemplate/html/com_fabrik/list/licenze/default_raw.php`
 
   con questo codice:
 
@@ -226,14 +226,14 @@ if (count($rows) > 0) {
   $row = $rows[0];
   $valid = ($row->valida == '1' || strtolower($row->valida) == 'sì');
   echo json_encode([
-    'email' => $row->email,
-    'license' => $row->license,
-    'valid' => $valid
+    "email" => $row->email,
+    "license" => $row->license,
+    "valid" => $valid
   ]);
 } else {
   echo json_encode([
-    'valid' => false,
-    'reason' => 'not found'
+    "valid" => false,
+    "reason" => "not found or invalid token"
   ]);
 }
 ```
@@ -244,7 +244,13 @@ Configura nel file `.env` di DocCropper:
 LICENSE_CHECK_URL=https://tuodominio.it/index.php?option=com_fabrik&view=list&listid=XXX&format=raw
 ```
 
-(Sostituisci `XXX` con l'ID reale della tabella Fabrik delle licenze)
+(Sostituisci `XXX` con l'ID reale della tabella Fabrik delle licenze. Il token verrà aggiunto automaticamente alle richieste.)
+
+Esempio di URL completo con token:
+
+```
+https://tuodominio.it/index.php?option=com_fabrik&view=list&listid=5&format=raw&email=user@example.com&license=pro&token=ABC123DEF456
+```
 
 For inquiries: **doccropper@iltuoconsulenteit.it**
 
