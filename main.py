@@ -485,6 +485,20 @@ async def read_root(request: Request):
     return response
 
 
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_page():
+    try:
+        path = os.path.join(os.path.dirname(__file__), "static", "admin.html")
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+        if CACHE_BUST:
+            content = content.replace("styles.css", f"styles.css{CACHE_BUST}")
+            content = content.replace("admin.js", f"admin.js{CACHE_BUST}")
+    except FileNotFoundError:
+        return HTMLResponse(content="Admin page not found", status_code=404)
+    return HTMLResponse(content=content, status_code=200)
+
+
 @app.get("/settings/")
 async def get_settings():
     data = load_settings()

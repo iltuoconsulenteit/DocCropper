@@ -175,6 +175,14 @@ button. A language-specific page is loaded based on your selection. You can
 also open it in a new tab at `http://<host>:<port>/wiki/<lang>/` (by default
 `http://localhost:8765/wiki/<lang>/`) or view the online version on GitHub.
 
+### Admin Page
+
+Developers can manage global settings and user accounts from a dedicated admin
+interface available at `/admin`. This page exposes the same options found in the
+settings panel and lists all registered users with the ability to create or
+remove them. It relies on the REST endpoints under `/settings/`, `/auth/` and
+`/users/` so you may customize the behavior or secure access as needed.
+
 ### Google Sign-In
 
 To enable optional Google authentication, set `google_client_id` in
