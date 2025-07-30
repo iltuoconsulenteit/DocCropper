@@ -107,7 +107,6 @@ def register(app, utils):
         <a id='pdfLink' style='display:none;margin-top:5px;' download='signed.pdf'>Download PDF</a>
         <button id='waPdfBtn' style='display:none;margin-left:10px;'>WhatsApp</button>
         <button id='emailPdfBtn' style='display:none;margin-left:10px;'>Email</button>
-        <pre id='signInfo' style='display:none;font-size:small;text-align:left;margin-top:10px;'></pre>
         <p>Tap the document then draw your signature</p>
         <select id='pageSelect' style='margin-top:10px'></select>
         <div id='container'>
@@ -203,7 +202,6 @@ def register(app, utils):
         const pdfLink=document.getElementById('pdfLink');
         const waPdfBtn=document.getElementById('waPdfBtn');
         const emailPdfBtn=document.getElementById('emailPdfBtn');
-        const signInfo=document.getElementById('signInfo');
         async function pollPdf(){
             try{
                 const r=await fetch('/signed-pdf/{token}',{cache:'no-store'});
@@ -214,16 +212,6 @@ def register(app, utils):
                         pdfLink.textContent='Download PDF';
                         pdfLink.style.display='block';
                         finishMsg.textContent='Signatures sent. Download your PDF:';
-                        if(signInfo){
-                            const lines=[];
-                            if(d.name) lines.push('Nome firmatario: '+d.name);
-                            if(d.email) lines.push('Email: '+d.email);
-                            if(d.timestamp) lines.push('Data/ora: '+d.timestamp);
-                            if(d.ip) lines.push('IP: '+d.ip);
-                            if(d.pdf_hash) lines.push('Hash: '+d.pdf_hash);
-                            signInfo.textContent=lines.join('\n');
-                            signInfo.style.display='block';
-                        }
                         if(waPdfBtn){
                             waPdfBtn.onclick=()=>{
                                 const p=(d.phone||'').replace(/[^0-9]/g,'');
@@ -406,31 +394,6 @@ def register(app, utils):
             page = doc[-1]
             rect = fitz.Rect(50, page.rect.height - 40, page.rect.width - 50, page.rect.height - 10)
             page.insert_textbox(rect, legal, fontsize=8, align=1)
-
-            lang = load_settings().get('language', 'en')
-            tmpl_dir = os.path.dirname(__file__)
-            tmpl_path = os.path.join(tmpl_dir, f'info_page_{lang}.txt')
-            if not os.path.exists(tmpl_path):
-                tmpl_path = os.path.join(tmpl_dir, 'info_page_en.txt')
-            try:
-                with open(tmpl_path, 'r', encoding='utf-8') as tfile:
-                    tmpl = tfile.read()
-            except Exception:
-                tmpl = ''
-            info_text = tmpl.format(
-                NAME=name,
-                EMAIL=email,
-                TIMESTAMP=ts,
-                IP=ip,
-                TOKEN=token,
-                HASH=hash_hex,
-            )
-            info_page = doc.new_page(-1)
-            info_page.insert_textbox(
-                fitz.Rect(50, 50, info_page.rect.width - 50, info_page.rect.height - 50),
-                info_text,
-                fontsize=12,
-            )
             pdf_bytes = doc.tobytes()
             doc.close()
         except Exception:
@@ -442,8 +405,6 @@ def register(app, utils):
         info['pdf_file'] = pdf_path
         info['pdf_url'] = str(url)
         info['pdf_hash'] = hash_hex
-        info['ip'] = ip
-        info['timestamp'] = ts
         with open(info_path, 'w') as fh:
             json.dump(info, fh)
         log_entry = {
@@ -462,7 +423,7 @@ def register(app, utils):
             json.dump(log_entry, fh, indent=2)
         if email:
             send_mail(email, 'Documento firmato', f'SHA256: {hash_hex}', pdf_path)
-        return {'status': 'ok', 'url': str(url), 'pdf_hash': hash_hex, 'name': name, 'email': email, 'timestamp': ts, 'ip': ip}
+        return {'status': 'ok', 'url': str(url)}
 
     @app.get('/signed-pdf/{token}')
     async def signed_pdf(request: Request, token: str):
@@ -481,7 +442,7 @@ def register(app, utils):
                 return JSONResponse(status_code=202, content={'message': 'Pending'})
             url = request.url_for('download_signed_pdf', token=token)
             result['url'] = str(url)
-        for key in ('name', 'email', 'phone', 'timestamp', 'ip', 'pdf_hash'):
+        for key in ('name', 'email', 'phone'):
             if key in info:
                 result[key] = info[key]
         return result

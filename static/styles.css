@@ -30,17 +30,6 @@ h1, h2 {
     margin: 5px;
 }
 
-/* place the custom branding before language and license */
-#brandBox {
-    order: 1;
-}
-
-#languageChoice,
-#loginArea,
-#licenseInfo {
-    order: 2;
-}
-
 #licenseInfo {
     font-size: 0.8em;
     color: #555;
@@ -55,6 +44,7 @@ h1, h2 {
     min-width: 80px;
     text-align: center;
     margin: 0 auto;
+    order: 2;
 }
 
 #brandBox img {
@@ -303,7 +293,6 @@ button:hover {
 }
 
 .signPageBtn {
-    transform: rotate(-30deg);
     font-size: 1.2em;
 }
 

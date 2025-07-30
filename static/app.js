@@ -43,7 +43,6 @@ const processedImageElement = document.getElementById('processedImage');
 const processedGallery = document.getElementById('processedGallery');
 const statusMessageElement = document.getElementById('statusMessage');
 const signedPdfLink = document.getElementById('signedPdfLink');
-const signedInfo = document.getElementById('signedInfo');
 const reorderHint = document.getElementById('reorderHint');
 const imageModal = document.getElementById('imageModal');
 const modalImage = document.getElementById('modalImage');
@@ -1658,9 +1657,8 @@ function generatePdf() {
     const scale_mode = scaleMode.value || 'fit';
     const scale_percent = parseInt(scalePercent.value || '100');
     const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures };
-    if (window.lastSignEmail || window.lastSignPhone || window.lastSignName || window.lastSignToken) {
+    if (window.lastSignEmail || window.lastSignPhone || window.lastSignName) {
         payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
-        if (window.lastSignToken) payload.sign_info.token = window.lastSignToken;
     }
     fetch('/create-pdf/', {
         method: 'POST',
@@ -1699,16 +1697,6 @@ function generatePdf() {
                             signedPdfLink.href = d.url;
                             signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
                             signedPdfLink.style.display = 'inline';
-                        }
-                        if (signedInfo) {
-                            const lines = [];
-                            if (d.name) lines.push(`Nome firmatario: ${d.name}`);
-                            if (d.email) lines.push(`Email: ${d.email}`);
-                            if (d.timestamp) lines.push(`Data/ora: ${d.timestamp}`);
-                            if (d.ip) lines.push(`IP: ${d.ip}`);
-                            if (d.pdf_hash) lines.push(`Hash: ${d.pdf_hash}`);
-                            signedInfo.textContent = lines.join('\n');
-                            signedInfo.style.display = 'block';
                         }
                     }
                     if (window.lastSignPhone) shareWhatsAppLink(window.lastSignPhone, d.url);
