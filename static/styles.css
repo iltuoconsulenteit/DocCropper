@@ -565,7 +565,7 @@ button:hover {
 
 @media (max-width: 600px) {
     #pageHeader {
-        flex-direction: column;
+        flex-direction: row;
     }
     #actionButtons {
         justify-content: center;
