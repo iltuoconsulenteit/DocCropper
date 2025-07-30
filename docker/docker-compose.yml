@@ -1,0 +1,9 @@
+version: '3.9'
+services:
+  doccropper:
+    build: .
+    ports:
+      - "8765:8765"
+    volumes:
+      - ../env:/opt/doccropper/env
+      - ../users:/opt/doccropper/users

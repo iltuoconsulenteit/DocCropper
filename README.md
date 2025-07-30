@@ -155,6 +155,18 @@ tray helper manually.
 If the tray cannot be shown, the script automatically launches the server
 without it.
 
+### Docker
+
+A sample Dockerfile and compose file are provided under `docker/`. Build and start the container with:
+
+```bash
+cd docker
+docker compose up --build
+```
+
+The compose file mounts the `env/` and `users/` folders so you can customize settings and retain user data.
+
+
 ### Built-in Wiki
 
 An offline copy of the documentation is included under the `/wiki` path. The
