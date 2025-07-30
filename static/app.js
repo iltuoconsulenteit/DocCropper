@@ -523,7 +523,10 @@ function applySettings(cfg) {
     startBannerRotation();
     brandHeight = parseInt(cfg.brand_height || 80);
     brandGap = parseInt(cfg.brand_gap || 20);
-    if (bannerBox) bannerBox.style.gap = brandGap + 'px';
+    if (bannerBox) {
+        bannerBox.style.paddingLeft = brandGap + 'px';
+        bannerBox.style.paddingRight = brandGap + 'px';
+    }
     updateBrandSize();
     if (cfg.version) {
         appVersion = cfg.version;

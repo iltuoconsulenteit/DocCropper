@@ -100,42 +100,20 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 🛠 Installer Scripts
+### 🛠 Developer setup
 
-- Clone the repo
-- Offer a numbered menu to choose `main` or the developer branch (default `work`)
-- The last developer branch is stored in `install/dev_branch`. Edit this file to
-  change the default or set `DOCROPPER_DEV_BRANCH` when running the script.
-- Set up the environment and install Python dependencies in a virtualenv
-- Stop any running instance using the appropriate `stop_DocCropper` script
-- Windows and macOS installers ask for an optional license key
-- Write a log file named `install.log` in the installation folder (falling back to `%TEMP%` on Windows or `/tmp` on Linux/macOS)
-- After cloning or updating, list the last 10 commits and optionally restore one by its hash
-- The previous commit is saved to `previous_commit` so you can run the new
-  `rollback_DocCropper` script to revert if an update fails
-- When updating, the scripts fetch the selected branch and hard reset to avoid merge conflicts
-- On Linux the installer now requests administrative privileges via `sudo` and installs under `/opt/DocCropper` by default. On macOS the script will similarly relaunch with `sudo` if installing to `/Applications`. If the directory cannot be created, the script exits with a permissions error. The script uses `tee` to create the initial `settings.json` so root permissions are required when installing to system locations. Existing `settings.json` files are backed up to `settings.local.json.bak` and merged back after updating so your license and other custom values are preserved.
-- Matching `uninstall_DocCropper` scripts are provided to remove the application later.
-You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer branch or `DOCROPPER_BRANCH` to force a specific branch.
+Clone this repository and install the Python dependencies inside the virtual environment. Example:
 
-You can pre-populate `settings.json` or override values using `.env` files in the `env/` folder.
-Several example files are included so you can enable features individually:
-`license.env.example`, `google.env.example`, `signing.env.example`,
-`docuseal.env.example` and `stripe.env.example`. The consolidated
-`env/.env.example` lists every supported variable.
-The `.env` files may also define `LICENSE_CHECK=true` to enforce license validation via a remote server.
-To quickly create an environment file for testing you can run one of the
-`scripts/setup_license` helpers. The script for your platform (`.bat`, `.sh` or
-`.command`) asks for your license key and name then writes `env/developer.env`
-with `DOCROPPER_LICENSE_KEY`, `DOCROPPER_LICENSE_NAME`,
-`DOCROPPER_DEV_LICENSE` and `DOCROPPER_LICENSE_LEVEL=full` so all
-features are unlocked. Set
-`DOCROPPER_DEV_WATERMARK=true` if you want to keep the watermark while
-testing with a developer key.
-A hidden demo license provides Full features and mobile signing but always keeps the watermark for demonstrations.
-If you see **Access denied** when running the script, launch it with administrator
-privileges ("Run as Administrator" on Windows). After writing the
-`env/developer.env` file, restart DocCropper so the new license is applied.
+```bash
+git clone https://github.com/yourname/DocCropper.git
+cd DocCropper
+python -m venv venv
+source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Copy one of the sample environment files under `env/` and adjust any settings or license values you need for local testing.
 
 ---
 
@@ -144,10 +122,6 @@ privileges ("Run as Administrator" on Windows). After writing the
 Use the included start scripts from the `scripts/` directory. They handle virtualenv creation and dependency install. On Windows, `start_DocCropper.bat` writes details to `%TEMP%\DocCropper_start.log` so you can troubleshoot launch problems. The scripts verify whether the tray icon and the server are already running and launch whichever component is missing before opening the browser. They also pause before closing so errors remain visible. DocCropper stores its PID file in the system temp folder so it can be managed without admin rights. The tray helper writes its own PID to `doccropper_tray.pid` so duplicate icons are avoided. By default the server listens on **port 8765** unless you override it in `settings.json` or with `--port`.
 
 To stop the server, run the matching stop script or send a POST to `/shutdown/`.
-
-### ❌ Uninstalling
-
-Run the appropriate `uninstall_DocCropper` script from the `install/` folder to completely remove DocCropper. The script stops any running instance and then deletes the installation directory. On Windows it will request administrator privileges if required.
 
 You may also launch `doccropper_tray.py` (or `.pyw`) to manage the server with a system tray icon.
 
@@ -210,10 +184,8 @@ To activate Pro or Full editions:
 - Provide a valid license key in `settings.json`, `.env`, or the Licenses panel
   - Developer keys unlock all features when `DOCROPPER_DEV_LICENSE` matches your `license_key`
     or the key ends with `-DEV`. Saving such a key through the Licenses panel now
-    automatically sets the edition to **Full** and enables mobile signing. The
-    installers store developer keys in `env/developer.env` with
-    `DOCROPPER_LICENSE_LEVEL=full` so subsequent runs start in developer mode.
-    When a developer key is active the tray menu includes an **Update Branch** option.
+     automatically sets the edition to **Full** and enables mobile signing. When a
+     developer key is active the tray menu includes an **Update Branch** option.
  - Mobile signing is enabled automatically when a developer key is used
 - You can generate a suitable `.env` by running `scripts/setup_license.bat` (or
   `.sh` / `.command`) and entering your details

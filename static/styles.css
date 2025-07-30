@@ -53,15 +53,27 @@ h1, h2 {
 
 #brandArea {
     display: flex;
-    justify-content: center;
     align-items: center;
-    gap: 20px;
     margin: 10px auto;
     position: relative;
+    width: 100%;
 }
 
 #brandArea img {
     max-height: 80px;
+}
+
+#clientLogo {
+    margin-right: auto;
+}
+
+#sloganImg {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#sponsorLogo {
+    margin-left: auto;
 }
 
 #brandArea .close {
