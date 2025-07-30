@@ -113,11 +113,14 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Copy one of the sample environment files under `env/` and adjust any settings or license values you need for local testing.
+Copy the sample environment files under `env/` and adjust any settings you need.
+Authentication variables live in `env/auth.env.example` while license-related
+settings are in `env/license.env.example`.
 
 ### Required environment variables
 
-Create a `.env` file with at least:
+Create a `.env` file (or multiple `.env` files inside the `env/` directory)
+with at least the authentication variables and your license check URL:
 
 ```bash
 SECRET_KEY=change-me
@@ -178,7 +181,8 @@ DocCropper ships with three editions. A **Licenses** button in the header opens 
 
 - **Free** – Watermark applied, up to five images per project, LAN access disabled
 - **Pro** – No watermark and unlimited images, but still restricted to local access
-- **Full** – Unlocks LAN access so DocCropper can run on an office server
+- **Lan** – Same as Pro but enabled for LAN usage only
+- **Full** – Unlocks all features including LAN and any optional plugins
 - *Demo Full* is a hidden license that behaves like the Full edition but keeps
   the watermark, enables mobile signing, and shows a demo notice.
   When this license is active the **Purchase** button turns into a PayPal
@@ -194,6 +198,7 @@ To activate Pro or Full editions:
      developer key is active the tray menu includes an **Update Branch** option.
 - Mobile signing is enabled automatically when a developer key is used
 - Set `LICENSE_CHECK=true` in your `.env` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
+If the server response includes a `plugins` map, DocCropper will automatically enable or disable the corresponding `enable_<plugin>` settings.
 
 ### Verifica licenze tramite Joomla + Fabrik con token utente
 
@@ -236,6 +241,8 @@ if (count($rows) > 0) {
     "reason" => "not found or invalid token"
   ]);
 }
+The endpoint may also return a `plugins` object to toggle optional components, e.g. `{"plugins": {"mobilesign": true}}`.
+
 ```
 
 Configura nel file `.env` di DocCropper:

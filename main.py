@@ -404,8 +404,20 @@ async def require_valid_license(user: User = Depends(fastapi_users.current_user(
     if not user.license_token:
         raise HTTPException(status_code=403, detail="Token licenza mancante")
 
-    if not await verify_license(user.email, user.license_type, user.license_token):
+    data = await verify_license(user.email, user.license_type, user.license_token)
+    if not data.get("valid", False):
         raise HTTPException(status_code=403, detail="Licenza non valida")
+
+    plugins = data.get("plugins", {})
+    if isinstance(plugins, dict) and plugins:
+        settings = load_settings()
+        updates = {}
+        for name, allowed in plugins.items():
+            key = f"enable_{name}"
+            if settings.get(key) != allowed:
+                updates[key] = allowed
+        if updates:
+            save_settings(updates)
 
     return user
 
