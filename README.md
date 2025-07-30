@@ -115,15 +115,23 @@ pip install -r requirements.txt
 
 Copy one of the sample environment files under `env/` and adjust any settings or license values you need for local testing.
 
+### Required environment variables
+
+Create a `.env` file with at least:
+
+```bash
+SECRET_KEY=change-me
+DATABASE_URL=sqlite+aiosqlite:///./db.sqlite3
+LICENSE_CHECK_URL=https://tuodominio.it/index.php?option=com_fabrik&view=list&listid=XXX&format=raw
+```
+
 ---
 
 ## ▶️ Running DocCropper
 
-Use the included start scripts from the `scripts/` directory. They handle virtualenv creation and dependency install. On Windows, `start_DocCropper.bat` writes details to `%TEMP%\DocCropper_start.log` so you can troubleshoot launch problems. The scripts verify whether the tray icon and the server are already running and launch whichever component is missing before opening the browser. They also pause before closing so errors remain visible. DocCropper stores its PID file in the system temp folder so it can be managed without admin rights. The tray helper writes its own PID to `doccropper_tray.pid` so duplicate icons are avoided. By default the server listens on **port 8765** unless you override it in `settings.json` or with `--port`.
+Activate your virtual environment and run the server with `uvicorn main:app --host 0.0.0.0 --port 8765` (or simply `python main.py`). The default port is **8765** but can be changed in `settings.json` or via `--port`.
 
-To stop the server, run the matching stop script or send a POST to `/shutdown/`.
-
-You may also launch `doccropper_tray.py` (or `.pyw`) to manage the server with a system tray icon.
+Send a POST to `/shutdown/` to stop the server. The helper script `doccropper_tray.py` may also be used to manage the server via a system tray icon.
 
 ### Tray icon usage
 
@@ -140,9 +148,7 @@ showing an icon:
 python doccropper_tray.py --no-tray
 ```
 Use the `--auto-start` flag to start the server automatically when launching the
-tray helper manually. The provided start scripts already launch the tray helper
-and start the server separately, so they do not use this flag to avoid starting
-multiple instances.
+tray helper manually.
 If the tray cannot be shown, the script automatically launches the server
 without it.
 
@@ -186,10 +192,8 @@ To activate Pro or Full editions:
     or the key ends with `-DEV`. Saving such a key through the Licenses panel now
      automatically sets the edition to **Full** and enables mobile signing. When a
      developer key is active the tray menu includes an **Update Branch** option.
- - Mobile signing is enabled automatically when a developer key is used
-- You can generate a suitable `.env` by running `scripts/setup_license.bat` (or
-  `.sh` / `.command`) and entering your details
-  - Set `LICENSE_CHECK=true` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
+- Mobile signing is enabled automatically when a developer key is used
+- Set `LICENSE_CHECK=true` in your `.env` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
 
 ### Verifica licenze tramite Joomla + Fabrik
 

@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 import fitz
 import uvicorn
-from fastapi import FastAPI, File, Form, UploadFile, Body, Request
+from fastapi import FastAPI, File, Form, UploadFile, Body, Request, Depends, HTTPException
 from PIL import Image, ImageDraw, ImageFont
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -38,8 +38,9 @@ import urllib.request
 import urllib.parse
 import socket
 from plugins.sign import register as register_sign
-from fastapi import Depends, HTTPException
 from app.licensing.check import verify_license
+from app.auth.routes import router as auth_router, fastapi_users
+from app.auth.models import User
 from plugins.mobilesign import register as register_mobilesign
 from plugins.remotesign import register as register_remotesign
 
@@ -369,6 +370,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+app.include_router(auth_router)
+
+@app.on_event("startup")
+async def startup_event():
+    from app.auth.database import engine, Base
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
 # Enable cross-origin requests if needed
 origins = os.getenv("DOCROPPER_CORS_ORIGINS", "*")
@@ -392,13 +400,10 @@ else:
         )
 
 # Dependency used to enforce that the configured license is valid
-async def require_valid_license():
-    settings = load_settings()
-    email = settings.get("license_name", "")
-    level = settings.get("license_level", "free")
-    if not await verify_license(email, level):
+async def require_valid_license(user: User = Depends(fastapi_users.current_user())):
+    if not await verify_license(user.email, user.license_type):
         raise HTTPException(status_code=403, detail="Licenza non valida o scaduta")
-    return True
+    return user
 
 # Mount static files directory and local wiki with no-cache headers
 app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
@@ -424,6 +429,10 @@ if enable_mobilesign:
     register_mobilesign(app, plugin_utils)
 if enable_remotesign:
     register_remotesign(app, plugin_utils)
+
+@app.get("/me", tags=["auth"])
+async def get_me(user: User = Depends(fastapi_users.current_user())):
+    return {"email": user.email, "license": user.license_type}
 
 @app.get('/favicon.ico')
 async def favicon():

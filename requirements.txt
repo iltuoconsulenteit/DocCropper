@@ -14,3 +14,9 @@ PyMuPDF
 qrcode
 cryptography
 stripe
+fastapi-users[sqlalchemy]
+sqlalchemy
+httpx
+passlib[bcrypt]
+python-jose
+email-validator
