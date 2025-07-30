@@ -406,24 +406,29 @@ def register(app, utils):
             page = doc[-1]
             rect = fitz.Rect(50, page.rect.height - 40, page.rect.width - 50, page.rect.height - 10)
             page.insert_textbox(rect, legal, fontsize=8, align=1)
-            info_lines = [
-                "FIRMA ELETTRONICA SEMPLICE",
-                "",
-                f"Documento firmato elettronicamente da: {name}",
-                f"Email firmatario: {email}",
-                f"Data e ora firma: {ts}",
-                f"IP dispositivo: {ip}",
-                f"ID operazione: {token}",
-                "SHA256 del documento firmato:",
-                hash_hex,
-                "",
-                "Dichiarazione firmatario:",
-                "\u201cCon la presente dichiaro di aver preso visione del contenuto del documento e di firmarlo consapevolmente con valore di Firma Elettronica Semplice ai sensi del Regolamento eIDAS (UE 910/2014).\u201d",
-            ]
+
+            lang = load_settings().get('language', 'en')
+            tmpl_dir = os.path.dirname(__file__)
+            tmpl_path = os.path.join(tmpl_dir, f'info_page_{lang}.txt')
+            if not os.path.exists(tmpl_path):
+                tmpl_path = os.path.join(tmpl_dir, 'info_page_en.txt')
+            try:
+                with open(tmpl_path, 'r', encoding='utf-8') as tfile:
+                    tmpl = tfile.read()
+            except Exception:
+                tmpl = ''
+            info_text = tmpl.format(
+                NAME=name,
+                EMAIL=email,
+                TIMESTAMP=ts,
+                IP=ip,
+                TOKEN=token,
+                HASH=hash_hex,
+            )
             info_page = doc.new_page(-1)
             info_page.insert_textbox(
                 fitz.Rect(50, 50, info_page.rect.width - 50, info_page.rect.height - 50),
-                "\n".join(info_lines),
+                info_text,
                 fontsize=12,
             )
             pdf_bytes = doc.tobytes()

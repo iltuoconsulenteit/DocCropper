@@ -1,0 +1,12 @@
+SIMPLE ELECTRONIC SIGNATURE
+
+Document electronically signed by: {NAME}
+Signer email: {EMAIL}
+Signature date and time: {TIMESTAMP}
+Device IP: {IP}
+Operation ID: {TOKEN}
+SHA256 of the signed document:
+{HASH}
+
+Signer declaration:
+"I hereby declare that I have read the contents of the document and knowingly sign it with Simple Electronic Signature in accordance with eIDAS Regulation (EU 910/2014)."
