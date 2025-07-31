@@ -7,7 +7,8 @@ async def verify_license(email: str, license_type: str, token: str) -> dict:
     """Check the remote Fabrik table and return the parsed response.
 
     The returned object always contains at least ``{"valid": bool}`` and may
-    optionally include a ``plugins`` mapping of enabled components.
+    include a ``plugins`` map of optional components or a ``settings`` object
+    with configuration values that should override the local ones.
     """
 
     license_url = os.getenv("LICENSE_CHECK_URL")

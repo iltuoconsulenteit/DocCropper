@@ -61,6 +61,8 @@ except Exception:
 
 
 SETTINGS_FILE = "settings.json"
+# Additional file storing values enforced by a license check
+LICENSE_OVERRIDES_FILE = "license_overrides.json"
 # Load environment variables from any .env files in env/
 ENV_DIR = "env"
 if os.path.isdir(ENV_DIR):
@@ -69,6 +71,24 @@ if os.path.isdir(ENV_DIR):
             load_dotenv(os.path.join(ENV_DIR, name), override=False)
 # Directory containing per-user settings
 USERS_DIR = "users"
+
+# Read/write values that the license server enforces. They override normal
+# settings and cannot be changed by users.
+def load_license_overrides() -> dict:
+    if not os.path.exists(LICENSE_OVERRIDES_FILE):
+        return {}
+    try:
+        with open(LICENSE_OVERRIDES_FILE) as fh:
+            return json.load(fh)
+    except Exception:
+        return {}
+
+def save_license_overrides(update: dict) -> dict:
+    data = load_license_overrides()
+    data.update(update)
+    with open(LICENSE_OVERRIDES_FILE, "w") as fh:
+        json.dump(data, fh)
+    return data
 
 # Developer license key for demonstration (case-insensitive)
 DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "")
@@ -290,6 +310,11 @@ def load_settings():
             except ValueError:
                 pass
 
+        # Apply values enforced by a previous license check
+        overrides = load_license_overrides()
+        if overrides:
+            merged.update(overrides)
+
         dev_env = DEV_LICENSE_KEY_UPPER
         key_upper = merged.get("license_key", "").strip().upper()
         if key_upper == DEMO_FULL_LICENSE_KEY:
@@ -314,7 +339,9 @@ def load_settings():
 
 def save_settings(update: dict):
     data = load_settings()
-    data.update(update)
+    overrides = load_license_overrides()
+    filtered = {k: v for k, v in update.items() if k not in overrides}
+    data.update(filtered)
     if os.getenv("DOCROPPER_PUBLIC_URL"):
         data["public_url"] = os.getenv("DOCROPPER_PUBLIC_URL")
     key_upper = data.get("license_key", "").strip().upper()
@@ -334,6 +361,10 @@ def save_settings(update: dict):
         if not data.get("license_name"):
             data["license_name"] = "Developer"
         data["enable_mobilesign"] = True
+    # Remove fields that are enforced by license
+    license_locked = load_license_overrides()
+    for key, val in license_locked.items():
+        data[key] = val
     with open(SETTINGS_FILE, "w") as fh:
         json.dump(data, fh)
     return data
@@ -432,6 +463,10 @@ async def require_valid_license(user: User = Depends(fastapi_users.current_user(
                 updates[key] = allowed
         if updates:
             save_settings(updates)
+
+    forced = data.get("settings", {})
+    if isinstance(forced, dict) and forced:
+        save_license_overrides(forced)
 
     settings = load_settings()
     limit = settings.get("lan_user_limit", 0)

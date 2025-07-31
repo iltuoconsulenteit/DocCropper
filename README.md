@@ -117,6 +117,8 @@ Copy the sample environment files under `env/` and adjust any settings you need.
 Authentication variables live in `env/auth.env.example` while license-related
 settings are in `env/license.env.example`.
 Optional templates are provided for Google sign-in (`env/google.env.example`), Stripe payments (`env/stripe.env.example`), local signing (`env/signing.env.example`) and remote Docuseal signing (`env/docuseal.env.example`).
+When a license is validated remotely, DocCropper writes forced configuration values to `license_overrides.json`.
+These settings override the normal `settings.json` values and should not be edited manually.
 
 ### Required environment variables
 
@@ -281,7 +283,12 @@ if (count($rows) > 0) {
   ]);
 }
 
-The endpoint may also return a `plugins` object to toggle optional components, e.g. `{"plugins": {"mobilesign": true}}`.
+The endpoint may also return:
+
+- a `plugins` object to toggle optional components, e.g. `{"plugins": {"mobilesign": true}}`.
+- a `settings` object with values that must be enforced on the client.
+  Any key provided here overrides the local configuration and is stored in
+  `license_overrides.json` so users cannot modify it without a new license.
 
 ```
 
