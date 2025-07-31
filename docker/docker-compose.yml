@@ -1,7 +1,9 @@
 version: '3.9'
 services:
   doccropper:
-    build: .
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     ports:
       - "8765:8765"
     volumes:

@@ -157,14 +157,16 @@ without it.
 
 ### Docker
 
-A sample Dockerfile and compose file are provided under `docker/`. Build and start the container with:
+A sample Dockerfile and compose file are provided under `docker/`. Build and
+launch the container from the repository root with:
 
 ```bash
-cd docker
-docker compose up --build
+docker compose -f docker/docker-compose.yml up --build
 ```
 
-The compose file mounts the `env/` and `users/` folders so you can customize settings and retain user data.
+The compose file mounts the `env/` and `users/` folders so you can customise
+settings and keep user data persistent between rebuilds. Copy the example files
+from `env/` and adjust them before running the container.
 
 
 ### Built-in Wiki
