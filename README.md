@@ -127,6 +127,7 @@ with at least the authentication variables and your license check URL:
 SECRET_KEY=change-me
 DATABASE_URL=sqlite+aiosqlite:///./db.sqlite3
 LICENSE_CHECK_URL=https://tuodominio.it/index.php?option=com_fabrik&view=list&listid=XXX&format=raw
+DOCROPPER_LAN_USER_LIMIT=0
 ```
 
 ---
@@ -208,14 +209,23 @@ When the hidden Demo Full license is active the login button is hidden even if
 
 DocCropper ships with three editions. A **Licenses** button in the header opens a panel where you can review the editions and enter your license key. Free users may paste a key here at any time to unlock Pro or Full features.
 
-- **Free** – Watermark applied, up to five images per project, LAN access disabled
-- **Pro** – No watermark and unlimited images, but still restricted to local access
-- **Lan** – Same as Pro but enabled for LAN usage only
-- **Full** – Unlocks all features including LAN and any optional plugins
+- **Free** – Watermark applied and up to five images per project
+- **Pro** – No watermark and unlimited images. A LAN plugin can add network
+  access for a limited number of users in steps of five (5, 10, 15...).
+- **Full** – All features unlocked including unrestricted LAN access and any
+  optional plugins
 - *Demo Full* is a hidden license that behaves like the Full edition but keeps
   the watermark, enables mobile signing, and shows a demo notice.
   When this license is active the **Purchase** button turns into a PayPal
   donation link.
+
+When the LAN plugin is active the `lan_user_limit` setting controls how many
+accounts may use DocCropper over the network. Licenses are typically sold in
+blocks of five users (5, 10, 15 and so on).
+
+Both Pro and Full can run completely offline on Windows, macOS or Linux. Use the
+platform-specific start scripts or Docker image to deploy DocCropper on a single
+PC without external dependencies.
 
 DocCropper itself is released under the [MIT](LICENSE.txt) license. See [Terms of Use](TERMS_OF_USE.md) for additional conditions.
 

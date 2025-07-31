@@ -253,6 +253,7 @@ def load_settings():
         stripe_success = os.getenv("STRIPE_SUCCESS_URL")
         stripe_cancel = os.getenv("STRIPE_CANCEL_URL")
         public_url_env = os.getenv("DOCROPPER_PUBLIC_URL")
+        lan_limit_env = os.getenv("DOCROPPER_LAN_USER_LIMIT")
         if env_key:
             merged["license_key"] = env_key
         if env_name:
@@ -283,6 +284,11 @@ def load_settings():
             merged["stripe_cancel_url"] = stripe_cancel
         if public_url_env:
             merged["public_url"] = public_url_env
+        if lan_limit_env:
+            try:
+                merged["lan_user_limit"] = int(lan_limit_env)
+            except ValueError:
+                pass
 
         dev_env = DEV_LICENSE_KEY_UPPER
         key_upper = merged.get("license_key", "").strip().upper()
@@ -413,11 +419,29 @@ async def require_valid_license(user: User = Depends(fastapi_users.current_user(
         settings = load_settings()
         updates = {}
         for name, allowed in plugins.items():
+            if name == "lan_users":
+                try:
+                    allowed_val = int(allowed)
+                except (TypeError, ValueError):
+                    continue
+                if settings.get("lan_user_limit") != allowed_val:
+                    updates["lan_user_limit"] = allowed_val
+                continue
             key = f"enable_{name}"
             if settings.get(key) != allowed:
                 updates[key] = allowed
         if updates:
             save_settings(updates)
+
+    settings = load_settings()
+    limit = settings.get("lan_user_limit", 0)
+    if limit and user.license_type == "pro":
+        from sqlalchemy import select, func
+        from app.auth.database import async_session_maker
+        async with async_session_maker() as session:
+            total = await session.scalar(select(func.count(User.id)))
+        if total > limit:
+            raise HTTPException(status_code=403, detail="LAN user limit exceeded")
 
     return user
 
