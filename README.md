@@ -70,7 +70,7 @@ Logos and branding can be customized via `static/logos/`, `settings.json`, and `
 Blank pages can be skipped during PDF import. Enable **Skip blank pages** in the layout controls and adjust the `blank_threshold` percentage (95% by default).
 Pages over this threshold are discarded in the Pro edition.
 
-User preferences are stored in the `users/` folder based on their email address. Anonymous users fallback to global settings in `settings.json`. The system supports optional Google sign-in and a configurable purchase panel (donation or subscription) opened from the **Purchase** button next to the Help button. Payment links can be supplied via `settings.json` or through Stripe credentials in `env/stripe.env.example`. Donation links open inside a modal so you can return to the app afterwards. Developer keys allow full access when the configured `license_key` matches the value of the `DOCROPPER_DEV_LICENSE` environment variable.
+User preferences are stored in the `users/` folder based on their email address. Anonymous users fallback to global settings in `settings.json`. The system supports optional Google sign-in and a configurable purchase panel (donation or subscription) opened from the **Purchase** button next to the Help button. Payment links can be supplied via `settings.json` or through Stripe credentials in `env/stripe.env.example`. Donation links open in a new browser tab for compatibility with PayPal. Developer keys allow full access when the configured `license_key` matches the value of the `DOCROPPER_DEV_LICENSE` environment variable.
 
 ---
 
@@ -221,7 +221,7 @@ DocCropper ships with three editions. A **Licenses** button in the header opens 
 - *Demo Full* is a hidden license that behaves like the Full edition but keeps
   the watermark, enables mobile signing, and shows a demo notice.
   When this license is active the **Purchase** button turns into a PayPal
-  donation link displayed in a modal.
+  donation link that opens in a new tab.
 
 When the LAN plugin is active the `lan_user_limit` setting controls how many
 accounts may use DocCropper over the network. Licenses are typically sold in

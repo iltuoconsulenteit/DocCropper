@@ -777,8 +777,7 @@ function showSponsorModal() {
 }
 
 function openDonationModal(url) {
-    donationFrame.src = url;
-    donationModal.style.display = 'block';
+    window.open(url, '_blank');
 }
 
 function rotateImage(index) {
