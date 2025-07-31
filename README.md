@@ -116,6 +116,7 @@ pip install -r requirements.txt
 Copy the sample environment files under `env/` and adjust any settings you need.
 Authentication variables live in `env/auth.env.example` while license-related
 settings are in `env/license.env.example`.
+Optional templates are provided for Google sign-in (`env/google.env.example`), Stripe payments (`env/stripe.env.example`), local signing (`env/signing.env.example`) and remote Docuseal signing (`env/docuseal.env.example`).
 
 ### Required environment variables
 
@@ -364,7 +365,7 @@ npm install
 npm start
 ```
 
-Create a `.env` file based on `.env.example` with your Google `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` (e.g. `http://localhost:8765/auth/google/callback`).
+Create a `.env` file based on `env/google.env.example` with your Google `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` (e.g. `http://localhost:8765/auth/google/callback`).
 You may also copy any of the sample files under `env/` if you wish to test
 additional features such as Docuseal or local signing.
 
