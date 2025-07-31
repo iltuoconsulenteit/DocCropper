@@ -58,6 +58,9 @@ const loginArea = document.getElementById('loginArea');
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
 const donateBox = document.getElementById('donateBox');
+const donationModal = document.getElementById('donationModal');
+const donationFrame = document.getElementById('donationFrame');
+const closeDonation = document.getElementById('closeDonation');
 const demoNotice = document.getElementById('demoNotice');
 const instructionsBox = document.getElementById('instructionsBox');
 const helpBtn = document.getElementById('helpBtn');
@@ -553,10 +556,14 @@ function applySettings(cfg) {
         }
     }
     if (donateBox) {
-        if (demoFullMode) {
-            const link = currentSettings.paypal_link || DEFAULT_PAYPAL;
-            donateBox.innerHTML = `<a href="${link}" target="_blank"><img src="https://www.paypalobjects.com/it_IT/IT/i/btn/btn_donateCC_LG.gif" alt="Donate"></a>`;
+        const link = currentSettings.paypal_link || DEFAULT_PAYPAL;
+        if (cfg.payment_mode && cfg.payment_mode.toLowerCase() === 'donation' && link) {
+            donateBox.innerHTML = `<button id="donateBtn"><img src="https://www.paypalobjects.com/it_IT/IT/i/btn/btn_donateCC_LG.gif" alt="Donate"></button>`;
             donateBox.style.display = 'block';
+            document.getElementById('donateBtn').addEventListener('click', (e) => {
+                e.preventDefault();
+                openDonationModal(link);
+            });
         } else {
             donateBox.style.display = 'none';
             donateBox.innerHTML = '';
@@ -767,6 +774,11 @@ function showSponsorModal() {
         };
         closeBtn.addEventListener('click', handler);
     });
+}
+
+function openDonationModal(url) {
+    donationFrame.src = url;
+    donationModal.style.display = 'block';
 }
 
 function rotateImage(index) {
@@ -1196,6 +1208,18 @@ closeModal.addEventListener('click', () => {
 imageModal.addEventListener('click', (e) => {
     if (e.target === imageModal) {
         imageModal.style.display = 'none';
+    }
+});
+
+closeDonation.addEventListener('click', () => {
+    donationModal.style.display = 'none';
+    donationFrame.src = '';
+});
+
+donationModal.addEventListener('click', (e) => {
+    if (e.target === donationModal) {
+        donationModal.style.display = 'none';
+        donationFrame.src = '';
     }
 });
 
@@ -2422,12 +2446,12 @@ function renderPaymentBox(cfg) {
     let hasItem = false;
     if (mode === 'donation') {
         if (cfg.paypal_link) {
-            html += `<li><a href="${cfg.paypal_link}" target="_blank">${t('donatePaypal')}</a></li>`;
+            html += `<li><a href="#" id="donatePaypalLink">${t('donatePaypal')}</a></li>`;
             hasItem = true;
         }
     } else if (mode === 'subscription') {
         if (cfg.paypal_link) {
-            html += `<li><a href="${cfg.paypal_link}" target="_blank">${t('payPaypal')}</a></li>`;
+            html += `<li><a href="#" id="payPaypalLink">${t('payPaypal')}</a></li>`;
             hasItem = true;
         }
         if (cfg.stripe_price_pro) {
@@ -2448,6 +2472,20 @@ function renderPaymentBox(cfg) {
     }
     html += '</ul>';
     purchaseBox.innerHTML = html;
+    const donateLink = document.getElementById('donatePaypalLink');
+    if (donateLink) {
+        donateLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            openDonationModal(cfg.paypal_link);
+        });
+    }
+    const payPaypalLink = document.getElementById('payPaypalLink');
+    if (payPaypalLink) {
+        payPaypalLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            openDonationModal(cfg.paypal_link);
+        });
+    }
     const proBtn = document.getElementById('stripeProBtn');
     if (proBtn) {
         proBtn.addEventListener('click', async () => {

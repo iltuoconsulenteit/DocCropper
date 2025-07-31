@@ -705,6 +705,11 @@ button:hover {
     height: 360px;
 }
 
+#donationContent iframe {
+    width: 100%;
+    height: 500px;
+}
+
 #sponsorCountdown {
     position: absolute;
     top: 20px;
