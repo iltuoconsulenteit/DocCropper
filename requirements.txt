@@ -17,6 +17,7 @@ stripe
 fastapi-users[sqlalchemy]
 sqlalchemy
 httpx
+aiosqlite
 passlib[bcrypt]
 python-jose
 email-validator

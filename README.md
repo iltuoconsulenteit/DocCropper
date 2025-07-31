@@ -97,7 +97,7 @@ venv\Scripts\activate        # On Windows
 source venv/bin/activate     # On Linux/macOS
 
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r requirements.txt  # includes aiosqlite for the SQLite backend
 ```
 
 ### 🛠 Developer setup
