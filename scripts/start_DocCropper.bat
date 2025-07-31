@@ -94,6 +94,13 @@ if errorlevel 1 (
     exit /b
 )
 
+:: Install or update dependencies
+if exist requirements.txt (
+    echo [INFO] Aggiornamento dipendenze Python >> "!LOG_FILE!"
+    python -m pip install --upgrade pip >> "!LOG_FILE!" 2>&1
+    pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
+)
+
 :: Stop any running instance
 python main.py --stop >> "!LOG_FILE!" 2>&1
 
