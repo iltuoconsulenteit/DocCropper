@@ -221,24 +221,24 @@ To activate Pro or Full editions:
 - Set `LICENSE_CHECK=true` in your `.env` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
 If the server response includes a `plugins` map, DocCropper will automatically enable or disable the corresponding `enable_<plugin>` settings.
 
-### Verifica licenze tramite Joomla + Fabrik con token utente
+### License verification via Joomla + Fabrik with a user token
 
-Per abilitare il controllo licenze remoto, è possibile collegare DocCropper a un sito Joomla con Fabrik configurato. Ogni licenza deve possedere un token segreto per una verifica più sicura.
+You can verify licenses remotely by linking DocCropper to a Joomla site that uses the Fabrik extension. Each license entry must contain a unique token which will be compared with the one stored for the user.
 
-**Requisiti lato Joomla:**
+**Joomla requirements:**
 
-- Estensione Fabrik installata
-- Creare una tabella Fabrik chiamata *licenze* con i campi `email`, `license`, `valida` e `token`
+- Fabrik extension installed
+- Create a Fabrik list called *licenze* with the columns `email`, `license`, `valida` and `token`
 
-**Configurazioni Fabrik:**
+**Fabrik configuration:**
 
-- Abilitare filtro da querystring su `email`, `license` e `token`
-- Abilitare la vista RAW della lista
-- Creare un override del template nella directory:
+- Enable querystring filtering on `email`, `license` and `token`
+- Enable the RAW view of the list
+- Create a template override at:
 
   `templates/tuotemplate/html/com_fabrik/list/licenze/default_raw.php`
 
-  con questo codice:
+  with this code:
 
 ```php
 <?php
@@ -262,22 +262,23 @@ if (count($rows) > 0) {
     "reason" => "not found or invalid token"
   ]);
 }
+
 The endpoint may also return a `plugins` object to toggle optional components, e.g. `{"plugins": {"mobilesign": true}}`.
 
 ```
 
-Configura nel file `.env` di DocCropper:
+Add the following line to DocCropper's `.env` file:
 
 ```
-LICENSE_CHECK_URL=https://tuodominio.it/index.php?option=com_fabrik&view=list&listid=XXX&format=raw
+LICENSE_CHECK_URL=https://yourdomain.tld/index.php?option=com_fabrik&view=list&listid=XXX&format=raw
 ```
 
-(Sostituisci `XXX` con l'ID reale della tabella Fabrik delle licenze. Il token verrà aggiunto automaticamente alle richieste.)
+(Replace `XXX` with the ID of your Fabrik license list. The token is appended automatically when DocCropper performs the request.)
 
-Esempio di URL completo con token:
+Example URL with token:
 
 ```
-https://tuodominio.it/index.php?option=com_fabrik&view=list&listid=5&format=raw&email=user@example.com&license=pro&token=ABC123DEF456
+https://yourdomain.tld/index.php?option=com_fabrik&view=list&listid=5&format=raw&email=user@example.com&license=pro&token=ABC123DEF456
 ```
 
 For inquiries: **doccropper@iltuoconsulenteit.it**
