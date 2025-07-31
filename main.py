@@ -421,7 +421,7 @@ async def startup_event():
     admin_email = os.getenv("DOCROPPER_ADMIN_EMAIL", "admin@example.com")
     admin_password = os.getenv("DOCROPPER_ADMIN_PASSWORD", "admin")
     async with async_session_maker() as session:
-        user_db = SQLAlchemyUserDatabase(User, session)
+        user_db = SQLAlchemyUserDatabase(session, User)
         existing = await user_db.get_by_email(admin_email)
         if existing is None:
             hashed = bcrypt.hash(admin_password)

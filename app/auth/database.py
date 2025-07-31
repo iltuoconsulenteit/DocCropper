@@ -11,4 +11,4 @@ async def get_user_db():
     from fastapi_users.db import SQLAlchemyUserDatabase
     from app.auth.models import User
     async with async_session_maker() as session:
-        yield SQLAlchemyUserDatabase(User, session)
+        yield SQLAlchemyUserDatabase(session, User)
