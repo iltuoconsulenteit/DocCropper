@@ -54,6 +54,7 @@ h1, h2 {
 #brandArea {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     margin: 10px auto;
     position: relative;
     width: 100%;
@@ -63,17 +64,12 @@ h1, h2 {
     max-height: 80px;
 }
 
-#clientLogo {
-    margin-right: auto;
+#clientLogo, #sloganImg, #sponsorLogo {
+    flex: 0 0 auto;
 }
 
 #sloganImg {
-    margin-left: auto;
-    margin-right: auto;
-}
-
-#sponsorLogo {
-    margin-left: auto;
+    margin: 0 auto;
 }
 
 #brandArea .close {

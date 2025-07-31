@@ -227,9 +227,7 @@ When the LAN plugin is active the `lan_user_limit` setting controls how many
 accounts may use DocCropper over the network. Licenses are typically sold in
 blocks of five users (5, 10, 15 and so on).
 
-Both Pro and Full can run completely offline on Windows, macOS or Linux. Use the
-platform-specific start scripts or Docker image to deploy DocCropper on a single
-PC without external dependencies.
+Both Pro and Full can run completely offline on Windows, macOS or Linux.
 
 DocCropper itself is released under the [MIT](LICENSE.txt) license. See [Terms of Use](TERMS_OF_USE.md) for additional conditions.
 
@@ -355,11 +353,11 @@ DocCropper can apply a personal signature in several ways:
 
 Alternatively, you may set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` to automatically apply a local PKCS#12 certificate.
 
-When `DOCROPPER_TUNNEL=true` and `cloudflared` is installed, the start scripts
+When `DOCROPPER_TUNNEL=true` and `cloudflared` is installed, DocCropper can
 launch a temporary Cloudflare Tunnel so the signing link works from outside your
 LAN. The public URL is written to the log.
 
-Set `DOCROPPER_OPEN_URL` if you want the start scripts and tray helper to open a
+Set `DOCROPPER_OPEN_URL` if you want DocCropper or the tray helper to open a
 custom address (for example your Cloudflare tunnel) instead of
 `http://localhost:PORT`.
 You may configure the public domain used for mobile signing either through the
