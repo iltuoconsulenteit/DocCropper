@@ -4,6 +4,7 @@ from fastapi_users.authentication import JWTStrategy, AuthenticationBackend, Coo
 from app.auth.models import User
 from app.auth.user_manager import UserManager
 from app.auth.database import get_user_db
+from app.auth.schemas import UserRead, UserCreate, UserUpdate
 import os
 
 cookie_transport = CookieTransport(cookie_name="auth", cookie_max_age=3600)
@@ -26,6 +27,18 @@ fastapi_users = FastAPIUsers[User, int](
 )
 
 router = APIRouter()
-router.include_router(fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"])
-router.include_router(fastapi_users.get_register_router(), prefix="/auth", tags=["auth"])
-router.include_router(fastapi_users.get_users_router(), prefix="/users", tags=["users"])
+router.include_router(
+    fastapi_users.get_auth_router(auth_backend),
+    prefix="/auth/jwt",
+    tags=["auth"],
+)
+router.include_router(
+    fastapi_users.get_register_router(UserRead, UserCreate),
+    prefix="/auth",
+    tags=["auth"],
+)
+router.include_router(
+    fastapi_users.get_users_router(UserRead, UserUpdate),
+    prefix="/users",
+    tags=["users"],
+)
