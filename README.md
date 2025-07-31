@@ -158,8 +158,10 @@ without it.
 
 ### Docker
 
-A sample Dockerfile and compose file are provided under `docker/`. Build and
-launch the container from the repository root with:
+A sample Dockerfile and compose file are provided under `docker/`. The Docker
+image installs Tesseract OCR and the runtime libraries required by OpenCV so all
+features work out of the box. Build and launch the container from the repository
+root with:
 
 ```bash
 docker compose -f docker/docker-compose.yml up --build
@@ -168,6 +170,9 @@ docker compose -f docker/docker-compose.yml up --build
 The compose file mounts the `env/` and `users/` folders so you can customise
 settings and keep user data persistent between rebuilds. Copy the example files
 from `env/` and adjust them before running the container.
+
+Additional packages can be added by extending `docker/Dockerfile` if your
+deployment requires them.
 
 
 ### Built-in Wiki
