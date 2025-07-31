@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi_users import FastAPIUsers
 from fastapi_users.authentication import JWTStrategy, AuthenticationBackend, CookieTransport
 from app.auth.models import User
@@ -17,11 +17,12 @@ auth_backend = AuthenticationBackend(
     get_strategy=get_jwt_strategy,
 )
 
+async def get_user_manager(user_db=Depends(get_user_db)):
+    yield UserManager(user_db)
+
 fastapi_users = FastAPIUsers[User, int](
-    get_user_db,
+    get_user_manager,
     [auth_backend],
-    User,
-    UserManager,
 )
 
 router = APIRouter()

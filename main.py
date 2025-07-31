@@ -411,9 +411,29 @@ app.include_router(auth_router)
 
 @app.on_event("startup")
 async def startup_event():
-    from app.auth.database import engine, Base
+    from app.auth.database import engine, Base, async_session_maker
+    from fastapi_users.db import SQLAlchemyUserDatabase
+    from passlib.hash import bcrypt
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # Create default admin user if none exists
+    admin_email = os.getenv("DOCROPPER_ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("DOCROPPER_ADMIN_PASSWORD", "admin")
+    async with async_session_maker() as session:
+        user_db = SQLAlchemyUserDatabase(User, session)
+        existing = await user_db.get_by_email(admin_email)
+        if existing is None:
+            hashed = bcrypt.hash(admin_password)
+            admin = User(
+                email=admin_email,
+                hashed_password=hashed,
+                is_active=True,
+                is_superuser=True,
+                is_verified=True,
+            )
+            session.add(admin)
+            await session.commit()
 
 # Enable cross-origin requests if needed
 origins = os.getenv("DOCROPPER_CORS_ORIGINS", "*")

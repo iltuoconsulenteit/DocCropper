@@ -130,6 +130,8 @@ SECRET_KEY=change-me
 DATABASE_URL=sqlite+aiosqlite:///./db.sqlite3
 LICENSE_CHECK_URL=https://tuodominio.it/index.php?option=com_fabrik&view=list&listid=XXX&format=raw
 DOCROPPER_LAN_USER_LIMIT=0
+DOCROPPER_ADMIN_EMAIL=admin@example.com
+DOCROPPER_ADMIN_PASSWORD=changeme
 ```
 
 ---
