@@ -1489,6 +1489,7 @@ async function addFiles(newFiles) {
         updateLayoutPreview();
     }
     hideLoading();
+    if (imageUploadElement) imageUploadElement.value = '';
 }
 
 imageUploadElement.addEventListener('change', async (event) => {
@@ -1510,6 +1511,7 @@ imageUploadElement.addEventListener('change', async (event) => {
         }
     }
     if (toProcess.length) await addFiles(toProcess);
+    imageUploadElement.value = '';
 });
 
 async function handleDrop(event) {
