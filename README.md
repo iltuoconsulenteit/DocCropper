@@ -66,11 +66,11 @@ JavaScript logic is contained in `static/app.js`.
 
 Images are processed and displayed as thumbnails with **Rotate**, **Edit**, and **Delete** buttons. Preview and layout configuration options are also provided before export.
 
-Logos and branding can be customized via `static/logos/`, `settings.json`, and `brand_html`. A dedicated area in the header can show a client logo (`client_logo`) and an optional sponsor banner (`sponsor_logo`). The `sponsor_scale` and `sponsor_bottom` settings control the banner size and position. The header also shows a language-specific slogan image (e.g. `DocCropper_slogan_en.png`), and the footer displays the current Git commit hash. Licensed users can also convert images to grayscale or black & white using buttons below each thumbnail, and a global color mode option applies to all images before PDF export.
+Logos and branding can be customized via `static/logos/`, `settings.json`, and `brand_html`. A dedicated area in the header can show a client logo (`client_logo`), a rotating slogan banner and an optional sponsor logo (`sponsor_logo`). Logo height and spacing can be tuned with `brand_height` and `brand_gap`. The `sponsor_scale` and `sponsor_bottom` settings control the video banner size and position. The header also shows a language-specific slogan image (e.g. `DocCropper_slogan_en.png`), and the footer displays the current Git commit hash. Licensed users can also convert images to grayscale or black & white using buttons below each thumbnail, and a global color mode option applies to all images before PDF export.
 Blank pages can be skipped during PDF import. Enable **Skip blank pages** in the layout controls and adjust the `blank_threshold` percentage (95% by default).
 Pages over this threshold are discarded in the Pro edition.
 
-User preferences are stored in the `users/` folder based on their email address. Anonymous users fallback to global settings in `settings.json`. The system supports optional Google sign-in and a configurable purchase panel (donation or subscription) opened from the **Purchase** button next to the Help button. Payment links can be supplied via `settings.json` or through Stripe credentials in `env/stripe.env.example`. Developer keys allow full access when the configured `license_key` matches the value of the `DOCROPPER_DEV_LICENSE` environment variable.
+User preferences are stored in the `users/` folder based on their email address. Anonymous users fallback to global settings in `settings.json`. The system supports optional Google sign-in and a configurable purchase panel (donation or subscription) opened from the **Purchase** button next to the Help button. Payment links can be supplied via `settings.json` or through Stripe credentials in `env/stripe.env.example`. Donation links open in a new browser tab for compatibility with PayPal. Developer keys allow full access when the configured `license_key` matches the value of the `DOCROPPER_DEV_LICENSE` environment variable.
 
 ---
 
@@ -97,59 +97,50 @@ venv\Scripts\activate        # On Windows
 source venv/bin/activate     # On Linux/macOS
 
 pip install --upgrade pip
+pip install -r requirements.txt  # includes aiosqlite for the SQLite backend
+```
+
+### 🛠 Developer setup
+
+Clone this repository and install the Python dependencies inside the virtual environment. Example:
+
+```bash
+git clone https://github.com/yourname/DocCropper.git
+cd DocCropper
+python -m venv venv
+source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 🛠 Installer Scripts
+Copy the sample environment files under `env/` and adjust any settings you need.
+Authentication variables live in `env/auth.env.example` while license-related
+settings are in `env/license.env.example`.
+Optional templates are provided for Google sign-in (`env/google.env.example`), Stripe payments (`env/stripe.env.example`), local signing (`env/signing.env.example`) and remote Docuseal signing (`env/docuseal.env.example`).
+When a license is validated remotely, DocCropper writes forced configuration values to `license_overrides.json`.
+These settings override the normal `settings.json` values and should not be edited manually.
 
-- Clone the repo
-- Offer a numbered menu to choose `main` or the developer branch (default `work`)
-- The last developer branch is stored in `install/dev_branch`. Edit this file to
-  change the default or set `DOCROPPER_DEV_BRANCH` when running the script.
-- Set up the environment and install Python dependencies in a virtualenv
-- Stop any running instance using the appropriate `stop_DocCropper` script
-- Windows and macOS installers ask for an optional license key
-- Write a log file named `install.log` in the installation folder (falling back to `%TEMP%` on Windows or `/tmp` on Linux/macOS)
-- After cloning or updating, list the last 10 commits and optionally restore one by its hash
-- The previous commit is saved to `previous_commit` so you can run the new
-  `rollback_DocCropper` script to revert if an update fails
-- When updating, the scripts fetch the selected branch and hard reset to avoid merge conflicts
-- On Linux the installer now requests administrative privileges via `sudo` and installs under `/opt/DocCropper` by default. On macOS the script will similarly relaunch with `sudo` if installing to `/Applications`. If the directory cannot be created, the script exits with a permissions error. The script uses `tee` to create the initial `settings.json` so root permissions are required when installing to system locations. Existing `settings.json` files are backed up to `settings.local.json.bak` and merged back after updating so your license and other custom values are preserved.
-- Matching `uninstall_DocCropper` scripts are provided to remove the application later.
-You can override the branches with `DOCROPPER_DEV_BRANCH` for the developer branch or `DOCROPPER_BRANCH` to force a specific branch.
+### Required environment variables
 
-You can pre-populate `settings.json` or override values using `.env` files in the `env/` folder.
-Several example files are included so you can enable features individually:
-`license.env.example`, `google.env.example`, `signing.env.example`,
-`docuseal.env.example` and `stripe.env.example`. The consolidated
-`env/.env.example` lists every supported variable.
-The `.env` files may also define `LICENSE_CHECK=true` to enforce license validation via a remote server.
-To quickly create an environment file for testing you can run one of the
-`scripts/setup_license` helpers. The script for your platform (`.bat`, `.sh` or
-`.command`) asks for your license key and name then writes `env/developer.env`
-with `DOCROPPER_LICENSE_KEY`, `DOCROPPER_LICENSE_NAME`,
-`DOCROPPER_DEV_LICENSE` and `DOCROPPER_LICENSE_LEVEL=full` so all
-features are unlocked. Set
-`DOCROPPER_DEV_WATERMARK=true` if you want to keep the watermark while
-testing with a developer key.
-A hidden demo license provides Full features and mobile signing but always keeps the watermark for demonstrations.
-If you see **Access denied** when running the script, launch it with administrator
-privileges ("Run as Administrator" on Windows). After writing the
-`env/developer.env` file, restart DocCropper so the new license is applied.
+Create a `.env` file (or multiple `.env` files inside the `env/` directory)
+with at least the authentication variables and your license check URL:
+
+```bash
+SECRET_KEY=change-me
+DATABASE_URL=sqlite+aiosqlite:///./db.sqlite3
+LICENSE_CHECK_URL=https://tuodominio.it/index.php?option=com_fabrik&view=list&listid=XXX&format=raw
+DOCROPPER_LAN_USER_LIMIT=0
+DOCROPPER_ADMIN_EMAIL=admin@example.com
+DOCROPPER_ADMIN_PASSWORD=changeme
+```
 
 ---
 
 ## ▶️ Running DocCropper
 
-Use the included start scripts from the `scripts/` directory. They handle virtualenv creation and dependency install. On Windows, `start_DocCropper.bat` writes details to `%TEMP%\DocCropper_start.log` so you can troubleshoot launch problems. The scripts verify whether the tray icon and the server are already running and launch whichever component is missing before opening the browser. They also pause before closing so errors remain visible. DocCropper stores its PID file in the system temp folder so it can be managed without admin rights. The tray helper writes its own PID to `doccropper_tray.pid` so duplicate icons are avoided. By default the server listens on **port 8765** unless you override it in `settings.json` or with `--port`.
+Activate your virtual environment and run the server with `uvicorn main:app --host 0.0.0.0 --port 8765` (or simply `python main.py`). The default port is **8765** but can be changed in `settings.json` or via `--port`.
 
-To stop the server, run the matching stop script or send a POST to `/shutdown/`.
-
-### ❌ Uninstalling
-
-Run the appropriate `uninstall_DocCropper` script from the `install/` folder to completely remove DocCropper. The script stops any running instance and then deletes the installation directory. On Windows it will request administrator privileges if required.
-
-You may also launch `doccropper_tray.py` (or `.pyw`) to manage the server with a system tray icon.
+Send a POST to `/shutdown/` to stop the server. The helper script `doccropper_tray.py` may also be used to manage the server via a system tray icon.
 
 ### Tray icon usage
 
@@ -166,11 +157,28 @@ showing an icon:
 python doccropper_tray.py --no-tray
 ```
 Use the `--auto-start` flag to start the server automatically when launching the
-tray helper manually. The provided start scripts already launch the tray helper
-and start the server separately, so they do not use this flag to avoid starting
-multiple instances.
+tray helper manually.
 If the tray cannot be shown, the script automatically launches the server
 without it.
+
+### Docker
+
+A sample Dockerfile and compose file are provided under `docker/`. The Docker
+image installs Tesseract OCR and the runtime libraries required by OpenCV so all
+features work out of the box. Build and launch the container from the repository
+root with:
+
+```bash
+docker compose -f docker/docker-compose.yml up --build
+```
+
+The compose file mounts the `env/` and `users/` folders so you can customise
+settings and keep user data persistent between rebuilds. Copy the example files
+from `env/` and adjust them before running the container.
+
+Additional packages can be added by extending `docker/Dockerfile` if your
+deployment requires them.
+
 
 ### Built-in Wiki
 
@@ -179,6 +187,15 @@ web interface displays this wiki in a sidebar on the right beneath the Help
 button. A language-specific page is loaded based on your selection. You can
 also open it in a new tab at `http://<host>:<port>/wiki/<lang>/` (by default
 `http://localhost:8765/wiki/<lang>/`) or view the online version on GitHub.
+
+### Admin Page
+
+Developers can manage global settings and user accounts from a dedicated admin
+interface available at `/admin`. Access to this page requires authentication as a
+superuser using the `/auth/jwt/login` endpoint. Once logged in, the page exposes
+the same options found in the settings panel and lists all registered users with
+the ability to create or remove them. It relies on the REST endpoints under
+`/settings/`, `/auth/` and `/users/`.
 
 ### Google Sign-In
 
@@ -196,13 +213,21 @@ When the hidden Demo Full license is active the login button is hidden even if
 
 DocCropper ships with three editions. A **Licenses** button in the header opens a panel where you can review the editions and enter your license key. Free users may paste a key here at any time to unlock Pro or Full features.
 
-- **Free** – Watermark applied, up to five images per project, LAN access disabled
-- **Pro** – No watermark and unlimited images, but still restricted to local access
-- **Full** – Unlocks LAN access so DocCropper can run on an office server
+- **Free** – Watermark applied and up to five images per project
+- **Pro** – No watermark and unlimited images. A LAN plugin can add network
+  access for a limited number of users in steps of five (5, 10, 15...).
+- **Full** – All features unlocked including unrestricted LAN access and any
+  optional plugins
 - *Demo Full* is a hidden license that behaves like the Full edition but keeps
   the watermark, enables mobile signing, and shows a demo notice.
   When this license is active the **Purchase** button turns into a PayPal
-  donation link.
+  donation link that opens in a new tab.
+
+When the LAN plugin is active the `lan_user_limit` setting controls how many
+accounts may use DocCropper over the network. Licenses are typically sold in
+blocks of five users (5, 10, 15 and so on).
+
+Both Pro and Full can run completely offline on Windows, macOS or Linux.
 
 DocCropper itself is released under the [MIT](LICENSE.txt) license. See [Terms of Use](TERMS_OF_USE.md) for additional conditions.
 
@@ -210,14 +235,76 @@ To activate Pro or Full editions:
 - Provide a valid license key in `settings.json`, `.env`, or the Licenses panel
   - Developer keys unlock all features when `DOCROPPER_DEV_LICENSE` matches your `license_key`
     or the key ends with `-DEV`. Saving such a key through the Licenses panel now
-    automatically sets the edition to **Full** and enables mobile signing. The
-    installers store developer keys in `env/developer.env` with
-    `DOCROPPER_LICENSE_LEVEL=full` so subsequent runs start in developer mode.
-    When a developer key is active the tray menu includes an **Update Branch** option.
- - Mobile signing is enabled automatically when a developer key is used
-- You can generate a suitable `.env` by running `scripts/setup_license.bat` (or
-  `.sh` / `.command`) and entering your details
-- Set `LICENSE_CHECK=true` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
+     automatically sets the edition to **Full** and enables mobile signing. When a
+     developer key is active the tray menu includes an **Update Branch** option.
+- Mobile signing is enabled automatically when a developer key is used
+- Set `LICENSE_CHECK=true` in your `.env` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
+If the server response includes a `plugins` map, DocCropper will automatically enable or disable the corresponding `enable_<plugin>` settings.
+
+### License verification via Joomla + Fabrik with a user token
+
+You can verify licenses remotely by linking DocCropper to a Joomla site that uses the Fabrik extension. Each license entry must contain a unique token which will be compared with the one stored for the user.
+
+**Joomla requirements:**
+
+- Fabrik extension installed
+- Create a Fabrik list called *licenze* with the columns `email`, `license`, `valida` and `token`
+
+**Fabrik configuration:**
+
+- Enable querystring filtering on `email`, `license` and `token`
+- Enable the RAW view of the list
+- Create a template override at:
+
+  `templates/tuotemplate/html/com_fabrik/list/licenze/default_raw.php`
+
+  with this code:
+
+```php
+<?php
+defined('_JEXEC') or die();
+header('Content-Type: application/json');
+
+$rows = $this->rows;
+$valid = false;
+
+if (count($rows) > 0) {
+  $row = $rows[0];
+  $valid = ($row->valida == '1' || strtolower($row->valida) == 'sì');
+  echo json_encode([
+    "email" => $row->email,
+    "license" => $row->license,
+    "valid" => $valid
+  ]);
+} else {
+  echo json_encode([
+    "valid" => false,
+    "reason" => "not found or invalid token"
+  ]);
+}
+
+The endpoint may also return:
+
+- a `plugins` object to toggle optional components, e.g. `{"plugins": {"mobilesign": true}}`.
+- a `settings` object with values that must be enforced on the client.
+  Any key provided here overrides the local configuration and is stored in
+  `license_overrides.json` so users cannot modify it without a new license.
+
+```
+
+Add the following line to DocCropper's `.env` file:
+
+```
+LICENSE_CHECK_URL=https://yourdomain.tld/index.php?option=com_fabrik&view=list&listid=XXX&format=raw
+```
+
+(Replace `XXX` with the ID of your Fabrik license list. The token is appended automatically when DocCropper performs the request.)
+
+Example URL with token:
+
+```
+https://yourdomain.tld/index.php?option=com_fabrik&view=list&listid=5&format=raw&email=user@example.com&license=pro&token=ABC123DEF456
+```
 
 For inquiries: **doccropper@iltuoconsulenteit.it**
 
@@ -266,11 +353,11 @@ DocCropper can apply a personal signature in several ways:
 
 Alternatively, you may set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` to automatically apply a local PKCS#12 certificate.
 
-When `DOCROPPER_TUNNEL=true` and `cloudflared` is installed, the start scripts
+When `DOCROPPER_TUNNEL=true` and `cloudflared` is installed, DocCropper can
 launch a temporary Cloudflare Tunnel so the signing link works from outside your
 LAN. The public URL is written to the log.
 
-Set `DOCROPPER_OPEN_URL` if you want the start scripts and tray helper to open a
+Set `DOCROPPER_OPEN_URL` if you want DocCropper or the tray helper to open a
 custom address (for example your Cloudflare tunnel) instead of
 `http://localhost:PORT`.
 You may configure the public domain used for mobile signing either through the
@@ -300,7 +387,7 @@ npm install
 npm start
 ```
 
-Create a `.env` file based on `.env.example` with your Google `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` (e.g. `http://localhost:8765/auth/google/callback`).
+Create a `.env` file based on `env/google.env.example` with your Google `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` (e.g. `http://localhost:8765/auth/google/callback`).
 You may also copy any of the sample files under `env/` if you wish to test
 additional features such as Docuseal or local signing.
 

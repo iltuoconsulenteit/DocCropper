@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 import fitz
 import uvicorn
-from fastapi import FastAPI, File, Form, UploadFile, Body, Request
+from fastapi import FastAPI, File, Form, UploadFile, Body, Request, Depends, HTTPException
 from PIL import Image, ImageDraw, ImageFont
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -38,6 +38,9 @@ import urllib.request
 import urllib.parse
 import socket
 from plugins.sign import register as register_sign
+from app.licensing.check import verify_license
+from app.auth.routes import router as auth_router, fastapi_users
+from app.auth.models import User
 from plugins.mobilesign import register as register_mobilesign
 from plugins.remotesign import register as register_remotesign
 
@@ -58,6 +61,8 @@ except Exception:
 
 
 SETTINGS_FILE = "settings.json"
+# Additional file storing values enforced by a license check
+LICENSE_OVERRIDES_FILE = "license_overrides.json"
 # Load environment variables from any .env files in env/
 ENV_DIR = "env"
 if os.path.isdir(ENV_DIR):
@@ -66,6 +71,24 @@ if os.path.isdir(ENV_DIR):
             load_dotenv(os.path.join(ENV_DIR, name), override=False)
 # Directory containing per-user settings
 USERS_DIR = "users"
+
+# Read/write values that the license server enforces. They override normal
+# settings and cannot be changed by users.
+def load_license_overrides() -> dict:
+    if not os.path.exists(LICENSE_OVERRIDES_FILE):
+        return {}
+    try:
+        with open(LICENSE_OVERRIDES_FILE) as fh:
+            return json.load(fh)
+    except Exception:
+        return {}
+
+def save_license_overrides(update: dict) -> dict:
+    data = load_license_overrides()
+    data.update(update)
+    with open(LICENSE_OVERRIDES_FILE, "w") as fh:
+        json.dump(data, fh)
+    return data
 
 # Developer license key for demonstration (case-insensitive)
 DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "")
@@ -123,10 +146,12 @@ DEFAULT_SETTINGS = {
     "license_check": False,
     "license_level": "free",
     "brand_html": "",
-    "client_logo": "",
-    "sponsor_logo": "",
+    "client_logo": "client_logo.png",
+    "sponsor_logo": "sponsor_logo.png",
     "sponsor_scale": 100,
     "sponsor_bottom": 80,
+    "brand_height": 80,
+    "brand_gap": 20,
     "blank_threshold": 95,
     "skip_blank": True,
     "banner_images": ["DocCropper_slogan_{{lang}}.png"],
@@ -248,6 +273,7 @@ def load_settings():
         stripe_success = os.getenv("STRIPE_SUCCESS_URL")
         stripe_cancel = os.getenv("STRIPE_CANCEL_URL")
         public_url_env = os.getenv("DOCROPPER_PUBLIC_URL")
+        lan_limit_env = os.getenv("DOCROPPER_LAN_USER_LIMIT")
         if env_key:
             merged["license_key"] = env_key
         if env_name:
@@ -278,6 +304,16 @@ def load_settings():
             merged["stripe_cancel_url"] = stripe_cancel
         if public_url_env:
             merged["public_url"] = public_url_env
+        if lan_limit_env:
+            try:
+                merged["lan_user_limit"] = int(lan_limit_env)
+            except ValueError:
+                pass
+
+        # Apply values enforced by a previous license check
+        overrides = load_license_overrides()
+        if overrides:
+            merged.update(overrides)
 
         dev_env = DEV_LICENSE_KEY_UPPER
         key_upper = merged.get("license_key", "").strip().upper()
@@ -303,7 +339,9 @@ def load_settings():
 
 def save_settings(update: dict):
     data = load_settings()
-    data.update(update)
+    overrides = load_license_overrides()
+    filtered = {k: v for k, v in update.items() if k not in overrides}
+    data.update(filtered)
     if os.getenv("DOCROPPER_PUBLIC_URL"):
         data["public_url"] = os.getenv("DOCROPPER_PUBLIC_URL")
     key_upper = data.get("license_key", "").strip().upper()
@@ -323,6 +361,10 @@ def save_settings(update: dict):
         if not data.get("license_name"):
             data["license_name"] = "Developer"
         data["enable_mobilesign"] = True
+    # Remove fields that are enforced by license
+    license_locked = load_license_overrides()
+    for key, val in license_locked.items():
+        data[key] = val
     with open(SETTINGS_FILE, "w") as fh:
         json.dump(data, fh)
     return data
@@ -365,6 +407,33 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+app.include_router(auth_router)
+
+@app.on_event("startup")
+async def startup_event():
+    from app.auth.database import engine, Base, async_session_maker
+    from fastapi_users.db import SQLAlchemyUserDatabase
+    from passlib.hash import bcrypt
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    # Create default admin user if none exists
+    admin_email = os.getenv("DOCROPPER_ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("DOCROPPER_ADMIN_PASSWORD", "admin")
+    async with async_session_maker() as session:
+        user_db = SQLAlchemyUserDatabase(session, User)
+        existing = await user_db.get_by_email(admin_email)
+        if existing is None:
+            hashed = bcrypt.hash(admin_password)
+            admin = User(
+                email=admin_email,
+                hashed_password=hashed,
+                is_active=True,
+                is_superuser=True,
+                is_verified=True,
+            )
+            session.add(admin)
+            await session.commit()
 
 # Enable cross-origin requests if needed
 origins = os.getenv("DOCROPPER_CORS_ORIGINS", "*")
@@ -386,6 +455,50 @@ else:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+
+# Dependency used to enforce that the configured license is valid
+async def require_valid_license(user: User = Depends(fastapi_users.current_user())):
+    if not user.license_token:
+        raise HTTPException(status_code=403, detail="Token licenza mancante")
+
+    data = await verify_license(user.email, user.license_type, user.license_token)
+    if not data.get("valid", False):
+        raise HTTPException(status_code=403, detail="Licenza non valida")
+
+    plugins = data.get("plugins", {})
+    if isinstance(plugins, dict) and plugins:
+        settings = load_settings()
+        updates = {}
+        for name, allowed in plugins.items():
+            if name == "lan_users":
+                try:
+                    allowed_val = int(allowed)
+                except (TypeError, ValueError):
+                    continue
+                if settings.get("lan_user_limit") != allowed_val:
+                    updates["lan_user_limit"] = allowed_val
+                continue
+            key = f"enable_{name}"
+            if settings.get(key) != allowed:
+                updates[key] = allowed
+        if updates:
+            save_settings(updates)
+
+    forced = data.get("settings", {})
+    if isinstance(forced, dict) and forced:
+        save_license_overrides(forced)
+
+    settings = load_settings()
+    limit = settings.get("lan_user_limit", 0)
+    if limit and user.license_type == "pro":
+        from sqlalchemy import select, func
+        from app.auth.database import async_session_maker
+        async with async_session_maker() as session:
+            total = await session.scalar(select(func.count(User.id)))
+        if total > limit:
+            raise HTTPException(status_code=403, detail="LAN user limit exceeded")
+
+    return user
 
 # Mount static files directory and local wiki with no-cache headers
 app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
@@ -411,6 +524,10 @@ if enable_mobilesign:
     register_mobilesign(app, plugin_utils)
 if enable_remotesign:
     register_remotesign(app, plugin_utils)
+
+@app.get("/me", tags=["auth"])
+async def get_me(user: User = Depends(fastapi_users.current_user())):
+    return {"email": user.email, "license": user.license_type}
 
 @app.get('/favicon.ico')
 async def favicon():
@@ -445,6 +562,26 @@ async def read_root(request: Request):
     response.headers["Pragma"] = "no-cache"
     response.set_cookie("session_id", session_id, httponly=True)
     return response
+
+
+async def require_superuser(user: User = Depends(fastapi_users.current_user())):
+    if not user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_page(user: User = Depends(require_superuser)):
+    try:
+        path = os.path.join(os.path.dirname(__file__), "static", "admin.html")
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+        if CACHE_BUST:
+            content = content.replace("styles.css", f"styles.css{CACHE_BUST}")
+            content = content.replace("admin.js", f"admin.js{CACHE_BUST}")
+    except FileNotFoundError:
+        return HTMLResponse(content="Admin page not found", status_code=404)
+    return HTMLResponse(content=content, status_code=200)
 
 
 @app.get("/settings/")
@@ -730,7 +867,7 @@ async def pdf_to_images(
         return JSONResponse(status_code=500, content={"message": f"PDF conversion failed: {str(e)}"})
 
 
-@app.post("/create-pdf/")
+@app.post("/create-pdf/", dependencies=[Depends(require_valid_license)])
 async def create_pdf(
     request: Request,
     images: list[str] = Body(...),
@@ -972,15 +1109,7 @@ async def create_pdf(
                 )
             for line in lines:
                 draw.text((100, y), line, fill="black", font=log_font)
-                if hasattr(draw, "textbbox"):
-                    bbox = draw.textbbox((100, y), line, font=log_font)
-                    line_h = bbox[3] - bbox[1]
-                elif hasattr(log_font, "getbbox"):
-                    bbox = log_font.getbbox(line)
-                    line_h = bbox[3] - bbox[1]
-                else:
-                    line_h = log_font.size
-                y += line_h + 20
+                y += log_font.getsize(line)[1] + 20
             pages.append(log_page)
 
         pdf_bytes_io = io.BytesIO()

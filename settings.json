@@ -18,12 +18,14 @@
   "stripe_success_url": "",
   "stripe_cancel_url": "",
   "bank_info": "",
-  "google_client_id": ""
-  , "brand_html": "",
-  "client_logo": "",
-  "sponsor_logo": "",
+  "google_client_id": "",
+  "brand_html": "",
+  "client_logo": "client_logo.png",
+  "sponsor_logo": "sponsor_logo.png",
   "sponsor_scale": 100,
   "sponsor_bottom": 80,
+  "brand_height": 80,
+  "brand_gap": 20,
   "blank_threshold": 95,
   "skip_blank": true,
   "license_check": false,
@@ -31,5 +33,7 @@
   "enable_sign": true,
   "enable_mobilesign": false,
   "enable_remotesign": false,
-  "banner_images": ["DocCropper_slogan_{{lang}}.png"]
+  "banner_images": ["DocCropper_slogan_{{lang}}.png"],
+  "banner_interval": 5000,
+  "lan_user_limit": 0
 }

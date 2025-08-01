@@ -11,6 +11,15 @@ else
 fi
 cd "$APP_DIR"
 
+# Copy default environment files if missing
+if [ ! -f "$APP_DIR/.env" ] && [ -f "$APP_DIR/.env.example" ]; then
+  cp "$APP_DIR/.env.example" "$APP_DIR/.env"
+fi
+if [ ! -f "$APP_DIR/env/auth.env" ] && [ -f "$APP_DIR/env/auth.env.example" ]; then
+  mkdir -p "$APP_DIR/env"
+  cp "$APP_DIR/env/auth.env.example" "$APP_DIR/env/auth.env"
+fi
+
 # Determine port from settings
 PORT=$(python3 - <<'PY'
 import json

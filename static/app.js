@@ -43,7 +43,6 @@ const processedImageElement = document.getElementById('processedImage');
 const processedGallery = document.getElementById('processedGallery');
 const statusMessageElement = document.getElementById('statusMessage');
 const signedPdfLink = document.getElementById('signedPdfLink');
-const signedInfo = document.getElementById('signedInfo');
 const reorderHint = document.getElementById('reorderHint');
 const imageModal = document.getElementById('imageModal');
 const modalImage = document.getElementById('modalImage');
@@ -59,6 +58,9 @@ const loginArea = document.getElementById('loginArea');
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
 const donateBox = document.getElementById('donateBox');
+const donationModal = document.getElementById('donationModal');
+const donationFrame = document.getElementById('donationFrame');
+const closeDonation = document.getElementById('closeDonation');
 const demoNotice = document.getElementById('demoNotice');
 const instructionsBox = document.getElementById('instructionsBox');
 const helpBtn = document.getElementById('helpBtn');
@@ -66,7 +68,7 @@ const purchaseBtn = document.getElementById('purchaseBtn');
 const licenseBtn = document.getElementById('licenseBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 const DEFAULT_PAYPAL = 'https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY';
-const bannerBox = document.getElementById('bannerBox');
+const bannerBox = document.getElementById('brandArea');
 const closeBanner = document.getElementById('closeBanner');
 const sloganImg = document.getElementById('sloganImg');
 const wikiFrame = document.getElementById('wikiFrame');
@@ -121,6 +123,9 @@ const OCR_ENABLED = false;
 let bannerImages = [];
 let bannerIndex = 0;
 let bannerTimer;
+let bannerInterval = 5000;
+let brandHeight = 80;
+let brandGap = 20;
 if (!OCR_ENABLED) {
     if (ocrBtn) ocrBtn.style.display = 'none';
     if (ocrOutput) ocrOutput.style.display = 'none';
@@ -516,12 +521,16 @@ function applySettings(cfg) {
     } else {
         bannerImages = ['DocCropper_slogan_{{lang}}.png'];
     }
+    bannerInterval = parseInt(cfg.banner_interval || 5000);
     bannerIndex = 0;
     startBannerRotation();
-    if (sloganImg) {
-        const scale = parseFloat(cfg.sponsor_scale || 100) / 100;
-        sloganImg.style.maxHeight = (200 * scale) + 'px';
+    brandHeight = parseInt(cfg.brand_height || 80);
+    brandGap = parseInt(cfg.brand_gap || 20);
+    if (bannerBox) {
+        bannerBox.style.paddingLeft = brandGap + 'px';
+        bannerBox.style.paddingRight = brandGap + 'px';
     }
+    updateBrandSize();
     if (cfg.version) {
         appVersion = cfg.version;
     }
@@ -547,10 +556,14 @@ function applySettings(cfg) {
         }
     }
     if (donateBox) {
-        if (demoFullMode) {
-            const link = currentSettings.paypal_link || DEFAULT_PAYPAL;
-            donateBox.innerHTML = `<a href="${link}" target="_blank"><img src="https://www.paypalobjects.com/it_IT/IT/i/btn/btn_donateCC_LG.gif" alt="Donate"></a>`;
+        const link = currentSettings.paypal_link || DEFAULT_PAYPAL;
+        if (cfg.payment_mode && cfg.payment_mode.toLowerCase() === 'donation' && link) {
+            donateBox.innerHTML = `<button id="donateBtn"><img src="https://www.paypalobjects.com/it_IT/IT/i/btn/btn_donateCC_LG.gif" alt="Donate"></button>`;
             donateBox.style.display = 'block';
+            document.getElementById('donateBtn').addEventListener('click', (e) => {
+                e.preventDefault();
+                openDonationModal(link);
+            });
         } else {
             donateBox.style.display = 'none';
             donateBox.innerHTML = '';
@@ -656,9 +669,18 @@ function startBannerRotation() {
         bannerTimer = setInterval(() => {
             bannerIndex = (bannerIndex + 1) % bannerImages.length;
             updateBannerImage();
-        }, 5000);
+        }, bannerInterval);
     }
 }
+
+function updateBrandSize() {
+    const maxH = Math.min(brandHeight, window.innerHeight * 0.25);
+    [clientLogo, sloganImg, sponsorLogo].forEach(el => {
+        if (el) el.style.maxHeight = maxH + 'px';
+    });
+}
+
+window.addEventListener('resize', updateBrandSize);
 
 function showLoading(message) {
     if (!loadingOverlay) return;
@@ -752,6 +774,10 @@ function showSponsorModal() {
         };
         closeBtn.addEventListener('click', handler);
     });
+}
+
+function openDonationModal(url) {
+    window.open(url, '_blank');
 }
 
 function rotateImage(index) {
@@ -1184,6 +1210,18 @@ imageModal.addEventListener('click', (e) => {
     }
 });
 
+closeDonation.addEventListener('click', () => {
+    donationModal.style.display = 'none';
+    donationFrame.src = '';
+});
+
+donationModal.addEventListener('click', (e) => {
+    if (e.target === donationModal) {
+        donationModal.style.display = 'none';
+        donationFrame.src = '';
+    }
+});
+
 const draggableElements = {
     p1: document.getElementById('p1'),
     p2: document.getElementById('p2'),
@@ -1451,6 +1489,7 @@ async function addFiles(newFiles) {
         updateLayoutPreview();
     }
     hideLoading();
+    if (imageUploadElement) imageUploadElement.value = '';
 }
 
 imageUploadElement.addEventListener('change', async (event) => {
@@ -1472,6 +1511,7 @@ imageUploadElement.addEventListener('change', async (event) => {
         }
     }
     if (toProcess.length) await addFiles(toProcess);
+    imageUploadElement.value = '';
 });
 
 async function handleDrop(event) {
@@ -1658,9 +1698,8 @@ function generatePdf() {
     const scale_mode = scaleMode.value || 'fit';
     const scale_percent = parseInt(scalePercent.value || '100');
     const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures };
-    if (window.lastSignEmail || window.lastSignPhone || window.lastSignName || window.lastSignToken) {
+    if (window.lastSignEmail || window.lastSignPhone || window.lastSignName) {
         payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
-        if (window.lastSignToken) payload.sign_info.token = window.lastSignToken;
     }
     fetch('/create-pdf/', {
         method: 'POST',
@@ -1699,16 +1738,6 @@ function generatePdf() {
                             signedPdfLink.href = d.url;
                             signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
                             signedPdfLink.style.display = 'inline';
-                        }
-                        if (signedInfo) {
-                            const lines = [];
-                            if (d.name) lines.push(`Nome firmatario: ${d.name}`);
-                            if (d.email) lines.push(`Email: ${d.email}`);
-                            if (d.timestamp) lines.push(`Data/ora: ${d.timestamp}`);
-                            if (d.ip) lines.push(`IP: ${d.ip}`);
-                            if (d.pdf_hash) lines.push(`Hash: ${d.pdf_hash}`);
-                            signedInfo.textContent = lines.join('\n');
-                            signedInfo.style.display = 'block';
                         }
                     }
                     if (window.lastSignPhone) shareWhatsAppLink(window.lastSignPhone, d.url);
@@ -1780,7 +1809,6 @@ cameraSelect.addEventListener('change', () => {
     }
 });
 let lastTap = 0;
-let lastSigTap = 0;
 imageElement.addEventListener('dblclick', autoDetectCorners);
 imageElement.addEventListener('touchend', (e) => {
     const now = Date.now();
@@ -1975,10 +2003,10 @@ if (signaturePreview) {
         if (draggingSig) updateSigPosition(e);
     });
     document.addEventListener('mouseup', () => { draggingSig = false; });
-    const handleSigPos = (clientX, clientY) => {
+    signaturePreview.addEventListener('dblclick', (e) => {
         const rect = signaturePreview.getBoundingClientRect();
-        const x = (clientX - rect.left) / signaturePreview.width;
-        const y = (clientY - rect.top) / signaturePreview.height;
+        const x = (e.clientX - rect.left) / signaturePreview.width;
+        const y = (e.clientY - rect.top) / signaturePreview.height;
         if (signatureImg) {
             signaturePosition.x = x;
             signaturePosition.y = y;
@@ -1987,18 +2015,6 @@ if (signaturePreview) {
             pendingSigPos = { x, y };
             signatureModal.style.display = 'block';
         }
-    };
-    signaturePreview.addEventListener('dblclick', (e) => {
-        handleSigPos(e.clientX, e.clientY);
-    });
-    signaturePreview.addEventListener('touchend', (e) => {
-        const now = Date.now();
-        const touch = e.changedTouches[0];
-        if (now - lastSigTap < 300) {
-            e.preventDefault();
-            handleSigPos(touch.clientX, touch.clientY);
-        }
-        lastSigTap = now;
     });
 }
 
@@ -2431,12 +2447,12 @@ function renderPaymentBox(cfg) {
     let hasItem = false;
     if (mode === 'donation') {
         if (cfg.paypal_link) {
-            html += `<li><a href="${cfg.paypal_link}" target="_blank">${t('donatePaypal')}</a></li>`;
+            html += `<li><a href="#" id="donatePaypalLink">${t('donatePaypal')}</a></li>`;
             hasItem = true;
         }
     } else if (mode === 'subscription') {
         if (cfg.paypal_link) {
-            html += `<li><a href="${cfg.paypal_link}" target="_blank">${t('payPaypal')}</a></li>`;
+            html += `<li><a href="#" id="payPaypalLink">${t('payPaypal')}</a></li>`;
             hasItem = true;
         }
         if (cfg.stripe_price_pro) {
@@ -2457,6 +2473,20 @@ function renderPaymentBox(cfg) {
     }
     html += '</ul>';
     purchaseBox.innerHTML = html;
+    const donateLink = document.getElementById('donatePaypalLink');
+    if (donateLink) {
+        donateLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            openDonationModal(cfg.paypal_link);
+        });
+    }
+    const payPaypalLink = document.getElementById('payPaypalLink');
+    if (payPaypalLink) {
+        payPaypalLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            openDonationModal(cfg.paypal_link);
+        });
+    }
     const proBtn = document.getElementById('stripeProBtn');
     if (proBtn) {
         proBtn.addEventListener('click', async () => {

@@ -152,6 +152,15 @@ PY
   rm -f "$TARGET_DIR/$BACKUP_FILE"
 fi
 
+# Ensure default environment files
+if [ ! -f "$TARGET_DIR/.env" ] && [ -f "$TARGET_DIR/.env.example" ]; then
+  cp "$TARGET_DIR/.env.example" "$TARGET_DIR/.env"
+fi
+if [ ! -f "$TARGET_DIR/env/auth.env" ] && [ -f "$TARGET_DIR/env/auth.env.example" ]; then
+  mkdir -p "$TARGET_DIR/env"
+  cp "$TARGET_DIR/env/auth.env.example" "$TARGET_DIR/env/auth.env"
+fi
+
 # Set up virtual environment and install dependencies
 cd "$TARGET_DIR"
 if [ ! -d "venv" ]; then
