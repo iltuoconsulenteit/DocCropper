@@ -440,6 +440,7 @@ function saveSettings(data) {
 
 function applySettings(cfg) {
     currentSettings = cfg;
+    currentSettings.enable_sponsor_video = !!cfg.enable_sponsor_video;
     if (cfg.language) {
         currentLang = cfg.language;
         langSelect.value = cfg.language;
@@ -745,6 +746,9 @@ function openModal(src) {
 }
 
 function showSponsorModal() {
+    if (!currentSettings.enable_sponsor_video) {
+        return Promise.resolve();
+    }
     return new Promise(resolve => {
         const modal = document.getElementById('sponsorModal');
         const closeBtn = document.getElementById('closeSponsor');
@@ -756,23 +760,28 @@ function showSponsorModal() {
         closeBtn.style.display = 'none';
         let remaining = 15;
         countdownEl.textContent = remaining;
+
+        const close = () => {
+            video.src = '';
+            modal.style.display = 'none';
+            closeBtn.removeEventListener('click', close);
+            resolve();
+        };
+
         const timer = setInterval(() => {
             remaining--;
             countdownEl.textContent = remaining;
             if (remaining <= 0) {
                 clearInterval(timer);
                 countdownEl.style.display = 'none';
-                closeBtn.style.display = 'block';
+                close();
             }
         }, 1000);
 
-        const handler = () => {
-            video.src = '';
-            modal.style.display = 'none';
-            closeBtn.removeEventListener('click', handler);
-            resolve();
-        };
-        closeBtn.addEventListener('click', handler);
+        closeBtn.addEventListener('click', () => {
+            clearInterval(timer);
+            close();
+        });
     });
 }
 

@@ -154,6 +154,7 @@ DEFAULT_SETTINGS = {
     "brand_gap": 20,
     "blank_threshold": 95,
     "skip_blank": True,
+    "enable_sponsor_video": False,
     "banner_images": ["DocCropper_slogan_{{lang}}.png"],
     "developer_watermark": False,
     "demo_full_mode": False,
@@ -457,7 +458,15 @@ else:
         )
 
 # Dependency used to enforce that the configured license is valid
-async def require_valid_license(user: User = Depends(fastapi_users.current_user())):
+async def require_valid_license(
+    user: User | None = Depends(fastapi_users.current_user(optional=True)),
+):
+    settings = load_settings()
+    if not settings.get("license_check", False):
+        return user
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     if not user.license_token:
         raise HTTPException(status_code=403, detail="Token licenza mancante")
 
