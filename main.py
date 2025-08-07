@@ -458,7 +458,15 @@ else:
         )
 
 # Dependency used to enforce that the configured license is valid
-async def require_valid_license(user: User = Depends(fastapi_users.current_user())):
+async def require_valid_license(
+    user: User | None = Depends(fastapi_users.current_user(optional=True)),
+):
+    settings = load_settings()
+    if not settings.get("license_check", False):
+        return user
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     if not user.license_token:
         raise HTTPException(status_code=403, detail="Token licenza mancante")
 
