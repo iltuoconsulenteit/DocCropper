@@ -154,6 +154,7 @@ DEFAULT_SETTINGS = {
     "brand_gap": 20,
     "blank_threshold": 95,
     "skip_blank": True,
+    "enable_sponsor_video": False,
     "banner_images": ["DocCropper_slogan_{{lang}}.png"],
     "developer_watermark": False,
     "demo_full_mode": False,

@@ -33,6 +33,7 @@
   "enable_sign": true,
   "enable_mobilesign": false,
   "enable_remotesign": false,
+  "enable_sponsor_video": false,
   "banner_images": ["DocCropper_slogan_{{lang}}.png"],
   "banner_interval": 5000,
   "lan_user_limit": 0
