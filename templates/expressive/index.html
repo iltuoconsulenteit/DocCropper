@@ -321,7 +321,12 @@
                   console.error('PDF import failed', err);
                 }
               } else {
-                const data = URL.createObjectURL(f);
+                const data = await new Promise((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onload = e => resolve(e.target.result);
+                  reader.onerror = reject;
+                  reader.readAsDataURL(f);
+                });
                 loaded.push({ id: Date.now()+Math.random(), name: f.name, url: data, original: data });
               }
             }
