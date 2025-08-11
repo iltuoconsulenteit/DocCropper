@@ -9,28 +9,50 @@
   </head>
   <body x-data="dcApp()" class="h-screen flex">
     <!-- Sidebar / Drawer -->
-    <div class="fixed inset-y-0 left-0 w-64 bg-gray-800 text-white transform md:translate-x-0" :class="{'-translate-x-full': !drawer}" x-transition>
-      <div class="p-4 font-bold">DocCropper</div>
-      <nav>
-        <button class="w-full text-left p-2 hover:bg-gray-700" @click="tab='export'; drawer=false">Export</button>
-        <button class="w-full text-left p-2 hover:bg-gray-700" @click="tab='files'; drawer=false">Files</button>
+    <div class="fixed inset-y-0 left-0 w-64 bg-gray-800 text-white flex flex-col transform md:translate-x-0" :class="{'-translate-x-full': !drawer}" x-transition>
+      <div class="p-4 flex items-center space-x-2">
+        <img src="/static/logos/header_logo.png" alt="DocCropper" class="h-8" />
+        <span class="font-bold">DocCropper</span>
+      </div>
+      <nav class="flex-1 overflow-y-auto">
+        <h2 class="px-4 text-xs uppercase text-gray-400">Commands</h2>
+        <ul>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('export')">Export</button>
+          </li>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('download')">Download</button>
+          </li>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('sign')">Sign</button>
+          </li>
+        </ul>
+        <h2 class="px-4 mt-4 text-xs uppercase text-gray-400">Navigation</h2>
+        <ul>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="tab='files'; drawer=false">Files</button>
+          </li>
+        </ul>
       </nav>
+      <div class="p-4 space-y-2">
+        <img src="/static/logos/client_logo.png" alt="Client" class="h-6 mx-auto" />
+        <img src="/static/logos/sponsor_logo.png" alt="Sponsor" class="h-6 mx-auto" />
+      </div>
     </div>
-    
+
     <div class="flex-1 flex flex-col ml-0 md:ml-64">
       <!-- Top bar -->
       <header class="bg-gray-100 p-2 flex items-center shadow">
         <button class="md:hidden mr-2" @click="drawer=!drawer">☰</button>
-        <h1 class="text-xl">DocCropper Expressive</h1>
+        <img src="/static/logos/header_logo.png" alt="DocCropper" class="h-8 mr-2 hidden md:block" />
+        <h1 class="text-xl font-semibold">DocCropper</h1>
       </header>
       <!-- Content -->
       <main class="flex-1 p-4" x-cloak>
-        <div x-show="tab==='export'">
-          <button class="px-4 py-2 bg-blue-500 text-white rounded" @click="doExport">Export PDF</button>
-        </div>
         <div x-show="tab==='files'">
           <p class="text-gray-600">No files available.</p>
         </div>
+        <div x-show="tab!=='files'" class="text-gray-600">Select a command from the menu.</div>
       </main>
     </div>
 
@@ -50,11 +72,22 @@
       function dcApp(){
         return {
           drawer:false,
-          tab:'export',
+          tab:'files',
           modal:false,
-          doExport: async function(){
-            this.modal=false;
-            await window.DC.export();
+          async command(action){
+            this.drawer=false;
+            switch(action){
+              case 'export':
+                this.modal=false;
+                await window.DC.export();
+                break;
+              case 'download':
+                await window.DC.download();
+                break;
+              case 'sign':
+                await window.DC.sign();
+                break;
+            }
           },
           download: () => window.DC.download(),
           sign: () => window.DC.sign()
