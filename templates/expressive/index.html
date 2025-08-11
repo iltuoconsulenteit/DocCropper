@@ -108,7 +108,7 @@
       </main>
       <footer class="p-4 text-center mt-auto space-y-2">
         <img src="/static/logos/footer_logo.png" alt="IlTuoConsulenteIT" class="h-8 mx-auto" />
-        <div class="text-xs text-gray-500" x-text="versionInfo"></div>
+        <div class="text-xs text-gray-500" x-text="versionInfo()"></div>
       </footer>
     </div>
 
@@ -253,7 +253,7 @@
               }
             },5000);
             window.addEventListener('dc-exported', () => { this.modal = true; });
-            fetch('/settings.json').then(r=>r.json()).then(cfg=>{
+            fetch('/settings/').then(r=>r.json()).then(cfg=>{
               this.clientLogo = cfg.client_logo ? `/static/logos/${cfg.client_logo}` : null;
               this.sponsorLogo = cfg.sponsor_logo ? `/static/logos/${cfg.sponsor_logo}` : null;
               this.version = cfg.version || '';
