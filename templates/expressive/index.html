@@ -69,6 +69,8 @@
         <button class="mr-2" @click="drawer=!drawer">☰</button>
         <img src="/static/logos/header_logo.png" alt="IlTuoConsulenteIT" class="h-8" />
         <h1 class="text-xl font-semibold flex-1">DocCropper</h1>
+        <span class="text-xs text-gray-600" x-text="licenseInfo()"></span>
+        <button @click="licenseModal=true" class="text-xs underline" x-text="t('licenses')"></button>
         <select x-model="lang" @change="setLang" class="border rounded p-1 text-sm">
           <option value="en">EN</option>
           <option value="it">IT</option>
@@ -146,6 +148,27 @@
       <img :src="viewUrl" class="max-w-full max-h-full" />
     </div>
 
+    <!-- License Modal -->
+    <div x-show="licenseModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded w-80">
+        <h2 class="text-lg mb-2" x-text="t('licenseOptions')"></h2>
+        <label class="block text-sm" x-text="t('licenseKey')"></label>
+        <input type="text" class="border w-full mb-2 p-1" x-model="licenseKey" />
+        <label class="block text-sm" x-text="t('licenseName')"></label>
+        <input type="text" class="border w-full mb-2 p-1" x-model="licenseNameInput" />
+        <label class="block text-sm" x-text="t('licenseType')"></label>
+        <select class="border w-full mb-4 p-1" x-model="licenseLevel">
+          <option value="free" x-text="t('licenseFree')"></option>
+          <option value="pro" x-text="t('licensePro')"></option>
+          <option value="full" x-text="t('licenseFull')"></option>
+        </select>
+        <div class="text-right space-x-2">
+          <button class="px-3 py-1 bg-gray-300 rounded" @click="licenseModal=false" x-text="t('cancel')"></button>
+          <button class="px-3 py-1 bg-blue-500 text-white rounded" @click="saveLicense" x-text="t('saveLicense')"></button>
+        </div>
+      </div>
+    </div>
+
     <script src="/js/doccropper.adapter.js"></script>
     <script>
       function dcApp(){
@@ -168,7 +191,19 @@
             unpin:'Unpin menu',
             version:'Version',
             apply:'Apply',
-            cancel:'Cancel'
+            cancel:'Cancel',
+            licensedTo:'Licensed to',
+            demoVersion:'DEMO - PRO features disabled',
+            licenses:'Licenses',
+            licenseOptions:'License Options',
+            licenseKey:'License key',
+            licenseName:'License name',
+            licenseType:'License type',
+            saveLicense:'Save license',
+            licenseFree:'Free',
+            licensePro:'Pro',
+            licenseFull:'Full',
+            licenseSaved:'License saved'
           },
           it:{
             commands:'Comandi',
@@ -188,7 +223,19 @@
             unpin:'Sblocca menu',
             version:'Versione',
             apply:'Applica',
-            cancel:'Annulla'
+            cancel:'Annulla',
+            licensedTo:'Licenziato a',
+            demoVersion:'DEMO - funzionalità PRO disabilitate',
+            licenses:'Licenze',
+            licenseOptions:'Opzioni di licenza',
+            licenseKey:'Chiave di licenza',
+            licenseName:'Nome licenza',
+            licenseType:'Tipo di licenza',
+            saveLicense:'Salva licenza',
+            licenseFree:'Gratis',
+            licensePro:'Pro',
+            licenseFull:'Completa',
+            licenseSaved:'Licenza salvata'
           }
         };
         const DEFAULT_PAYPAL = 'https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY';
@@ -214,6 +261,11 @@
           donateLink:null,
           version:'',
           versionDate:'',
+          licenseKey:'',
+          licenseName:'',
+          licenseNameInput:'',
+          licenseLevel:'free',
+          licenseModal:false,
           lang: window.DC_LANG || 'en',
           strings,
           slides:{
@@ -259,6 +311,10 @@
               this.sponsorLogo = cfg.sponsor_logo ? `/static/logos/${cfg.sponsor_logo}` : null;
               this.version = cfg.version || '';
               this.versionDate = cfg.version_date || '';
+              this.licenseKey = cfg.license_key || '';
+              this.licenseName = cfg.license_name || '';
+              this.licenseNameInput = this.licenseName;
+              this.licenseLevel = (cfg.license_level || 'free').toLowerCase();
               const mode = cfg.payment_mode && cfg.payment_mode.toLowerCase();
               if(mode==='donation'){
                 this.donateLink = cfg.paypal_link || DEFAULT_PAYPAL;
@@ -300,6 +356,20 @@
           download(){ this.modal=false; window.DC.download(); },
           sign(){ this.modal=false; window.DC.sign(); },
           donate(){ window.DC.donate(); },
+          licenseInfo(){
+            if(this.licenseName){
+              const levelKey = 'license' + this.licenseLevel.charAt(0).toUpperCase() + this.licenseLevel.slice(1);
+              const level = this.t(levelKey);
+              return `${this.t('licensedTo')} ${this.licenseName} (${level})`;
+            }
+            return this.t('demoVersion');
+          },
+          saveLicense(){
+            const payload = {license_key:this.licenseKey, license_name:this.licenseNameInput, license_level:this.licenseLevel};
+            fetch('/settings/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
+              .then(()=>{ this.licenseName = this.licenseNameInput; alert(this.t('licenseSaved')); this.licenseModal=false; })
+              .catch(()=>{ this.licenseModal=false; });
+          },
           async handleImport(e){
             const selected = Array.from(e.target.files || []);
             const loaded = [];
