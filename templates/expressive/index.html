@@ -8,56 +8,59 @@
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   </head>
   <body x-data="dcApp()" class="h-screen flex">
+    <!-- Overlay for mobile -->
+    <div x-show="drawer && !pinned" @click="drawer=false" class="fixed inset-0 bg-black/50 md:hidden"></div>
     <!-- Sidebar / Drawer -->
-    <div class="fixed inset-y-0 left-0 w-64 bg-gray-800 text-white flex flex-col transform transition-transform duration-200" :class="drawer ? 'translate-x-0' : '-translate-x-full'" x-transition>
+    <div class="fixed inset-y-0 left-0 w-64 bg-gray-800 text-white flex flex-col transform transition-transform duration-200" :class="(drawer || pinned) ? 'translate-x-0' : '-translate-x-full'" x-transition>
       <div class="p-4 flex items-center space-x-2">
         <img src="/static/logos/app_logo.png" alt="DocCropper" class="h-8" />
         <span class="font-bold">DocCropper</span>
       </div>
       <nav class="flex-1 overflow-y-auto">
-        <h2 class="px-4 text-xs uppercase text-gray-400">Commands</h2>
+        <h2 class="px-4 text-xs uppercase text-gray-400" x-text="t('commands')"></h2>
         <ul>
           <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('export')">Export</button>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('export')" x-text="t('export')"></button>
           </li>
           <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('download')">Download</button>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('download')" x-text="t('download')"></button>
           </li>
           <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('sign')">Sign</button>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('sign')" x-text="t('sign')"></button>
           </li>
           <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('import')">Import</button>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('import')" x-text="t('import')"></button>
           </li>
           <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('mobileSign')">Mobile Sign</button>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('mobileSign')" x-text="t('mobileSign')"></button>
           </li>
         </ul>
-        <h2 class="px-4 mt-4 text-xs uppercase text-gray-400">Navigation</h2>
+        <h2 class="px-4 mt-4 text-xs uppercase text-gray-400" x-text="t('navigation')"></h2>
         <ul>
           <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="tab='files'; drawer=false">Files</button>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="tab='files'; drawer=false" x-text="t('files')"></button>
           </li>
           <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('guide')">Guide</button>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('guide')" x-text="t('guide')"></button>
           </li>
           <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('donate')">Donate</button>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('donate')" x-text="t('donate')"></button>
           </li>
         </ul>
       </nav>
       <div class="p-4 space-y-2">
-        <img src="/static/logos/client_logo.png" alt="IlTuoConsulenteIT" class="h-6 mx-auto" />
+        <img src="/static/logos/header_logo.png" alt="IlTuoConsulenteIT" class="h-6 mx-auto" />
         <img src="/static/logos/sponsor_logo.png" alt="Sponsor" class="h-6 mx-auto" />
       </div>
     </div>
 
-    <div class="flex-1 flex flex-col transition-all duration-200" :class="drawer ? 'ml-64' : 'ml-0'">
+    <div class="flex-1 flex flex-col transition-all duration-200" :class="pinned ? 'ml-64' : (drawer ? 'ml-64' : 'ml-0')">
       <!-- Top bar -->
       <header class="bg-gray-100 p-2 flex items-center shadow space-x-2">
-        <button class="mr-2" @click="drawer=!drawer">☰</button>
+        <button class="mr-2 md:hidden" @click="drawer=true">☰</button>
+        <button class="mr-2 hidden md:block" @click="pinned=!pinned" :title="pinned ? t('unpin') : t('pin')">📌</button>
         <img src="/static/logos/app_logo.png" alt="DocCropper" class="h-8" />
-        <img src="/static/logos/client_logo.png" alt="IlTuoConsulenteIT" class="h-8" />
+        <img src="/static/logos/header_logo.png" alt="IlTuoConsulenteIT" class="h-8" />
         <h1 class="text-xl font-semibold flex-1">DocCropper</h1>
         <select x-model="lang" @change="setLang" class="border rounded p-1 text-sm">
           <option value="en">EN</option>
@@ -65,21 +68,24 @@
         </select>
       </header>
       <!-- Content -->
-      <main class="flex-1 p-4" x-cloak>
-        <div x-show="tab==='files'">
-          <p class="text-gray-600">No files available.</p>
+      <main class="flex-1 p-4 space-y-4" x-cloak>
+        <div class="mb-4" x-show="currentSlide">
+          <img :src="currentSlide" alt="slogan" class="w-full" />
         </div>
-        <div x-show="tab!=='files'" class="text-gray-600">Select a command from the menu.</div>
+        <div x-show="tab==='files'">
+          <p class="text-gray-600" x-text="t('noFiles')"></p>
+        </div>
+        <div x-show="tab!=='files'" class="text-gray-600" x-text="t('selectCommand')"></div>
       </main>
     </div>
 
     <!-- Modal -->
     <div x-show="modal" x-transition class="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center">
       <div class="bg-white w-full md:w-96 p-4 rounded-t-lg md:rounded-lg">
-        <h2 class="text-lg mb-4">Export complete</h2>
+        <h2 class="text-lg mb-4" x-text="t('exportComplete')"></h2>
         <div class="flex justify-end space-x-2">
-          <button class="px-4 py-2 bg-blue-500 text-white rounded" @click="download">Download</button>
-          <button class="px-4 py-2 bg-green-500 text-white rounded" @click="sign">Sign</button>
+          <button class="px-4 py-2 bg-blue-500 text-white rounded" @click="download" x-text="t('download')"></button>
+          <button class="px-4 py-2 bg-green-500 text-white rounded" @click="sign" x-text="t('sign')"></button>
         </div>
       </div>
     </div>
@@ -87,14 +93,78 @@
     <script src="/js/doccropper.adapter.js"></script>
     <script>
       function dcApp(){
+        const strings = {
+          en:{
+            commands:'Commands',
+            export:'Export',
+            download:'Download',
+            sign:'Sign',
+            import:'Import',
+            mobileSign:'Mobile Sign',
+            navigation:'Navigation',
+            files:'Files',
+            guide:'Guide',
+            donate:'Donate',
+            noFiles:'No files available.',
+            selectCommand:'Select a command from the menu.',
+            exportComplete:'Export complete',
+            pin:'Pin menu',
+            unpin:'Unpin menu'
+          },
+          it:{
+            commands:'Comandi',
+            export:'Esporta',
+            download:'Scarica',
+            sign:'Firma',
+            import:'Importa',
+            mobileSign:'Firma Mobile',
+            navigation:'Navigazione',
+            files:'File',
+            guide:'Guida',
+            donate:'Dona',
+            noFiles:'Nessun file disponibile.',
+            selectCommand:'Seleziona un comando dal menu.',
+            exportComplete:'Esportazione completata',
+            pin:'Fissa menu',
+            unpin:'Sblocca menu'
+          }
+        };
         return {
-          drawer:true,
+          drawer:false,
+          pinned:false,
           tab:'files',
           modal:false,
           lang: window.DC_LANG || 'en',
-          init(){ this.setLang(); },
+          strings,
+          slides:{
+            en:['/static/logos/DocCropper_slogan_en.png','/static/logos/DocCropper_slogan_sign_en.png'],
+            it:['/static/logos/DocCropper_slogan_it.png','/static/logos/DocCropper_slogan_sign_it.png']
+          },
+          slideIndex:0,
+          currentSlide:'',
+          t(key){ return this.strings[this.lang][key] || key; },
+          refreshSlides(){
+            this.slideIndex = 0;
+            this.currentSlide = this.slides[this.lang][0];
+          },
+          init(){
+            this.setLang();
+            const mq = window.matchMedia('(min-width:768px)');
+            this.pinned = mq.matches;
+            this.drawer = mq.matches;
+            mq.addEventListener('change', e=>{
+              this.pinned = e.matches;
+              this.drawer = e.matches ? true : false;
+            });
+            this.refreshSlides();
+            setInterval(()=>{
+              this.slideIndex = (this.slideIndex+1) % this.slides[this.lang].length;
+              this.currentSlide = this.slides[this.lang][this.slideIndex];
+            },5000);
+            window.addEventListener('dc-exported', () => { this.modal = true; });
+          },
           async command(action){
-            this.drawer=false;
+            if(!this.pinned) this.drawer=false;
             switch(action){
               case 'export':
                 this.modal=false;
@@ -122,15 +192,12 @@
           },
           setLang(){
             document.documentElement.lang = this.lang;
+            this.refreshSlides();
           },
           download: () => window.DC.download(),
           sign: () => window.DC.sign()
         }
       }
-      window.addEventListener('dc-exported', () => {
-        const root = document.querySelector('[x-data]');
-        if(root && root.__x) root.__x.$data.modal = true;
-      });
     </script>
   </body>
 </html>
