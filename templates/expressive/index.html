@@ -9,6 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css" />
     <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
   </head>
   <body x-data="dcApp()" class="h-screen flex">
     <!-- Overlay for mobile -->
@@ -84,17 +85,20 @@
           <template x-if="files.length === 0">
             <p class="text-gray-600" x-text="t('noFiles')"></p>
           </template>
-          <div x-show="files.length > 0" class="grid grid-cols-2 gap-2">
-            <template x-for="(file, idx) in files" :key="idx">
+          <div x-show="files.length > 0" x-ref="fileGrid" class="grid grid-cols-2 gap-2">
+            <template x-for="(file, idx) in files" :key="file.id">
               <div class="border p-1 relative">
                 <img :src="file.url" :alt="file.name" class="w-full h-32 object-contain" />
-                <div class="absolute top-0 left-0 right-0 flex flex-wrap justify-center gap-1 bg-white/70 p-1">
+                <div class="absolute top-0 left-0 right-0 flex justify-between bg-white/70 p-1">
                   <button @click="crop(idx)" title="Crop" class="text-xs">✂</button>
+                  <button @click="remove(idx)" title="Delete" class="text-xs">✖</button>
+                </div>
+                <div class="absolute bottom-0 left-0 right-0 flex justify-center gap-1 bg-white/70 p-1">
                   <button @click="rotate(idx)" title="Rotate" class="text-xs">↻</button>
                   <button @click="toGray(idx)" title="Gray" class="text-xs">🌑</button>
                   <button @click="toBW(idx)" title="B/W" class="text-xs">⬛</button>
                   <button @click="toColor(idx)" title="Color" class="text-xs">🎨</button>
-                  <button @click="remove(idx)" title="Delete" class="text-xs">✖</button>
+                  <button @click="signPage(idx)" title="Sign" class="text-xs">✒</button>
                 </div>
                 <p class="text-xs text-center truncate" x-text="file.name"></p>
               </div>
@@ -185,6 +189,7 @@
           cropModal:false,
           cropIndex:null,
           cropper:null,
+          sortable:null,
           files:[],
           clientLogo:null,
           sponsorLogo:null,
@@ -293,19 +298,20 @@
                     canvas.height = viewport.height;
                     await page.render({ canvasContext: ctx, viewport }).promise;
                     const data = canvas.toDataURL();
-                    loaded.push({ name: `${f.name} p${i}`, url: data, original: data });
+                    loaded.push({ id: Date.now()+Math.random(), name: `${f.name} p${i}`, url: data, original: data });
                   }
                 } catch (err) {
                   console.error('PDF import failed', err);
                 }
               } else {
                 const data = URL.createObjectURL(f);
-                loaded.push({ name: f.name, url: data, original: data });
+                loaded.push({ id: Date.now()+Math.random(), name: f.name, url: data, original: data });
               }
             }
-            this.files = loaded;
+            this.files.push(...loaded);
             this.showSlides = false;
             this.tab = 'files';
+            this.$nextTick(()=>this.initSortable());
             e.target.value = '';
           },
           rotate(idx){
@@ -348,7 +354,12 @@
             };
             img.src=this.files[idx].original;
           },
-          remove(idx){ this.files.splice(idx,1); },
+          signPage(idx){
+            if(typeof window.openSignatureForPage==='function') return window.openSignatureForPage(idx);
+            if(typeof window.startSign==='function') return window.startSign();
+            if(window.DC && typeof window.DC.sign==='function') return window.DC.sign();
+          },
+          remove(idx){ this.files.splice(idx,1); this.$nextTick(()=>this.initSortable()); },
           crop(idx){
             this.cropIndex = idx;
             this.cropModal = true;
@@ -366,6 +377,20 @@
             this.files[this.cropIndex].url=out;
             this.files[this.cropIndex].original=out;
             this.closeCrop();
+          },
+          initSortable(){
+            if(!this.$refs.fileGrid) return;
+            if(this.sortable){ this.sortable.destroy(); }
+            this.sortable = Sortable.create(this.$refs.fileGrid, {
+              animation:150,
+              handle:'img',
+              filter:'button',
+              preventOnFilter:false,
+              onEnd: e => {
+                const moved = this.files.splice(e.oldIndex,1)[0];
+                this.files.splice(e.newIndex,0,moved);
+              }
+            });
           }
         }
       }
