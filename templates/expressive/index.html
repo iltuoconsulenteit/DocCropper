@@ -1,88 +1,114 @@
 <!DOCTYPE html>
-<html lang="en" x-data="docUI()" x-init="init()">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DocCropper Expressive</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/material-dashboard/2.1.2/css/material-dashboard.min.css" />
 </head>
-<body class="h-screen bg-gray-100">
-  <div class="flex h-full" x-cloak>
-    <!-- Drawer -->
-    <nav :class="{'-translate-x-full': !drawer}" class="fixed inset-y-0 left-0 w-64 bg-white shadow transform transition-transform duration-200 md:translate-x-0 md:static md:shadow-none z-20">
-      <div class="p-4 font-bold border-b">DocCropper</div>
-      <ul class="p-2 space-y-1">
-        <li>
-          <a href="#" @click.prevent="tab='export'; drawer=false" :class="navClass('export')" class="block px-4 py-2 rounded">Export</a>
-        </li>
-        <li>
-          <a href="#" @click.prevent="tab='files'; drawer=false" :class="navClass('files')" class="block px-4 py-2 rounded">Files</a>
-        </li>
-      </ul>
-    </nav>
-    <!-- Main content -->
-    <div class="flex-1 flex flex-col md:ml-64">
-      <header class="bg-white shadow p-4 flex items-center">
-        <button class="md:hidden mr-2" @click="drawer=true">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-        </button>
-        <h1 class="font-semibold">Dashboard</h1>
-      </header>
-      <main class="flex-1 p-4 overflow-auto">
-        <div x-show="tab==='export'" class="space-y-4">
-          <button class="px-4 py-2 bg-blue-600 text-white rounded" @click="runExport" :disabled="exporting">
-            <span x-show="!exporting">Export PDF</span>
-            <span x-show="exporting">Exporting...</span>
+<body>
+  <div class="wrapper">
+    <div class="sidebar" data-color="purple" data-background-color="white">
+      <div class="logo"><a href="#" class="simple-text logo-normal">DocCropper</a></div>
+      <div class="sidebar-wrapper">
+        <ul class="nav">
+          <li class="nav-item active">
+            <a class="nav-link" href="#" data-tab="export">
+              <i class="material-icons">file_upload</i>
+              <p>Export</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" data-tab="files">
+              <i class="material-icons">folder</i>
+              <p>Files</p>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="main-panel">
+      <nav class="navbar navbar-expand-lg navbar-transparent navbar-absolute fixed-top">
+        <div class="container-fluid">
+          <div class="navbar-wrapper">
+            <a class="navbar-brand" href="#">Dashboard</a>
+          </div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navigation" aria-controls="navigation" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
           </button>
         </div>
-        <div x-show="tab==='files'">
-          <p class="text-gray-600">Files tab content</p>
+      </nav>
+      <div class="content pt-5">
+        <div class="container-fluid">
+          <div id="export-tab">
+            <button id="exportBtn" class="btn btn-primary">Export PDF</button>
+          </div>
+          <div id="files-tab" class="d-none">
+            <p>Files tab content</p>
+          </div>
         </div>
-      </main>
-    </div>
-  </div>
-  <!-- Modal -->
-  <div x-show="modal" x-transition class="fixed inset-0 flex items-end md:items-center justify-center bg-black/50 z-30" @click.self="modal=false">
-    <div class="bg-white w-full md:max-w-md rounded-t-lg md:rounded-lg p-6">
-      <h2 class="text-lg font-semibold mb-4">Export ready</h2>
-      <div class="flex justify-end space-x-2">
-        <button class="px-4 py-2 bg-green-600 text-white rounded" @click="window.DC.download()">Download</button>
-        <button class="px-4 py-2 bg-gray-200 rounded" @click="window.DC.sign()">Sign</button>
       </div>
     </div>
   </div>
-  <!-- Toast -->
-  <div x-show="toast" x-transition class="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded">Export completed</div>
-
+  <div class="modal fade" id="resultModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Export ready</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Choose an action:</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-success" id="downloadBtn">Download</button>
+          <button type="button" class="btn btn-secondary" id="signBtn">Sign</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="toast" class="toast text-white bg-primary border-0" role="alert">
+      <div class="d-flex">
+        <div class="toast-body">Export completed</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="/js/doccropper.adapter.js"></script>
   <script>
-    function docUI() {
-      return {
-        drawer:false,
-        tab:'export',
-        modal:false,
-        toast:false,
-        exporting:false,
-        init() {
-          window.addEventListener('dc-exported', () => {
-            this.exporting = false;
-            this.modal = true;
-            this.toast = true;
-            setTimeout(() => this.toast = false, 3000);
-          });
-        },
-        runExport() {
-          this.exporting = true;
-          window.DC.export();
-        },
-        navClass(name) {
-          return this.tab === name
-            ? 'bg-blue-500 text-white'
-            : 'text-gray-700 hover:bg-gray-200';
-        }
-      }
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+      const exportBtn = document.getElementById('exportBtn');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const signBtn = document.getElementById('signBtn');
+      const modal = new bootstrap.Modal(document.getElementById('resultModal'));
+      const toast = new bootstrap.Toast(document.getElementById('toast'));
+      exportBtn.addEventListener('click', () => {
+        exportBtn.disabled = true;
+        window.DC.export();
+      });
+      window.addEventListener('dc-exported', () => {
+        exportBtn.disabled = false;
+        modal.show();
+        toast.show();
+      });
+      downloadBtn.addEventListener('click', () => window.DC.download());
+      signBtn.addEventListener('click', () => window.DC.sign());
+      document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+        link.addEventListener('click', e => {
+          e.preventDefault();
+          const tab = link.dataset.tab;
+          document.getElementById('export-tab').classList.toggle('d-none', tab !== 'export');
+          document.getElementById('files-tab').classList.toggle('d-none', tab !== 'files');
+          document.querySelectorAll('.sidebar .nav-item').forEach(li => li.classList.remove('active'));
+          link.parentElement.classList.add('active');
+        });
+      });
+    });
     window.DC_EXPORT_ENDPOINT = '/api/export';
     window.DC_DOWNLOAD_ENDPOINT = '/api/export/download';
     window.DC_SIGN_ENDPOINT = '/api/sign';
