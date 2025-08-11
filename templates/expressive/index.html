@@ -1,64 +1,90 @@
 <!DOCTYPE html>
-<html lang="en" x-data="{drawer:false, tab:'export', exporting:false, showModal:false, toast:''}"
-      x-on:dc-exported.window="showModal = true; toast='Export completed'; setTimeout(()=>toast='',3000)">
+<html lang="en" x-data="{tab: 'export'}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DocCropper Expressive</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <title>DocCropper Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" />
+  <link rel="stylesheet" href="https://demos.creative-tim.com/material-dashboard/assets/css/material-dashboard.min.css" />
 </head>
-<body class="h-screen flex flex-col">
-  <header class="flex items-center p-4 bg-gray-800 text-white">
-    <button class="mr-4 md:hidden" @click="drawer = true">☰</button>
-    <h1 class="text-lg font-semibold">DocCropper</h1>
-  </header>
-  <div x-show="drawer" class="fixed inset-0 z-40 flex md:hidden">
-    <div class="bg-white w-64 p-4" @click.away="drawer=false">
-      <nav>
-        <a href="#" class="block py-2" @click="tab='export'; drawer=false">Export</a>
-        <a href="#" class="block py-2" @click="tab='files'; drawer=false">Files</a>
-      </nav>
+<body class="g-sidenav-show bg-gray-100">
+  <aside class="sidenav navbar navbar-vertical navbar-expand-xs border-0 border-radius-xl fixed-start ms-3" id="sidenav-main">
+    <div class="sidenav-header">
+      <a class="navbar-brand m-0" href="#">DocCropper</a>
     </div>
-    <div class="flex-1 bg-black opacity-50" @click="drawer=false"></div>
-  </div>
-  <div class="flex flex-1 overflow-hidden">
-    <aside class="hidden md:block md:w-64 bg-gray-100 p-4">
-      <nav>
-        <a href="#" class="block py-2" :class="{'font-bold':tab==='export'}" @click="tab='export'">Export</a>
-        <a href="#" class="block py-2" :class="{'font-bold':tab==='files'}" @click="tab='files'">Files</a>
-      </nav>
-    </aside>
-    <main class="flex-1 p-4 overflow-y-auto">
-      <template x-if="tab==='export'">
-        <div class="space-y-4">
-          <button class="px-4 py-2 bg-blue-600 text-white rounded" @click="exporting=true; await window.DC.export(); exporting=false">Export PDF</button>
-        </div>
-      </template>
-      <template x-if="tab==='files'">
-        <div class="text-gray-500">Files tab content</div>
-      </template>
-    </main>
-  </div>
-  <div x-show="showModal" x-transition class="fixed inset-0 z-50 flex items-end md:items-center justify-center">
-    <div class="absolute inset-0 bg-black opacity-50" @click="showModal=false"></div>
-    <div class="bg-white w-full md:w-1/3 p-6 rounded-t-2xl md:rounded-xl relative">
-      <h2 class="text-xl font-semibold mb-4">Export ready</h2>
-      <div class="flex space-x-2">
-        <button class="flex-1 px-4 py-2 bg-green-600 text-white rounded" @click="window.DC.download()">Download</button>
-        <button class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded" @click="window.DC.sign()">Sign</button>
+    <hr class="horizontal dark mt-0" />
+    <div class="collapse navbar-collapse w-auto">
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link" :class="{active: tab==='export'}" href="#" @click.prevent="tab='export'">
+            <i class="material-icons opacity-10">picture_as_pdf</i>
+            <span class="nav-link-text">Export</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" :class="{active: tab==='files'}" href="#" @click.prevent="tab='files'">
+            <i class="material-icons opacity-10">folder</i>
+            <span class="nav-link-text">Files</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </aside>
+  <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg ps">
+    <nav class="navbar navbar-main navbar-expand-lg px-0 mx-4 shadow-none border-radius-xl" id="navbarBlur">
+      <div class="container-fluid py-1">
+        <h6 class="font-weight-bolder mb-0">Dashboard</h6>
       </div>
-      <button class="absolute top-2 right-2 text-gray-500" @click="showModal=false">&times;</button>
+    </nav>
+    <div class="container-fluid py-4">
+      <div x-show="tab==='export'">
+        <button class="btn btn-primary" @click="window.DC.export()">Export PDF</button>
+      </div>
+      <div x-show="tab==='files'">
+        <p class="text-muted">Files tab content</p>
+      </div>
+    </div>
+  </main>
+  <div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Export ready</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Select an action</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-success" onclick="window.DC.download()">Download</button>
+          <button class="btn btn-secondary" onclick="window.DC.sign()">Sign</button>
+        </div>
+      </div>
     </div>
   </div>
-  <div x-show="toast" x-transition class="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded">
-    <span x-text="toast"></span>
-  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
   <script src="/js/doccropper.adapter.js"></script>
   <script>
     window.DC_EXPORT_ENDPOINT = '/api/export';
     window.DC_DOWNLOAD_ENDPOINT = '/api/export/download';
     window.DC_SIGN_ENDPOINT = '/api/sign';
+    window.addEventListener('dc-exported', function () {
+      var modal = new bootstrap.Modal(document.getElementById('exportModal'));
+      modal.show();
+    });
   </script>
+  <style>
+    @media (max-width: 768px) {
+      #exportModal .modal-dialog {
+        position: fixed;
+        bottom: 0;
+        margin: 0;
+        width: 100%;
+      }
+    }
+  </style>
 </body>
 </html>
