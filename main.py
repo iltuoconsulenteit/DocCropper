@@ -555,10 +555,19 @@ async def read_root(request: Request):
     try:
         base_dir = os.path.dirname(__file__)
         template_name = load_settings().get("template", "static")
-        if template_name != "static":
-            index_path = os.path.join(base_dir, "templates", template_name, "index.html")
+        if isinstance(template_name, str):
+            template_name = template_name.strip().lower()
         else:
-            index_path = os.path.join(base_dir, "static", "index.html")
+            template_name = "static"
+
+        index_path = os.path.join(base_dir, "static", "index.html")
+        if template_name != "static":
+            alt_path = os.path.join(base_dir, "templates", template_name, "index.html")
+            if os.path.exists(alt_path):
+                index_path = alt_path
+            else:
+                logger.error("Template '%s' not found, using static index", template_name)
+
         with open(index_path, "r", encoding="utf-8") as f:
             content = f.read()
         if CACHE_BUST:
