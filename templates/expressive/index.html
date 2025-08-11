@@ -202,11 +202,12 @@
           sortable:null,
           viewModal:false,
           viewUrl:'',
-          points:[],
-          scaleW:1,
-          scaleH:1,
+          draggables:{},
           origW:0,
           origH:0,
+          scalingW:1,
+          scalingH:1,
+          currentPoints:[],
           files:[],
           clientLogo:null,
           sponsorLogo:null,
@@ -388,43 +389,64 @@
             this.cropModal = true;
             this.$nextTick(()=>{
               const img = this.$refs.cropImg;
-              img.onload = () => { this.prepareCrop(); };
+              img.onload = () => { this.setupCrop(); };
               img.src = this.files[idx].url;
             });
           },
-          prepareCrop(){
-            const img=this.$refs.cropImg;
-            this.origW=img.naturalWidth;
-            this.origH=img.naturalHeight;
-            const w=img.clientWidth;
-            const h=img.clientHeight;
-            this.scaleW=this.origW/w;
-            this.scaleH=this.origH/h;
-            this.points=[[0,0],[w,0],[w,h],[0,h]];
-            const ids=['cp1','cp2','cp3','cp4'];
-            ids.forEach((id,i)=>{
-              const el=document.getElementById(id);
-              el.style.left=(this.points[i][0]-10)+'px';
-              el.style.top=(this.points[i][1]-10)+'px';
-              el.dataset.index=i;
-              interact(el).draggable({ listeners:{ move: evt=>{
-                const x=parseFloat(el.style.left)+evt.dx;
-                const y=parseFloat(el.style.top)+evt.dy;
-                el.style.left=x+'px';
-                el.style.top=y+'px';
-                this.points[i]=[x+10,y+10];
-                this.updatePath();
-              } }});
-            });
-            this.updatePath();
+          setupCrop(){
+            const img = this.$refs.cropImg;
+            this.origW = img.naturalWidth;
+            this.origH = img.naturalHeight;
+            const w = img.clientWidth;
+            const h = img.clientHeight;
+            const svg=this.$refs.cropSvg;
+            svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+            svg.setAttribute('width',w);
+            svg.setAttribute('height',h);
+            this.scalingW = this.origW / w;
+            this.scalingH = this.origH / h;
+            this.initDraggables(w,h);
           },
-          updatePath(){
+          initDraggables(w,h){
+            const map={cp1:'cp1',cp2:'cp2',cp3:'cp3',cp4:'cp4'};
+            this.draggables={};
+            Object.keys(map).forEach((k,i)=>{
+              const el=document.getElementById(map[k]);
+              this.draggables[k]=el;
+              const pointSize=el.offsetWidth;
+              const pos=[[0,0],[w-pointSize,0],[w-pointSize,h-pointSize],[0,h-pointSize]][i];
+              el.style.left=pos[0]+"px";
+              el.style.top=pos[1]+"px";
+              el.setAttribute('data-x','0');
+              el.setAttribute('data-y','0');
+              interact(el).draggable({listeners:{move:evt=>{
+                const x=parseFloat(el.getAttribute('data-x')||0)+evt.dx;
+                const y=parseFloat(el.getAttribute('data-y')||0)+evt.dy;
+                el.setAttribute('data-x',x);
+                el.setAttribute('data-y',y);
+                el.style.transform=`translate(${x}px,${y}px)`;
+                this.updatePolygon();
+              }}});
+            });
+            this.updatePolygon();
+          },
+          updatePolygon(){
             const svg=this.$refs.cropSvg;
             const path=this.$refs.cropPath;
             const w=svg.clientWidth;
             const h=svg.clientHeight;
-            const p=this.points;
-            const d=`M0,0 H${w} V${h} H0 Z M${p[0][0]},${p[0][1]} L${p[1][0]},${p[1][1]} L${p[2][0]},${p[2][1]} L${p[3][0]},${p[3][1]} Z`;
+            const pts=[];
+            ['cp1','cp2','cp3','cp4'].forEach((id,idx)=>{
+              const el=this.draggables[id];
+              const left=parseFloat(el.style.left||0);
+              const top=parseFloat(el.style.top||0);
+              const dx=parseFloat(el.getAttribute('data-x')||0);
+              const dy=parseFloat(el.getAttribute('data-y')||0);
+              pts.push(left+dx+el.offsetWidth/2);
+              pts.push(top+dy+el.offsetHeight/2);
+            });
+            this.currentPoints=pts;
+            const d=`M0,0 H${w} V${h} H0 Z M${pts[0]},${pts[1]} L${pts[2]},${pts[3]} L${pts[4]},${pts[5]} L${pts[6]},${pts[7]} Z`;
             path.setAttribute('d',d);
           },
           closeCrop(){
@@ -438,8 +460,8 @@
             return new Blob([u8],{type:mime});
           },
           applyCrop(){
-            if(this.points.length!==4) return;
-            const scaled=this.points.flatMap(p=>[p[0]*this.scaleW,p[1]*this.scaleH]);
+            if(this.currentPoints.length!==8) return;
+            const scaled=this.currentPoints.map((v,i)=>i%2===0? v*this.scalingW : v*this.scalingH);
             const blob=this.dataURLtoBlob(this.files[this.cropIndex].url);
             const fd=new FormData();
             fd.append('image_file',blob,'image.png');
