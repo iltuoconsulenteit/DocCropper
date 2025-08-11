@@ -161,6 +161,7 @@ DEFAULT_SETTINGS = {
     "docuseal_api_url": "",
     "docuseal_api_key": "",
     "public_url": "",
+    "template": "static",
 }
 
 def verify_license_server(key: str) -> bool:
@@ -512,6 +513,7 @@ async def require_valid_license(
 # Mount static files directory and local wiki with no-cache headers
 app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
 app.mount("/wiki", NoCacheStaticFiles(directory="wiki", html=True), name="wiki")
+app.mount("/js", NoCacheStaticFiles(directory="public/js"), name="js")
 plugin_utils = {
     'load_settings': load_settings,
     'get_session_dir': get_session_dir,
@@ -551,7 +553,12 @@ async def read_root(request: Request):
         session_id = uuid.uuid4().hex
     get_session_dir(session_id)
     try:
-        index_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
+        base_dir = os.path.dirname(__file__)
+        template_name = load_settings().get("template", "static")
+        if template_name != "static":
+            index_path = os.path.join(base_dir, "templates", template_name, "index.html")
+        else:
+            index_path = os.path.join(base_dir, "static", "index.html")
         with open(index_path, "r", encoding="utf-8") as f:
             content = f.read()
         if CACHE_BUST:
@@ -564,7 +571,7 @@ async def read_root(request: Request):
             content = content.replace("DocCropper_slogan_en.png", f"DocCropper_slogan_en.png{CACHE_BUST}")
             content = content.replace("DocCropper_slogan_it.png", f"DocCropper_slogan_it.png{CACHE_BUST}")
     except FileNotFoundError:
-        logger.error("static/index.html not found")
+        logger.error(f"{index_path} not found")
         return HTMLResponse(content="Frontend not found.", status_code=500)
     response = HTMLResponse(content=content, status_code=200)
     response.headers["Cache-Control"] = "no-cache"
