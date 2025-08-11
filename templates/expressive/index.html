@@ -12,9 +12,12 @@
     <div x-show="drawer && !pinned" @click="drawer=false" class="fixed inset-0 bg-black/50 md:hidden"></div>
     <!-- Sidebar / Drawer -->
     <div class="fixed inset-y-0 left-0 w-64 bg-gray-800 text-white flex flex-col transform transition-transform duration-200" :class="(drawer || pinned) ? 'translate-x-0' : '-translate-x-full'" x-transition>
-      <div class="p-4 flex items-center space-x-2">
-        <img src="/static/logos/app_logo.png" alt="DocCropper" class="h-8" />
-        <span class="font-bold">DocCropper</span>
+      <div class="p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <img src="/static/logos/app_logo.png" alt="DocCropper" class="h-8" />
+          <span class="font-bold">DocCropper</span>
+        </div>
+        <button class="hidden md:block" @click="pinned=!pinned; drawer=pinned" :title="pinned ? t('unpin') : t('pin')">📌</button>
       </div>
       <nav class="flex-1 overflow-y-auto">
         <h2 class="px-4 text-xs uppercase text-gray-400" x-text="t('commands')"></h2>
@@ -58,7 +61,6 @@
       <!-- Top bar -->
       <header class="bg-gray-100 p-2 flex items-center shadow space-x-2">
         <button class="mr-2" @click="drawer=!drawer">☰</button>
-        <button class="mr-2 hidden md:block" @click="pinned=!pinned; drawer=pinned" :title="pinned ? t('unpin') : t('pin')">📌</button>
         <img src="/static/logos/header_logo.png" alt="IlTuoConsulenteIT" class="h-8" />
         <h1 class="text-xl font-semibold flex-1">DocCropper</h1>
         <select x-model="lang" @change="setLang" class="border rounded p-1 text-sm">
@@ -68,11 +70,22 @@
       </header>
       <!-- Content -->
       <main class="flex-1 p-4 space-y-4 overflow-y-auto" x-cloak>
+        <input type="file" id="imageUpload" class="hidden" multiple accept="image/*,application/pdf" @change="handleImport">
         <div class="mb-4 flex justify-center" x-show="currentSlide">
           <img :src="currentSlide" alt="slogan" class="max-h-64 w-auto object-contain" />
         </div>
         <div x-show="tab==='files'">
-          <p class="text-gray-600" x-text="t('noFiles')"></p>
+          <template x-if="files.length === 0">
+            <p class="text-gray-600" x-text="t('noFiles')"></p>
+          </template>
+          <div x-show="files.length > 0" class="grid grid-cols-2 gap-2">
+            <template x-for="(file, idx) in files" :key="idx">
+              <div class="border p-1">
+                <img :src="file.url" :alt="file.name" class="w-full object-contain" />
+                <p class="text-xs text-center truncate" x-text="file.name"></p>
+              </div>
+            </template>
+          </div>
         </div>
         <div x-show="tab!=='files'" class="text-gray-600" x-text="t('selectCommand')"></div>
       </main>
@@ -136,6 +149,7 @@
           pinned:false,
           tab:'files',
           modal:false,
+          files:[],
           lang: window.DC_LANG || 'en',
           strings,
           slides:{
@@ -198,7 +212,12 @@
             this.refreshSlides();
           },
           download(){ this.modal=false; window.DC.download(); },
-          sign(){ this.modal=false; window.DC.sign(); }
+          sign(){ this.modal=false; window.DC.sign(); },
+          handleImport(e){
+            const selected = Array.from(e.target.files || []);
+            this.files = selected.map(f => ({ name: f.name, url: URL.createObjectURL(f) }));
+            this.tab = 'files';
+          }
         }
       }
     </script>
