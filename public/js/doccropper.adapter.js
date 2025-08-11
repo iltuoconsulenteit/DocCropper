@@ -1,8 +1,16 @@
 window.DC = window.DC || {};
 
 window.DC.export = window.DC.export || (async function() {
-  if (typeof window.exportPdf === 'function') return window.exportPdf();
-  if (typeof window.doExport === 'function') return window.doExport();
+  if (typeof window.exportPdf === 'function') {
+    const result = await window.exportPdf();
+    window.dispatchEvent(new CustomEvent('dc-exported'));
+    return result;
+  }
+  if (typeof window.doExport === 'function') {
+    const result = await window.doExport();
+    window.dispatchEvent(new CustomEvent('dc-exported'));
+    return result;
+  }
 
   const url = window.DC_EXPORT_ENDPOINT || '/api/export';
   const headers = { 'X-Requested-With': 'XMLHttpRequest' };
@@ -11,7 +19,15 @@ window.DC.export = window.DC.export || (async function() {
     headers['Content-Type'] = 'application/x-www-form-urlencoded';
     body = new URLSearchParams({ [window.DC_CSRF]: 1 });
   }
-  await fetch(url, { method: 'POST', headers, body });
+  const resp = await fetch(url, { method: 'POST', headers, body });
+  try {
+    const data = await resp.json();
+    if (data && data.downloadUrl) {
+      window.DC_DOWNLOAD_ENDPOINT = data.downloadUrl;
+    }
+  } catch (e) {
+    // ignore json parse errors
+  }
   window.dispatchEvent(new CustomEvent('dc-exported'));
 });
 
