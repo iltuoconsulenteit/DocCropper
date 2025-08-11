@@ -1,36 +1,36 @@
 window.DC = window.DC || {};
 
-if (typeof window.generatePdf === 'function' && !window.generatePdf._dcPatched) {
-  const origGeneratePdf = window.generatePdf;
-  window.generatePdf = function (...args) {
-    const res = origGeneratePdf.apply(this, args);
-    const poll = setInterval(() => {
-      if (window.currentPdfBlob) {
-        clearInterval(poll);
-        window.dispatchEvent(new CustomEvent('dc-exported'));
-      }
-    }, 500);
-    return res;
-  };
-  window.generatePdf._dcPatched = true;
-}
-
 window.DC.export = window.DC.export || (async function () {
-  if (typeof window.exportPdf === 'function') {
-    const result = await window.exportPdf();
-    window.dispatchEvent(new CustomEvent('dc-exported'));
-    return result;
-  }
-  if (typeof window.doExport === 'function') {
-    const result = await window.doExport();
-    window.dispatchEvent(new CustomEvent('dc-exported'));
-    return result;
-  }
+  const fire = () => window.dispatchEvent(new CustomEvent('dc-exported'));
+  const poll = () => {
+    if (window.currentPdfBlob) return fire();
+    const t = setInterval(() => {
+      if (window.currentPdfBlob) { clearInterval(t); fire(); }
+    }, 500);
+  };
+  const call = (fn) => {
+    try {
+      const res = fn();
+      if (res && typeof res.then === 'function') {
+        res.then(fire).catch(() => {});
+      } else {
+        poll();
+      }
+      return res;
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  if (typeof window.exportPdf === 'function') return call(window.exportPdf);
+  if (typeof window.doExport === 'function') return call(window.doExport);
+  if (typeof window.generatePdf === 'function') return call(window.generatePdf);
+  if (typeof window.handleExport === 'function') return call(window.handleExport);
+  if (typeof window.startExport === 'function') return call(window.startExport);
+
   const btn = document.getElementById('exportPdfBtn');
-  if (btn) {
-    btn.click();
-    return;
-  }
+  if (btn) { btn.click(); poll(); return; }
+
   const url = window.DC_EXPORT_ENDPOINT || '/api/export';
   const headers = { 'X-Requested-With': 'XMLHttpRequest' };
   let body;
@@ -41,13 +41,9 @@ window.DC.export = window.DC.export || (async function () {
   const resp = await fetch(url, { method: 'POST', headers, body });
   try {
     const data = await resp.json();
-    if (data && data.downloadUrl) {
-      window.DC_DOWNLOAD_ENDPOINT = data.downloadUrl;
-    }
-  } catch (e) {
-    // ignore json parse errors
-  }
-  window.dispatchEvent(new CustomEvent('dc-exported'));
+    if (data && data.downloadUrl) window.DC_DOWNLOAD_ENDPOINT = data.downloadUrl;
+  } catch {}
+  fire();
 });
 
 window.DC.download = window.DC.download || (async function () {
@@ -55,14 +51,20 @@ window.DC.download = window.DC.download || (async function () {
     const href = await window.getLastPdfUrl();
     if (href) return (window.location.href = href);
   }
-  const btn = document.getElementById('downloadPdfBtn');
-  if (btn) {
-    btn.click();
-    return;
+  if (typeof window.lastPdfUrl === 'string') {
+    return (window.location.href = window.lastPdfUrl);
   }
+  const btn = document.getElementById('downloadPdfBtn');
+  if (btn) { btn.click(); return; }
   const link = document.getElementById('signedPdfLink');
-  if (link && link.href) {
-    window.location.href = link.href;
+  if (link && link.href) return (window.location.href = link.href);
+  if (window.currentPdfBlob) {
+    const url = URL.createObjectURL(window.currentPdfBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'document.pdf';
+    a.click();
+    URL.revokeObjectURL(url);
     return;
   }
   const url = window.DC_DOWNLOAD_ENDPOINT || '/api/export/download';
@@ -71,11 +73,9 @@ window.DC.download = window.DC.download || (async function () {
 
 window.DC.sign = window.DC.sign || (async function () {
   if (typeof window.startMobileSign === 'function') return window.startMobileSign();
-  const btn = document.getElementById('signBtn');
-  if (btn) {
-    btn.click();
-    return;
-  }
+  if (typeof window.startSign === 'function') return window.startSign();
+  const btn = document.getElementById('signBtn') || document.getElementById('mobileSignBtn');
+  if (btn) { btn.click(); return; }
   const url = window.DC_SIGN_ENDPOINT || '/api/sign';
   const headers = { 'X-Requested-With': 'XMLHttpRequest' };
   let body;
@@ -89,10 +89,7 @@ window.DC.sign = window.DC.sign || (async function () {
 window.DC.mobileSign = window.DC.mobileSign || (async function () {
   if (typeof window.startMobileSign === 'function') return window.startMobileSign();
   const btn = document.getElementById('mobileSignBtn');
-  if (btn) {
-    btn.click();
-    return;
-  }
+  if (btn) { btn.click(); return; }
   const url = window.DC_MOBILE_SIGN_ENDPOINT || window.DC_SIGN_ENDPOINT || '/api/sign/mobile';
   const headers = { 'X-Requested-With': 'XMLHttpRequest' };
   let body;
@@ -106,10 +103,7 @@ window.DC.mobileSign = window.DC.mobileSign || (async function () {
 window.DC.import = window.DC.import || (async function () {
   if (typeof window.startImport === 'function') return window.startImport();
   const input = document.getElementById('imageUpload');
-  if (input) {
-    input.click();
-    return;
-  }
+  if (input) { input.click(); return; }
   const url = window.DC_IMPORT_ENDPOINT || '/api/import';
   const headers = { 'X-Requested-With': 'XMLHttpRequest' };
   let body;
@@ -129,3 +123,4 @@ window.DC.donate = window.DC.donate || (function () {
   const url = window.DC_DONATE_URL || '/donate';
   window.open(url, '_blank');
 });
+
