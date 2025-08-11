@@ -59,7 +59,6 @@
       <header class="bg-gray-100 p-2 flex items-center shadow space-x-2">
         <button class="mr-2 md:hidden" @click="drawer=true">☰</button>
         <button class="mr-2 hidden md:block" @click="pinned=!pinned" :title="pinned ? t('unpin') : t('pin')">📌</button>
-        <img src="/static/logos/app_logo.png" alt="DocCropper" class="h-8" />
         <img src="/static/logos/header_logo.png" alt="IlTuoConsulenteIT" class="h-8" />
         <h1 class="text-xl font-semibold flex-1">DocCropper</h1>
         <select x-model="lang" @change="setLang" class="border rounded p-1 text-sm">
@@ -68,15 +67,18 @@
         </select>
       </header>
       <!-- Content -->
-      <main class="flex-1 p-4 space-y-4" x-cloak>
-        <div class="mb-4" x-show="currentSlide">
-          <img :src="currentSlide" alt="slogan" class="w-full" />
+      <main class="flex-1 p-4 space-y-4 overflow-y-auto" x-cloak>
+        <div class="mb-4 flex justify-center" x-show="currentSlide">
+          <img :src="currentSlide" alt="slogan" class="max-h-64 w-auto object-contain" />
         </div>
         <div x-show="tab==='files'">
           <p class="text-gray-600" x-text="t('noFiles')"></p>
         </div>
         <div x-show="tab!=='files'" class="text-gray-600" x-text="t('selectCommand')"></div>
       </main>
+      <footer class="p-4 text-center mt-auto">
+        <img src="/static/logos/footer_logo.png" alt="IlTuoConsulenteIT" class="h-8 mx-auto" />
+      </footer>
     </div>
 
     <!-- Modal -->
@@ -84,8 +86,8 @@
       <div class="bg-white w-full md:w-96 p-4 rounded-t-lg md:rounded-lg">
         <h2 class="text-lg mb-4" x-text="t('exportComplete')"></h2>
         <div class="flex justify-end space-x-2">
-          <button class="px-4 py-2 bg-blue-500 text-white rounded" @click="download" x-text="t('download')"></button>
-          <button class="px-4 py-2 bg-green-500 text-white rounded" @click="sign" x-text="t('sign')"></button>
+          <button class="px-4 py-2 bg-blue-500 text-white rounded" @click="download()" x-text="t('download')"></button>
+          <button class="px-4 py-2 bg-green-500 text-white rounded" @click="sign()" x-text="t('sign')"></button>
         </div>
       </div>
     </div>
@@ -194,8 +196,8 @@
             document.documentElement.lang = this.lang;
             this.refreshSlides();
           },
-          download: () => window.DC.download(),
-          sign: () => window.DC.sign()
+          download(){ this.modal=false; window.DC.download(); },
+          sign(){ this.modal=false; window.DC.sign(); }
         }
       }
     </script>
