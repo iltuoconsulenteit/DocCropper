@@ -6,6 +6,7 @@
     <title>DocCropper Expressive</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
   </head>
   <body x-data="dcApp()" class="h-screen flex">
     <!-- Overlay for mobile -->
@@ -71,7 +72,7 @@
       <!-- Content -->
       <main class="flex-1 p-4 space-y-4 overflow-y-auto" x-cloak>
         <input type="file" id="imageUpload" class="hidden" multiple accept="image/*,application/pdf" @change="handleImport">
-        <div class="mb-4 flex justify-center" x-show="currentSlide">
+        <div class="mb-4 flex justify-center" x-show="showSlides && currentSlide && files.length===0">
           <img :src="currentSlide" alt="slogan" class="max-h-64 w-auto object-contain" />
         </div>
         <div x-show="tab==='files'">
@@ -157,13 +158,17 @@
             it:['/static/logos/DocCropper_slogan_it.png','/static/logos/DocCropper_slogan_sign_it.png']
           },
           slideIndex:0,
+          showSlides:true,
           currentSlide:'',
           t(key){ return this.strings[this.lang][key] || key; },
           refreshSlides(){
             this.slideIndex = 0;
-            this.currentSlide = this.slides[this.lang][0];
+            this.currentSlide = this.showSlides ? this.slides[this.lang][0] : '';
           },
           init(){
+            if (window['pdfjsLib']) {
+              pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js';
+            }
             this.setLang();
             const mq = window.matchMedia('(min-width:768px)');
             this.pinned = false;
@@ -175,8 +180,10 @@
               }
             });
             setInterval(()=>{
-              this.slideIndex = (this.slideIndex+1) % this.slides[this.lang].length;
-              this.currentSlide = this.slides[this.lang][this.slideIndex];
+              if (this.showSlides) {
+                this.slideIndex = (this.slideIndex+1) % this.slides[this.lang].length;
+                this.currentSlide = this.slides[this.lang][this.slideIndex];
+              }
             },5000);
             window.addEventListener('dc-exported', () => { this.modal = true; });
           },
@@ -213,9 +220,32 @@
           },
           download(){ this.modal=false; window.DC.download(); },
           sign(){ this.modal=false; window.DC.sign(); },
-          handleImport(e){
+          async handleImport(e){
             const selected = Array.from(e.target.files || []);
-            this.files = selected.map(f => ({ name: f.name, url: URL.createObjectURL(f) }));
+            const loaded = [];
+            for (const f of selected) {
+              if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
+                try {
+                  const pdf = await pdfjsLib.getDocument(URL.createObjectURL(f)).promise;
+                  for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 1 });
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    await page.render({ canvasContext: ctx, viewport }).promise;
+                    loaded.push({ name: `${f.name} p${i}`, url: canvas.toDataURL() });
+                  }
+                } catch (err) {
+                  console.error('PDF import failed', err);
+                }
+              } else {
+                loaded.push({ name: f.name, url: URL.createObjectURL(f) });
+              }
+            }
+            this.files = loaded;
+            this.showSlides = false;
             this.tab = 'files';
           }
         }
