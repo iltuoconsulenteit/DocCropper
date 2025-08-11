@@ -7,8 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css" />
-    <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>
+    <script src="https://cdn.interactjs.io/v1.10.11/interactjs/index.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
   </head>
   <body x-data="dcApp()" class="h-screen flex">
@@ -88,7 +87,7 @@
           <div x-show="files.length > 0" x-ref="fileGrid" class="grid grid-cols-2 gap-2">
             <template x-for="(file, idx) in files" :key="file.id">
               <div class="border p-1 relative">
-                <img :src="file.url" :alt="file.name" class="w-full h-32 object-contain" />
+                <img :src="file.url" :alt="file.name" class="w-full h-32 object-contain cursor-pointer" @click="view(file.url)" />
                 <div class="absolute top-0 left-0 right-0 flex justify-between bg-white/70 p-1">
                   <button @click="crop(idx)" title="Crop" class="text-xs">✂</button>
                   <button @click="remove(idx)" title="Delete" class="text-xs">✖</button>
@@ -126,13 +125,25 @@
 
     <!-- Crop Modal -->
     <div x-show="cropModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
-      <div class="bg-white p-4 rounded w-full md:w-auto">
-        <img x-ref="cropImg" class="max-w-full max-h-[75vh]" />
+      <div class="bg-white p-4 rounded">
+        <div id="cropWrapper" class="relative inline-block">
+          <img x-ref="cropImg" class="max-w-full max-h-[75vh]" />
+          <svg x-ref="cropSvg" class="absolute inset-0"><path x-ref="cropPath" fill-rule="evenodd" fill="rgba(0,0,0,0.5)" stroke="red" stroke-width="1"/></svg>
+          <div id="cp1" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute">1</div>
+          <div id="cp2" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute">2</div>
+          <div id="cp3" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute">3</div>
+          <div id="cp4" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute">4</div>
+        </div>
         <div class="mt-2 text-right space-x-2">
           <button @click="applyCrop" class="bg-blue-500 text-white px-3 py-1 rounded" x-text="t('apply')"></button>
           <button @click="closeCrop" class="bg-gray-300 px-3 py-1 rounded" x-text="t('cancel')"></button>
         </div>
       </div>
+    </div>
+
+    <!-- View Modal -->
+    <div x-show="viewModal" @click.self="viewModal=false" class="fixed inset-0 bg-black/70 flex items-center justify-center">
+      <img :src="viewUrl" class="max-w-full max-h-full" />
     </div>
 
     <script src="/js/doccropper.adapter.js"></script>
@@ -188,8 +199,14 @@
           modal:false,
           cropModal:false,
           cropIndex:null,
-          cropper:null,
           sortable:null,
+          viewModal:false,
+          viewUrl:'',
+          points:[],
+          scaleW:1,
+          scaleH:1,
+          origW:0,
+          origH:0,
           files:[],
           clientLogo:null,
           sponsorLogo:null,
@@ -332,7 +349,7 @@
           },
           toGray(idx){ this._convertColor(idx,'gray'); },
           toBW(idx){ this._convertColor(idx,'bw'); },
-          toColor(idx){ this.files[idx].url = this.files[idx].original; },
+          toColor(idx){ this.files[idx].url = this.files[idx].original; this.files = [...this.files]; },
           _convertColor(idx, mode){
             const img = new Image();
             img.onload=()=>{
@@ -351,32 +368,85 @@
               ctx.putImageData(data,0,0);
               const out=canvas.toDataURL('image/png');
               this.files[idx].url=out;
+              this.files = [...this.files];
             };
             img.src=this.files[idx].original;
           },
           signPage(idx){
             if(typeof window.openSignatureForPage==='function') return window.openSignatureForPage(idx);
-            if(typeof window.startSign==='function') return window.startSign();
             if(window.DC && typeof window.DC.sign==='function') return window.DC.sign();
           },
+          view(url){ this.viewUrl=url; this.viewModal=true; },
           remove(idx){ this.files.splice(idx,1); this.$nextTick(()=>this.initSortable()); },
           crop(idx){
             this.cropIndex = idx;
             this.cropModal = true;
             this.$nextTick(()=>{
               const img = this.$refs.cropImg;
+              img.onload = () => { this.prepareCrop(); };
               img.src = this.files[idx].url;
-              this.cropper = new Cropper(img,{viewMode:1});
             });
           },
-          closeCrop(){ if(this.cropper){ this.cropper.destroy(); this.cropper=null; } this.cropModal=false; },
+          prepareCrop(){
+            const img=this.$refs.cropImg;
+            this.origW=img.naturalWidth;
+            this.origH=img.naturalHeight;
+            const w=img.clientWidth;
+            const h=img.clientHeight;
+            this.scaleW=this.origW/w;
+            this.scaleH=this.origH/h;
+            this.points=[[0,0],[w,0],[w,h],[0,h]];
+            const ids=['cp1','cp2','cp3','cp4'];
+            ids.forEach((id,i)=>{
+              const el=document.getElementById(id);
+              el.style.left=(this.points[i][0]-10)+'px';
+              el.style.top=(this.points[i][1]-10)+'px';
+              el.dataset.index=i;
+              interact(el).draggable({ listeners:{ move: evt=>{
+                const x=parseFloat(el.style.left)+evt.dx;
+                const y=parseFloat(el.style.top)+evt.dy;
+                el.style.left=x+'px';
+                el.style.top=y+'px';
+                this.points[i]=[x+10,y+10];
+                this.updatePath();
+              } }});
+            });
+            this.updatePath();
+          },
+          updatePath(){
+            const svg=this.$refs.cropSvg;
+            const path=this.$refs.cropPath;
+            const w=svg.clientWidth;
+            const h=svg.clientHeight;
+            const p=this.points;
+            const d=`M0,0 H${w} V${h} H0 Z M${p[0][0]},${p[0][1]} L${p[1][0]},${p[1][1]} L${p[2][0]},${p[2][1]} L${p[3][0]},${p[3][1]} Z`;
+            path.setAttribute('d',d);
+          },
+          closeCrop(){
+            ['cp1','cp2','cp3','cp4'].forEach(id=>{ try{interact('#'+id).unset();}catch(e){} });
+            this.cropModal=false;
+          },
+          dataURLtoBlob(dataUrl){
+            const arr=dataUrl.split(','), mime=arr[0].match(/:(.*?);/)[1];
+            const bstr=atob(arr[1]); let n=bstr.length; const u8=new Uint8Array(n);
+            while(n--) u8[n]=bstr.charCodeAt(n);
+            return new Blob([u8],{type:mime});
+          },
           applyCrop(){
-            if(!this.cropper) return;
-            const canvas=this.cropper.getCroppedCanvas();
-            const out=canvas.toDataURL('image/png');
-            this.files[this.cropIndex].url=out;
-            this.files[this.cropIndex].original=out;
-            this.closeCrop();
+            if(this.points.length!==4) return;
+            const scaled=this.points.flatMap(p=>[p[0]*this.scaleW,p[1]*this.scaleH]);
+            const blob=this.dataURLtoBlob(this.files[this.cropIndex].url);
+            const fd=new FormData();
+            fd.append('image_file',blob,'image.png');
+            fd.append('points',JSON.stringify(scaled));
+            fd.append('original_width',Math.round(this.origW));
+            fd.append('original_height',Math.round(this.origH));
+            fd.append('brightness',100);
+            fd.append('contrast',100);
+            fetch('/process-image/',{method:'POST',body:fd})
+              .then(r=>r.json())
+              .then(d=>{ if(d.processed_image){ this.files[this.cropIndex].url=d.processed_image; this.files[this.cropIndex].original=d.processed_image; } })
+              .finally(()=>{ this.closeCrop(); });
           },
           initSortable(){
             if(!this.$refs.fileGrid) return;
