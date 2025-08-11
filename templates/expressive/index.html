@@ -20,6 +20,9 @@
         <h2 class="px-4 text-xs uppercase text-gray-400" x-text="t('commands')"></h2>
         <ul>
           <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('import')" x-text="t('import')"></button>
+          </li>
+          <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('export')" x-text="t('export')"></button>
           </li>
           <li>
@@ -27,9 +30,6 @@
           </li>
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('sign')" x-text="t('sign')"></button>
-          </li>
-          <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('import')" x-text="t('import')"></button>
           </li>
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('mobileSign')" x-text="t('mobileSign')"></button>
@@ -57,8 +57,8 @@
     <div class="flex-1 flex flex-col transition-all duration-200" :class="pinned ? 'ml-64' : (drawer ? 'ml-64' : 'ml-0')">
       <!-- Top bar -->
       <header class="bg-gray-100 p-2 flex items-center shadow space-x-2">
-        <button class="mr-2 md:hidden" @click="drawer=true">☰</button>
-        <button class="mr-2 hidden md:block" @click="pinned=!pinned" :title="pinned ? t('unpin') : t('pin')">📌</button>
+        <button class="mr-2" @click="drawer=!drawer">☰</button>
+        <button class="mr-2 hidden md:block" @click="pinned=!pinned; drawer=pinned" :title="pinned ? t('unpin') : t('pin')">📌</button>
         <img src="/static/logos/header_logo.png" alt="IlTuoConsulenteIT" class="h-8" />
         <h1 class="text-xl font-semibold flex-1">DocCropper</h1>
         <select x-model="lang" @change="setLang" class="border rounded p-1 text-sm">
@@ -152,13 +152,14 @@
           init(){
             this.setLang();
             const mq = window.matchMedia('(min-width:768px)');
-            this.pinned = mq.matches;
-            this.drawer = mq.matches;
+            this.pinned = false;
+            this.drawer = false;
             mq.addEventListener('change', e=>{
-              this.pinned = e.matches;
-              this.drawer = e.matches ? true : false;
+              if(!e.matches){
+                this.pinned = false;
+                this.drawer = false;
+              }
             });
-            this.refreshSlides();
             setInterval(()=>{
               this.slideIndex = (this.slideIndex+1) % this.slides[this.lang].length;
               this.currentSlide = this.slides[this.lang][this.slideIndex];
