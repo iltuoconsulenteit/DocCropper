@@ -698,11 +698,26 @@ async def google_login(token: str = Body(...)):
         return JSONResponse(status_code=400, content={"message": "Invalid token"})
 
 @app.post("/detect-corners/")
-async def detect_corners(image_file: UploadFile = File(...)):
+async def detect_corners(request: Request, image_file: UploadFile = File(...)):
     try:
         contents = await image_file.read()
         if len(contents) > MAX_UPLOAD_BYTES:
             return JSONResponse(status_code=413, content={"message": "File too large"})
+
+        session_id = request.cookies.get("session_id")
+        session_dir = get_session_dir(session_id)
+        if session_dir:
+            try:
+                fname = os.path.join(
+                    session_dir,
+                    f"{uuid.uuid4().hex}{os.path.splitext(image_file.filename)[1]}{ENC_SUFFIX}",
+                )
+                enc = encrypt_bytes(session_id, contents)
+                with open(fname, "wb") as fh:
+                    fh.write(enc)
+            except Exception:
+                logger.exception("Failed to save uploaded image")
+
         nparr = np.frombuffer(contents, np.uint8)
         img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if img_cv is None:
@@ -735,6 +750,19 @@ async def process_image(
         contents = await image_file.read()
         if len(contents) > MAX_UPLOAD_BYTES:
             return JSONResponse(status_code=413, content={"message": "File too large"})
+
+        if session_dir:
+            try:
+                orig_fname = os.path.join(
+                    session_dir,
+                    f"{uuid.uuid4().hex}{os.path.splitext(image_file.filename)[1]}{ENC_SUFFIX}",
+                )
+                enc_orig = encrypt_bytes(session_id, contents)
+                with open(orig_fname, "wb") as fh:
+                    fh.write(enc_orig)
+            except Exception:
+                logger.exception("Failed to save uploaded image")
+
         nparr = np.frombuffer(contents, np.uint8)
         img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
@@ -865,6 +893,7 @@ async def process_image(
 
 @app.post("/pdf-to-images/")
 async def pdf_to_images(
+    request: Request,
     pdf_file: UploadFile = File(...),
     threshold: int = Form(95),
     skip_blank: bool = Form(True)
@@ -877,6 +906,18 @@ async def pdf_to_images(
         pdf_bytes = await pdf_file.read()
         if len(pdf_bytes) > MAX_UPLOAD_BYTES:
             return JSONResponse(status_code=413, content={"message": "File too large"})
+
+        session_id = request.cookies.get("session_id")
+        session_dir = get_session_dir(session_id)
+        if session_dir:
+            try:
+                fname = os.path.join(session_dir, f"{uuid.uuid4().hex}.pdf{ENC_SUFFIX}")
+                enc_pdf = encrypt_bytes(session_id, pdf_bytes)
+                with open(fname, "wb") as fh:
+                    fh.write(enc_pdf)
+            except Exception:
+                logger.exception("Failed to save uploaded PDF")
+
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         thr = max(0, min(100, int(threshold))) / 100.0
         images_b64: list[str] = []
