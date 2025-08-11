@@ -51,3 +51,37 @@ window.DC.sign = window.DC.sign || (async function() {
   }
   await fetch(url, { method: 'POST', headers, body });
 });
+
+window.DC.mobileSign = window.DC.mobileSign || (async function() {
+  if (typeof window.startMobileSign === 'function') return window.startMobileSign();
+  const url = window.DC_MOBILE_SIGN_ENDPOINT || window.DC_SIGN_ENDPOINT || '/api/sign/mobile';
+  const headers = { 'X-Requested-With': 'XMLHttpRequest' };
+  let body;
+  if (window.DC_CSRF) {
+    headers['Content-Type'] = 'application/x-www-form-urlencoded';
+    body = new URLSearchParams({ [window.DC_CSRF]: 1 });
+  }
+  await fetch(url, { method: 'POST', headers, body });
+});
+
+window.DC.import = window.DC.import || (async function() {
+  if (typeof window.startImport === 'function') return window.startImport();
+  const url = window.DC_IMPORT_ENDPOINT || '/api/import';
+  const headers = { 'X-Requested-With': 'XMLHttpRequest' };
+  let body;
+  if (window.DC_CSRF) {
+    headers['Content-Type'] = 'application/x-www-form-urlencoded';
+    body = new URLSearchParams({ [window.DC_CSRF]: 1 });
+  }
+  await fetch(url, { method: 'POST', headers, body });
+});
+
+window.DC.guide = window.DC.guide || (function() {
+  const url = window.DC_GUIDE_URL || '/guide';
+  window.open(url, '_blank');
+});
+
+window.DC.donate = window.DC.donate || (function() {
+  const url = window.DC_DONATE_URL || '/donate';
+  window.open(url, '_blank');
+});

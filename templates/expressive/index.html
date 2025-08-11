@@ -26,26 +26,43 @@
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('sign')">Sign</button>
           </li>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('import')">Import</button>
+          </li>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('mobileSign')">Mobile Sign</button>
+          </li>
         </ul>
         <h2 class="px-4 mt-4 text-xs uppercase text-gray-400">Navigation</h2>
         <ul>
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="tab='files'; drawer=false">Files</button>
           </li>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('guide')">Guide</button>
+          </li>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('donate')">Donate</button>
+          </li>
         </ul>
       </nav>
       <div class="p-4 space-y-2">
-        <img src="/static/logos/client_logo.png" alt="Client" class="h-6 mx-auto" />
+        <img src="/static/logos/client_logo.png" alt="IlTuoConsulenteIT" class="h-6 mx-auto" />
         <img src="/static/logos/sponsor_logo.png" alt="Sponsor" class="h-6 mx-auto" />
       </div>
     </div>
 
     <div class="flex-1 flex flex-col transition-all duration-200" :class="drawer ? 'ml-64' : 'ml-0'">
       <!-- Top bar -->
-      <header class="bg-gray-100 p-2 flex items-center shadow">
+      <header class="bg-gray-100 p-2 flex items-center shadow space-x-2">
         <button class="mr-2" @click="drawer=!drawer">☰</button>
-        <img src="/static/logos/app_logo.png" alt="DocCropper" class="h-8 mr-2" />
-        <h1 class="text-xl font-semibold">DocCropper</h1>
+        <img src="/static/logos/app_logo.png" alt="DocCropper" class="h-8" />
+        <img src="/static/logos/client_logo.png" alt="IlTuoConsulenteIT" class="h-8" />
+        <h1 class="text-xl font-semibold flex-1">DocCropper</h1>
+        <select x-model="lang" @change="setLang" class="border rounded p-1 text-sm">
+          <option value="en">EN</option>
+          <option value="it">IT</option>
+        </select>
       </header>
       <!-- Content -->
       <main class="flex-1 p-4" x-cloak>
@@ -74,6 +91,8 @@
           drawer:true,
           tab:'files',
           modal:false,
+          lang: window.DC_LANG || 'en',
+          init(){ this.setLang(); },
           async command(action){
             this.drawer=false;
             switch(action){
@@ -87,7 +106,22 @@
               case 'sign':
                 await window.DC.sign();
                 break;
+              case 'import':
+                await window.DC.import();
+                break;
+              case 'mobileSign':
+                await window.DC.mobileSign();
+                break;
+              case 'guide':
+                window.DC.guide();
+                break;
+              case 'donate':
+                window.DC.donate();
+                break;
             }
+          },
+          setLang(){
+            document.documentElement.lang = this.lang;
           },
           download: () => window.DC.download(),
           sign: () => window.DC.sign()

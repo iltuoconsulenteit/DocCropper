@@ -570,6 +570,9 @@ async def read_root(request: Request):
 
         with open(index_path, "r", encoding="utf-8") as f:
             content = f.read()
+        lang = load_settings().get("language", "en")
+        content = content.replace('<html lang="en">', f'<html lang="{lang}">')
+        content = content.replace('</head>', f'<script>window.DC_LANG="{lang}";</script></head>')
         if CACHE_BUST:
             content = content.replace("styles.css", f"styles.css{CACHE_BUST}")
             content = content.replace("app.js", f"app.js{CACHE_BUST}")
