@@ -136,6 +136,14 @@
           <div id="cp3" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10 touch-none">3</div>
           <div id="cp4" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10 touch-none">4</div>
         </div>
+        <div class="mt-2">
+          <label class="block text-sm" x-text="t('brightness')"></label>
+          <input type="range" min="0" max="200" x-model.number="cropBrightness" class="w-full" />
+        </div>
+        <div class="mt-2">
+          <label class="block text-sm" x-text="t('contrast')"></label>
+          <input type="range" min="0" max="200" x-model.number="cropContrast" class="w-full" />
+        </div>
         <div class="mt-2 text-right space-x-2">
           <button @click="applyCrop" class="bg-blue-500 text-white px-3 py-1 rounded" x-text="t('apply')"></button>
           <button @click="closeCrop" class="bg-gray-300 px-3 py-1 rounded" x-text="t('cancel')"></button>
@@ -203,7 +211,9 @@
             licenseFree:'Free',
             licensePro:'Pro',
             licenseFull:'Full',
-            licenseSaved:'License saved'
+            licenseSaved:'License saved',
+            brightness:'Brightness',
+            contrast:'Contrast'
           },
           it:{
             commands:'Comandi',
@@ -235,7 +245,9 @@
             licenseFree:'Gratis',
             licensePro:'Pro',
             licenseFull:'Completa',
-            licenseSaved:'Licenza salvata'
+            licenseSaved:'Licenza salvata',
+            brightness:'Luminosità',
+            contrast:'Contrasto'
           }
         };
         const DEFAULT_PAYPAL = 'https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY';
@@ -255,6 +267,8 @@
           scalingW:1,
           scalingH:1,
           currentPoints:[],
+          cropBrightness:100,
+          cropContrast:100,
           files:[],
           clientLogo:null,
           sponsorLogo:null,
@@ -456,6 +470,8 @@
           remove(idx){ this.files.splice(idx,1); this.$nextTick(()=>this.initSortable()); },
           crop(idx){
             this.cropIndex = idx;
+            this.cropBrightness = 100;
+            this.cropContrast = 100;
             this.cropModal = true;
             this.$nextTick(()=>{
               const img = this.$refs.cropImg;
@@ -563,8 +579,8 @@
             fd.append('points',JSON.stringify(scaled));
             fd.append('original_width',Math.round(this.origW));
             fd.append('original_height',Math.round(this.origH));
-            fd.append('brightness',100);
-            fd.append('contrast',100);
+            fd.append('brightness',this.cropBrightness);
+            fd.append('contrast',this.cropContrast);
             fetch('/process-image/',{method:'POST',body:fd})
               .then(r=>r.json())
               .then(d=>{ if(d.processed_image){ this.files[this.cropIndex].url=d.processed_image; this.files[this.cropIndex].original=d.processed_image; } })
