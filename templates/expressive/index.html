@@ -155,35 +155,47 @@
     </div>
 
     <!-- Sign Modal -->
-    <div x-show="signModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;">
-      <div style="background:white;padding:16px;border-radius:8px;">
-        <div style="display:flex;gap:16px;">
-          <div style="position:relative;" x-ref="signWrap">
-            <img x-ref="signImg" :src="files[signIndex]?.url" @dblclick.stop="addSignature($event)" style="max-width:100%;max-height:70vh;cursor:crosshair;" />
+    <div x-show="signModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded">
+        <div class="flex gap-4">
+          <div class="relative" x-ref="signWrap">
+            <img x-ref="signImg" :src="files[signIndex]?.url" @dblclick.stop="addSignature($event)" class="max-w-full max-h-[70vh] cursor-crosshair" />
             <template x-for="(sig,i) in signatures.filter(s=>s.page===signIndex)" :key="i">
-              <img :id="'sig'+i" :src="signatureImageData" style="position:absolute;cursor:move;" @mousedown.stop="selectSig(i)">
+              <img :id="'sig'+i" :src="signatureImageData" class="absolute cursor-move" @mousedown.stop="selectSig(i)">
             </template>
-            <div style="margin-top:8px;display:flex;align-items:center;gap:8px;font-size:12px;">
+            <div class="mt-2 flex items-center gap-2 text-xs">
               <label x-text="t('scale')"></label>
-              <input type="range" min="0.5" max="2" step="0.1" x-model.number="sigScale" @input="updateScale" style="width:128px;">
+              <input type="range" min="0.5" max="2" step="0.1" x-model.number="sigScale" @input="updateScale" class="w-32">
             </div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:8px;width:160px;font-size:12px;">
-            <input type="file" accept="image/*" @change="loadSignature" style="font-size:12px;">
-            <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" x-model="removeSigBg" @change="window.removeSignatureBackground = removeSigBg"><span x-text="t('removeBg')"></span></label>
-            <div style="border-top:1px solid #ccc;padding-top:8px;display:flex;flex-direction:column;gap:4px;">
+          <div class="flex flex-col space-y-2 w-40 text-xs">
+            <input type="file" accept="image/*" @change="loadSignature" class="text-xs">
+            <button @click="drawModal=true" class="px-2 py-1 bg-gray-200 rounded" x-text="t('draw') || 'Draw'"></button>
+            <label class="flex items-center gap-1"><input type="checkbox" x-model="removeSigBg" @change="window.removeSignatureBackground = removeSigBg"><span x-text="t('removeBg')"></span></label>
+            <div class="border-t pt-2 space-y-1">
               <template x-for="(sig,i) in signatures.filter(s=>s.page===signIndex)" :key="'list'+i">
-                <div style="display:flex;align-items:center;justify-content:space-between;">
-                  <button @click="selectSig(i)" style="padding:0 4px;" :style="activeSig===i ? 'font-weight:bold;' : ''">#<span x-text="i+1"></span></button>
-                  <button @click="removeSig(i)" style="color:#e02424;">✖</button>
+                <div class="flex items-center justify-between">
+                  <button @click="selectSig(i)" class="px-1" :class="{'font-bold': activeSig===i}">#<span x-text="i+1"></span></button>
+                  <button @click="removeSig(i)" class="text-red-500">✖</button>
                 </div>
               </template>
             </div>
-            <div style="margin-top:auto;text-align:right;">
-              <button @click="saveSignModal" style="background:#3b82f6;color:white;padding:4px 8px;border-radius:4px;margin-right:4px;" x-text="t('apply')"></button>
-              <button @click="closeSign" style="background:#d1d5db;padding:4px 8px;border-radius:4px;" x-text="t('cancel')"></button>
+            <div class="mt-auto text-right space-x-2">
+              <button @click="saveSignModal" class="bg-blue-500 text-white px-2 py-1 rounded" x-text="t('apply')"></button>
+              <button @click="closeSign" class="bg-gray-300 px-2 py-1 rounded" x-text="t('cancel')"></button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Draw Modal -->
+    <div x-show="drawModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded">
+        <canvas x-ref="drawCanvas" width="300" height="150" class="border" @mousedown="startDraw($event)" @mousemove="moveDraw($event)" @mouseup="endDraw" @mouseleave="endDraw" @touchstart.prevent="startDraw($event)" @touchmove.prevent="moveDraw($event)" @touchend="endDraw"></canvas>
+        <div class="mt-2 flex justify-end gap-2 text-sm">
+          <button @click="clearDraw" class="px-2 py-1 bg-gray-200 rounded" x-text="t('clear') || 'Clear'"></button>
+          <button @click="useDraw" class="px-2 py-1 bg-blue-500 text-white rounded" x-text="t('apply')"></button>
         </div>
       </div>
     </div>
@@ -341,6 +353,9 @@
           lastTap:0,
           files:[],
           signModal:false,
+          drawModal:false,
+          drawing:false,
+          lastPoint:null,
           signIndex:null,
           signatureImageData:null,
           signatures:[],
@@ -672,6 +687,41 @@
             if(this.activeSig===i) this.activeSig=null;
             else if(this.activeSig>i) this.activeSig--;
             this.renderSignatures();
+          },
+          getDrawPos(e){
+            const rect=this.$refs.drawCanvas.getBoundingClientRect();
+            const x=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
+            const y=(e.touches?e.touches[0].clientY:e.clientY)-rect.top;
+            return {x,y};
+          },
+          startDraw(e){ this.drawing=true; this.lastPoint=this.getDrawPos(e); },
+          moveDraw(e){
+            if(!this.drawing) return;
+            const ctx=this.$refs.drawCanvas.getContext('2d');
+            const p=this.getDrawPos(e);
+            ctx.beginPath();
+            ctx.moveTo(this.lastPoint.x,this.lastPoint.y);
+            ctx.lineTo(p.x,p.y);
+            ctx.stroke();
+            this.lastPoint=p;
+          },
+          endDraw(){ this.drawing=false; },
+          clearDraw(){
+            const c=this.$refs.drawCanvas;
+            c.getContext('2d').clearRect(0,0,c.width,c.height);
+          },
+          useDraw(){
+            const data=this.$refs.drawCanvas.toDataURL('image/png');
+            this.signatureImageData=data;
+            window.signatureImageData=data;
+            const img=new Image();
+            img.onload=()=>{
+              this.signatureAspect=img.height/img.width;
+              window.signatureAspect=this.signatureAspect;
+              this.renderSignatures();
+            };
+            img.src=data;
+            this.drawModal=false;
           },
           saveSignModal(){
             this.signModal=false;
