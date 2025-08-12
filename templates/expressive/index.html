@@ -584,6 +584,7 @@
             const rect = this.$refs.signImg.getBoundingClientRect();
             const x = (ev.clientX - rect.left) / rect.width;
             const y = (ev.clientY - rect.top) / rect.height;
+            console.debug('addSignature dblclick', { page: this.signIndex, clientX: ev.clientX, clientY: ev.clientY, x, y });
             const sig = {page:this.signIndex, x, y, scale:this.sigScale};
             this.signatures.push(sig);
             window.signatures = this.signatures;
