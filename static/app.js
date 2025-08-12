@@ -2328,6 +2328,9 @@ window.addEventListener('signedPdfAvailable', (e) => {
         signedPdfFrame.src = url;
         signedPdfFrame.style.display = 'block';
     }
+    if (e.detail.hash) {
+        window.lastPdfHash = e.detail.hash;
+    }
     statusMessageElement.textContent = translations['pdfReady'] || 'PDF ready.';
     if (window.lastSignPhone) shareWhatsAppLink(window.lastSignPhone, url);
     if (window.lastSignEmail) shareEmailLink(window.lastSignEmail, url);

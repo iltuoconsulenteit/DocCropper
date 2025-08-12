@@ -271,11 +271,21 @@ def register(app, utils):
                 const r=await fetch('/store-signed-pdf/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pdf:data})});
                 if(r.ok){
                     const d=await r.json();
-                    if(d.url){
+                    if(d.url&&d.hash){
+                        try{
+                            const fr=await fetch(d.url);
+                            const buf=await fr.arrayBuffer();
+                            const digest=await crypto.subtle.digest('SHA-256',buf);
+                            const hash=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+                            if(hash!==d.hash){
+                                finishMsg.textContent='Hash mismatch';
+                                return;
+                            }
+                        }catch{}
                         pdfLink.href=d.url;
                         pdfLink.textContent='Download PDF';
                         pdfLink.style.display='block';
-                        finishMsg.textContent='Signatures sent. Download your PDF:';
+                        finishMsg.textContent='Signatures sent. SHA256: '+d.hash;
                         if(waPdfBtn){
                             waPdfBtn.onclick=()=>{
                                 const p=(phoneInput.value||'').replace(/[^0-9]/g,'');
@@ -460,8 +470,6 @@ def register(app, utils):
         email = info.get('email', '')
         phone = info.get('phone', '')
         consent = info.get('consent', False)
-        hash_hex = hashlib.sha256(pdf_bytes).hexdigest()
-        legal = f"Firmato elettronicamente in data {ts} da {name} con firma elettronica semplice ai sensi del Regolamento eIDAS(UE 910/2014). IP: {ip} | Email: {email} | SHA256: {hash_hex}"
         try:
             doc = fitz.open(stream=pdf_bytes, filetype='pdf')
             # Reapply recorded signatures to guarantee the server copy is signed
@@ -483,6 +491,21 @@ def register(app, utils):
                     page.insert_image(fitz.Rect(x0, y0, x0 + w, y0 + h), filename=img_path)
                 except Exception:
                     continue
+            doc_bytes = doc.tobytes(
+                clean=True,
+                garbage=4,
+                deflate=True,
+                deflate_images=True,
+                deflate_fonts=True,
+            )
+            doc.close()
+        except Exception:
+            logging.exception('Failed to reapply signatures')
+            doc_bytes = pdf_bytes
+        content_hash = hashlib.sha256(doc_bytes).hexdigest()
+        legal = f"Firmato elettronicamente in data {ts} da {name} con firma elettronica semplice ai sensi del Regolamento eIDAS(UE 910/2014). IP: {ip} | Email: {email} | SHA256: {content_hash}"
+        try:
+            doc = fitz.open(stream=doc_bytes, filetype='pdf')
             try:
                 page = doc[-1]
                 rect = fitz.Rect(50, page.rect.height - 40, page.rect.width - 50, page.rect.height - 10)
@@ -491,7 +514,7 @@ def register(app, utils):
                 pass
             try:
                 info_page = doc.new_page()
-                text = f"Nome: {name}\nEmail: {email}\nTelefono: {phone}\nData: {ts}\nSHA256: {hash_hex}\nConsenso: {consent}"
+                text = f"Nome: {name}\nEmail: {email}\nTelefono: {phone}\nData: {ts}\nSHA256: {content_hash}\nConsenso: {consent}"
                 info_rect = fitz.Rect(50,50, info_page.rect.width-50, info_page.rect.height-50)
                 info_page.insert_textbox(info_rect, text, fontsize=12, align=0)
             except Exception:
@@ -506,6 +529,7 @@ def register(app, utils):
             doc.close()
         except Exception:
             logging.exception('Failed to append legal text')
+            pdf_bytes = doc_bytes
         hash_hex = hashlib.sha256(pdf_bytes).hexdigest()
         pdf_path = os.path.join(signatures_dir, f'signed_{token}.pdf')
         with open(pdf_path, 'wb') as fh:
@@ -514,12 +538,14 @@ def register(app, utils):
         info['pdf_file'] = pdf_path
         info['pdf_url'] = str(url)
         info['pdf_hash'] = hash_hex
+        info['content_hash'] = content_hash
         with open(info_path, 'w') as fh:
             json.dump(info, fh)
         log_entry = {
             'token': token,
             'pdf_file': os.path.basename(pdf_path),
             'hash': hash_hex,
+            'content_hash': content_hash,
             'timestamp': ts,
             'ip': ip,
             'user_agent': request.headers.get('user-agent', ''),
@@ -531,8 +557,8 @@ def register(app, utils):
         with open(os.path.join('log_firme', f'firma_{token}.json'), 'w') as fh:
             json.dump(log_entry, fh, indent=2)
         if email:
-            send_mail(email, 'Documento firmato', f'SHA256: {hash_hex}', pdf_path)
-        return {'status': 'ok', 'url': str(url), 'email': email, 'phone': phone}
+            send_mail(email, 'Documento firmato', f'SHA256: {content_hash}', pdf_path)
+        return {'status': 'ok', 'url': str(url), 'hash': hash_hex, 'email': email, 'phone': phone}
 
     @app.get('/signed-pdf/{token}')
     async def signed_pdf(request: Request, token: str):
@@ -551,9 +577,9 @@ def register(app, utils):
                 return JSONResponse(status_code=202, content={'message': 'Pending'})
             url = request.url_for('download_signed_pdf', token=token)
             result['url'] = str(url)
-        for key in ('name', 'email', 'phone'):
+        for key in ('name', 'email', 'phone', 'pdf_hash'):
             if key in info:
-                result[key] = info[key]
+                result[key if key != 'pdf_hash' else 'hash'] = info[key]
         return result
 
     @app.get('/download-signed/{token}.pdf', name='download_signed_pdf')
