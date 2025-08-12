@@ -527,7 +527,13 @@
             this.signatureImageData = window.signatureImageData || null;
             this.signatureAspect = window.signatureAspect || this.signatureAspect;
             this.signModal = true;
-            this.$nextTick(()=>this.renderSignatures());
+            this.$nextTick(() => {
+              if(!this.signatureImageData){
+                const inp = this.$el.querySelector('input[type=file]');
+                if(inp) inp.click();
+              }
+              this.renderSignatures();
+            });
           },
           loadSignature(e){
             const file = e.target.files[0];
