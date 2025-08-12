@@ -86,10 +86,10 @@
           <template x-if="files.length === 0">
             <p class="text-gray-600" x-text="t('noFiles')"></p>
           </template>
-          <div x-show="files.length > 0" x-ref="fileGrid" class="grid grid-cols-2 gap-2">
+          <div x-show="files.length > 0" x-ref="fileGrid" class="grid grid-cols-1 md:grid-cols-2 gap-2">
             <template x-for="(file, idx) in files" :key="file.id">
               <div class="border p-1 relative">
-                <img :src="file.url" :alt="file.name" class="w-full h-32 object-contain cursor-pointer" @click="view(file.url)" />
+                <img :src="file.url" :alt="file.name" class="w-full h-48 md:h-40 object-contain cursor-pointer" @click="view(file.url)" />
                 <div class="absolute top-0 left-0 right-0 flex justify-between bg-white/70 p-1">
                   <button @click="crop(idx)" title="Crop" class="text-xs">✂</button>
                   <button @click="remove(idx)" title="Delete" class="text-xs">✖</button>
@@ -145,6 +145,20 @@
         <div class="mt-2 text-right space-x-2">
           <button @click="applyCrop" class="bg-blue-500 text-white px-3 py-1 rounded" x-text="t('apply')"></button>
           <button @click="closeCrop" class="bg-gray-300 px-3 py-1 rounded" x-text="t('cancel')"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sign Modal -->
+    <div x-show="signModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded">
+        <div class="relative inline-block">
+          <img x-ref="signImg" :src="files[signIndex]?.url" @click="setSignPos" class="max-w-full max-h-[75vh] cursor-crosshair" />
+          <div x-show="signPos" class="absolute w-4 h-4 bg-green-500 rounded-full transform -translate-x-1/2 -translate-y-1/2" :style="`left:${signPos.x}px;top:${signPos.y}px`"></div>
+        </div>
+        <div class="mt-2 text-right space-x-2">
+          <button @click="applySign" class="bg-blue-500 text-white px-3 py-1 rounded" x-text="t('apply')"></button>
+          <button @click="closeSign" class="bg-gray-300 px-3 py-1 rounded" x-text="t('cancel')"></button>
         </div>
       </div>
     </div>
@@ -269,6 +283,9 @@
           cropContrast:100,
           lastTap:0,
           files:[],
+          signModal:false,
+          signIndex:null,
+          signPos:null,
           clientLogo:null,
           sponsorLogo:null,
           donateLink:null,
@@ -392,7 +409,7 @@
                   const pdf = await pdfjsLib.getDocument(URL.createObjectURL(f)).promise;
                   for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
-                    const viewport = page.getViewport({ scale: 1 });
+                    const viewport = page.getViewport({ scale: 2 });
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     canvas.width = viewport.width;
@@ -462,8 +479,32 @@
             img.src=this.files[idx].original;
           },
           signPage(idx){
-            if(typeof window.openSignatureForPage==='function') return window.openSignatureForPage(idx);
-            if(window.DC && typeof window.DC.sign==='function') return window.DC.sign();
+            this.signIndex = idx;
+            this.signPos = null;
+            this.signModal = true;
+          },
+          setSignPos(e){
+            const rect = this.$refs.signImg.getBoundingClientRect();
+            const x = e.offsetX;
+            const y = e.offsetY;
+            this.signPos = { x, y, relX: x / rect.width, relY: y / rect.height };
+          },
+          applySign(){
+            if(this.signPos){
+              if(typeof window.openSignatureForPage==='function'){
+                window.openSignatureForPage(this.signIndex, this.signPos.relX, this.signPos.relY);
+              }else if(window.DC && typeof window.DC.sign==='function'){
+                window.DC.sign({page:this.signIndex, x:this.signPos.relX, y:this.signPos.relY});
+              }
+            }else if(window.DC && typeof window.DC.sign==='function'){
+              window.DC.sign({page:this.signIndex});
+            }
+            this.closeSign();
+          },
+          closeSign(){
+            this.signModal=false;
+            this.signPos=null;
+            this.signIndex=null;
           },
           view(url){ this.viewUrl=url; this.viewModal=true; },
           remove(idx){ this.files.splice(idx,1); this.$nextTick(()=>this.initSortable()); },
@@ -585,7 +626,7 @@
             fd.append('contrast',this.cropContrast);
             fetch('/process-image/',{method:'POST',body:fd})
               .then(r=>r.json())
-              .then(d=>{ if(d.processed_image){ this.files[this.cropIndex].url=d.processed_image; this.files[this.cropIndex].original=d.processed_image; } })
+              .then(d=>{ if(d.processed_image){ this.files[this.cropIndex].url=d.processed_image; this.files[this.cropIndex].original=d.processed_image; this.files=[...this.files]; } })
               .finally(()=>{ this.closeCrop(); });
           },
           initSortable(){

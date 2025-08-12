@@ -172,12 +172,18 @@ def register(app, utils: dict[str, Any]):
                     content={"message": "Could not compute perspective transform. Check point alignment."},
                 )
 
-            warped_image = cv2.warpPerspective(img_cv, matrix, (max_width, max_height))
-            kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
-            sharpened_image = cv2.filter2D(warped_image, -1, kernel)
+            warped_image = cv2.warpPerspective(
+                img_cv,
+                matrix,
+                (max_width, max_height),
+                flags=cv2.INTER_LANCZOS4,
+                borderMode=cv2.BORDER_REPLICATE,
+            )
             b_factor = max(0, brightness) / 100.0
             c_factor = max(0, contrast) / 100.0
-            adjusted = cv2.convertScaleAbs(sharpened_image, alpha=c_factor, beta=int((b_factor - 1) * 255))
+            adjusted = cv2.convertScaleAbs(
+                warped_image, alpha=c_factor, beta=int((b_factor - 1) * 255)
+            )
 
             success, img_encoded_buffer = cv2.imencode(".png", adjusted)
             if not success:
