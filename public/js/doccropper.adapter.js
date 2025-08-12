@@ -72,9 +72,9 @@ window.DC.download = window.DC.download || (async function () {
 });
 
 window.DC.sign = window.DC.sign || (async function () {
+  if (typeof window.startSign === 'function') return window.startSign();
   if (typeof window.openSignatureForPage === 'function') return window.openSignatureForPage(0);
   if (typeof window.startMobileSign === 'function') return window.startMobileSign();
-  if (typeof window.startSign === 'function') return window.startSign();
   const btn = document.getElementById('signBtn') || document.getElementById('mobileSignBtn');
   if (btn) { btn.click(); return; }
   const url = window.DC_SIGN_ENDPOINT || '/api/sign';

@@ -433,11 +433,7 @@
                 await window.DC.download();
                 break;
               case 'sign':
-                if(this.files.length>0){
-                  this.signPage(0);
-                } else {
-                  await window.DC.sign();
-                }
+                await window.DC.sign();
                 break;
               case 'import':
                 await window.DC.import();
