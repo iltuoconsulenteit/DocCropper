@@ -737,6 +737,7 @@ async def create_pdf(
     scale_percent: int = Body(100),
     color_mode: str = Body("color"),
     signature_image: str | None = Body(None),
+    remove_signature_bg: bool = Body(True),
     signatures: list[dict] = Body(default_factory=list),
     sign_info: dict | None = Body(default_factory=dict)
 ):
@@ -787,10 +788,11 @@ async def create_pdf(
                 sig_b64 = signature_image.split(',', 1)[1] if signature_image.startswith('data:') else signature_image
                 sig_bytes = base64.b64decode(sig_b64)
                 sig_img = Image.open(io.BytesIO(sig_bytes)).convert('RGBA')
-                arr = np.array(sig_img)
-                white = (arr[:, :, :3] > 240).all(axis=2)
-                arr[white, 3] = 0
-                sig_img = Image.fromarray(arr)
+                if remove_signature_bg:
+                    arr = np.array(sig_img)
+                    white = (arr[:, :, :3] > 240).all(axis=2)
+                    arr[white, 3] = 0
+                    sig_img = Image.fromarray(arr)
             except Exception:
                 logger.exception('Failed to decode signature image')
 

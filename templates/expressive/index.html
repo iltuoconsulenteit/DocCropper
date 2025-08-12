@@ -90,16 +90,14 @@
             <template x-for="(file, idx) in files" :key="file.id">
               <div class="border p-1 relative">
                 <img :src="file.url" :alt="file.name" class="w-full h-48 md:h-40 object-contain cursor-pointer" @click="view(file.url)" />
-                <div class="absolute top-0 left-0 right-0 flex justify-between bg-white/70 p-1">
-                  <button @click="crop(idx)" title="Crop" class="text-xs">✂</button>
-                  <button @click="remove(idx)" title="Delete" class="text-xs">✖</button>
-                </div>
                 <div class="absolute bottom-0 left-0 right-0 flex justify-center gap-1 bg-white/70 p-1">
+                  <button @click="crop(idx)" title="Crop" class="text-xs">✂</button>
                   <button @click="rotate(idx)" title="Rotate" class="text-xs">↻</button>
                   <button @click="toGray(idx)" title="Gray" class="text-xs">🌑</button>
                   <button @click="toBW(idx)" title="B/W" class="text-xs">⬛</button>
                   <button @click="toColor(idx)" title="Color" class="text-xs">🎨</button>
                   <button @click="signPage(idx)" title="Sign" class="text-xs">✒</button>
+                  <button @click="remove(idx)" title="Delete" class="text-xs">✖</button>
                 </div>
                 <p class="text-xs text-center truncate" x-text="file.name"></p>
               </div>
@@ -161,6 +159,7 @@
           </div>
           <div class="space-y-2 w-48">
             <input type="file" accept="image/*" @change="loadSignature">
+            <label class="flex items-center gap-1 text-sm"><input type="checkbox" x-model="removeSigBg" @change="window.removeSignatureBackground = removeSigBg"><span x-text="t('removeBg')"></span></label>
             <div>
               <label class="text-sm" x-text="t('scale')"></label>
               <input type="range" min="0.5" max="2" step="0.1" x-model.number="sigScale" @input="updateScale" class="w-full">
@@ -241,7 +240,8 @@
             brightness:'Brightness',
             contrast:'Contrast',
             scale:'Scale',
-            delete:'Delete'
+            delete:'Delete',
+            removeBg:'Remove BG'
           },
           it:{
             commands:'Comandi',
@@ -277,7 +277,8 @@
             brightness:'Luminosità',
             contrast:'Contrasto',
             scale:'Scala',
-            delete:'Elimina'
+            delete:'Elimina',
+            removeBg:'Rimuovi sfondo'
           }
         };
         const DEFAULT_PAYPAL = 'https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY';
@@ -305,6 +306,7 @@
           signIndex:null,
           signatureImageData:null,
           signatures:[],
+          removeSigBg:true,
           sigScale:1,
           activeSig:null,
           signatureAspect:1,
@@ -341,6 +343,7 @@
             if (window['pdfjsLib']) {
               pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js';
             }
+            window.removeSignatureBackground = this.removeSigBg;
             this.setLang();
             const mq = window.matchMedia('(min-width:768px)');
             this.pinned = false;
@@ -513,11 +516,32 @@
             if(!file) return;
             const reader = new FileReader();
             reader.onload = ev => {
-              this.signatureImageData = ev.target.result;
-              window.signatureImageData = this.signatureImageData;
-              const img = new Image();
-              img.onload = ()=>{ this.signatureAspect = img.height / img.width; this.renderSignatures(); };
-              img.src = this.signatureImageData;
+              const base = ev.target.result;
+              if(this.removeSigBg){
+                const img = new Image();
+                img.onload = () => {
+                  const c = document.createElement('canvas');
+                  c.width = img.width; c.height = img.height;
+                  const ctx = c.getContext('2d');
+                  ctx.drawImage(img,0,0);
+                  const data = ctx.getImageData(0,0,c.width,c.height);
+                  for(let i=0;i<data.data.length;i+=4){
+                    if(data.data[i]>240 && data.data[i+1]>240 && data.data[i+2]>240){ data.data[i+3]=0; }
+                  }
+                  ctx.putImageData(data,0,0);
+                  this.signatureImageData = c.toDataURL('image/png');
+                  window.signatureImageData = this.signatureImageData;
+                  this.signatureAspect = img.height / img.width;
+                  this.renderSignatures();
+                };
+                img.src = base;
+              } else {
+                this.signatureImageData = base;
+                window.signatureImageData = this.signatureImageData;
+                const img = new Image();
+                img.onload = ()=>{ this.signatureAspect = img.height / img.width; this.renderSignatures(); };
+                img.src = this.signatureImageData;
+              }
             };
             reader.readAsDataURL(file);
             e.target.value='';
@@ -525,8 +549,8 @@
           addSignature(ev){
             if(!this.signatureImageData) return;
             const rect = this.$refs.signImg.getBoundingClientRect();
-            const x = ev.offsetX / rect.width;
-            const y = ev.offsetY / rect.height;
+            const x = (ev.clientX - rect.left) / rect.width;
+            const y = (ev.clientY - rect.top) / rect.height;
             const sig = {page:this.signIndex, x, y, scale:this.sigScale};
             this.signatures.push(sig);
             window.signatures = this.signatures;

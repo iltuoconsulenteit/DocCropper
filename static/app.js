@@ -1706,7 +1706,7 @@ function generatePdf() {
     const arrangement = arrangeSelect.value || 'auto';
     const scale_mode = scaleMode.value || 'fit';
     const scale_percent = parseInt(scalePercent.value || '100');
-    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures };
+    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures, remove_signature_bg: window.removeSignatureBackground !== false };
     if (window.lastSignEmail || window.lastSignPhone || window.lastSignName) {
         payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
     }
