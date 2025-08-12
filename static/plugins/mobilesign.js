@@ -13,7 +13,6 @@ export function initSignaturePlugin(translations, enabled = true) {
     const detailsPhone = document.getElementById('mobilePhoneInput');
     const detailsStart = document.getElementById('mobileDetailsStart');
     const detailsCancel = document.getElementById('mobileDetailsCancel');
-    const signaturePage = document.getElementById('signaturePage');
     window.lastSignToken = '';
 
     if (!enabled) {
@@ -60,18 +59,8 @@ export function initSignaturePlugin(translations, enabled = true) {
                 alert(translations['noFiles'] || 'No files available.');
                 return;
             }
-            if (signaturePage && signaturePage.options.length === 0) {
-                signaturePage.innerHTML = '';
-                for (let i = 0; i < images.length; i++) {
-                    const opt = document.createElement('option');
-                    opt.value = i;
-                    opt.textContent = (i + 1).toString();
-                    signaturePage.appendChild(opt);
-                }
-            }
-            const page = parseInt(signaturePage?.value || '0');
-            const payload = { page, images };
-            payload.image = images[page];
+            const payload = { page: 0, images };
+            payload.image = images[0];
             if (window.mobileSignPoints && Object.keys(window.mobileSignPoints).length) {
                 payload.points = window.mobileSignPoints;
             }
@@ -133,7 +122,18 @@ export function initSignaturePlugin(translations, enabled = true) {
     if (copySignLink) {
         copySignLink.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (signQrLink) navigator.clipboard.writeText(signQrLink.href);
+            if (!signQrLink) return;
+            const text = signQrLink.href;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text);
+            } else {
+                const tmp = document.createElement('textarea');
+                tmp.value = text;
+                document.body.appendChild(tmp);
+                tmp.select();
+                document.execCommand('copy');
+                document.body.removeChild(tmp);
+            }
         });
     }
     if (waSignLink) {

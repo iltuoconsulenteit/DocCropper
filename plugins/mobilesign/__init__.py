@@ -108,7 +108,8 @@ def register(app, utils):
         <button id='waPdfBtn' style='display:none;margin-left:10px;'>WhatsApp</button>
         <button id='emailPdfBtn' style='display:none;margin-left:10px;'>Email</button>
         <p>Tap the document then draw your signature</p>
-        <select id='pageSelect' style='margin-top:10px'></select>
+        <label for='pageSelect' style='display:block;margin-top:10px;'>Page:</label>
+        <select id='pageSelect' style='margin-top:4px'></select>
         <div id='container'>
             <img id='docImg' src='{img}' alt='doc'>
             <canvas id='overlay'></canvas>
