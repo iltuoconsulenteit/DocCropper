@@ -925,17 +925,18 @@ async function shareWhatsApp(phone) {
     }
     phone = phone ? phone.replace(/[^0-9]/g, '') : '';
     const url = window.lastSignedUrl || URL.createObjectURL(currentPdfBlob);
-    const wa = phone ?
-        `https://wa.me/${phone}?text=${encodeURIComponent(url)}` :
-        `https://wa.me/?text=${encodeURIComponent(url)}`;
+    const params = new URLSearchParams({ text: url });
+    if (phone) params.set('phone', phone);
+    const wa = `https://web.whatsapp.com/send?${params.toString()}`;
     window.open(wa, '_blank');
 }
 
 function shareWhatsAppLink(phone, link) {
     if (!link) return;
     phone = phone ? phone.replace(/[^0-9]/g, '') : '';
-    const wa = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(link)}` :
-        `https://wa.me/?text=${encodeURIComponent(link)}`;
+    const params = new URLSearchParams({ text: link });
+    if (phone) params.set('phone', phone);
+    const wa = `https://web.whatsapp.com/send?${params.toString()}`;
     window.open(wa, '_blank');
 }
 
@@ -2154,6 +2155,8 @@ function addCurrentSignature() {
         mobileSignPoints[page].push({ x: signaturePosition.x, y: signaturePosition.y });
     } else {
         signatures.push({ page, x: signaturePosition.x, y: signaturePosition.y, scale: signatureScale });
+        const pageSigs = signatures.filter(s => s.page === page);
+        scaleTarget = (pageSigs.length - 1).toString();
     }
     const OFFSET = 0.05;
     signaturePosition.x += OFFSET;

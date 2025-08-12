@@ -240,7 +240,9 @@ def register(app, utils):
                         if(waPdfBtn){
                             waPdfBtn.onclick=()=>{
                                 const p=(d.phone||'').replace(/[^0-9]/g,'');
-                                const u=p?`https://wa.me/${p}?text=${encodeURIComponent(d.url)}`:`https://wa.me/?text=${encodeURIComponent(d.url)}`;
+                                const params=new URLSearchParams({text:d.url});
+                                if(p) params.set('phone',p);
+                                const u=`https://web.whatsapp.com/send?${params.toString()}`;
                                 window.open(u,'_blank');
                             };
                             waPdfBtn.style.display='inline';

@@ -134,6 +134,13 @@ export function initSignaturePlugin(translations, enabled = true) {
                 document.execCommand('copy');
                 document.body.removeChild(tmp);
             }
+            const original = copySignLink.textContent;
+            copySignLink.style.background = '#4ade80';
+            copySignLink.textContent = translations['copied'] || 'Copied!';
+            setTimeout(() => {
+                copySignLink.style.background = '#e5e7eb';
+                copySignLink.textContent = original;
+            }, 1200);
         });
     }
     if (waSignLink) {
@@ -141,8 +148,9 @@ export function initSignaturePlugin(translations, enabled = true) {
             e.stopPropagation();
             const url = signQrLink ? signQrLink.href : '';
             const phone = window.lastSignPhone ? window.lastSignPhone.replace(/[^0-9]/g, '') : '';
-            const wa = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(url)}` :
-                `https://wa.me/?text=${encodeURIComponent(url)}`;
+            const params = new URLSearchParams({ text: url });
+            if (phone) params.set('phone', phone);
+            const wa = `https://web.whatsapp.com/send?${params.toString()}`;
             window.open(wa, '_blank');
         });
     }
