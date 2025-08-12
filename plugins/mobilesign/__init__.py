@@ -123,7 +123,7 @@ def register(app, utils):
             </label>
             <button id='finish'>Finish</button>
         </div>
-        <div style='margin-top:20px;'><img src='/static/logos/footer_logo.png' style='max-width:120px' alt='IlTuoConsulenteIT'></div>
+        <div style='margin-top:20px;'><img src='/static/logos/footer_logo.png' style='max-height:20px' alt='IlTuoConsulenteIT'></div>
         <script>
         const padEl=document.getElementById('pad');
         const overlay=document.getElementById('overlay');
@@ -140,8 +140,15 @@ def register(app, utils):
         const scaleInput=document.getElementById('scaleRange');
         const container=document.getElementById('container');
         let scale=1;
+        let activeSign=null;
         if(scaleInput){
-            scaleInput.oninput=()=>{ scale=parseFloat(scaleInput.value); };
+            scaleInput.oninput=()=>{
+                scale=parseFloat(scaleInput.value);
+                if(activeSign){
+                    activeSign.scale=scale;
+                    positionAllSigns();
+                }
+            };
         }
         const images={images_json};
         const spots={spots_json};
@@ -197,6 +204,9 @@ def register(app, utils):
             let sx=0, sy=0, dragging=false;
             el.addEventListener('pointerdown',e=>{
                 dragging=true; sx=e.clientX; sy=e.clientY; el.setPointerCapture(e.pointerId);
+                activeSign=s;
+                if(scaleInput){ scaleInput.value=s.scale; }
+                scale=s.scale;
             });
             el.addEventListener('pointermove',e=>{
                 if(!dragging) return; const dx=e.clientX-sx; const dy=e.clientY-sy; const left=parseFloat(el.style.left)+dx; const top=parseFloat(el.style.top)+dy; el.style.left=left+'px'; el.style.top=top+'px'; const rect=docImg.getBoundingClientRect(); s.x=(left+el.offsetWidth/2)/rect.width; s.y=(top+el.offsetHeight/2)/rect.height; sx=e.clientX; sy=e.clientY;
@@ -220,6 +230,8 @@ def register(app, utils):
             pad.clear();
             padEl.style.display='none';
             drawSpots();
+            activeSign=sign;
+            if(scaleInput){ scaleInput.value=sign.scale; }
             return true;
         }
         submitBtn.onclick=placeCurrent;
