@@ -129,20 +129,18 @@
     <div x-show="cropModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
       <div class="bg-white p-4 rounded">
         <div id="cropWrapper" class="relative inline-block">
-          <img x-ref="cropImg" class="max-w-full max-h-[75vh]" :style="`filter:brightness(${cropBrightness}%) contrast(${cropContrast}%)`" />
+          <img x-ref="cropImg" @click="cropTap" class="max-w-full max-h-[75vh] cursor-crosshair" :style="`filter:brightness(${cropBrightness}%) contrast(${cropContrast}%)`" />
           <svg x-ref="cropSvg" class="absolute inset-0 pointer-events-none"><path x-ref="cropPath" fill-rule="evenodd" fill="rgba(0,0,0,0.5)" stroke="red" stroke-width="1"/></svg>
           <div id="cp1" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10 touch-none">1</div>
           <div id="cp2" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10 touch-none">2</div>
           <div id="cp3" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10 touch-none">3</div>
           <div id="cp4" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10 touch-none">4</div>
         </div>
-        <div class="mt-2">
-          <label class="block text-sm" x-text="t('brightness')"></label>
-          <input type="range" min="0" max="200" x-model.number="cropBrightness" class="w-48" />
-        </div>
-        <div class="mt-2">
-          <label class="block text-sm" x-text="t('contrast')"></label>
-          <input type="range" min="0" max="200" x-model.number="cropContrast" class="w-48" />
+        <div class="mt-2 flex items-center gap-2">
+          <label class="text-sm" x-text="t('brightness')"></label>
+          <input type="range" min="0" max="200" x-model.number="cropBrightness" class="w-24" />
+          <label class="text-sm ml-2" x-text="t('contrast')"></label>
+          <input type="range" min="0" max="200" x-model.number="cropContrast" class="w-24" />
         </div>
         <div class="mt-2 text-right space-x-2">
           <button @click="applyCrop" class="bg-blue-500 text-white px-3 py-1 rounded" x-text="t('apply')"></button>
@@ -269,6 +267,7 @@
           currentPoints:[],
           cropBrightness:100,
           cropContrast:100,
+          lastTap:0,
           files:[],
           clientLogo:null,
           sponsorLogo:null,
@@ -492,7 +491,6 @@
             this.scalingW = this.origW / w;
             this.scalingH = this.origH / h;
             this.initDraggables(w,h);
-            this.autoDetect();
           },
           initDraggables(w,h,pts=null){
             const map={cp1:'cp1',cp2:'cp2',cp3:'cp3',cp4:'cp4'};
@@ -506,7 +504,7 @@
               if(pts && pts.length===8){
                 pos=[pts[2*i]-pointSize/2, pts[2*i+1]-pointSize/2];
               }else{
-                pos=[[0,0],[w-pointSize,0],[w-pointSize,h-pointSize],[0,h-pointSize]][i];
+                pos=[[-pointSize/2,-pointSize/2],[w-pointSize/2,-pointSize/2],[w-pointSize/2,h-pointSize/2],[-pointSize/2,h-pointSize/2]][i];
               }
               el.style.left=pos[0]+"px";
               el.style.top=pos[1]+"px";
@@ -519,7 +517,7 @@
                 el.setAttribute('data-y',y);
                 el.style.transform=`translate(${x}px,${y}px)`;
                 this.updatePolygon();
-              }},modifiers:[interact.modifiers.restrictRect({restriction:'parent',endOnly:false})]});
+              }},modifiers:[interact.modifiers.restrictRect({restriction:'parent',endOnly:false,elementRect:{top:0.5,left:0.5,bottom:0.5,right:0.5}})]});
             });
             this.updatePolygon();
           },
@@ -545,6 +543,11 @@
           closeCrop(){
             ['cp1','cp2','cp3','cp4'].forEach(id=>{ try{interact('#'+id).unset();}catch(e){} });
             this.cropModal=false;
+          },
+          cropTap(){
+            const now=Date.now();
+            if(now - this.lastTap < 300){ this.autoDetect(); }
+            this.lastTap = now;
           },
           autoDetect(){
             if(this.cropIndex==null) return;
