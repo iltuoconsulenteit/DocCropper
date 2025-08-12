@@ -1706,7 +1706,7 @@ function generatePdf() {
     const arrangement = arrangeSelect.value || 'auto';
     const scale_mode = scaleMode.value || 'fit';
     const scale_percent = parseInt(scalePercent.value || '100');
-    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures };
+    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures, remove_signature_bg: window.removeSignatureBackground !== false };
     if (window.lastSignEmail || window.lastSignPhone || window.lastSignName) {
         payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
     }
@@ -1818,11 +1818,15 @@ cameraSelect.addEventListener('change', () => {
     }
 });
 let lastTap = 0;
-imageElement.addEventListener('dblclick', autoDetectCorners);
+imageElement.addEventListener('dblclick', (e) => {
+    console.debug('dblclick on imageElement', { x: e.clientX, y: e.clientY });
+    autoDetectCorners();
+});
 imageElement.addEventListener('touchend', (e) => {
     const now = Date.now();
     if (now - lastTap < 300) {
         e.preventDefault();
+        console.debug('double tap on imageElement');
         autoDetectCorners();
     }
     lastTap = now;
@@ -2016,6 +2020,7 @@ if (signaturePreview) {
         const rect = signaturePreview.getBoundingClientRect();
         const x = (e.clientX - rect.left) / signaturePreview.width;
         const y = (e.clientY - rect.top) / signaturePreview.height;
+        console.debug('dblclick on signaturePreview', { clientX: e.clientX, clientY: e.clientY, x, y });
         if (signatureImg) {
             signaturePosition.x = x;
             signaturePosition.y = y;
@@ -2330,6 +2335,7 @@ function updateSigPosition(evt) {
 
 function autoDetectCorners() {
     if (!currentFile) return;
+    console.debug('autoDetectCorners triggered');
     statusMessageElement.textContent = translations['detectingEdges'] || 'Detecting edges...';
     const formData = new FormData();
     formData.append('image_file', currentFile);

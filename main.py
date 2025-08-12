@@ -43,6 +43,7 @@ from app.auth.routes import router as auth_router, fastapi_users
 from app.auth.models import User
 from plugins.mobilesign import register as register_mobilesign
 from plugins.remotesign import register as register_remotesign
+from plugins.crop import register as register_crop
 
 try:
     import stripe
@@ -161,6 +162,7 @@ DEFAULT_SETTINGS = {
     "docuseal_api_url": "",
     "docuseal_api_key": "",
     "public_url": "",
+    "template": "static",
 }
 
 def verify_license_server(key: str) -> bool:
@@ -226,28 +228,6 @@ def get_lan_ip() -> str:
     except Exception:
         return "localhost"
 
-def order_points(pts: np.ndarray) -> np.ndarray:
-    rect = np.zeros((4, 2), dtype="float32")
-    s = pts.sum(axis=1)
-    rect[0] = pts[np.argmin(s)]
-    rect[2] = pts[np.argmax(s)]
-    diff = np.diff(pts, axis=1)
-    rect[1] = pts[np.argmin(diff)]
-    rect[3] = pts[np.argmax(diff)]
-    return rect
-
-def detect_document_corners(img: np.ndarray) -> np.ndarray | None:
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    edged = cv2.Canny(gray, 50, 200)
-    cnts, _ = cv2.findContours(edged, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-    cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
-    for c in cnts:
-        peri = cv2.arcLength(c, True)
-        approx = cv2.approxPolyDP(c, 0.02 * peri, True)
-        if len(approx) == 4:
-            return order_points(approx.reshape(4, 2))
-    return None
 
 def load_settings():
     if not os.path.exists(SETTINGS_FILE):
@@ -512,6 +492,7 @@ async def require_valid_license(
 # Mount static files directory and local wiki with no-cache headers
 app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
 app.mount("/wiki", NoCacheStaticFiles(directory="wiki", html=True), name="wiki")
+app.mount("/js", NoCacheStaticFiles(directory="public/js"), name="js")
 plugin_utils = {
     'load_settings': load_settings,
     'get_session_dir': get_session_dir,
@@ -520,7 +501,10 @@ plugin_utils = {
     'decrypt_file': decrypt_file,
     'encrypt_bytes': encrypt_bytes,
     'ENC_SUFFIX': ENC_SUFFIX,
+    'MAX_UPLOAD_BYTES': MAX_UPLOAD_BYTES,
 }
+
+register_crop(app, plugin_utils)
 
 settings = load_settings()
 enable_sign = str(os.getenv('DOCROPPER_ENABLE_SIGN', settings.get('enable_sign', True))).lower() != 'false'
@@ -551,9 +535,26 @@ async def read_root(request: Request):
         session_id = uuid.uuid4().hex
     get_session_dir(session_id)
     try:
-        index_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
+        base_dir = os.path.dirname(__file__)
+        template_name = load_settings().get("template", "static")
+        if isinstance(template_name, str):
+            template_name = template_name.strip().lower()
+        else:
+            template_name = "static"
+
+        index_path = os.path.join(base_dir, "static", "index.html")
+        if template_name != "static":
+            alt_path = os.path.join(base_dir, "templates", template_name, "index.html")
+            if os.path.exists(alt_path):
+                index_path = alt_path
+            else:
+                logger.error("Template '%s' not found, using static index", template_name)
+
         with open(index_path, "r", encoding="utf-8") as f:
             content = f.read()
+        lang = load_settings().get("language", "en")
+        content = content.replace('<html lang="en">', f'<html lang="{lang}">')
+        content = content.replace('</head>', f'<script>window.DC_LANG="{lang}";</script></head>')
         if CACHE_BUST:
             content = content.replace("styles.css", f"styles.css{CACHE_BUST}")
             content = content.replace("app.js", f"app.js{CACHE_BUST}")
@@ -564,7 +565,7 @@ async def read_root(request: Request):
             content = content.replace("DocCropper_slogan_en.png", f"DocCropper_slogan_en.png{CACHE_BUST}")
             content = content.replace("DocCropper_slogan_it.png", f"DocCropper_slogan_it.png{CACHE_BUST}")
     except FileNotFoundError:
-        logger.error("static/index.html not found")
+        logger.error(f"{index_path} not found")
         return HTMLResponse(content="Frontend not found.", status_code=500)
     response = HTMLResponse(content=content, status_code=200)
     response.headers["Cache-Control"] = "no-cache"
@@ -678,174 +679,11 @@ async def google_login(token: str = Body(...)):
         logger.exception("Google token verification failed")
         return JSONResponse(status_code=400, content={"message": "Invalid token"})
 
-@app.post("/detect-corners/")
-async def detect_corners(image_file: UploadFile = File(...)):
-    try:
-        contents = await image_file.read()
-        if len(contents) > MAX_UPLOAD_BYTES:
-            return JSONResponse(status_code=413, content={"message": "File too large"})
-        nparr = np.frombuffer(contents, np.uint8)
-        img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        if img_cv is None:
-            return JSONResponse(status_code=400, content={"message": "Invalid image"})
-        corners = detect_document_corners(img_cv)
-        if corners is None:
-            return JSONResponse(status_code=400, content={"message": "Edges not found"})
-        pts = corners.reshape(8).tolist()
-        return {"points": pts}
-    except Exception:
-        logger.exception("Corner detection failed")
-        return JSONResponse(status_code=500, content={"message": "Detection error"})
-
-@app.post("/process-image/")
-async def process_image(
-    request: Request,
-    image_file: UploadFile = File(...),
-    points: str = Form(...), # JSON string of points: "[x1,y1,x2,y2,x3,y3,x4,y4]"
-    original_width: int = Form(...),
-    original_height: int = Form(...),
-    brightness: int = Form(100),
-    contrast: int = Form(100)
-):
-    logger.info(f"Received image: {image_file.filename}, original_width: {original_width}, original_height: {original_height}")
-    logger.info(f"Received points string (raw form data): {points}")
-    session_id = request.cookies.get("session_id")
-    session_dir = get_session_dir(session_id)
-    try:
-        # Read image
-        contents = await image_file.read()
-        if len(contents) > MAX_UPLOAD_BYTES:
-            return JSONResponse(status_code=413, content={"message": "File too large"})
-        nparr = np.frombuffer(contents, np.uint8)
-        img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-        if img_cv is None:
-            logger.error("Failed to decode image.")
-            return JSONResponse(status_code=400, content={"message": "Invalid image file"})
-
-        logger.info(f"Image decoded successfully. Shape: {img_cv.shape} (HxWxC)")
-
-        # Parse points from JSON string
-        # Points are expected as a flat list: [p1x, p1y, p2x, p2y, p3x, p3y, p4x, p4y]
-        # Frontend order: Top-Left, Top-Right, Bottom-Right, Bottom-Left
-        try:
-            scaled_points_flat = json.loads(points)
-        except json.JSONDecodeError:
-            logger.error(f"Failed to parse points JSON: {points}")
-            return JSONResponse(status_code=400, content={"message": "Invalid points JSON format."})
-
-        if not isinstance(scaled_points_flat, list) or len(scaled_points_flat) != 8:
-            logger.error(f"Invalid number of points or format: {len(scaled_points_flat)} points, type: {type(scaled_points_flat)}")
-            return JSONResponse(status_code=400, content={"message": "Requires an array of 8 coordinates for 4 points."})
-
-        # Reshape points to (4, 2) for OpenCV
-        # Ensure points are float32
-        src_pts = np.array(scaled_points_flat, dtype=np.float32).reshape((4, 2))
-        logger.info(f"Source points for perspective transform (scaled to original image, TL, TR, BR, BL order expected): \n{src_pts}")
-
-
-        # Define destination points for perspective transform (output rectangle)
-        # The order of these points must correspond to the order of src_pts
-        # src_pts order: Top-Left, Top-Right, Bottom-Right, Bottom-Left
-
-        tl, tr, br, bl = src_pts # Unpack for clarity in dimension calculation
-
-        # Calculate width of the new image based on the longer of the top/bottom edges of the selection
-        width_a = np.sqrt(((br[0] - bl[0])**2) + ((br[1] - bl[1])**2)) # Length of bottom edge
-        width_b = np.sqrt(((tr[0] - tl[0])**2) + ((tr[1] - tl[1])**2)) # Length of top edge
-        max_width = max(int(width_a), int(width_b))
-
-
-        # Calculate height based on the selected left/right edges of the
-        # document. We no longer force an A4 portrait ratio so horizontal
-        # documents maintain their original orientation.
-        height_from_selection_a = np.sqrt(((tr[0] - br[0])**2) + ((tr[1] - br[1])**2)) # Length of right edge
-        height_from_selection_b = np.sqrt(((tl[0] - bl[0])**2) + ((tl[1] - bl[1])**2)) # Length of left edge
-        max_height = max(int(height_from_selection_a), int(height_from_selection_b))
-
-        logger.info(f"Max width from selection: {max_width}")
-        logger.info(f"Max height from selection: {max_height}")
-
-
-        if max_width <= 0 or max_height <= 0:
-            logger.error(
-                f"Calculated max_width or max_height is invalid. Width: {max_width}, Height: {max_height}. Points: {src_pts.tolist()}"
-            )
-            return JSONResponse(
-                status_code=400,
-                content={"message": "Invalid points leading to zero/negative output dimensions."},
-            )
-
-
-        # Define the 4 corners of the output rectangle using the potentially adjusted max_height
-        dst_pts = np.array([
-            [0, 0],                          # Top-left corner of output
-            [max_width - 1, 0],              # Top-right corner of output
-            [max_width - 1, max_height - 1], # Bottom-right corner of output
-            [0, max_height - 1]              # Bottom-left corner of output
-        ], dtype=np.float32)
-
-        logger.info(f"Destination points for perspective transform (output rectangle corners): \n{dst_pts}")
-        logger.info(f"Calculated output dimensions for warped image: Width={max_width}, Height={max_height}")
-
-        # Perform the perspective transform
-        matrix = cv2.getPerspectiveTransform(src_pts, dst_pts)
-
-        if matrix is None:
-            logger.error("Failed to compute perspective transform matrix. Points might be collinear or invalid.")
-            return JSONResponse(status_code=400, content={"message": "Could not compute perspective transform. Check point alignment."})
-
-        logger.info(f"Perspective transform matrix: \n{matrix}")
-
-        warped_image = cv2.warpPerspective(img_cv, matrix, (max_width, max_height))
-        logger.info(f"Image warped successfully. Warped shape: {warped_image.shape}")
-
-        # ---- Image Sharpening Step ----
-        kernel = np.array([[-1,-1,-1],
-                           [-1, 9,-1],
-                           [-1,-1,-1]])
-
-        # Apply the kernel to the warped image
-        sharpened_image = cv2.filter2D(warped_image, -1, kernel)
-        logger.info(f"Image sharpened successfully. Sharpened shape: {sharpened_image.shape}")
-
-        b_factor = max(0, brightness) / 100.0
-        c_factor = max(0, contrast) / 100.0
-        adjusted = cv2.convertScaleAbs(sharpened_image, alpha=c_factor, beta=int((b_factor - 1) * 255))
-
-
-        # Encode processed image with brightness/contrast adjustments
-        success, img_encoded_buffer = cv2.imencode(".png", adjusted)
-        if not success:
-            logger.error("Failed to encode processed image to PNG.")
-            return JSONResponse(status_code=500, content={"message": "Failed to encode processed image."})
-
-        img_base64 = base64.b64encode(img_encoded_buffer).decode("utf-8")
-
-        if session_dir:
-            try:
-                fname = os.path.join(session_dir, f"{uuid.uuid4().hex}.png{ENC_SUFFIX}")
-                enc = encrypt_bytes(session_id, img_encoded_buffer)
-                with open(fname, "wb") as fh:
-                    fh.write(enc)
-            except Exception:
-                logger.exception("Failed to save processed image to session dir")
-
-        return JSONResponse(content={
-            "message": "Image processed successfully",
-            "processed_image": "data:image/png;base64," + img_base64
-        })
-
-    except json.JSONDecodeError as e:
-        logger.exception(f"JSON parsing error: {e}")
-        return JSONResponse(status_code=400, content={"message": f"Invalid points format: {e}"})
-    except Exception as e:
-        logger.exception("An error occurred during image processing.")
-        return JSONResponse(status_code=500, content={"message": f"An internal error occurred: {str(e)}"})
 
 
 @app.post("/pdf-to-images/")
 async def pdf_to_images(
+    request: Request,
     pdf_file: UploadFile = File(...),
     threshold: int = Form(95),
     skip_blank: bool = Form(True)
@@ -858,6 +696,18 @@ async def pdf_to_images(
         pdf_bytes = await pdf_file.read()
         if len(pdf_bytes) > MAX_UPLOAD_BYTES:
             return JSONResponse(status_code=413, content={"message": "File too large"})
+
+        session_id = request.cookies.get("session_id")
+        session_dir = get_session_dir(session_id)
+        if session_dir:
+            try:
+                fname = os.path.join(session_dir, f"{uuid.uuid4().hex}.pdf{ENC_SUFFIX}")
+                enc_pdf = encrypt_bytes(session_id, pdf_bytes)
+                with open(fname, "wb") as fh:
+                    fh.write(enc_pdf)
+            except Exception:
+                logger.exception("Failed to save uploaded PDF")
+
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         thr = max(0, min(100, int(threshold))) / 100.0
         images_b64: list[str] = []
@@ -887,6 +737,7 @@ async def create_pdf(
     scale_percent: int = Body(100),
     color_mode: str = Body("color"),
     signature_image: str | None = Body(None),
+    remove_signature_bg: bool = Body(True),
     signatures: list[dict] = Body(default_factory=list),
     sign_info: dict | None = Body(default_factory=dict)
 ):
@@ -937,10 +788,11 @@ async def create_pdf(
                 sig_b64 = signature_image.split(',', 1)[1] if signature_image.startswith('data:') else signature_image
                 sig_bytes = base64.b64decode(sig_b64)
                 sig_img = Image.open(io.BytesIO(sig_bytes)).convert('RGBA')
-                arr = np.array(sig_img)
-                white = (arr[:, :, :3] > 240).all(axis=2)
-                arr[white, 3] = 0
-                sig_img = Image.fromarray(arr)
+                if remove_signature_bg:
+                    arr = np.array(sig_img)
+                    white = (arr[:, :, :3] > 240).all(axis=2)
+                    arr[white, 3] = 0
+                    sig_img = Image.fromarray(arr)
             except Exception:
                 logger.exception('Failed to decode signature image')
 

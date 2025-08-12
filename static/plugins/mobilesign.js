@@ -103,6 +103,8 @@ export function initSignaturePlugin(translations, enabled = true) {
         if (detailsPhone) detailsPhone.value = window.lastSignPhone || '';
         detailsModal.style.display = 'block';
     }
+    // Expose starter so global adapter can trigger the mobile signing flow
+    window.startMobileSign = openDetailsModal;
     if (mobileSignBtn) {
         mobileSignBtn.addEventListener('click', openDetailsModal);
     }
