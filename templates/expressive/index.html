@@ -946,6 +946,38 @@
       const lang = window.DC_LANG || document.documentElement.lang || 'en';
       const trans = (window.dcStrings && window.dcStrings[lang]) ? window.dcStrings[lang] : {};
       initSignaturePlugin(trans, true);
+      window.addEventListener('signedPdfAvailable', (e) => {
+        const url = e.detail.url;
+        const exportBox = document.getElementById('exportOptions');
+        const link = document.getElementById('signedPdfLink');
+        const frame = document.getElementById('signedPdfFrame');
+        const waBtn = document.getElementById('waShareBtn');
+        const emailBtn = document.getElementById('emailShareBtn');
+        if (exportBox) exportBox.style.display = 'block';
+        if (link) {
+          link.href = url;
+          link.textContent = trans['downloadPdf'] || 'Download PDF';
+          link.style.display = 'inline';
+        }
+        if (frame) {
+          frame.src = url;
+          frame.style.display = 'block';
+        }
+        if (waBtn) {
+          waBtn.onclick = () => {
+            const p = (window.lastSignPhone || '').replace(/[^0-9]/g, '');
+            const params = new URLSearchParams({ text: url });
+            if (p) params.set('phone', p);
+            window.open(`https://web.whatsapp.com/send?${params.toString()}`, '_blank');
+          };
+        }
+        if (emailBtn) {
+          emailBtn.onclick = () => {
+            const m = window.lastSignEmail ? encodeURIComponent(window.lastSignEmail) : '';
+            window.open(`mailto:${m}?body=${encodeURIComponent(url)}`, '_blank');
+          };
+        }
+      });
     </script>
   </body>
 </html>

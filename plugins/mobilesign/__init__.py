@@ -254,7 +254,11 @@ def register(app, utils):
                 const pdf=new jsPDF({orientation:'p',unit:'px',format:[imgs[0].width,imgs[0].height]});
                 imgs.forEach((img,idx)=>{
                     if(idx>0) pdf.addPage([img.width,img.height]);
-                    pdf.addImage(img,'PNG',0,0,img.width,img.height);
+                    const c=document.createElement('canvas');
+                    c.width=img.width; c.height=img.height;
+                    c.getContext('2d').drawImage(img,0,0);
+                    const jpg=c.toDataURL('image/jpeg',0.85);
+                    pdf.addImage(jpg,'JPEG',0,0,img.width,img.height,'','FAST');
                     signs.filter(s=>s.page===idx).forEach(s=>{
                         const h=img.height/10*s.scale;
                         const w=h*(s.ratio||1);
