@@ -43,6 +43,8 @@ const processedImageElement = document.getElementById('processedImage');
 const processedGallery = document.getElementById('processedGallery');
 const statusMessageElement = document.getElementById('statusMessage');
 const signedPdfLink = document.getElementById('signedPdfLink');
+const pdfPreviewModal = document.getElementById('pdfPreviewModal');
+const pdfPreviewFrame = document.getElementById('pdfPreviewFrame');
 const reorderHint = document.getElementById('reorderHint');
 const imageModal = document.getElementById('imageModal');
 const modalImage = document.getElementById('modalImage');
@@ -270,6 +272,7 @@ if (digitalSignBtn) {
             statusMessageElement.textContent = translations['docusealError'] || 'Docuseal request failed';
         }
         exportOptions.style.display = 'none';
+        if (pdfPreviewModal) pdfPreviewModal.style.display = 'none';
     });
 }
 
@@ -883,6 +886,7 @@ function deleteImage(index) {
 function openSignatureForPage(idx) {
     populateSignaturePages();
     signaturePage.value = idx;
+    scaleTarget = 'current';
     updateSignatureTargetOptions();
     signatureControls.style.display = 'block';
     signatureExtra.style.display = 'block';
@@ -891,6 +895,10 @@ function openSignatureForPage(idx) {
     if (legalDisclaimerEl) legalDisclaimerEl.style.display = 'block';
     renderSignaturePreview();
 }
+
+// Expose signature helpers for global adapters
+window.openSignatureForPage = openSignatureForPage;
+window.startSign = () => openSignatureForPage(0);
 
 function cropImage(index) {
     editingIndex = index;
@@ -921,17 +929,18 @@ async function shareWhatsApp(phone) {
     }
     phone = phone ? phone.replace(/[^0-9]/g, '') : '';
     const url = window.lastSignedUrl || URL.createObjectURL(currentPdfBlob);
-    const wa = phone ?
-        `https://wa.me/${phone}?text=${encodeURIComponent(url)}` :
-        `https://wa.me/?text=${encodeURIComponent(url)}`;
+    const params = new URLSearchParams({ text: url });
+    if (phone) params.set('phone', phone);
+    const wa = `https://web.whatsapp.com/send?${params.toString()}`;
     window.open(wa, '_blank');
 }
 
 function shareWhatsAppLink(phone, link) {
     if (!link) return;
     phone = phone ? phone.replace(/[^0-9]/g, '') : '';
-    const wa = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(link)}` :
-        `https://wa.me/?text=${encodeURIComponent(link)}`;
+    const params = new URLSearchParams({ text: link });
+    if (phone) params.set('phone', phone);
+    const wa = `https://web.whatsapp.com/send?${params.toString()}`;
     window.open(wa, '_blank');
 }
 
@@ -1694,12 +1703,14 @@ submitBtn.addEventListener('click', () => {
     });
 });
 
-function generatePdf() {
+async function generatePdf() {
     if (processedImages.length === 0) {
         statusMessageElement.textContent = 'No processed images to export.';
         return;
     }
+    await mergeAllSignatures();
     if (signedPdfLink) signedPdfLink.style.display = 'none';
+    if (pdfPreviewModal) pdfPreviewModal.style.display = 'none';
     statusMessageElement.textContent = 'Generating PDF...';
     const layout = parseInt(layoutSelect.value || '1');
     const orientation = orientationSelect.value || 'portrait';
@@ -1734,24 +1745,18 @@ function generatePdf() {
             exportOptions.style.display = 'block';
             statusMessageElement.textContent = 'PDF ready.';
             if (window.lastSignToken) {
-                fetch('/store-signed-pdf/' + window.lastSignToken, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pdf: data.pdf })
-                })
-                .then(r => r.json())
-                .then(d => {
-                    if (d.url) {
-                        window.lastSignedUrl = d.url;
-                        if (signedPdfLink) {
-                            signedPdfLink.href = d.url;
-                            signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
-                            signedPdfLink.style.display = 'inline';
-                        }
-                    }
-                    if (window.lastSignPhone) shareWhatsAppLink(window.lastSignPhone, d.url);
-                    if (window.lastSignEmail) shareEmailLink(window.lastSignEmail, d.url);
-                });
+                const url = window.lastSignedUrl || URL.createObjectURL(currentPdfBlob);
+                if (signedPdfLink) {
+                    signedPdfLink.href = url;
+                    signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
+                    signedPdfLink.style.display = 'inline';
+                }
+                if (pdfPreviewFrame && pdfPreviewModal) {
+                    pdfPreviewFrame.src = url;
+                    pdfPreviewModal.style.display = 'flex';
+                }
+                if (window.lastSignPhone) shareWhatsAppLink(window.lastSignPhone, url);
+                if (window.lastSignEmail) shareEmailLink(window.lastSignEmail, url);
             } else {
                 if (window.lastSignPhone) {
                     shareWhatsApp(window.lastSignPhone);
@@ -1764,6 +1769,10 @@ function generatePdf() {
                     signedPdfLink.href = url;
                     signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
                     signedPdfLink.style.display = 'inline';
+                    if (pdfPreviewFrame && pdfPreviewModal) {
+                        pdfPreviewFrame.src = url;
+                        pdfPreviewModal.style.display = 'flex';
+                    }
                 }
             }
         } else {
@@ -1778,7 +1787,7 @@ function generatePdf() {
 
 exportPdfBtn.addEventListener('click', async () => {
     await showSponsorModal();
-    generatePdf();
+    await generatePdf();
 });
 
 if (OCR_ENABLED) {
@@ -1890,6 +1899,7 @@ if (downloadPdfBtn) {
         link.click();
         URL.revokeObjectURL(url);
         exportOptions.style.display = 'none';
+        if (pdfPreviewModal) pdfPreviewModal.style.display = 'none';
     });
 }
 
@@ -1897,6 +1907,7 @@ if (waShareBtn) {
     waShareBtn.addEventListener('click', async () => {
         await shareWhatsApp(window.lastSignPhone);
         exportOptions.style.display = 'none';
+        if (pdfPreviewModal) pdfPreviewModal.style.display = 'none';
     });
 }
 
@@ -1904,6 +1915,7 @@ if (emailShareBtn) {
     emailShareBtn.addEventListener('click', async () => {
         await shareEmail(window.lastSignEmail);
         exportOptions.style.display = 'none';
+        if (pdfPreviewModal) pdfPreviewModal.style.display = 'none';
     });
 }
 
@@ -2024,7 +2036,7 @@ if (signaturePreview) {
         if (signatureImg) {
             signaturePosition.x = x;
             signaturePosition.y = y;
-            renderSignaturePreview();
+            addCurrentSignature();
         } else {
             pendingSigPos = { x, y };
             signatureModal.style.display = 'block';
@@ -2150,6 +2162,8 @@ function addCurrentSignature() {
         mobileSignPoints[page].push({ x: signaturePosition.x, y: signaturePosition.y });
     } else {
         signatures.push({ page, x: signaturePosition.x, y: signaturePosition.y, scale: signatureScale });
+        const pageSigs = signatures.filter(s => s.page === page);
+        scaleTarget = (pageSigs.length - 1).toString();
     }
     const OFFSET = 0.05;
     signaturePosition.x += OFFSET;
@@ -2224,6 +2238,49 @@ if (discardSignatureBtn) {
     });
 }
 
+async function mergeAllSignatures() {
+    if (!signatureImg) return;
+    const pages = new Set(signatures.map(s => s.page));
+    const current = parseInt(signaturePage.value || '0');
+    pages.add(current);
+    for (const page of pages) {
+        let stamps = signatures.filter(s => s.page === page);
+        if (page === current) {
+            stamps = stamps.concat([{ page, x: signaturePosition.x, y: signaturePosition.y, scale: signatureScale }]);
+        }
+        if (stamps.length === 0) continue;
+        const base = new Image();
+        await new Promise(res => { base.onload = res; base.src = processedImages[page]; });
+        const canvas = document.createElement('canvas');
+        canvas.width = base.width;
+        canvas.height = base.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(base, 0, 0);
+        const baseRatio = (canvas.height / 10) / signatureImg.height;
+        for (const sig of stamps) {
+            const w = signatureImg.width * baseRatio * sig.scale;
+            const h = signatureImg.height * baseRatio * sig.scale;
+            const x = sig.x * canvas.width - w / 2;
+            const y = sig.y * canvas.height - h / 2;
+            ctx.drawImage(signatureImg, x, y, w, h);
+        }
+        const url = canvas.toDataURL('image/png');
+        processedImages[page] = url;
+        if (originalImages[page]) originalImages[page] = url;
+        const container = processedGallery.children[page];
+        if (container) container.querySelector('img').src = url;
+        try {
+            const blob = await (await fetch(url)).blob();
+            processedFiles[page] = new File([blob], processedFiles[page]?.name || `image_${page}.png`, { type: 'image/png' });
+        } catch {}
+    }
+    signatures = [];
+    signatureImageData = null;
+    signatureImg = null;
+    renderSignaturePreview();
+    updateSignatureTargetOptions();
+}
+
 async function applyRemoteSignature(data) {
     const pageIdx = parseInt(data.page || 0);
     const base = new Image();
@@ -2258,7 +2315,27 @@ async function applyRemoteSignature(data) {
 
 window.addEventListener('remoteSignature', (e) => applyRemoteSignature(e.detail));
 window.addEventListener('mobileSignComplete', () => {
-    if (exportPdfBtn) exportPdfBtn.click();
+    statusMessageElement.textContent = translations['waitingPdf'] || 'Waiting for signed PDF...';
+});
+window.addEventListener('signedPdfAvailable', (e) => {
+    const url = e.detail.url;
+    exportOptions.style.display = 'block';
+    if (signedPdfLink) {
+        signedPdfLink.href = url;
+        signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
+        signedPdfLink.style.display = 'inline';
+    }
+    if (pdfPreviewFrame && pdfPreviewModal) {
+        pdfPreviewFrame.src = url;
+        pdfPreviewModal.style.display = 'flex';
+        pdfPreviewModal.addEventListener('click', () => { pdfPreviewModal.style.display = 'none'; }, { once: true });
+    }
+    if (e.detail.hash) {
+        window.lastPdfHash = e.detail.hash;
+    }
+    statusMessageElement.textContent = translations['pdfReady'] || 'PDF ready.';
+    if (window.lastSignPhone) shareWhatsAppLink(window.lastSignPhone, url);
+    if (window.lastSignEmail) shareEmailLink(window.lastSignEmail, url);
 });
 
 function updateImageFilters() {
@@ -2396,6 +2473,9 @@ function updateSignatureTargetOptions() {
         signatureTargetSelect.appendChild(optAll);
     }
     signatureTargetSelect.value = scaleTarget;
+    if (signatureTargetSelect.value !== scaleTarget) {
+        scaleTarget = signatureTargetSelect.value;
+    }
     if (signatureScaleInput) {
         if (scaleTarget === 'current') {
             signatureScaleInput.value = signatureScale;

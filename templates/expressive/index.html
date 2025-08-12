@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DocCropper Expressive</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.11/dist/interact.min.js"></script>
@@ -14,6 +14,33 @@
       main::-webkit-scrollbar-track { background: #f3f4f6; }
       main::-webkit-scrollbar-thumb { background-color: #9ca3af; border-radius: 8px; }
       main { scrollbar-width: auto; scrollbar-color: #9ca3af #f3f4f6; }
+      #exportOptions {
+        position: fixed;
+        right: 10px;
+        bottom: 10px;
+        background: #fff;
+        border: 1px solid #888;
+        padding: 10px;
+        z-index: 1000;
+        text-align: center;
+      }
+      #exportOptions button {
+        margin: 5px;
+      }
+      #layoutPreview {
+        width: 180px;
+        height: 220px;
+        border: 1px dashed #666;
+        margin-top: 10px;
+        display: none;
+        gap: 4px;
+      }
+      #layoutPreview.visible {
+        display: grid;
+      }
+      #layoutPreview .cell {
+        border: 1px solid #aaa;
+      }
     </style>
   </head>
   <body x-data="dcApp()" class="h-screen flex">
@@ -41,7 +68,7 @@
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('sign')" x-text="t('sign')"></button>
           </li>
           <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('mobileSign')" x-text="t('mobileSign')"></button>
+            <button id="mobileSignBtn" class="w-full text-left p-2 hover:bg-gray-700" @click="command('mobileSign')" x-text="t('mobileSign')"></button>
           </li>
         </ul>
         <h2 class="px-4 mt-4 text-xs uppercase text-gray-400" x-text="t('navigation')"></h2>
@@ -159,6 +186,7 @@
       <div class="bg-white p-4 rounded">
         <div class="flex gap-4">
           <div class="relative" x-ref="signWrap">
+            <p class="text-xs text-gray-500 mb-1" x-text="t('dblClickHint') || 'Double click the image to add your signature'"></p>
             <img x-ref="signImg" :src="files[signIndex]?.url" @dblclick.stop="addSignature($event)" class="max-w-full max-h-[70vh] cursor-crosshair" />
             <template x-for="(sig,i) in signatures.filter(s=>s.page===signIndex)" :key="i">
               <img :id="'sig'+i" :src="signatureImageData" class="absolute cursor-move" @mousedown.stop="selectSig(i)">
@@ -170,6 +198,7 @@
           </div>
           <div class="flex flex-col space-y-2 w-40 text-xs">
             <input type="file" accept="image/*" @change="loadSignature" class="text-xs">
+            <button @click="drawModal=true" class="px-2 py-1 bg-gray-200 rounded" x-text="t('draw') || 'Draw'"></button>
             <label class="flex items-center gap-1"><input type="checkbox" x-model="removeSigBg" @change="window.removeSignatureBackground = removeSigBg"><span x-text="t('removeBg')"></span></label>
             <div class="border-t pt-2 space-y-1">
               <template x-for="(sig,i) in signatures.filter(s=>s.page===signIndex)" :key="'list'+i">
@@ -184,6 +213,17 @@
               <button @click="closeSign" class="bg-gray-300 px-2 py-1 rounded" x-text="t('cancel')"></button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Draw Modal -->
+    <div x-show="drawModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded">
+        <canvas x-ref="drawCanvas" width="300" height="150" class="border" @mousedown="startDraw($event)" @mousemove="moveDraw($event)" @mouseup="endDraw" @mouseleave="endDraw" @touchstart.prevent="startDraw($event)" @touchmove.prevent="moveDraw($event)" @touchend="endDraw"></canvas>
+        <div class="mt-2 flex justify-end gap-2 text-sm">
+          <button @click="clearDraw" class="px-2 py-1 bg-gray-200 rounded" x-text="t('clear') || 'Clear'"></button>
+          <button @click="useDraw" class="px-2 py-1 bg-blue-500 text-white rounded" x-text="t('apply')"></button>
         </div>
       </div>
     </div>
@@ -215,25 +255,24 @@
     </div>
 
     <!-- Mobile Sign Overlay and Details Modal -->
-    <div id="signQR" style="display:none;" class="fixed inset-0 bg-black/70 flex flex-col items-center justify-center p-4 text-center">
-      <img id="signQrImg" class="max-w-xs mb-2" alt="QR" />
-      <p id="signQrHint" class="text-white text-sm mb-2"></p>
-      <a id="signQrLink" href="#" target="_blank" class="break-all text-blue-300 underline mb-2"></a>
-      <div class="space-x-2">
-        <button id="copySignLink" class="px-2 py-1 bg-gray-200 rounded">Copy</button>
-        <button id="waSignLink" class="px-2 py-1 bg-green-500 text-white rounded">WhatsApp</button>
-        <button id="emailSignLink" class="px-2 py-1 bg-blue-500 text-white rounded">Email</button>
+    <div id="signQR" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); padding:1rem; text-align:center; align-items:center; justify-content:center; flex-direction:column;">
+      <img id="signQrImg" alt="QR" style="max-width:20rem; margin-bottom:0.5rem;" />
+      <p id="signQrHint" style="color:#fff; font-size:0.875rem; margin-bottom:0.5rem;"></p>
+      <a id="signQrLink" href="#" target="_blank" style="word-break:break-all; color:#93c5fd; text-decoration:underline; margin-bottom:0.5rem;"></a>
+      <div style="display:flex; gap:0.5rem;">
+        <button id="copySignLink" style="padding:0.25rem 0.5rem; background:#e5e7eb; border-radius:0.25rem;">Copy</button>
+        <button id="waSignLink" style="padding:0.25rem 0.5rem; background:#22c55e; color:#fff; border-radius:0.25rem;">WhatsApp</button>
+        <button id="emailSignLink" style="padding:0.25rem 0.5rem; background:#3b82f6; color:#fff; border-radius:0.25rem;">Email</button>
       </div>
     </div>
-    <div id="mobileDetailsModal" style="display:none;" class="fixed inset-0 bg-black/50 flex items-center justify-center">
-      <div class="bg-white p-4 rounded w-72 space-y-2 text-center">
-        <select id="signaturePage" class="border w-full p-1"></select>
-        <input id="mobileNameInput" type="text" placeholder="Name" class="border w-full p-1" />
-        <input id="mobileEmailInput" type="email" placeholder="Email" class="border w-full p-1" />
-        <input id="mobilePhoneInput" type="tel" placeholder="Phone" class="border w-full p-1" />
-        <div class="pt-2 space-x-2">
-          <button id="mobileDetailsStart" class="bg-blue-500 text-white px-3 py-1 rounded">Start</button>
-          <button id="mobileDetailsCancel" class="bg-gray-300 px-3 py-1 rounded">Cancel</button>
+    <div id="mobileDetailsModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+      <div style="background:#fff; padding:1rem; border-radius:0.25rem; width:18rem; text-align:center; display:flex; flex-direction:column; gap:0.5rem;">
+        <input id="mobileNameInput" type="text" placeholder="Name" style="border:1px solid #d1d5db; width:100%; padding:0.25rem;" />
+        <input id="mobileEmailInput" type="email" placeholder="Email" style="border:1px solid #d1d5db; width:100%; padding:0.25rem;" />
+        <input id="mobilePhoneInput" type="tel" placeholder="Phone" style="border:1px solid #d1d5db; width:100%; padding:0.25rem;" />
+        <div style="padding-top:0.5rem; display:flex; gap:0.5rem; justify-content:center;">
+          <button id="mobileDetailsStart" style="background:#3b82f6; color:#fff; padding:0.25rem 0.75rem; border-radius:0.25rem;">Start</button>
+          <button id="mobileDetailsCancel" style="background:#d1d5db; padding:0.25rem 0.75rem; border-radius:0.25rem;">Cancel</button>
         </div>
       </div>
     </div>
@@ -341,6 +380,9 @@
           lastTap:0,
           files:[],
           signModal:false,
+          drawModal:false,
+          drawing:false,
+          lastPoint:null,
           signIndex:null,
           signatureImageData:null,
           signatures:[],
@@ -421,6 +463,7 @@
             window.startSign = () => {
               if (this.files.length > 0) this.signPage(0);
             };
+            window.getProcessedImages = () => this.files.map(f => f.url);
           },
           async command(action){
             if(!this.pinned) this.drawer=false;
@@ -673,6 +716,41 @@
             else if(this.activeSig>i) this.activeSig--;
             this.renderSignatures();
           },
+          getDrawPos(e){
+            const rect=this.$refs.drawCanvas.getBoundingClientRect();
+            const x=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
+            const y=(e.touches?e.touches[0].clientY:e.clientY)-rect.top;
+            return {x,y};
+          },
+          startDraw(e){ this.drawing=true; this.lastPoint=this.getDrawPos(e); },
+          moveDraw(e){
+            if(!this.drawing) return;
+            const ctx=this.$refs.drawCanvas.getContext('2d');
+            const p=this.getDrawPos(e);
+            ctx.beginPath();
+            ctx.moveTo(this.lastPoint.x,this.lastPoint.y);
+            ctx.lineTo(p.x,p.y);
+            ctx.stroke();
+            this.lastPoint=p;
+          },
+          endDraw(){ this.drawing=false; },
+          clearDraw(){
+            const c=this.$refs.drawCanvas;
+            c.getContext('2d').clearRect(0,0,c.width,c.height);
+          },
+          useDraw(){
+            const data=this.$refs.drawCanvas.toDataURL('image/png');
+            this.signatureImageData=data;
+            window.signatureImageData=data;
+            const img=new Image();
+            img.onload=()=>{
+              this.signatureAspect=img.height/img.width;
+              window.signatureAspect=this.signatureAspect;
+              this.renderSignatures();
+            };
+            img.src=data;
+            this.drawModal=false;
+          },
           saveSignModal(){
             this.signModal=false;
           },
@@ -804,7 +882,7 @@
               .then(d=>{ if(d.processed_image){ this.files[this.cropIndex].url=d.processed_image; this.files[this.cropIndex].original=d.processed_image; this.files=[...this.files]; } })
               .finally(()=>{ this.closeCrop(); });
           },
-          initSortable(){
+      initSortable(){
             if(!this.$refs.fileGrid) return;
             if(this.sortable){ this.sortable.destroy(); }
             this.sortable = Sortable.create(this.$refs.fileGrid, {
@@ -821,11 +899,91 @@
         }
       }
     </script>
+    <div id="layoutControls" style="display:none; text-align:left; margin-bottom:8px;">
+      <button id="togglePreviewBtn">Preview layout</button>
+      <label for="layoutSelect">Images per page:</label>
+      <select id="layoutSelect">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="4">4</option>
+      </select>
+      <label for="orientationSelect">Orientation:</label>
+      <select id="orientationSelect">
+        <option value="portrait">Portrait</option>
+        <option value="landscape">Landscape</option>
+      </select>
+      <label for="arrangeSelect">Layout:</label>
+      <select id="arrangeSelect">
+        <option value="auto">Auto</option>
+        <option value="horizontal">Horizontal</option>
+        <option value="vertical">Vertical</option>
+        <option value="grid">Grid</option>
+      </select>
+      <label for="scaleMode">Image size:</label>
+      <select id="scaleMode">
+        <option value="fit">Fill cell</option>
+        <option value="original">Original</option>
+        <option value="percent">Scale (%)</option>
+      </select>
+      <input type="number" id="scalePercent" value="100" min="10" max="300" step="10" style="width:60px; display:none;">
+      <label for="colorModeSelect">Color mode:</label>
+      <select id="colorModeSelect">
+        <option value="color">Color</option>
+        <option value="gray">Grayscale</option>
+        <option value="bw">B/W</option>
+      </select>
+    </div>
+    <div id="layoutPreview"></div>
+    <div id="exportOptions" style="display:none;">
+      <a id="signedPdfLink" style="display:none; margin-bottom:8px; color:#2563eb; text-decoration:underline;" download="signed.pdf"></a>
+      <button id="downloadPdfBtn">Download PDF</button>
+      <button id="waShareBtn">WhatsApp</button>
+      <button id="emailShareBtn">Email</button>
+    </div>
+    <div id="pdfPreviewModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; z-index:1000;">
+      <iframe id="pdfPreviewFrame" style="width:80%; height:80%; border:1px solid #666; background:white;"></iframe>
+    </div>
     <script type="module">
       import { initSignaturePlugin } from '/static/plugins/mobilesign.js';
       const lang = window.DC_LANG || document.documentElement.lang || 'en';
       const trans = (window.dcStrings && window.dcStrings[lang]) ? window.dcStrings[lang] : {};
       initSignaturePlugin(trans, true);
+      window.addEventListener('signedPdfAvailable', (e) => {
+        const url = e.detail.url;
+        const exportBox = document.getElementById('exportOptions');
+        const link = document.getElementById('signedPdfLink');
+        const frameModal = document.getElementById('pdfPreviewModal');
+        const frame = document.getElementById('pdfPreviewFrame');
+        const waBtn = document.getElementById('waShareBtn');
+        const emailBtn = document.getElementById('emailShareBtn');
+        if (exportBox) exportBox.style.display = 'block';
+        if (link) {
+          link.href = url;
+          link.textContent = trans['downloadPdf'] || 'Download PDF';
+          link.style.display = 'inline';
+        }
+        if (frame && frameModal) {
+          frame.src = url;
+          frameModal.style.display = 'flex';
+        }
+        if (waBtn) {
+          waBtn.onclick = () => {
+            const p = (window.lastSignPhone || '').replace(/[^0-9]/g, '');
+            const params = new URLSearchParams({ text: url });
+            if (p) params.set('phone', p);
+            window.open(`https://web.whatsapp.com/send?${params.toString()}`, '_blank');
+          };
+        }
+        if (emailBtn) {
+          emailBtn.onclick = () => {
+            const m = window.lastSignEmail ? encodeURIComponent(window.lastSignEmail) : '';
+            window.open(`mailto:${m}?body=${encodeURIComponent(url)}`, '_blank');
+          };
+        }
+        if (frameModal) {
+          frameModal.addEventListener('click', () => { frameModal.style.display = 'none'; });
+        }
+      });
     </script>
   </body>
 </html>
