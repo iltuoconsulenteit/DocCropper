@@ -1702,11 +1702,12 @@ submitBtn.addEventListener('click', () => {
     });
 });
 
-function generatePdf() {
+async function generatePdf() {
     if (processedImages.length === 0) {
         statusMessageElement.textContent = 'No processed images to export.';
         return;
     }
+    await mergeAllSignatures();
     if (signedPdfLink) signedPdfLink.style.display = 'none';
     if (signedPdfFrame) signedPdfFrame.style.display = 'none';
     statusMessageElement.textContent = 'Generating PDF...';
@@ -1785,7 +1786,7 @@ function generatePdf() {
 
 exportPdfBtn.addEventListener('click', async () => {
     await showSponsorModal();
-    generatePdf();
+    await generatePdf();
 });
 
 if (OCR_ENABLED) {
@@ -2234,6 +2235,49 @@ if (discardSignatureBtn) {
         };
         base.src = processedImages[pageIdx];
     });
+}
+
+async function mergeAllSignatures() {
+    if (!signatureImg) return;
+    const pages = new Set(signatures.map(s => s.page));
+    const current = parseInt(signaturePage.value || '0');
+    pages.add(current);
+    for (const page of pages) {
+        let stamps = signatures.filter(s => s.page === page);
+        if (page === current) {
+            stamps = stamps.concat([{ page, x: signaturePosition.x, y: signaturePosition.y, scale: signatureScale }]);
+        }
+        if (stamps.length === 0) continue;
+        const base = new Image();
+        await new Promise(res => { base.onload = res; base.src = processedImages[page]; });
+        const canvas = document.createElement('canvas');
+        canvas.width = base.width;
+        canvas.height = base.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(base, 0, 0);
+        const baseRatio = (canvas.height / 10) / signatureImg.height;
+        for (const sig of stamps) {
+            const w = signatureImg.width * baseRatio * sig.scale;
+            const h = signatureImg.height * baseRatio * sig.scale;
+            const x = sig.x * canvas.width - w / 2;
+            const y = sig.y * canvas.height - h / 2;
+            ctx.drawImage(signatureImg, x, y, w, h);
+        }
+        const url = canvas.toDataURL('image/png');
+        processedImages[page] = url;
+        if (originalImages[page]) originalImages[page] = url;
+        const container = processedGallery.children[page];
+        if (container) container.querySelector('img').src = url;
+        try {
+            const blob = await (await fetch(url)).blob();
+            processedFiles[page] = new File([blob], processedFiles[page]?.name || `image_${page}.png`, { type: 'image/png' });
+        } catch {}
+    }
+    signatures = [];
+    signatureImageData = null;
+    signatureImg = null;
+    renderSignaturePreview();
+    updateSignatureTargetOptions();
 }
 
 async function applyRemoteSignature(data) {
