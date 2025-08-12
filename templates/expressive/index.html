@@ -159,6 +159,7 @@
       <div class="bg-white p-4 rounded">
         <div class="flex gap-4">
           <div class="relative" x-ref="signWrap">
+            <p class="text-xs text-gray-500 mb-1" x-text="t('dblClickHint') || 'Double click the image to add your signature'"></p>
             <img x-ref="signImg" :src="files[signIndex]?.url" @dblclick.stop="addSignature($event)" class="max-w-full max-h-[70vh] cursor-crosshair" />
             <template x-for="(sig,i) in signatures.filter(s=>s.page===signIndex)" :key="i">
               <img :id="'sig'+i" :src="signatureImageData" class="absolute cursor-move" @mousedown.stop="selectSig(i)">
