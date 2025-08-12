@@ -86,7 +86,7 @@ export function initSignaturePlugin(translations, enabled = true) {
                     signQrLink.textContent = data.url;
                     signQrLink.href = data.url;
                 }
-                signQR.style.display = 'block';
+                signQR.style.display = 'flex';
                 window.lastSignToken = data.token;
                 pollSignature(data.token);
             }
@@ -101,7 +101,7 @@ export function initSignaturePlugin(translations, enabled = true) {
         if (detailsName) detailsName.value = window.lastSignName || '';
         if (detailsEmail) detailsEmail.value = window.lastSignEmail || '';
         if (detailsPhone) detailsPhone.value = window.lastSignPhone || '';
-        detailsModal.style.display = 'block';
+        detailsModal.style.display = 'flex';
     }
     // Expose starter so global adapter can trigger the mobile signing flow
     window.startMobileSign = openDetailsModal;
