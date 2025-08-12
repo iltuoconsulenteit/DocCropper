@@ -214,6 +214,30 @@
       </div>
     </div>
 
+    <!-- Mobile Sign Overlay and Details Modal -->
+    <div id="signQR" style="display:none;" class="fixed inset-0 bg-black/70 flex flex-col items-center justify-center p-4 text-center">
+      <img id="signQrImg" class="max-w-xs mb-2" alt="QR" />
+      <p id="signQrHint" class="text-white text-sm mb-2"></p>
+      <a id="signQrLink" href="#" target="_blank" class="break-all text-blue-300 underline mb-2"></a>
+      <div class="space-x-2">
+        <button id="copySignLink" class="px-2 py-1 bg-gray-200 rounded">Copy</button>
+        <button id="waSignLink" class="px-2 py-1 bg-green-500 text-white rounded">WhatsApp</button>
+        <button id="emailSignLink" class="px-2 py-1 bg-blue-500 text-white rounded">Email</button>
+      </div>
+    </div>
+    <div id="mobileDetailsModal" style="display:none;" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded w-72 space-y-2 text-center">
+        <select id="signaturePage" class="border w-full p-1"></select>
+        <input id="mobileNameInput" type="text" placeholder="Name" class="border w-full p-1" />
+        <input id="mobileEmailInput" type="email" placeholder="Email" class="border w-full p-1" />
+        <input id="mobilePhoneInput" type="tel" placeholder="Phone" class="border w-full p-1" />
+        <div class="pt-2 space-x-2">
+          <button id="mobileDetailsStart" class="bg-blue-500 text-white px-3 py-1 rounded">Start</button>
+          <button id="mobileDetailsCancel" class="bg-gray-300 px-3 py-1 rounded">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <script src="/js/doccropper.adapter.js"></script>
     <script>
       function dcApp(){
@@ -293,6 +317,8 @@
             removeBg:'Rimuovi sfondo'
           }
         };
+        // Expose translations so external plugins (e.g., mobile sign) can reuse them
+        window.dcStrings = strings;
         const DEFAULT_PAYPAL = 'https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY';
         return {
           drawer:false,
@@ -792,6 +818,12 @@
           }
         }
       }
+    </script>
+    <script type="module">
+      import { initSignaturePlugin } from '/static/plugins/mobilesign.js';
+      const lang = window.DC_LANG || document.documentElement.lang || 'en';
+      const trans = (window.dcStrings && window.dcStrings[lang]) ? window.dcStrings[lang] : {};
+      initSignaturePlugin(trans, true);
     </script>
   </body>
 </html>
