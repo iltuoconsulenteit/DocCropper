@@ -14,6 +14,33 @@
       main::-webkit-scrollbar-track { background: #f3f4f6; }
       main::-webkit-scrollbar-thumb { background-color: #9ca3af; border-radius: 8px; }
       main { scrollbar-width: auto; scrollbar-color: #9ca3af #f3f4f6; }
+      #exportOptions {
+        position: fixed;
+        right: 10px;
+        bottom: 10px;
+        background: #fff;
+        border: 1px solid #888;
+        padding: 10px;
+        z-index: 1000;
+        text-align: center;
+      }
+      #exportOptions button {
+        margin: 5px;
+      }
+      #layoutPreview {
+        width: 180px;
+        height: 220px;
+        border: 1px dashed #666;
+        margin-top: 10px;
+        display: none;
+        gap: 4px;
+      }
+      #layoutPreview.visible {
+        display: grid;
+      }
+      #layoutPreview .cell {
+        border: 1px solid #aaa;
+      }
     </style>
   </head>
   <body x-data="dcApp()" class="h-screen flex">
@@ -855,7 +882,7 @@
               .then(d=>{ if(d.processed_image){ this.files[this.cropIndex].url=d.processed_image; this.files[this.cropIndex].original=d.processed_image; this.files=[...this.files]; } })
               .finally(()=>{ this.closeCrop(); });
           },
-          initSortable(){
+      initSortable(){
             if(!this.$refs.fileGrid) return;
             if(this.sortable){ this.sortable.destroy(); }
             this.sortable = Sortable.create(this.$refs.fileGrid, {
@@ -872,6 +899,47 @@
         }
       }
     </script>
+    <div id="exportOptions" style="display:none;">
+      <a id="signedPdfLink" style="display:none; margin-bottom:8px; color:#2563eb; text-decoration:underline;" download="signed.pdf"></a>
+      <div id="layoutControls" style="display:none; text-align:left; margin-bottom:8px;">
+        <button id="togglePreviewBtn">Preview layout</button>
+        <label for="layoutSelect">Images per page:</label>
+        <select id="layoutSelect">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="4">4</option>
+        </select>
+        <label for="orientationSelect">Orientation:</label>
+        <select id="orientationSelect">
+          <option value="portrait">Portrait</option>
+          <option value="landscape">Landscape</option>
+        </select>
+        <label for="arrangeSelect">Layout:</label>
+        <select id="arrangeSelect">
+          <option value="auto">Auto</option>
+          <option value="horizontal">Horizontal</option>
+          <option value="vertical">Vertical</option>
+          <option value="grid">Grid</option>
+        </select>
+        <label for="scaleMode">Image size:</label>
+        <select id="scaleMode">
+          <option value="fit">Fill cell</option>
+          <option value="original">Original</option>
+          <option value="percent">Scale (%)</option>
+        </select>
+        <input type="number" id="scalePercent" value="100" min="10" max="300" step="10" style="width:60px; display:none;">
+        <label for="colorModeSelect">Color mode:</label>
+        <select id="colorModeSelect">
+          <option value="color">Color</option>
+          <option value="gray">Grayscale</option>
+          <option value="bw">B/W</option>
+        </select>
+      </div>
+      <div id="layoutPreview"></div>
+      <button id="downloadPdfBtn">Download PDF</button>
+      <button id="waShareBtn">WhatsApp</button>
+      <button id="emailShareBtn">Email</button>
+    </div>
     <script type="module">
       import { initSignaturePlugin } from '/static/plugins/mobilesign.js';
       const lang = window.DC_LANG || document.documentElement.lang || 'en';
