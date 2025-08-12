@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
-    <script src="https://cdn.interactjs.io/v1.10.11/interactjs/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.11/dist/interact.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
   </head>
   <body x-data="dcApp()" class="h-screen flex">
@@ -129,7 +129,7 @@
     <div x-show="cropModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
       <div class="bg-white p-4 rounded">
         <div id="cropWrapper" class="relative inline-block">
-          <img x-ref="cropImg" class="max-w-full max-h-[75vh]" />
+          <img x-ref="cropImg" class="max-w-full max-h-[75vh]" :style="`filter:brightness(${cropBrightness}%) contrast(${cropContrast}%)`" />
           <svg x-ref="cropSvg" class="absolute inset-0 pointer-events-none"><path x-ref="cropPath" fill-rule="evenodd" fill="rgba(0,0,0,0.5)" stroke="red" stroke-width="1"/></svg>
           <div id="cp1" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10 touch-none">1</div>
           <div id="cp2" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10 touch-none">2</div>
@@ -138,11 +138,11 @@
         </div>
         <div class="mt-2">
           <label class="block text-sm" x-text="t('brightness')"></label>
-          <input type="range" min="0" max="200" x-model.number="cropBrightness" class="w-full" />
+          <input type="range" min="0" max="200" x-model.number="cropBrightness" class="w-48" />
         </div>
         <div class="mt-2">
           <label class="block text-sm" x-text="t('contrast')"></label>
-          <input type="range" min="0" max="200" x-model.number="cropContrast" class="w-full" />
+          <input type="range" min="0" max="200" x-model.number="cropContrast" class="w-48" />
         </div>
         <div class="mt-2 text-right space-x-2">
           <button @click="applyCrop" class="bg-blue-500 text-white px-3 py-1 rounded" x-text="t('apply')"></button>
@@ -475,7 +475,7 @@
             this.cropModal = true;
             this.$nextTick(()=>{
               const img = this.$refs.cropImg;
-              img.onload = () => { requestAnimationFrame(()=>this.setupCrop()); };
+              img.onload = () => { this.$nextTick(()=>this.setupCrop()); };
               img.src = this.files[idx].url;
             });
           },
@@ -483,9 +483,8 @@
             const img = this.$refs.cropImg;
             this.origW = img.naturalWidth;
             this.origH = img.naturalHeight;
-            const rect = img.getBoundingClientRect();
-            const w = rect.width;
-            const h = rect.height;
+            const w = img.offsetWidth || img.getBoundingClientRect().width;
+            const h = img.offsetHeight || img.getBoundingClientRect().height;
             const svg=this.$refs.cropSvg;
             svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
             svg.setAttribute('width',w);
