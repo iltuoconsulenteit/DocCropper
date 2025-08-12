@@ -96,6 +96,7 @@ def register(app, utils):
         #pad{ border:1px solid #000; display:none; margin-top:10px; width:100%; height:200px }
         </style>
         <script src='https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js'></script>
+        <script src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'></script>
         </head><body>
         <img src='/static/logos/header_logo.png' style='max-width:150px;margin-top:10px' alt='DocCropper'>
         <p style='font-size:small;color:#a00;margin-top:5px;font-weight:bold'>DocCropper e i suoi autori declinano ogni responsabilità per un uso non conforme alla legge.<br>DocCropper and its authors accept no liability for illegal use.</p>
@@ -123,7 +124,7 @@ def register(app, utils):
             </label>
             <button id='finish'>Finish</button>
         </div>
-        <div style='margin-top:20px;'><img src='/static/logos/footer_logo.png' style='max-height:20px' alt='IlTuoConsulenteIT'></div>
+        <div style='margin-top:20px;'><img src='/static/logos/footer_logo.png' style='max-height:30px' alt='IlTuoConsulenteIT'></div>
         <script>
         const padEl=document.getElementById('pad');
         const overlay=document.getElementById('overlay');
@@ -239,10 +240,32 @@ def register(app, utils):
         const pdfLink=document.getElementById('pdfLink');
         const waPdfBtn=document.getElementById('waPdfBtn');
         const emailPdfBtn=document.getElementById('emailPdfBtn');
-        async function pollPdf(){
+
+        function loadImage(src){
+            return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});
+        }
+
+        async function generatePdf(){
             try{
-                const r=await fetch('/signed-pdf/{token}',{cache:'no-store'});
-                if(r.status===200){
+                const { jsPDF } = window.jspdf || {};
+                if(!jsPDF) throw new Error('jsPDF missing');
+                const imgs=[];
+                for(const src of images){ imgs.push(await loadImage(src)); }
+                const pdf=new jsPDF({orientation:'p',unit:'px',format:[imgs[0].width,imgs[0].height]});
+                imgs.forEach((img,idx)=>{
+                    if(idx>0) pdf.addPage([img.width,img.height]);
+                    pdf.addImage(img,'PNG',0,0,img.width,img.height);
+                    signs.filter(s=>s.page===idx).forEach(s=>{
+                        const h=img.height/10*s.scale;
+                        const w=h*(s.ratio||1);
+                        const x=s.x*img.width - w/2;
+                        const y=s.y*img.height - h/2;
+                        pdf.addImage(s.img,'PNG',x,y,w,h);
+                    });
+                });
+                const data=pdf.output('datauristring');
+                const r=await fetch('/store-signed-pdf/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pdf:data})});
+                if(r.ok){
                     const d=await r.json();
                     if(d.url){
                         pdfLink.href=d.url;
@@ -251,7 +274,7 @@ def register(app, utils):
                         finishMsg.textContent='Signatures sent. Download your PDF:';
                         if(waPdfBtn){
                             waPdfBtn.onclick=()=>{
-                                const p=(d.phone||'').replace(/[^0-9]/g,'');
+                                const p=(phoneInput.value||'').replace(/[^0-9]/g,'');
                                 const params=new URLSearchParams({text:d.url});
                                 if(p) params.set('phone',p);
                                 const u=`https://web.whatsapp.com/send?${params.toString()}`;
@@ -261,7 +284,7 @@ def register(app, utils):
                         }
                         if(emailPdfBtn){
                             emailPdfBtn.onclick=()=>{
-                                const m=d.email?encodeURIComponent(d.email):'';
+                                const m=emailInput.value?encodeURIComponent(emailInput.value):'';
                                 const mailto=`mailto:${m}?body=${encodeURIComponent(d.url)}`;
                                 window.open(mailto,'_blank');
                             };
@@ -270,8 +293,10 @@ def register(app, utils):
                         return;
                     }
                 }
-            }catch{}
-            setTimeout(pollPdf,3000);
+                finishMsg.textContent='PDF generation failed';
+            }catch(err){
+                finishMsg.textContent='PDF generation failed';
+            }
         }
         finishBtn.onclick=async()=>{
             if(finished) return;
@@ -282,13 +307,13 @@ def register(app, utils):
                 await fetch('/submit-signature/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:s.img,x:s.x,y:s.y,page:s.page,scale:s.scale})});
             }
             await fetch('/finish-signing/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:nameInput.value||'',email:emailInput.value||'',phone:phoneInput.value||'',consent:consentFlag.checked})});
-            finishMsg.textContent='Signatures sent. Waiting for PDF...';
+            finishMsg.textContent='Generating PDF...';
             finished=true;
             finishBtn.disabled=true;
             submitBtn.disabled=true;
             clearBtn.disabled=true;
             docImg.onclick=null;
-            pollPdf();
+            await generatePdf();
         };
         </script>
         </body></html>
@@ -430,12 +455,24 @@ def register(app, utils):
         name = info.get('name', '')
         ip = request.client.host or ''
         email = info.get('email', '')
+        phone = info.get('phone', '')
+        consent = info.get('consent', False)
         legal = f"Firmato elettronicamente in data {ts} da {name} con firma elettronica semplice ai sensi del Regolamento eIDAS (UE 910/2014). IP: {ip} | Email: {email} | SHA256: {hash_hex}"
         try:
             doc = fitz.open(stream=pdf_bytes, filetype='pdf')
-            page = doc[-1]
-            rect = fitz.Rect(50, page.rect.height - 40, page.rect.width - 50, page.rect.height - 10)
-            page.insert_textbox(rect, legal, fontsize=8, align=1)
+            try:
+                page = doc[-1]
+                rect = fitz.Rect(50, page.rect.height - 40, page.rect.width - 50, page.rect.height - 10)
+                page.insert_textbox(rect, legal, fontsize=8, align=1)
+            except Exception:
+                pass
+            try:
+                info_page = doc.new_page()
+                text = f"Nome: {name}\nEmail: {email}\nTelefono: {phone}\nData: {ts}\nSHA256: {hash_hex}\nConsenso: {consent}"
+                info_rect = fitz.Rect(50,50, info_page.rect.width-50, info_page.rect.height-50)
+                info_page.insert_textbox(info_rect, text, fontsize=12, align=0)
+            except Exception:
+                pass
             pdf_bytes = doc.tobytes()
             doc.close()
         except Exception:
@@ -465,7 +502,7 @@ def register(app, utils):
             json.dump(log_entry, fh, indent=2)
         if email:
             send_mail(email, 'Documento firmato', f'SHA256: {hash_hex}', pdf_path)
-        return {'status': 'ok', 'url': str(url)}
+        return {'status': 'ok', 'url': str(url), 'email': email, 'phone': phone}
 
     @app.get('/signed-pdf/{token}')
     async def signed_pdf(request: Request, token: str):
