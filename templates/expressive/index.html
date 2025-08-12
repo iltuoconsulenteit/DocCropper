@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DocCropper Expressive</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet" />
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.11/dist/interact.min.js"></script>
@@ -415,12 +415,14 @@
               }
             }).catch(()=>{});
             window.signatures = this.signatures;
-            window.openSignatureForPage = (idx = 0) => {
-              this.signPage(idx);
-            };
-            window.startSign = () => {
-              if (this.files.length > 0) this.signPage(0);
-            };
+            window.openSignatureForPage = this.openSignatureForPage.bind(this);
+            window.startSign = this.startSign.bind(this);
+          },
+          openSignatureForPage(idx = 0){
+            this.signPage(idx);
+          },
+          startSign(){
+            if (this.files.length > 0) this.signPage(0);
           },
           async command(action){
             if(!this.pinned) this.drawer=false;
