@@ -450,14 +450,14 @@ def register(app, utils):
             return JSONResponse(status_code=404, content={'message': 'Not found'})
         with open(info_path, 'r') as fh:
             info = json.load(fh)
-        hash_hex = hashlib.sha256(pdf_bytes).hexdigest()
         ts = info.get('timestamp') or datetime.utcnow().isoformat()
         name = info.get('name', '')
         ip = request.client.host or ''
         email = info.get('email', '')
         phone = info.get('phone', '')
         consent = info.get('consent', False)
-        legal = f"Firmato elettronicamente in data {ts} da {name} con firma elettronica semplice ai sensi del Regolamento eIDAS (UE 910/2014). IP: {ip} | Email: {email} | SHA256: {hash_hex}"
+        hash_hex = hashlib.sha256(pdf_bytes).hexdigest()
+        legal = f"Firmato elettronicamente in data {ts} da {name} con firma elettronica semplice ai sensi del Regolamento eIDAS(UE 910/2014). IP: {ip} | Email: {email} | SHA256: {hash_hex}"
         try:
             doc = fitz.open(stream=pdf_bytes, filetype='pdf')
             try:
@@ -473,10 +473,11 @@ def register(app, utils):
                 info_page.insert_textbox(info_rect, text, fontsize=12, align=0)
             except Exception:
                 pass
-            pdf_bytes = doc.tobytes()
+            pdf_bytes = doc.tobytes(garbage=4, deflate=True)
             doc.close()
         except Exception:
             logging.exception('Failed to append legal text')
+        hash_hex = hashlib.sha256(pdf_bytes).hexdigest()
         pdf_path = os.path.join(signatures_dir, f'signed_{token}.pdf')
         with open(pdf_path, 'wb') as fh:
             fh.write(pdf_bytes)

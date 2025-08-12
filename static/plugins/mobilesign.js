@@ -20,6 +20,23 @@ export function initSignaturePlugin(translations, enabled = true) {
         return;
     }
 
+    async function pollPdf(token) {
+        try {
+            const r = await fetch(`/signed-pdf/${token}`);
+            if (r.status === 200) {
+                const d = await r.json();
+                if (d.url) {
+                    window.lastSignedUrl = d.url;
+                    window.dispatchEvent(new CustomEvent('signedPdfAvailable', { detail: d }));
+                    return;
+                }
+            }
+        } catch (err) {
+            console.error('pdf poll error', err);
+        }
+        setTimeout(() => pollPdf(token), 3000);
+    }
+
     async function pollSignature(token) {
         try {
             const resp = await fetch(`/signature-result/${token}`);
@@ -37,6 +54,7 @@ export function initSignaturePlugin(translations, enabled = true) {
                 }
                 window.dispatchEvent(new Event('mobileSignComplete'));
                 signQR.style.display = 'none';
+                pollPdf(token);
                 return;
             } else if (resp.status === 202) {
                 setTimeout(() => pollSignature(token), 3000);

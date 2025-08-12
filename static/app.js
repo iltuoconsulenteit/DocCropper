@@ -1740,24 +1740,14 @@ function generatePdf() {
             exportOptions.style.display = 'block';
             statusMessageElement.textContent = 'PDF ready.';
             if (window.lastSignToken) {
-                fetch('/store-signed-pdf/' + window.lastSignToken, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pdf: data.pdf })
-                })
-                .then(r => r.json())
-                .then(d => {
-                    if (d.url) {
-                        window.lastSignedUrl = d.url;
-                        if (signedPdfLink) {
-                            signedPdfLink.href = d.url;
-                            signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
-                            signedPdfLink.style.display = 'inline';
-                        }
-                    }
-                    if (window.lastSignPhone) shareWhatsAppLink(window.lastSignPhone, d.url);
-                    if (window.lastSignEmail) shareEmailLink(window.lastSignEmail, d.url);
-                });
+                const url = window.lastSignedUrl || URL.createObjectURL(currentPdfBlob);
+                if (signedPdfLink) {
+                    signedPdfLink.href = url;
+                    signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
+                    signedPdfLink.style.display = 'inline';
+                }
+                if (window.lastSignPhone) shareWhatsAppLink(window.lastSignPhone, url);
+                if (window.lastSignEmail) shareEmailLink(window.lastSignEmail, url);
             } else {
                 if (window.lastSignPhone) {
                     shareWhatsApp(window.lastSignPhone);
@@ -2266,7 +2256,19 @@ async function applyRemoteSignature(data) {
 
 window.addEventListener('remoteSignature', (e) => applyRemoteSignature(e.detail));
 window.addEventListener('mobileSignComplete', () => {
-    if (exportPdfBtn) exportPdfBtn.click();
+    statusMessageElement.textContent = translations['waitingPdf'] || 'Waiting for signed PDF...';
+});
+window.addEventListener('signedPdfAvailable', (e) => {
+    const url = e.detail.url;
+    exportOptions.style.display = 'block';
+    if (signedPdfLink) {
+        signedPdfLink.href = url;
+        signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
+        signedPdfLink.style.display = 'inline';
+    }
+    statusMessageElement.textContent = translations['pdfReady'] || 'PDF ready.';
+    if (window.lastSignPhone) shareWhatsAppLink(window.lastSignPhone, url);
+    if (window.lastSignEmail) shareEmailLink(window.lastSignEmail, url);
 });
 
 function updateImageFilters() {
