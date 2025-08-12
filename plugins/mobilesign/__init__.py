@@ -473,7 +473,13 @@ def register(app, utils):
                 info_page.insert_textbox(info_rect, text, fontsize=12, align=0)
             except Exception:
                 pass
-            pdf_bytes = doc.tobytes(garbage=4, deflate=True)
+            pdf_bytes = doc.tobytes(
+                clean=True,
+                garbage=4,
+                deflate=True,
+                deflate_images=True,
+                deflate_fonts=True,
+            )
             doc.close()
         except Exception:
             logging.exception('Failed to append legal text')
