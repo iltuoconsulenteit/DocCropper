@@ -130,11 +130,11 @@
       <div class="bg-white p-4 rounded">
         <div id="cropWrapper" class="relative inline-block">
           <img x-ref="cropImg" class="max-w-full max-h-[75vh]" />
-          <svg x-ref="cropSvg" class="absolute inset-0"><path x-ref="cropPath" fill-rule="evenodd" fill="rgba(0,0,0,0.5)" stroke="red" stroke-width="1"/></svg>
-          <div id="cp1" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10">1</div>
-          <div id="cp2" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10">2</div>
-          <div id="cp3" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10">3</div>
-          <div id="cp4" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10">4</div>
+          <svg x-ref="cropSvg" class="absolute inset-0 pointer-events-none"><path x-ref="cropPath" fill-rule="evenodd" fill="rgba(0,0,0,0.5)" stroke="red" stroke-width="1"/></svg>
+          <div id="cp1" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10 touch-none">1</div>
+          <div id="cp2" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10 touch-none">2</div>
+          <div id="cp3" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10 touch-none">3</div>
+          <div id="cp4" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10 touch-none">4</div>
         </div>
         <div class="mt-2 text-right space-x-2">
           <button @click="applyCrop" class="bg-blue-500 text-white px-3 py-1 rounded" x-text="t('apply')"></button>
@@ -485,7 +485,8 @@
             Object.keys(map).forEach((k,i)=>{
               const el=document.getElementById(map[k]);
               this.draggables[k]=el;
-              const pointSize=el.offsetWidth;
+              const pointSize=el.offsetWidth||20;
+              el.style.touchAction='none';
               let pos;
               if(pts && pts.length===8){
                 pos=[pts[2*i]-pointSize/2, pts[2*i+1]-pointSize/2];
@@ -503,7 +504,7 @@
                 el.setAttribute('data-y',y);
                 el.style.transform=`translate(${x}px,${y}px)`;
                 this.updatePolygon();
-              }}});
+              }},modifiers:[interact.modifiers.restrictRect({restriction:'parent',endOnly:false})]});
             });
             this.updatePolygon();
           },
