@@ -97,10 +97,8 @@
               <div class="mb-4">
                 <p class="text-xs text-center mb-1 truncate" x-text="(idx+1)+' - '+file.name"></p>
                 <div class="border p-1 relative">
-                  <div class="absolute top-0 left-0 right-0 flex justify-center gap-1 bg-white/70 p-1">
-                    <button @click="crop(idx)" title="Crop" class="text-xs">✂</button>
-                    <button @click="remove(idx)" title="Delete" class="text-xs">✖</button>
-                  </div>
+                  <button @click="crop(idx)" title="Crop" class="absolute top-0 left-0 m-1 bg-white/70 px-1 text-xs rounded">✂</button>
+                  <button @click="remove(idx)" title="Delete" class="absolute top-0 right-0 m-1 bg-white/70 px-1 text-xs rounded">✖</button>
                   <img :src="file.url" :alt="file.name" class="w-full h-72 lg:h-96 object-contain cursor-pointer" @click="view(file.url)" />
                   <div class="absolute bottom-0 left-0 right-0 flex justify-center gap-1 bg-white/70 p-1">
                     <button @click="rotate(idx)" title="Rotate" class="text-xs">↻</button>
@@ -160,14 +158,14 @@
     <!-- Sign Modal -->
     <div x-show="signModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
       <div class="bg-white p-4 rounded">
-        <div class="flex flex-col md:flex-row gap-4">
+        <div class="flex flex-col gap-4">
           <div class="relative" x-ref="signWrap">
-            <img x-ref="signImg" :src="files[signIndex]?.url" @click="addSignature" class="max-w-full max-h-[70vh] cursor-crosshair" />
+            <img x-ref="signImg" :src="files[signIndex]?.url" @dblclick="addSignature" class="max-w-full max-h-[70vh] cursor-crosshair" />
             <template x-for="(sig,i) in signatures.filter(s=>s.page===signIndex)" :key="i">
               <img :id="'sig'+i" :src="signatureImageData" class="absolute cursor-move" @mousedown.stop="selectSig(i)">
             </template>
           </div>
-          <div class="space-y-2 w-48">
+          <div class="space-y-2 mt-4">
             <input type="file" accept="image/*" @change="loadSignature">
             <label class="flex items-center gap-1 text-sm"><input type="checkbox" x-model="removeSigBg" @change="window.removeSignatureBackground = removeSigBg"><span x-text="t('removeBg')"></span></label>
             <div>
@@ -557,7 +555,11 @@
             e.target.value='';
           },
           addSignature(ev){
-            if(!this.signatureImageData) return;
+            if(!this.signatureImageData){
+              const inp = this.$el.querySelector('input[type=file]');
+              if(inp) inp.click();
+              return;
+            }
             const rect = this.$refs.signImg.getBoundingClientRect();
             const x = (ev.clientX - rect.left) / rect.width;
             const y = (ev.clientY - rect.top) / rect.height;
