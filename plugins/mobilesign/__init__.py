@@ -99,6 +99,8 @@ def register(app, utils):
         </head><body>
         <img src='/static/logos/header_logo.png' style='max-width:150px;margin-top:10px' alt='DocCropper'>
         <p style='font-size:small;color:#a00;margin-top:5px;font-weight:bold'>DocCropper e i suoi autori declinano ogni responsabilità per un uso non conforme alla legge.<br>DocCropper and its authors accept no liability for illegal use.</p>
+        <label for='pageSelect' style='display:block;margin-top:10px;'>Page:</label>
+        <select id='pageSelect' style='margin-top:4px'></select>
         <label style='display:block;margin-top:5px;'><input type='checkbox' id='consentFlag'> Consento il trattamento dei dati</label>
         <input id='nameInput' type='text' placeholder='Nome' value='{name}' style='width:90%;max-width:300px;margin-top:5px;'>
         <input id='emailInput' type='email' placeholder='Email' value='{email}' style='width:90%;max-width:300px;margin-top:5px;'>
@@ -108,8 +110,6 @@ def register(app, utils):
         <button id='waPdfBtn' style='display:none;margin-left:10px;'>WhatsApp</button>
         <button id='emailPdfBtn' style='display:none;margin-left:10px;'>Email</button>
         <p>Tap the document then draw your signature</p>
-        <label for='pageSelect' style='display:block;margin-top:10px;'>Page:</label>
-        <select id='pageSelect' style='margin-top:4px'></select>
         <div id='container'>
             <img id='docImg' src='{img}' alt='doc'>
             <canvas id='overlay'></canvas>
@@ -138,12 +138,14 @@ def register(app, utils):
         const phoneInput=document.getElementById('phoneInput');
         const consentFlag=document.getElementById('consentFlag');
         const scaleInput=document.getElementById('scaleRange');
+        const container=document.getElementById('container');
         let scale=1;
         if(scaleInput){
             scaleInput.oninput=()=>{ scale=parseFloat(scaleInput.value); };
         }
         const images={images_json};
         const spots={spots_json};
+        const signs=[];
         async function loadPages(){
             try{
                 const resp=await fetch('/sign-pages/{token}');
@@ -156,8 +158,8 @@ def register(app, utils):
             }catch{}
             images.forEach((img,idx)=>{const opt=document.createElement('option');opt.value=idx;opt.textContent=(idx+1);pageSelect.appendChild(opt);});
             pageSelect.value={page};
+            docImg.onload=()=>{resize(); drawSpots(); positionAllSigns();};
             docImg.src=images[pageSelect.value];
-            drawSpots();
         }
         loadPages();
         let pos=null;
@@ -165,8 +167,9 @@ def register(app, utils):
         function resize(){
             padEl.width=window.innerWidth*0.9; padEl.height=200;
             overlay.width=docImg.clientWidth; overlay.height=docImg.clientHeight;
+            positionAllSigns();
         }
-        resize(); window.addEventListener('resize',resize);
+        window.addEventListener('resize',resize);
         const pad=new SignaturePad(padEl);
         function drawSpots(){
             const ctx=overlay.getContext('2d');
@@ -176,29 +179,50 @@ def register(app, utils):
             ctx.lineWidth=2;
             list.forEach(pt=>{const x=pt.x*overlay.width;const y=pt.y*overlay.height;ctx.beginPath();ctx.moveTo(x-10,y);ctx.lineTo(x+10,y);ctx.moveTo(x,y-10);ctx.lineTo(x,y+10);ctx.stroke();});
         }
-        pageSelect.onchange=()=>{ docImg.src=images[pageSelect.value]; drawSpots(); pos=null; };
+        function positionAllSigns(){
+            const rect=docImg.getBoundingClientRect();
+            signs.forEach(s=>{
+                const h=rect.height/10*s.scale;
+                const w=h*(s.ratio||1);
+                const x=s.x*rect.width - w/2;
+                const y=s.y*rect.height - h/2;
+                s.element.style.width=w+'px';
+                s.element.style.height=h+'px';
+                s.element.style.left=x+'px';
+                s.element.style.top=y+'px';
+                s.element.style.display = (s.page==parseInt(pageSelect.value)) ? 'block':'none';
+            });
+        }
+        function makeDraggable(el,s){
+            let sx=0, sy=0, dragging=false;
+            el.addEventListener('pointerdown',e=>{
+                dragging=true; sx=e.clientX; sy=e.clientY; el.setPointerCapture(e.pointerId);
+            });
+            el.addEventListener('pointermove',e=>{
+                if(!dragging) return; const dx=e.clientX-sx; const dy=e.clientY-sy; const left=parseFloat(el.style.left)+dx; const top=parseFloat(el.style.top)+dy; el.style.left=left+'px'; el.style.top=top+'px'; const rect=docImg.getBoundingClientRect(); s.x=(left+el.offsetWidth/2)/rect.width; s.y=(top+el.offsetHeight/2)/rect.height; sx=e.clientX; sy=e.clientY;
+            });
+            el.addEventListener('pointerup',e=>{ dragging=false; el.releasePointerCapture(e.pointerId); });
+        }
+        pageSelect.onchange=()=>{ docImg.onload=()=>{resize(); drawSpots(); positionAllSigns();}; docImg.src=images[pageSelect.value]; pos=null; };
         docImg.onclick=e=>{ if(finished) return; const r=e.target.getBoundingClientRect(); pos={x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}; padEl.style.display='block'; controls.style.display='block'; };
         clearBtn.onclick=()=>pad.clear();
-        async function submitCurrent(){
+        function placeCurrent(){
             if(!pos||pad.isEmpty())return false;
             const img=pad.toDataURL('image/png');
-            await fetch('/submit-signature/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:img,x:pos.x,y:pos.y,page:parseInt(pageSelect.value),scale})});
-            const ctx=overlay.getContext('2d');
-            const tmp=new Image();
-            tmp.onload=()=>{
-                const w=tmp.width*(overlay.height/10)*scale/tmp.height;
-                const h=overlay.height/10*scale;
-                const x=pos.x*overlay.width - w/2;
-                const y=pos.y*overlay.height - h/2;
-                ctx.drawImage(tmp,x,y,w,h);
-            };
-            tmp.src=img;
+            const sign={img,x:pos.x,y:pos.y,scale:scale,page:parseInt(pageSelect.value)};
+            const el=new Image();
+            el.src=img; el.style.position='absolute'; el.style.touchAction='none';
+            sign.element=el;
+            el.onload=()=>{ sign.ratio=el.width/el.height; positionAllSigns(); };
+            makeDraggable(el,sign);
+            container.appendChild(el);
+            signs.push(sign);
             pad.clear();
             padEl.style.display='none';
             drawSpots();
             return true;
         }
-        submitBtn.onclick=submitCurrent;
+        submitBtn.onclick=placeCurrent;
         const finishMsg=document.getElementById('finishMsg');
         const pdfLink=document.getElementById('pdfLink');
         const waPdfBtn=document.getElementById('waPdfBtn');
@@ -237,9 +261,12 @@ def register(app, utils):
         }
         finishBtn.onclick=async()=>{
             if(finished) return;
-            if(!pad.isEmpty()) await submitCurrent();
+            if(!pad.isEmpty()) placeCurrent();
             finishMsg.textContent='Sending signatures...';
             finishMsg.style.display='block';
+            for(const s of signs){
+                await fetch('/submit-signature/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:s.img,x:s.x,y:s.y,page:s.page,scale:s.scale})});
+            }
             await fetch('/finish-signing/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:nameInput.value||'',email:emailInput.value||'',phone:phoneInput.value||'',consent:consentFlag.checked})});
             finishMsg.textContent='Signatures sent. Waiting for PDF...';
             finished=true;
