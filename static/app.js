@@ -892,6 +892,10 @@ function openSignatureForPage(idx) {
     renderSignaturePreview();
 }
 
+// Expose signature helpers for global adapters
+window.openSignatureForPage = openSignatureForPage;
+window.startSign = () => openSignatureForPage(0);
+
 function cropImage(index) {
     editingIndex = index;
     const file = processedFiles[index];

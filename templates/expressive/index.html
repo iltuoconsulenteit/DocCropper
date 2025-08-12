@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DocCropper Expressive</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.11/dist/interact.min.js"></script>
@@ -159,6 +159,7 @@
       <div class="bg-white p-4 rounded">
         <div class="flex gap-4">
           <div class="relative" x-ref="signWrap">
+            <p class="text-xs text-gray-500 mb-1" x-text="t('dblClickHint') || 'Double click the image to add your signature'"></p>
             <img x-ref="signImg" :src="files[signIndex]?.url" @dblclick.stop="addSignature($event)" class="max-w-full max-h-[70vh] cursor-crosshair" />
             <template x-for="(sig,i) in signatures.filter(s=>s.page===signIndex)" :key="i">
               <img :id="'sig'+i" :src="signatureImageData" class="absolute cursor-move" @mousedown.stop="selectSig(i)">
@@ -170,6 +171,7 @@
           </div>
           <div class="flex flex-col space-y-2 w-40 text-xs">
             <input type="file" accept="image/*" @change="loadSignature" class="text-xs">
+            <button @click="drawModal=true" class="px-2 py-1 bg-gray-200 rounded" x-text="t('draw') || 'Draw'"></button>
             <label class="flex items-center gap-1"><input type="checkbox" x-model="removeSigBg" @change="window.removeSignatureBackground = removeSigBg"><span x-text="t('removeBg')"></span></label>
             <div class="border-t pt-2 space-y-1">
               <template x-for="(sig,i) in signatures.filter(s=>s.page===signIndex)" :key="'list'+i">
@@ -184,6 +186,17 @@
               <button @click="closeSign" class="bg-gray-300 px-2 py-1 rounded" x-text="t('cancel')"></button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Draw Modal -->
+    <div x-show="drawModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded">
+        <canvas x-ref="drawCanvas" width="300" height="150" class="border" @mousedown="startDraw($event)" @mousemove="moveDraw($event)" @mouseup="endDraw" @mouseleave="endDraw" @touchstart.prevent="startDraw($event)" @touchmove.prevent="moveDraw($event)" @touchend="endDraw"></canvas>
+        <div class="mt-2 flex justify-end gap-2 text-sm">
+          <button @click="clearDraw" class="px-2 py-1 bg-gray-200 rounded" x-text="t('clear') || 'Clear'"></button>
+          <button @click="useDraw" class="px-2 py-1 bg-blue-500 text-white rounded" x-text="t('apply')"></button>
         </div>
       </div>
     </div>
@@ -341,6 +354,9 @@
           lastTap:0,
           files:[],
           signModal:false,
+          drawModal:false,
+          drawing:false,
+          lastPoint:null,
           signIndex:null,
           signatureImageData:null,
           signatures:[],
@@ -672,6 +688,41 @@
             if(this.activeSig===i) this.activeSig=null;
             else if(this.activeSig>i) this.activeSig--;
             this.renderSignatures();
+          },
+          getDrawPos(e){
+            const rect=this.$refs.drawCanvas.getBoundingClientRect();
+            const x=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
+            const y=(e.touches?e.touches[0].clientY:e.clientY)-rect.top;
+            return {x,y};
+          },
+          startDraw(e){ this.drawing=true; this.lastPoint=this.getDrawPos(e); },
+          moveDraw(e){
+            if(!this.drawing) return;
+            const ctx=this.$refs.drawCanvas.getContext('2d');
+            const p=this.getDrawPos(e);
+            ctx.beginPath();
+            ctx.moveTo(this.lastPoint.x,this.lastPoint.y);
+            ctx.lineTo(p.x,p.y);
+            ctx.stroke();
+            this.lastPoint=p;
+          },
+          endDraw(){ this.drawing=false; },
+          clearDraw(){
+            const c=this.$refs.drawCanvas;
+            c.getContext('2d').clearRect(0,0,c.width,c.height);
+          },
+          useDraw(){
+            const data=this.$refs.drawCanvas.toDataURL('image/png');
+            this.signatureImageData=data;
+            window.signatureImageData=data;
+            const img=new Image();
+            img.onload=()=>{
+              this.signatureAspect=img.height/img.width;
+              window.signatureAspect=this.signatureAspect;
+              this.renderSignatures();
+            };
+            img.src=data;
+            this.drawModal=false;
           },
           saveSignModal(){
             this.signModal=false;
