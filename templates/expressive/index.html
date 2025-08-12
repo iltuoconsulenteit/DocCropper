@@ -415,6 +415,12 @@
               }
             }).catch(()=>{});
             window.signatures = this.signatures;
+            window.openSignatureForPage = (idx = 0) => {
+              this.signPage(idx);
+            };
+            window.startSign = () => {
+              if (this.files.length > 0) this.signPage(0);
+            };
           },
           async command(action){
             if(!this.pinned) this.drawer=false;
