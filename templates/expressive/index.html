@@ -131,10 +131,10 @@
         <div id="cropWrapper" class="relative inline-block">
           <img x-ref="cropImg" class="max-w-full max-h-[75vh]" />
           <svg x-ref="cropSvg" class="absolute inset-0"><path x-ref="cropPath" fill-rule="evenodd" fill="rgba(0,0,0,0.5)" stroke="red" stroke-width="1"/></svg>
-          <div id="cp1" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute">1</div>
-          <div id="cp2" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute">2</div>
-          <div id="cp3" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute">3</div>
-          <div id="cp4" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute">4</div>
+          <div id="cp1" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10">1</div>
+          <div id="cp2" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10">2</div>
+          <div id="cp3" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10">3</div>
+          <div id="cp4" class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs absolute z-10">4</div>
         </div>
         <div class="mt-2 text-right space-x-2">
           <button @click="applyCrop" class="bg-blue-500 text-white px-3 py-1 rounded" x-text="t('apply')"></button>
@@ -459,7 +459,7 @@
             this.cropModal = true;
             this.$nextTick(()=>{
               const img = this.$refs.cropImg;
-              img.onload = () => { this.setupCrop(); };
+              img.onload = () => { requestAnimationFrame(()=>this.setupCrop()); };
               img.src = this.files[idx].url;
             });
           },
@@ -467,8 +467,9 @@
             const img = this.$refs.cropImg;
             this.origW = img.naturalWidth;
             this.origH = img.naturalHeight;
-            const w = img.clientWidth;
-            const h = img.clientHeight;
+            const rect = img.getBoundingClientRect();
+            const w = rect.width;
+            const h = rect.height;
             const svg=this.$refs.cropSvg;
             svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
             svg.setAttribute('width',w);
