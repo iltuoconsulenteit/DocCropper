@@ -2034,7 +2034,7 @@ if (signaturePreview) {
         if (signatureImg) {
             signaturePosition.x = x;
             signaturePosition.y = y;
-            renderSignaturePreview();
+            addCurrentSignature();
         } else {
             pendingSigPos = { x, y };
             signatureModal.style.display = 'block';
