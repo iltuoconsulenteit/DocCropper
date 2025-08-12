@@ -53,8 +53,13 @@ export function initSignaturePlugin(translations, enabled = true) {
     async function startQrSign() {
         if (window.showLoading) window.showLoading(translations['loading'] || 'Loading...');
         try {
-            const images = window.processedImages || [];
-            if (!images.length) return;
+            const images = typeof window.getProcessedImages === 'function'
+                ? window.getProcessedImages()
+                : (window.processedImages || []);
+            if (!images.length) {
+                alert(translations['noFiles'] || 'No files available.');
+                return;
+            }
             if (signaturePage && signaturePage.options.length === 0) {
                 signaturePage.innerHTML = '';
                 for (let i = 0; i < images.length; i++) {

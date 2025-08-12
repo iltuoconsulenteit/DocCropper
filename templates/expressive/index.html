@@ -437,6 +437,7 @@
             window.startSign = () => {
               if (this.files.length > 0) this.signPage(0);
             };
+            window.getProcessedImages = () => this.files.map(f => f.url);
           },
           async command(action){
             if(!this.pinned) this.drawer=false;
