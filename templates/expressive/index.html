@@ -152,13 +152,27 @@
     <!-- Sign Modal -->
     <div x-show="signModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
       <div class="bg-white p-4 rounded">
-        <div class="relative inline-block">
-          <img x-ref="signImg" :src="files[signIndex]?.url" @click="setSignPos" class="max-w-full max-h-[75vh] cursor-crosshair" />
-          <div x-show="signPos" class="absolute w-4 h-4 bg-green-500 rounded-full transform -translate-x-1/2 -translate-y-1/2" :style="`left:${signPos.x}px;top:${signPos.y}px`"></div>
-        </div>
-        <div class="mt-2 text-right space-x-2">
-          <button @click="applySign" class="bg-blue-500 text-white px-3 py-1 rounded" x-text="t('apply')"></button>
-          <button @click="closeSign" class="bg-gray-300 px-3 py-1 rounded" x-text="t('cancel')"></button>
+        <div class="flex flex-col md:flex-row gap-4">
+          <div class="relative" x-ref="signWrap">
+            <img x-ref="signImg" :src="files[signIndex]?.url" @click="addSignature" class="max-w-full max-h-[70vh] cursor-crosshair" />
+            <template x-for="(sig,i) in signatures.filter(s=>s.page===signIndex)" :key="i">
+              <img :id="'sig'+i" :src="signatureImageData" class="absolute cursor-move" @mousedown.stop="selectSig(i)">
+            </template>
+          </div>
+          <div class="space-y-2 w-48">
+            <input type="file" accept="image/*" @change="loadSignature">
+            <div>
+              <label class="text-sm" x-text="t('scale')"></label>
+              <input type="range" min="0.5" max="2" step="0.1" x-model.number="sigScale" @input="updateScale" class="w-full">
+            </div>
+            <div class="text-right" x-show="activeSig!==null">
+              <button @click="deleteSig" class="bg-red-500 text-white px-2 py-1 rounded" x-text="t('delete')"></button>
+            </div>
+            <div class="text-right pt-2 space-x-2">
+              <button @click="saveSignModal" class="bg-blue-500 text-white px-3 py-1 rounded" x-text="t('apply')"></button>
+              <button @click="closeSign" class="bg-gray-300 px-3 py-1 rounded" x-text="t('cancel')"></button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -225,7 +239,9 @@
             licenseFull:'Full',
             licenseSaved:'License saved',
             brightness:'Brightness',
-            contrast:'Contrast'
+            contrast:'Contrast',
+            scale:'Scale',
+            delete:'Delete'
           },
           it:{
             commands:'Comandi',
@@ -259,7 +275,9 @@
             licenseFull:'Completa',
             licenseSaved:'Licenza salvata',
             brightness:'Luminosità',
-            contrast:'Contrasto'
+            contrast:'Contrasto',
+            scale:'Scala',
+            delete:'Elimina'
           }
         };
         const DEFAULT_PAYPAL = 'https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY';
@@ -285,7 +303,11 @@
           files:[],
           signModal:false,
           signIndex:null,
-          signPos:null,
+          signatureImageData:null,
+          signatures:[],
+          sigScale:1,
+          activeSig:null,
+          signatureAspect:1,
           clientLogo:null,
           sponsorLogo:null,
           donateLink:null,
@@ -351,6 +373,7 @@
                 window.DC_DONATE_URL = this.donateLink;
               }
             }).catch(()=>{});
+            window.signatures = this.signatures;
           },
           async command(action){
             if(!this.pinned) this.drawer=false;
@@ -480,30 +503,95 @@
           },
           signPage(idx){
             this.signIndex = idx;
-            this.signPos = null;
+            this.activeSig = null;
+            this.sigScale = 1;
             this.signModal = true;
+            this.$nextTick(()=>this.renderSignatures());
           },
-          setSignPos(e){
+          loadSignature(e){
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+              this.signatureImageData = ev.target.result;
+              window.signatureImageData = this.signatureImageData;
+              const img = new Image();
+              img.onload = ()=>{ this.signatureAspect = img.height / img.width; this.renderSignatures(); };
+              img.src = this.signatureImageData;
+            };
+            reader.readAsDataURL(file);
+            e.target.value='';
+          },
+          addSignature(ev){
+            if(!this.signatureImageData) return;
             const rect = this.$refs.signImg.getBoundingClientRect();
-            const x = e.offsetX;
-            const y = e.offsetY;
-            this.signPos = { x, y, relX: x / rect.width, relY: y / rect.height };
+            const x = ev.offsetX / rect.width;
+            const y = ev.offsetY / rect.height;
+            const sig = {page:this.signIndex, x, y, scale:this.sigScale};
+            this.signatures.push(sig);
+            window.signatures = this.signatures;
+            this.activeSig = this.signatures.filter(s=>s.page===this.signIndex).length-1;
+            this.renderSignatures();
           },
-          applySign(){
-            if(this.signPos){
-              if(typeof window.openSignatureForPage==='function'){
-                window.openSignatureForPage(this.signIndex, this.signPos.relX, this.signPos.relY);
-              }else if(window.DC && typeof window.DC.sign==='function'){
-                window.DC.sign({page:this.signIndex, x:this.signPos.relX, y:this.signPos.relY});
-              }
-            }else if(window.DC && typeof window.DC.sign==='function'){
-              window.DC.sign({page:this.signIndex});
+          renderSignatures(){
+            this.$nextTick(()=>{
+              const img = this.$refs.signImg;
+              if(!img) return;
+              const w = img.clientWidth;
+              const h = img.clientHeight;
+              const pageSigs = this.signatures.filter(s=>s.page===this.signIndex);
+              pageSigs.forEach((sig, idx)=>{
+                const el = document.getElementById('sig'+idx);
+                if(!el) return;
+                const update=()=>{
+                  const base=w/5;
+                  const width=base*sig.scale;
+                  const height=width*this.signatureAspect;
+                  el.style.width=width+'px';
+                  el.style.height=height+'px';
+                  el.style.left=(sig.x*w - width/2)+'px';
+                  el.style.top=(sig.y*h - height/2)+'px';
+                };
+                interact(el).draggable({listeners:{move:evt=>{
+                  sig.x += evt.dx / w;
+                  sig.y += evt.dy / h;
+                  update();
+                }}});
+                update();
+              });
+            });
+          },
+          selectSig(i){
+            this.activeSig = i;
+            const pageSigs = this.signatures.filter(s=>s.page===this.signIndex);
+            if(pageSigs[i]) this.sigScale = pageSigs[i].scale;
+          },
+          updateScale(){
+            const pageSigs = this.signatures.filter(s=>s.page===this.signIndex);
+            if(this.activeSig!==null && pageSigs[this.activeSig]){
+              pageSigs[this.activeSig].scale = this.sigScale;
+              window.signatures = this.signatures;
+              this.renderSignatures();
             }
-            this.closeSign();
+          },
+          deleteSig(){
+            if(this.activeSig===null) return;
+            let count=0;
+            this.signatures = this.signatures.filter(s=>{
+              if(s.page!==this.signIndex) return true;
+              if(count===this.activeSig){ count++; return false; }
+              count++; return true;
+            });
+            window.signatures = this.signatures;
+            this.activeSig=null;
+            this.renderSignatures();
+          },
+          saveSignModal(){
+            this.signModal=false;
           },
           closeSign(){
             this.signModal=false;
-            this.signPos=null;
+            this.activeSig=null;
             this.signIndex=null;
           },
           view(url){ this.viewUrl=url; this.viewModal=true; },
