@@ -464,6 +464,25 @@ def register(app, utils):
         legal = f"Firmato elettronicamente in data {ts} da {name} con firma elettronica semplice ai sensi del Regolamento eIDAS(UE 910/2014). IP: {ip} | Email: {email} | SHA256: {hash_hex}"
         try:
             doc = fitz.open(stream=pdf_bytes, filetype='pdf')
+            # Reapply recorded signatures to guarantee the server copy is signed
+            for sig in info.get('signatures', []) or []:
+                try:
+                    page_num = sig.get('page', info.get('page', 0))
+                    page = doc[page_num]
+                    img_path = sig.get('image_path')
+                    if not img_path or not os.path.exists(img_path):
+                        continue
+                    x = float(sig.get('x', 0.5))
+                    y = float(sig.get('y', 0.5))
+                    scale = float(sig.get('scale', 1.0))
+                    pix = fitz.Pixmap(img_path)
+                    h = page.rect.height / 10 * scale
+                    w = h * pix.width / pix.height
+                    x0 = x * page.rect.width - w / 2
+                    y0 = y * page.rect.height - h / 2
+                    page.insert_image(fitz.Rect(x0, y0, x0 + w, y0 + h), filename=img_path)
+                except Exception:
+                    continue
             try:
                 page = doc[-1]
                 rect = fitz.Rect(50, page.rect.height - 40, page.rect.width - 50, page.rect.height - 10)
