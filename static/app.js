@@ -883,6 +883,7 @@ function deleteImage(index) {
 function openSignatureForPage(idx) {
     populateSignaturePages();
     signaturePage.value = idx;
+    scaleTarget = 'current';
     updateSignatureTargetOptions();
     signatureControls.style.display = 'block';
     signatureExtra.style.display = 'block';
@@ -2403,6 +2404,9 @@ function updateSignatureTargetOptions() {
         signatureTargetSelect.appendChild(optAll);
     }
     signatureTargetSelect.value = scaleTarget;
+    if (signatureTargetSelect.value !== scaleTarget) {
+        scaleTarget = signatureTargetSelect.value;
+    }
     if (signatureScaleInput) {
         if (scaleTarget === 'current') {
             signatureScaleInput.value = signatureScale;
