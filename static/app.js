@@ -1122,7 +1122,10 @@ function addThumbnail(src, index) {
         addOption('color', 'toColor');
     }
     addOption('edit', 'edit');
-    if (removeBgEnabled) addOption('removeBg', 'removeBg');
+    if (removeBgEnabled) {
+        addOption('removeBg', 'removeBg');
+        addOption('setRemoveBgThreshold', 'setRemoveBgThreshold');
+    }
     addOption('delete', 'delete');
 
     const cropBtnEl = document.createElement('button');
@@ -1195,6 +1198,18 @@ function addThumbnail(src, index) {
             }
         });
         actions.appendChild(bgBtnEl);
+
+        const bgThrBtn = document.createElement('button');
+        bgThrBtn.className = 'thumbBtn removeBgThresholdBtn';
+        bgThrBtn.textContent = '%';
+        bgThrBtn.title = t('setRemoveBgThreshold');
+        bgThrBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (typeof window.setRemoveBgThreshold === 'function') {
+                window.setRemoveBgThreshold();
+            }
+        });
+        actions.appendChild(bgThrBtn);
     }
 
     if (signEnabled) {
@@ -1272,6 +1287,9 @@ function addThumbnail(src, index) {
                 break;
             case 'removeBg':
                 if (typeof window.removeBackground === 'function') window.removeBackground(idx);
+                break;
+            case 'setRemoveBgThreshold':
+                if (typeof window.setRemoveBgThreshold === 'function') window.setRemoveBgThreshold();
                 break;
         }
         menu.value = '';
