@@ -23,6 +23,7 @@
         padding: 10px;
         z-index: 1000;
         text-align: center;
+        width: 220px;
       }
       #exportOptions button {
         margin: 5px;
@@ -738,6 +739,36 @@
             this.drawModal=false;
           },
           saveSignModal(){
+            if(this.signIndex!==null && this.signatureImageData && this.signatures.some(s=>s.page===this.signIndex)){
+              const idx=this.signIndex;
+              const base=new Image();
+              base.onload=()=>{
+                const canvas=document.createElement('canvas');
+                canvas.width=base.width; canvas.height=base.height;
+                const ctx=canvas.getContext('2d');
+                ctx.drawImage(base,0,0);
+                const sigImg=new Image();
+                sigImg.onload=()=>{
+                  const baseRatio=(canvas.height/10)/sigImg.height;
+                  this.signatures.filter(s=>s.page===idx).forEach(s=>{
+                    const w=sigImg.width*baseRatio*s.scale;
+                    const h=sigImg.height*baseRatio*s.scale;
+                    const x=s.x*canvas.width - w/2;
+                    const y=s.y*canvas.height - h/2;
+                    ctx.drawImage(sigImg,x,y,w,h);
+                  });
+                  const url=canvas.toDataURL('image/png');
+                  this.files[idx].url=url;
+                  this.files[idx].original=url;
+                  this.files=[...this.files];
+                  this.signatures=this.signatures.filter(s=>s.page!==idx);
+                  window.signatures=this.signatures;
+                  window.updateLayoutPreview && window.updateLayoutPreview();
+                };
+                sigImg.src=this.signatureImageData;
+              };
+              base.src=this.files[idx].url;
+            }
             this.signModal=false;
           },
           closeSign(){
@@ -886,42 +917,54 @@
       }
     </script>
     <div id="exportOptions" style="display:none;">
-      <div id="layoutControls" style="display:none; text-align:left; margin-bottom:8px;">
-        <button id="togglePreviewBtn">Preview layout</button>
-        <label for="layoutSelect">Images per page:</label>
-        <select id="layoutSelect">
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="4">4</option>
-        </select>
-        <label for="orientationSelect">Orientation:</label>
-        <select id="orientationSelect">
-          <option value="portrait">Portrait</option>
-          <option value="landscape">Landscape</option>
-        </select>
-        <label for="arrangeSelect">Layout:</label>
-        <select id="arrangeSelect">
-          <option value="auto">Auto</option>
-          <option value="horizontal">Horizontal</option>
-          <option value="vertical">Vertical</option>
-          <option value="grid">Grid</option>
-        </select>
-        <label for="scaleMode">Image size:</label>
-        <select id="scaleMode">
-          <option value="fit">Fill cell</option>
-          <option value="original">Original</option>
-          <option value="percent">Scale (%)</option>
-        </select>
-        <input type="number" id="scalePercent" value="100" min="10" max="300" step="10" style="width:60px; display:none;">
-        <label for="colorModeSelect">Color mode:</label>
-        <select id="colorModeSelect">
-          <option value="color">Color</option>
-          <option value="gray">Grayscale</option>
-          <option value="bw">B/W</option>
-        </select>
+      <button id="closeExportBtn" style="position:absolute; top:2px; right:2px;">×</button>
+      <div id="layoutControls" style="display:none; text-align:left; margin-bottom:8px; font-size:12px;">
+        <div><button id="togglePreviewBtn">Preview layout</button></div>
+        <div>
+          <label for="layoutSelect">Images per page:</label>
+          <select id="layoutSelect">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="4">4</option>
+          </select>
+        </div>
+        <div>
+          <label for="orientationSelect">Orientation:</label>
+          <select id="orientationSelect">
+            <option value="portrait">Portrait</option>
+            <option value="landscape">Landscape</option>
+          </select>
+        </div>
+        <div>
+          <label for="arrangeSelect">Layout:</label>
+          <select id="arrangeSelect">
+            <option value="auto">Auto</option>
+            <option value="horizontal">Horizontal</option>
+            <option value="vertical">Vertical</option>
+            <option value="grid">Grid</option>
+          </select>
+        </div>
+        <div>
+          <label for="scaleMode">Image size:</label>
+          <select id="scaleMode">
+            <option value="fit">Fill cell</option>
+            <option value="original">Original</option>
+            <option value="percent">Scale (%)</option>
+          </select>
+          <input type="number" id="scalePercent" value="100" min="10" max="300" step="10" style="width:60px; display:none;" />
+          <span id="scalePercentSymbol" style="display:none;">%</span>
+        </div>
+        <div>
+          <label for="colorModeSelect">Color mode:</label>
+          <select id="colorModeSelect">
+            <option value="color">Color</option>
+            <option value="gray">Grayscale</option>
+            <option value="bw">B/W</option>
+          </select>
+        </div>
       </div>
       <div id="layoutPreview"></div>
-      <iframe id="exportPreviewFrame" style="width:200px; height:260px; border:1px solid #666; margin-bottom:8px; display:none;"></iframe>
+      <iframe id="exportPreviewFrame" style="width:100%; height:260px; border:1px solid #666; margin-bottom:8px; display:none;"></iframe>
       <a id="signedPdfLink" style="display:none; margin-bottom:8px; color:#2563eb; text-decoration:underline;" download="signed.pdf"></a>
       <button id="downloadPdfBtn" style="display:none;">Download PDF</button>
       <button id="waShareBtn" style="display:none;">WhatsApp</button>
@@ -955,6 +998,7 @@
         if (!preview || !preview.classList.contains('visible')) return;
         const { cols, rows } = calculateGrid();
         const orientation = document.getElementById('orientationSelect')?.value || 'portrait';
+        const images = window.getProcessedImages ? window.getProcessedImages() : [];
         preview.innerHTML = '';
         preview.style.width = orientation === 'portrait' ? '180px' : '220px';
         preview.style.height = orientation === 'portrait' ? '220px' : '180px';
@@ -964,13 +1008,47 @@
         for (let i = 0; i < total; i++) {
           const cell = document.createElement('div');
           cell.className = 'cell';
+          const src = images[i];
+          if (src) {
+            const img = document.createElement('img');
+            img.src = src;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = document.getElementById('scaleMode')?.value === 'fit' ? 'cover' : 'contain';
+            cell.appendChild(img);
+          }
           preview.appendChild(cell);
         }
       }
 
-      document.getElementById('layoutSelect')?.addEventListener('change', updateLayoutPreview);
-      document.getElementById('orientationSelect')?.addEventListener('change', updateLayoutPreview);
-      document.getElementById('arrangeSelect')?.addEventListener('change', updateLayoutPreview);
+      window.updateLayoutPreview = updateLayoutPreview;
+
+      function maybeRegenerate() {
+        if (window.currentPdfBlob && typeof window.generatePdf === 'function') {
+          window.generatePdf();
+        }
+      }
+
+      const layoutSel = document.getElementById('layoutSelect');
+      const orientSel = document.getElementById('orientationSelect');
+      const arrangeSel = document.getElementById('arrangeSelect');
+      const scaleSel = document.getElementById('scaleMode');
+      const scalePct = document.getElementById('scalePercent');
+      const scaleSym = document.getElementById('scalePercentSymbol');
+
+      function toggleScaleInput() {
+        const show = scaleSel && scaleSel.value === 'percent';
+        if (scalePct) scalePct.style.display = show ? 'inline-block' : 'none';
+        if (scaleSym) scaleSym.style.display = show ? 'inline' : 'none';
+      }
+
+      toggleScaleInput();
+
+      layoutSel?.addEventListener('change', () => { updateLayoutPreview(); maybeRegenerate(); });
+      orientSel?.addEventListener('change', () => { updateLayoutPreview(); maybeRegenerate(); });
+      arrangeSel?.addEventListener('change', () => { updateLayoutPreview(); maybeRegenerate(); });
+      scaleSel?.addEventListener('change', () => { toggleScaleInput(); updateLayoutPreview(); maybeRegenerate(); });
+      scalePct?.addEventListener('change', () => { updateLayoutPreview(); maybeRegenerate(); });
       document.getElementById('togglePreviewBtn')?.addEventListener('click', () => {
         const lp = document.getElementById('layoutPreview');
         lp.classList.toggle('visible');
@@ -1045,6 +1123,21 @@
           window.dispatchEvent(new CustomEvent('signedPdfAvailable', { detail: { url } }));
         }
       };
+
+      document.getElementById('closeExportBtn')?.addEventListener('click', () => {
+        const box = document.getElementById('exportOptions');
+        const frame = document.getElementById('exportPreviewFrame');
+        const link = document.getElementById('signedPdfLink');
+        const dl = document.getElementById('downloadPdfBtn');
+        const wa = document.getElementById('waShareBtn');
+        const em = document.getElementById('emailShareBtn');
+        if (frame) { frame.src = ''; frame.style.display = 'none'; }
+        if (link) link.style.display = 'none';
+        if (dl) dl.style.display = 'none';
+        if (wa) wa.style.display = 'none';
+        if (em) em.style.display = 'none';
+        if (box) box.style.display = 'none';
+      });
 
       window.addEventListener('signedPdfAvailable', (e) => {
         const url = e.detail.url;

@@ -22,6 +22,7 @@ const exportOptions = document.getElementById('exportOptions');
 const downloadPdfBtn = document.getElementById('downloadPdfBtn');
 const waShareBtn = document.getElementById('waShareBtn');
 const emailShareBtn = document.getElementById('emailShareBtn');
+const closeExportBtn = document.getElementById('closeExportBtn');
 const layoutControls = document.getElementById('layoutControls');
 const blankControls = document.getElementById('blankControls');
 const layoutSelect = document.getElementById('layoutSelect');
@@ -29,6 +30,7 @@ const orientationSelect = document.getElementById('orientationSelect');
 const arrangeSelect = document.getElementById('arrangeSelect');
 const scaleMode = document.getElementById('scaleMode');
 const scalePercent = document.getElementById('scalePercent');
+const scalePercentSymbol = document.getElementById('scalePercentSymbol');
 const colorModeSelect = document.getElementById('colorModeSelect');
 const colorModeLabel = document.querySelector("label[for='colorModeSelect']");
 const blankThresholdInput = document.getElementById('blankThreshold');
@@ -465,6 +467,7 @@ function applySettings(cfg) {
     if (cfg.scale_mode) {
         scaleMode.value = cfg.scale_mode;
         scalePercent.style.display = scaleMode.value === 'percent' ? 'inline-block' : 'none';
+        if (scalePercentSymbol) scalePercentSymbol.style.display = scaleMode.value === 'percent' ? 'inline' : 'none';
     }
     if (cfg.scale_percent !== undefined) {
         scalePercent.value = cfg.scale_percent;
@@ -744,9 +747,19 @@ function updateLayoutPreview() {
     for (let i = 0; i < total; i++) {
         const cell = document.createElement('div');
         cell.className = 'cell';
+        const src = processedImages[i];
+        if (src) {
+            const img = document.createElement('img');
+            img.src = src;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = scaleMode.value === 'fit' ? 'cover' : 'contain';
+            cell.appendChild(img);
+        }
         layoutPreview.appendChild(cell);
     }
 }
+window.updateLayoutPreview = updateLayoutPreview;
 
 function openModal(src) {
     modalImage.src = src;
@@ -2092,19 +2105,26 @@ langSelect.addEventListener('change', async () => {
     saveSettings({ language: currentLang });
 });
 
+function maybeRegenerate() {
+    if (currentPdfBlob) generatePdf();
+}
+
 layoutSelect.addEventListener('change', () => {
     updateLayoutPreview();
     saveSettings({ layout: parseInt(layoutSelect.value || '1') });
+    maybeRegenerate();
 });
 
 orientationSelect.addEventListener('change', () => {
     updateLayoutPreview();
     saveSettings({ orientation: orientationSelect.value });
+    maybeRegenerate();
 });
 
 arrangeSelect.addEventListener('change', () => {
     updateLayoutPreview();
     saveSettings({ arrangement: arrangeSelect.value });
+    maybeRegenerate();
 });
 
 if (togglePreviewBtn) {
@@ -2115,17 +2135,35 @@ if (togglePreviewBtn) {
 }
 
 scaleMode.addEventListener('change', () => {
-    scalePercent.style.display = scaleMode.value === 'percent' ? 'inline-block' : 'none';
+    const show = scaleMode.value === 'percent';
+    scalePercent.style.display = show ? 'inline-block' : 'none';
+    if (scalePercentSymbol) scalePercentSymbol.style.display = show ? 'inline' : 'none';
     saveSettings({ scale_mode: scaleMode.value, scale_percent: parseInt(scalePercent.value || '100') });
+    maybeRegenerate();
 });
 
 scalePercent.addEventListener('change', () => {
     saveSettings({ scale_percent: parseInt(scalePercent.value || '100') });
+    maybeRegenerate();
 });
 colorModeSelect.addEventListener("change", () => {
     globalColorMode = colorModeSelect.value;
     saveSettings({ color_mode: globalColorMode });
+    maybeRegenerate();
 });
+if (closeExportBtn) {
+    closeExportBtn.addEventListener('click', () => {
+        if (exportPreviewFrame) {
+            exportPreviewFrame.src = '';
+            exportPreviewFrame.style.display = 'none';
+        }
+        if (signedPdfLink) signedPdfLink.style.display = 'none';
+        if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
+        if (waShareBtn) waShareBtn.style.display = 'none';
+        if (emailShareBtn) emailShareBtn.style.display = 'none';
+        if (exportOptions) exportOptions.style.display = 'none';
+    });
+}
 if (blankThresholdInput) {
     blankThresholdInput.addEventListener('change', () => {
         blankThreshold = parseInt(blankThresholdInput.value || '95');
