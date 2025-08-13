@@ -376,6 +376,7 @@
           sigScale:1,
           activeSig:null,
           signatureAspect:1,
+          pendingSigPos:null,
           clientLogo:null,
           sponsorLogo:null,
           donateLink:null,
@@ -581,10 +582,6 @@
             this.signatureAspect = window.signatureAspect || this.signatureAspect;
             this.signModal = true;
             this.$nextTick(() => {
-              if(!this.signatureImageData){
-                const inp = this.$el.querySelector('input[type=file]');
-                if(inp) inp.click();
-              }
               this.renderSignatures();
             });
           },
@@ -629,14 +626,14 @@
             e.target.value='';
           },
           addSignature(ev){
-            if(!this.signatureImageData){
-              const inp = this.$el.querySelector('input[type=file]');
-              if(inp) inp.click();
-              return;
-            }
             const rect = this.$refs.signImg.getBoundingClientRect();
             const x = (ev.clientX - rect.left) / rect.width;
             const y = (ev.clientY - rect.top) / rect.height;
+            if(!this.signatureImageData){
+              this.pendingSigPos = {x, y};
+              this.drawModal = true;
+              return;
+            }
             console.debug('addSignature dblclick', { page: this.signIndex, clientX: ev.clientX, clientY: ev.clientY, x, y });
             const sig = {page:this.signIndex, x, y, scale:this.sigScale};
             this.signatures.push(sig);
@@ -728,6 +725,13 @@
             img.onload=()=>{
               this.signatureAspect=img.height/img.width;
               window.signatureAspect=this.signatureAspect;
+              if(this.pendingSigPos){
+                const sig={page:this.signIndex,x:this.pendingSigPos.x,y:this.pendingSigPos.y,scale:this.sigScale};
+                this.signatures.push(sig);
+                window.signatures=this.signatures;
+                this.activeSig=this.signatures.filter(s=>s.page===this.signIndex).length-1;
+                this.pendingSigPos=null;
+              }
               this.renderSignatures();
             };
             img.src=data;
@@ -929,6 +933,50 @@
       const trans = (window.dcStrings && window.dcStrings[lang]) ? window.dcStrings[lang] : {};
       initSignaturePlugin(trans, true);
 
+      function calculateGrid() {
+        const layout = parseInt(document.getElementById('layoutSelect')?.value || '1');
+        const orientation = document.getElementById('orientationSelect')?.value || 'portrait';
+        const arrangement = document.getElementById('arrangeSelect')?.value || 'auto';
+        let cols = 1, rows = 1;
+        if (layout === 2) {
+          if (arrangement === 'horizontal') { cols = 2; rows = 1; }
+          else if (arrangement === 'vertical') { cols = 1; rows = 2; }
+          else if (orientation === 'landscape') { cols = 2; rows = 1; } else { cols = 1; rows = 2; }
+        } else if (layout === 4) {
+          if (arrangement === 'horizontal') { cols = 4; rows = 1; }
+          else if (arrangement === 'vertical') { cols = 1; rows = 4; }
+          else { cols = 2; rows = 2; }
+        }
+        return { cols, rows };
+      }
+
+      function updateLayoutPreview() {
+        const preview = document.getElementById('layoutPreview');
+        if (!preview || !preview.classList.contains('visible')) return;
+        const { cols, rows } = calculateGrid();
+        const orientation = document.getElementById('orientationSelect')?.value || 'portrait';
+        preview.innerHTML = '';
+        preview.style.width = orientation === 'portrait' ? '180px' : '220px';
+        preview.style.height = orientation === 'portrait' ? '220px' : '180px';
+        preview.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        preview.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+        const total = cols * rows;
+        for (let i = 0; i < total; i++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          preview.appendChild(cell);
+        }
+      }
+
+      document.getElementById('layoutSelect')?.addEventListener('change', updateLayoutPreview);
+      document.getElementById('orientationSelect')?.addEventListener('change', updateLayoutPreview);
+      document.getElementById('arrangeSelect')?.addEventListener('change', updateLayoutPreview);
+      document.getElementById('togglePreviewBtn')?.addEventListener('click', () => {
+        const lp = document.getElementById('layoutPreview');
+        lp.classList.toggle('visible');
+        updateLayoutPreview();
+      });
+
       async function loadImage(src) {
         return new Promise(res => {
           const img = new Image();
@@ -1006,7 +1054,10 @@
         const downloadBtn = document.getElementById('downloadPdfBtn');
         const waBtn = document.getElementById('waShareBtn');
         const emailBtn = document.getElementById('emailShareBtn');
+        const controls = document.getElementById('layoutControls');
         if (exportBox) exportBox.style.display = 'block';
+        if (controls) controls.style.display = 'block';
+        updateLayoutPreview();
         if (link) {
           link.href = url;
           link.textContent = trans['downloadPdf'] || 'Download PDF';
@@ -1016,7 +1067,10 @@
           frame.src = url;
           frame.style.display = 'block';
         }
-        if (downloadBtn) downloadBtn.style.display = 'inline-block';
+        if (downloadBtn) {
+          downloadBtn.style.display = 'inline-block';
+          downloadBtn.onclick = () => window.DC.download();
+        }
         if (waBtn) {
           waBtn.style.display = 'inline-block';
           waBtn.onclick = () => {
