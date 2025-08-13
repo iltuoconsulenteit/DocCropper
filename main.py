@@ -44,6 +44,7 @@ from app.auth.models import User
 from plugins.mobilesign import register as register_mobilesign
 from plugins.remotesign import register as register_remotesign
 from plugins.crop import register as register_crop
+from plugins.removebg import register as register_removebg
 
 try:
     import stripe
@@ -510,6 +511,7 @@ settings = load_settings()
 enable_sign = str(os.getenv('DOCROPPER_ENABLE_SIGN', settings.get('enable_sign', True))).lower() != 'false'
 enable_mobilesign = str(os.getenv('DOCROPPER_ENABLE_MOBILESIGN', settings.get('enable_mobilesign', False))).lower() == 'true'
 enable_remotesign = str(os.getenv('DOCROPPER_ENABLE_REMOTESIGN', settings.get('enable_remotesign', False))).lower() == 'true'
+enable_removebg = str(os.getenv('DOCROPPER_ENABLE_REMOVEBG', settings.get('enable_removebg', False))).lower() == 'true'
 
 if enable_sign:
     register_sign(app, plugin_utils)
@@ -517,6 +519,8 @@ if enable_mobilesign:
     register_mobilesign(app, plugin_utils)
 if enable_remotesign:
     register_remotesign(app, plugin_utils)
+if enable_removebg:
+    register_removebg(app, plugin_utils)
 
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):
