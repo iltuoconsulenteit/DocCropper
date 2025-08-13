@@ -88,6 +88,12 @@
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('tutorials')" x-text="t('tutorials')"></button>
           </li>
           <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('purchase')" x-text="t('purchase')"></button>
+          </li>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('subscriptions')" x-text="t('subscriptions')"></button>
+          </li>
+          <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('donate')" x-text="t('donate')"></button>
           </li>
           <li>
@@ -159,7 +165,17 @@
         <div x-show="tab==='tutorials'" class="w-full h-full">
           <div id="tutorialsArea" class="w-full h-[80vh] flex items-center justify-center text-gray-500" x-text="t('tutorialsPlaceholder')"></div>
         </div>
-        <div x-show="tab!=='files' && tab!=='guide' && tab!=='updates' && tab!=='tutorials'" class="text-gray-600" x-text="t('selectCommand')"></div>
+        <div x-show="tab==='purchase'" class="p-4 space-y-2">
+          <p x-text="t('purchaseInfo')"></p>
+        </div>
+        <div x-show="tab==='subscriptions'" class="p-4 space-y-2">
+          <p x-text="t('subscriptionsInfo')"></p>
+        </div>
+        <div x-show="tab==='donate'" class="p-4 space-y-2">
+          <p x-text="t('donationInfo')"></p>
+          <button @click="donate()" class="bg-yellow-400 text-black px-4 py-2 rounded text-sm" x-text="t('donate')"></button>
+        </div>
+        <div x-show="tab!=='files' && tab!=='guide' && tab!=='updates' && tab!=='tutorials' && tab!=='purchase' && tab!=='subscriptions' && tab!=='donate'" class="text-gray-600" x-text="t('selectCommand')"></div>
       </main>
       <footer class="p-4 mt-auto space-y-2">
         <div class="flex items-center justify-between">
@@ -346,6 +362,11 @@
             guide:'Guide',
             updates:'Updates',
             tutorials:'Tutorials',
+            purchase:'Purchase',
+            subscriptions:'Subscriptions',
+            purchaseInfo:'Purchase or subscription options will appear here.',
+            subscriptionsInfo:'Subscription plans will appear here.',
+            donationInfo:'Support the project via the button below.',
             donate:'Donate',
             settings:'Settings',
             enterPassword:'Enter password',
@@ -414,6 +435,11 @@
             guide:'Guida',
             updates:'Aggiornamenti',
             tutorials:'Tutorial',
+            purchase:'Acquisto',
+            subscriptions:'Abbonamenti',
+            purchaseInfo:'Opzioni di acquisto o abbonamento saranno mostrate qui.',
+            subscriptionsInfo:'I piani di abbonamento saranno mostrati qui.',
+            donationInfo:'Sostieni il progetto con il pulsante qui sotto.',
             donate:'Dona',
             settings:'Impostazioni',
             enterPassword:'Inserisci password',
@@ -511,9 +537,9 @@
           settingsModal:false,
           passwordModal:false,
           passwordInput:'',
-          settings:{clientLogo:'', sponsorLogo:'', clientLogoHeight:60, sponsorLogoHeight:60},
-          clientLogoHeight:60,
-          sponsorLogoHeight:60,
+          settings:{clientLogo:'', sponsorLogo:'', clientLogoHeight:150, sponsorLogoHeight:150},
+          clientLogoHeight:150,
+          sponsorLogoHeight:150,
           version:'',
           versionDate:'',
           licenseKey:'',
@@ -561,8 +587,8 @@
             fetch('/settings/').then(r=>r.json()).then(cfg=>{
               this.settings.clientLogo = cfg.client_logo || '';
               this.settings.sponsorLogo = cfg.sponsor_logo || '';
-              this.settings.clientLogoHeight = parseInt(cfg.client_logo_height || 60);
-              this.settings.sponsorLogoHeight = parseInt(cfg.sponsor_logo_height || 60);
+              this.settings.clientLogoHeight = parseInt(cfg.client_logo_height || 150);
+              this.settings.sponsorLogoHeight = parseInt(cfg.sponsor_logo_height || 150);
               this.clientLogo = this.settings.clientLogo ? `/static/logos/${this.settings.clientLogo}` : null;
               this.sponsorLogo = this.settings.sponsorLogo ? `/static/logos/${this.settings.sponsorLogo}` : null;
               this.clientLogoHeight = this.settings.clientLogoHeight;
@@ -618,8 +644,17 @@
                 this.tab='tutorials';
                 this.showSlides=false;
                 break;
+              case 'purchase':
+                this.tab='purchase';
+                this.showSlides=false;
+                break;
+              case 'subscriptions':
+                this.tab='subscriptions';
+                this.showSlides=false;
+                break;
               case 'donate':
-                window.DC.donate();
+                this.tab='donate';
+                this.showSlides=false;
                 break;
               case 'settings':
                 this.openSettings();

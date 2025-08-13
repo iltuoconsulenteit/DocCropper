@@ -61,7 +61,7 @@ h1, h2 {
 }
 
 #brandArea img {
-    max-height: 80px;
+    max-height: 150px;
 }
 
 #clientLogo, #sloganImg, #sponsorLogo {
@@ -223,7 +223,7 @@ button:hover {
 }
 
 #sloganImg {
-    max-height: 80px;
+    max-height: 150px;
 }
 
 #statusMessage {
