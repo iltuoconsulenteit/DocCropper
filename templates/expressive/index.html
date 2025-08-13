@@ -946,6 +946,76 @@
       const lang = window.DC_LANG || document.documentElement.lang || 'en';
       const trans = (window.dcStrings && window.dcStrings[lang]) ? window.dcStrings[lang] : {};
       initSignaturePlugin(trans, true);
+
+      async function loadImage(src) {
+        return new Promise(res => {
+          const img = new Image();
+          img.onload = () => res(img);
+          img.src = src;
+        });
+      }
+
+      async function mergeAllSignatures(images) {
+        if (!window.signatureImageData || !window.signatures || window.signatures.length === 0) return images;
+        const sig = await loadImage(window.signatureImageData);
+        const aspect = sig.height / sig.width;
+        const out = images.slice();
+        const pages = new Set(window.signatures.map(s => s.page));
+        for (const page of pages) {
+          const base = await loadImage(out[page]);
+          const canvas = document.createElement('canvas');
+          canvas.width = base.width;
+          canvas.height = base.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(base, 0, 0);
+          const pageSigs = window.signatures.filter(s => s.page === page);
+          for (const s of pageSigs) {
+            const w = (base.width / 5) * s.scale;
+            const h = w * aspect;
+            const x = s.x * base.width - w / 2;
+            const y = s.y * base.height - h / 2;
+            ctx.drawImage(sig, x, y, w, h);
+          }
+          out[page] = canvas.toDataURL('image/png');
+        }
+        window.signatures.length = 0;
+        window.signatureImageData = null;
+        return out;
+      }
+
+      window.generatePdf = async function () {
+        const getter = window.getProcessedImages;
+        if (!getter) return;
+        let images = getter();
+        if (!images.length) return;
+        images = await mergeAllSignatures(images);
+        const layout = parseInt(document.getElementById('layoutSelect')?.value || '1');
+        const orientation = document.getElementById('orientationSelect')?.value || 'portrait';
+        const arrangement = document.getElementById('arrangeSelect')?.value || 'auto';
+        const scale_mode = document.getElementById('scaleMode')?.value || 'fit';
+        const scale_percent = parseInt(document.getElementById('scalePercent')?.value || '100');
+        const color_mode = document.getElementById('colorModeSelect')?.value || 'color';
+        const payload = { images, layout, orientation, arrangement, scale_mode, scale_percent, color_mode };
+        if (window.lastSignEmail || window.lastSignPhone || window.lastSignName) {
+          payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
+        }
+        const resp = await fetch('/create-pdf/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (data.pdf) {
+          const base64 = data.pdf.split(',')[1];
+          const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          window.currentPdfBlob = blob;
+          const url = URL.createObjectURL(blob);
+          window.lastPdfUrl = url;
+          window.dispatchEvent(new CustomEvent('signedPdfAvailable', { detail: { url } }));
+        }
+      };
+
       window.addEventListener('signedPdfAvailable', (e) => {
         const url = e.detail.url;
         const exportBox = document.getElementById('exportOptions');
