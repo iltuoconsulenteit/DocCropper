@@ -57,7 +57,7 @@
     <div x-show="drawer && !pinned" @click="drawer=false" class="fixed inset-0 bg-black/50 md:hidden"></div>
     <!-- Sidebar / Drawer -->
     <div class="fixed inset-y-0 left-0 w-40 bg-gray-800 text-white flex flex-col transform transition-transform duration-200" :class="(drawer || pinned) ? 'translate-x-0' : '-translate-x-full'" x-transition>
-      <div class="p-4 flex items-center">
+      <div class="p-4 flex items-center justify-center">
         <img src="/static/logos/app_logo.png" alt="DocCropper" class="h-8" />
       </div>
       <nav class="flex-1 overflow-y-auto">
@@ -76,10 +76,13 @@
         <h2 class="px-4 mt-4 text-xs uppercase text-gray-400" x-text="t('navigation')"></h2>
         <ul>
           <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="tab='files'; drawer=false" x-text="t('files')"></button>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('files')" x-text="t('files')"></button>
           </li>
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('guide')" x-text="t('guide')"></button>
+          </li>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('updates')" x-text="t('updates')"></button>
           </li>
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('donate')" x-text="t('donate')"></button>
@@ -112,9 +115,10 @@
       <!-- Content -->
       <main class="flex-1 p-4 space-y-4 overflow-y-auto" x-cloak>
         <input type="file" id="imageUpload" class="hidden" multiple accept="image/*,application/pdf" @change="handleImport">
-        <div class="mb-4 flex justify-center" x-show="showSlides && currentSlide && files.length===0">
+        <div class="mb-4 flex justify-center" x-show="showSlides && currentSlide && files.length===0 && tab==='files'">
           <img :src="currentSlide" alt="slogan" class="max-h-64 w-auto object-contain" />
         </div>
+        <div x-show="files.length===0 && tab==='files' && updates[lang] && updates[lang].length" class="text-center text-sm text-gray-600" x-text="t('lastUpdate') + ': ' + updates[lang][0]"></div>
         <div x-show="tab==='files'">
           <template x-if="files.length === 0">
             <p class="text-gray-600" x-text="t('noFiles')"></p>
@@ -144,13 +148,18 @@
         <div x-show="tab==='guide'" class="w-full h-full">
           <iframe :src="`/wiki/${lang}/index.html`" class="w-full h-[80vh]"></iframe>
         </div>
-        <div x-show="tab!=='files' && tab!=='guide'" class="text-gray-600" x-text="t('selectCommand')"></div>
+        <div x-show="tab==='updates'" class="p-4 space-y-2">
+          <template x-for="(note, idx) in updates[lang]" :key="idx">
+            <div class="border-b pb-2" x-text="note"></div>
+          </template>
+        </div>
+        <div x-show="tab!=='files' && tab!=='guide' && tab!=='updates'" class="text-gray-600" x-text="t('selectCommand')"></div>
       </main>
       <footer class="p-4 mt-auto space-y-2">
         <div class="flex items-center justify-between">
-          <img x-show="sponsorLogo" :src="sponsorLogo" alt="Sponsor" class="h-6" />
+          <img x-show="sponsorLogo" :src="sponsorLogo" alt="Sponsor" class="h-8" />
           <img src="/static/logos/footer_logo.png" alt="IlTuoConsulenteIT" class="h-8" />
-          <img x-show="clientLogo" :src="clientLogo" alt="Client" class="h-6" />
+          <img x-show="clientLogo" :src="clientLogo" alt="Client" class="h-8" />
         </div>
         <div class="text-xs text-gray-500 text-center" x-text="versionInfo()"></div>
       </footer>
@@ -253,6 +262,18 @@
       </div>
     </div>
 
+    <!-- Password Modal -->
+    <div x-show="passwordModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded w-64 space-y-2">
+        <h2 class="text-lg" x-text="t('enterPassword')"></h2>
+        <input type="password" class="border w-full p-1" x-model="passwordInput" />
+        <div class="text-right space-x-2 pt-2">
+          <button class="px-3 py-1 bg-gray-300 rounded" @click="passwordModal=false" x-text="t('cancel')"></button>
+          <button class="px-3 py-1 bg-blue-500 text-white rounded" @click="checkPassword" x-text="t('apply')"></button>
+        </div>
+      </div>
+    </div>
+
     <!-- Settings Modal -->
     <div x-show="settingsModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
       <div class="bg-white p-4 rounded w-72 space-y-2">
@@ -309,6 +330,7 @@
             navigation:'Navigation',
             files:'Files',
             guide:'Guide',
+            updates:'Updates',
             donate:'Donate',
             settings:'Settings',
             enterPassword:'Enter password',
@@ -359,7 +381,8 @@
             bw:'B/W',
             downloadPdf:'Download PDF',
             whatsapp:'WhatsApp',
-            email:'Email'
+            email:'Email',
+            lastUpdate:'Last update'
           },
           it:{
             commands:'Comandi',
@@ -371,6 +394,7 @@
             navigation:'Navigazione',
             files:'File',
             guide:'Guida',
+            updates:'Aggiornamenti',
             donate:'Dona',
             settings:'Impostazioni',
             enterPassword:'Inserisci password',
@@ -421,7 +445,8 @@
             bw:'B/N',
             downloadPdf:'Scarica PDF',
             whatsapp:'WhatsApp',
-            email:'Email'
+            email:'Email',
+            lastUpdate:'Ultimo aggiornamento'
           }
         };
         // Expose translations so external plugins (e.g., mobile sign) can reuse them
@@ -462,6 +487,8 @@
           sponsorLogo:null,
           donateLink:null,
           settingsModal:false,
+          passwordModal:false,
+          passwordInput:'',
           settings:{clientLogo:'', sponsorLogo:''},
           version:'',
           versionDate:'',
@@ -479,6 +506,10 @@
           slideIndex:0,
           showSlides:true,
           currentSlide:'',
+          updates:{
+            en:['Improved signing workflow and export options.'],
+            it:['Migliorato il flusso di firma e opzioni di esportazione.']
+          },
           t(key){ return this.strings[this.lang][key] || key; },
           refreshSlides(){
             this.slideIndex = 0;
@@ -530,8 +561,11 @@
             window.getProcessedImages = () => this.files.map(f => f.url);
           },
           async command(action){
-            if(!this.pinned) this.drawer=false;
             switch(action){
+              case 'files':
+                this.tab='files';
+                this.showSlides=true;
+                break;
               case 'export':
                 await window.DC.export();
                 break;
@@ -546,6 +580,11 @@
                 break;
               case 'guide':
                 this.tab='guide';
+                this.showSlides=false;
+                break;
+              case 'updates':
+                this.tab='updates';
+                this.showSlides=false;
                 break;
               case 'donate':
                 window.DC.donate();
@@ -554,16 +593,20 @@
                 this.openSettings();
                 break;
             }
+            if(!this.pinned) this.drawer=false;
           },
           setLang(){
             document.documentElement.lang = this.lang;
             this.refreshSlides();
           },
           openSettings(){
-            const pwd = prompt(this.t('enterPassword'));
-            if(pwd === null) return;
-            if(pwd === 'secret'){
-              this.settingsModal = true;
+            this.passwordInput='';
+            this.passwordModal=true;
+          },
+          checkPassword(){
+            if(this.passwordInput==='secret'){
+              this.passwordModal=false;
+              this.settingsModal=true;
             } else {
               alert(this.t('wrongPassword'));
             }
