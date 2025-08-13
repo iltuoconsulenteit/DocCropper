@@ -158,6 +158,7 @@
   "signaturesSent": "Firme inviate. Puoi chiudere la pagina.",
   "pageToSign": "Pagina da firmare:",
   "loading": "Caricamento...",
+  "maxUploadLimit": "Massimo {n} file per caricamento",
   "fileTroppoGrande": "File troppo grande (max {mb} MB)",
   "demoLicenseDisabled": "La modifica della licenza è disabilitata nella versione demo",
   "sponsorMessage": "Video sponsorizzato - chiudi per continuare"

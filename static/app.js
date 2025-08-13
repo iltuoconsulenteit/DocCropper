@@ -159,6 +159,7 @@ let demoFullMode = false;
 const MAX_IMAGES_FREE = 5;
 const MAX_FILE_MB = 20;
 const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
+let MAX_UPLOAD_FILES = 10;
 
 let files = [];
 let currentFileIndex = 0;
@@ -489,6 +490,9 @@ function applySettings(cfg) {
     if (cfg.skip_blank !== undefined) {
         skipBlank = !!cfg.skip_blank;
         if (skipBlankCheckbox) skipBlankCheckbox.checked = skipBlank;
+    }
+    if (cfg.max_upload_files !== undefined) {
+        MAX_UPLOAD_FILES = parseInt(cfg.max_upload_files);
     }
     if (cfg.license_level) {
         currentLicenseLevel = cfg.license_level.toLowerCase();
@@ -1686,7 +1690,11 @@ async function addFiles(newFiles) {
 }
 
 imageUploadElement.addEventListener('change', async (event) => {
-    const list = Array.from(event.target.files);
+    const all = Array.from(event.target.files);
+    const list = all.slice(0, MAX_UPLOAD_FILES);
+    if (all.length > MAX_UPLOAD_FILES) {
+        statusMessageElement.textContent = t('maxUploadLimit').replace('{n}', MAX_UPLOAD_FILES);
+    }
     const toProcess = [];
     for (const f of list) {
         if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
@@ -1710,7 +1718,11 @@ imageUploadElement.addEventListener('change', async (event) => {
 async function handleDrop(event) {
     event.preventDefault();
     if (event.dataTransfer && event.dataTransfer.files) {
-        const list = Array.from(event.dataTransfer.files);
+        const all = Array.from(event.dataTransfer.files);
+        const list = all.slice(0, MAX_UPLOAD_FILES);
+        if (all.length > MAX_UPLOAD_FILES) {
+            statusMessageElement.textContent = t('maxUploadLimit').replace('{n}', MAX_UPLOAD_FILES);
+        }
         const toProcess = [];
         for (const f of list) {
             if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
@@ -2109,7 +2121,12 @@ if (emailShareBtn) {
 
 cameraFileInput.addEventListener('change', (e) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    addFiles(e.target.files);
+    const all = Array.from(e.target.files);
+    const list = all.slice(0, MAX_UPLOAD_FILES);
+    if (all.length > MAX_UPLOAD_FILES) {
+        statusMessageElement.textContent = t('maxUploadLimit').replace('{n}', MAX_UPLOAD_FILES);
+    }
+    addFiles(list);
 });
 
 if (signatureUpload) {

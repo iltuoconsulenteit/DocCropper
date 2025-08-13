@@ -445,6 +445,7 @@
             downloadPdf:'Download PDF',
             whatsapp:'WhatsApp',
             email:'Email',
+            maxUploadLimit:'Maximum {n} files per upload',
             lastUpdate:'Last update',
             tutorialsPlaceholder:'Tutorial videos coming soon.'
           },
@@ -522,6 +523,7 @@
             downloadPdf:'Scarica PDF',
             whatsapp:'WhatsApp',
             email:'Email',
+            maxUploadLimit:'Massimo {n} file per caricamento',
             lastUpdate:'Ultimo aggiornamento',
             tutorialsPlaceholder:'Prossimamente video tutorial.'
           }
@@ -591,6 +593,7 @@
             en:['Improved signing workflow and export options.'],
             it:['Migliorato il flusso di firma e opzioni di esportazione.']
           },
+          maxUpload:10,
           t(key){ return this.strings[this.lang][key] || key; },
           toggleLayout(){ this.layoutHorizontal = !this.layoutHorizontal; },
           refreshSlides(){
@@ -626,6 +629,7 @@
               this.clientLogoHeight = this.settings.clientLogoHeight;
               this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
               this.removeBgEnabled = !!cfg.enable_removebg;
+              this.maxUpload = parseInt(cfg.max_upload_files || 10);
               this.version = cfg.version || '';
               this.versionDate = cfg.version_date || '';
               this.licenseKey = cfg.license_key || '';
@@ -734,7 +738,11 @@
               .catch(()=>{ this.licenseModal=false; });
           },
           async handleImport(e){
-            const selected = Array.from(e.target.files || []);
+            let selected = Array.from(e.target.files || []);
+            if(selected.length > this.maxUpload){
+              alert(this.t('maxUploadLimit').replace('{n}', this.maxUpload));
+              selected = selected.slice(0, this.maxUpload);
+            }
             const loaded = [];
             for (const f of selected) {
               if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {

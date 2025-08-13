@@ -158,6 +158,7 @@
   "signaturesSent": "Signatures sent. You may close this page.",
   "pageToSign": "Page to sign:",
   "loading": "Loading...",
+  "maxUploadLimit": "Maximum {n} files per upload",
   "fileTooLarge": "File too large (max {mb} MB)",
   "demoLicenseDisabled": "License editing is disabled in the demo version",
   "sponsorMessage": "Sponsored video - close to continue"
