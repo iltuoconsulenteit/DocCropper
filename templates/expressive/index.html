@@ -58,7 +58,7 @@
     <!-- Sidebar / Drawer -->
     <div class="fixed inset-y-0 left-0 w-40 bg-gray-800 text-white flex flex-col transform transition-transform duration-200" :class="(drawer || pinned) ? 'translate-x-0' : '-translate-x-full'" x-transition>
       <div class="p-4 flex items-center justify-center">
-        <img src="/static/logos/app_logo.png" alt="DocCropper" class="h-8" />
+        <img src="/static/logos/app_logo.png" alt="DocCropper" class="h-8 cursor-pointer" @click="command('files')" />
       </div>
       <nav class="flex-1 overflow-y-auto">
         <h2 class="px-4 text-xs uppercase text-gray-400" x-text="t('commands')"></h2>
@@ -85,6 +85,9 @@
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('updates')" x-text="t('updates')"></button>
           </li>
           <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('tutorials')" x-text="t('tutorials')"></button>
+          </li>
+          <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('donate')" x-text="t('donate')"></button>
           </li>
           <li>
@@ -103,7 +106,7 @@
       <!-- Top bar -->
       <header class="bg-gray-100 p-2 flex items-center shadow space-x-2">
         <button class="mr-2" @click="pinned ? pinned=false : drawer=!drawer">☰</button>
-        <img src="/static/logos/header_logo.png" alt="IlTuoConsulenteIT" class="h-8" />
+        <img src="/static/logos/header_logo.png" alt="IlTuoConsulenteIT" class="h-8 cursor-pointer" @click="command('files')" />
         <div class="flex-1"></div>
         <span class="text-xs text-gray-600" x-text="licenseInfo()"></span>
         <button @click="licenseModal=true" class="text-xs underline" x-text="t('licenses')"></button>
@@ -153,13 +156,16 @@
             <div class="border-b pb-2" x-text="note"></div>
           </template>
         </div>
-        <div x-show="tab!=='files' && tab!=='guide' && tab!=='updates'" class="text-gray-600" x-text="t('selectCommand')"></div>
+        <div x-show="tab==='tutorials'" class="w-full h-full">
+          <div id="tutorialsArea" class="w-full h-[80vh] flex items-center justify-center text-gray-500" x-text="t('tutorialsPlaceholder')"></div>
+        </div>
+        <div x-show="tab!=='files' && tab!=='guide' && tab!=='updates' && tab!=='tutorials'" class="text-gray-600" x-text="t('selectCommand')"></div>
       </main>
       <footer class="p-4 mt-auto space-y-2">
         <div class="flex items-center justify-between">
-          <img x-show="sponsorLogo" :src="sponsorLogo" alt="Sponsor" class="h-8" />
-          <img src="/static/logos/footer_logo.png" alt="IlTuoConsulenteIT" class="h-8" />
-          <img x-show="clientLogo" :src="clientLogo" alt="Client" class="h-8" />
+          <img x-show="sponsorLogo" :src="sponsorLogo" alt="Sponsor" :style="'height:'+sponsorLogoHeight+'px'" />
+          <img src="/static/logos/footer_logo.png" alt="IlTuoConsulenteIT" class="h-10 cursor-pointer" @click="command('files')" />
+          <img x-show="clientLogo" :src="clientLogo" alt="Client" :style="'height:'+clientLogoHeight+'px'" />
         </div>
         <div class="text-xs text-gray-500 text-center" x-text="versionInfo()"></div>
       </footer>
@@ -286,6 +292,14 @@
           <label class="block text-sm" x-text="t('sponsorLogo')"></label>
           <input type="text" class="border w-full p-1" x-model="settings.sponsorLogo" />
         </div>
+        <div>
+          <label class="block text-sm" x-text="t('clientLogoHeight')"></label>
+          <input type="number" class="border w-full p-1" x-model.number="settings.clientLogoHeight" />
+        </div>
+        <div>
+          <label class="block text-sm" x-text="t('sponsorLogoHeight')"></label>
+          <input type="number" class="border w-full p-1" x-model.number="settings.sponsorLogoHeight" />
+        </div>
         <div class="text-right space-x-2 pt-2">
           <button class="px-3 py-1 bg-gray-300 rounded" @click="settingsModal=false" x-text="t('cancel')"></button>
           <button class="px-3 py-1 bg-blue-500 text-white rounded" @click="saveSettings" x-text="t('apply')"></button>
@@ -331,12 +345,15 @@
             files:'Files',
             guide:'Guide',
             updates:'Updates',
+            tutorials:'Tutorials',
             donate:'Donate',
             settings:'Settings',
             enterPassword:'Enter password',
             wrongPassword:'Wrong password',
             clientLogo:'Client logo',
             sponsorLogo:'Sponsor logo',
+            clientLogoHeight:'Client logo height',
+            sponsorLogoHeight:'Sponsor logo height',
             noFiles:'No files available.',
             selectCommand:'Select a command from the menu.',
             pin:'Pin menu',
@@ -382,7 +399,8 @@
             downloadPdf:'Download PDF',
             whatsapp:'WhatsApp',
             email:'Email',
-            lastUpdate:'Last update'
+            lastUpdate:'Last update',
+            tutorialsPlaceholder:'Tutorial videos coming soon.'
           },
           it:{
             commands:'Comandi',
@@ -395,12 +413,15 @@
             files:'File',
             guide:'Guida',
             updates:'Aggiornamenti',
+            tutorials:'Tutorial',
             donate:'Dona',
             settings:'Impostazioni',
             enterPassword:'Inserisci password',
             wrongPassword:'Password errata',
             clientLogo:'Logo cliente',
             sponsorLogo:'Logo sponsor',
+            clientLogoHeight:'Altezza logo cliente',
+            sponsorLogoHeight:'Altezza logo sponsor',
             noFiles:'Nessun file disponibile.',
             selectCommand:'Seleziona un comando dal menu.',
             pin:'Fissa menu',
@@ -446,7 +467,8 @@
             downloadPdf:'Scarica PDF',
             whatsapp:'WhatsApp',
             email:'Email',
-            lastUpdate:'Ultimo aggiornamento'
+            lastUpdate:'Ultimo aggiornamento',
+            tutorialsPlaceholder:'Prossimamente video tutorial.'
           }
         };
         // Expose translations so external plugins (e.g., mobile sign) can reuse them
@@ -489,7 +511,9 @@
           settingsModal:false,
           passwordModal:false,
           passwordInput:'',
-          settings:{clientLogo:'', sponsorLogo:''},
+          settings:{clientLogo:'', sponsorLogo:'', clientLogoHeight:60, sponsorLogoHeight:60},
+          clientLogoHeight:60,
+          sponsorLogoHeight:60,
           version:'',
           versionDate:'',
           licenseKey:'',
@@ -537,8 +561,12 @@
             fetch('/settings/').then(r=>r.json()).then(cfg=>{
               this.settings.clientLogo = cfg.client_logo || '';
               this.settings.sponsorLogo = cfg.sponsor_logo || '';
+              this.settings.clientLogoHeight = parseInt(cfg.client_logo_height || 60);
+              this.settings.sponsorLogoHeight = parseInt(cfg.sponsor_logo_height || 60);
               this.clientLogo = this.settings.clientLogo ? `/static/logos/${this.settings.clientLogo}` : null;
               this.sponsorLogo = this.settings.sponsorLogo ? `/static/logos/${this.settings.sponsorLogo}` : null;
+              this.clientLogoHeight = this.settings.clientLogoHeight;
+              this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
               this.version = cfg.version || '';
               this.versionDate = cfg.version_date || '';
               this.licenseKey = cfg.license_key || '';
@@ -586,6 +614,10 @@
                 this.tab='updates';
                 this.showSlides=false;
                 break;
+              case 'tutorials':
+                this.tab='tutorials';
+                this.showSlides=false;
+                break;
               case 'donate':
                 window.DC.donate();
                 break;
@@ -593,7 +625,6 @@
                 this.openSettings();
                 break;
             }
-            if(!this.pinned) this.drawer=false;
           },
           setLang(){
             document.documentElement.lang = this.lang;
@@ -612,11 +643,18 @@
             }
           },
           saveSettings(){
-            const payload = {client_logo:this.settings.clientLogo, sponsor_logo:this.settings.sponsorLogo};
+            const payload = {
+              client_logo:this.settings.clientLogo,
+              sponsor_logo:this.settings.sponsorLogo,
+              client_logo_height:this.settings.clientLogoHeight,
+              sponsor_logo_height:this.settings.sponsorLogoHeight
+            };
             fetch('/settings/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
               .then(()=>{
                 this.clientLogo = this.settings.clientLogo ? `/static/logos/${this.settings.clientLogo}` : null;
                 this.sponsorLogo = this.settings.sponsorLogo ? `/static/logos/${this.settings.sponsorLogo}` : null;
+                this.clientLogoHeight = this.settings.clientLogoHeight;
+                this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
                 this.settingsModal = false;
               });
           },
