@@ -61,7 +61,7 @@ h1, h2 {
 }
 
 #brandArea img {
-    max-height: 150px;
+    max-height: 125px;
 }
 
 #clientLogo, #sloganImg, #sponsorLogo {
@@ -123,11 +123,8 @@ h1, h2 {
     margin-left: auto;
 }
 
-#sponsorBadge {
-    position: absolute;
-    right: 10px;
-    bottom: 100px;
-    max-height: 50px;
+#sponsorBadge, #clientBadge {
+    max-height: 125px;
 }
 
 #wrapper {
@@ -223,7 +220,7 @@ button:hover {
 }
 
 #sloganImg {
-    max-height: 150px;
+    max-height: 125px;
 }
 
 #statusMessage {

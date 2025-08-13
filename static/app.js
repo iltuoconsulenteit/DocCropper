@@ -79,6 +79,7 @@ const openWikiLink = document.getElementById('openWikiLink');
 const clientLogo = document.getElementById('clientLogo');
 const sponsorLogo = document.getElementById('sponsorLogo');
 const sponsorBadge = document.getElementById('sponsorBadge');
+const clientBadge = document.getElementById('clientBadge');
 const headerLogo = document.getElementById('headerLogo');
 const footerLogo = document.getElementById('footerLogo');
 const autoDetectHint = document.getElementById('autoDetectHint');
@@ -520,10 +521,20 @@ function applySettings(cfg) {
             sponsorLogo.style.display = 'none';
         }
     }
+    if (clientBadge) {
+        if (cfg.client_logo) {
+            clientBadge.src = `/static/logos/${cfg.client_logo}`;
+            clientBadge.style.display = 'block';
+            clientBadge.style.maxHeight = (cfg.client_logo_height || 125) + 'px';
+        } else {
+            clientBadge.style.display = 'none';
+        }
+    }
     if (sponsorBadge) {
         if (cfg.sponsor_logo) {
             sponsorBadge.src = `/static/logos/${cfg.sponsor_logo}`;
             sponsorBadge.style.display = 'block';
+            sponsorBadge.style.maxHeight = (cfg.sponsor_logo_height || 125) + 'px';
         } else {
             sponsorBadge.style.display = 'none';
         }
