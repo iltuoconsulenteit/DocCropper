@@ -180,7 +180,10 @@
       <footer class="p-4 mt-auto space-y-2">
         <div class="flex items-center justify-between">
           <img x-show="sponsorLogo" :src="sponsorLogo" alt="Sponsor" :style="'height:'+sponsorLogoHeight+'px'" />
-          <img src="/static/logos/footer_logo.png" alt="IlTuoConsulenteIT" class="h-10 cursor-pointer" @click="command('files')" />
+          <a href="https://www.iltuoconsulenteit.it/site/index.php/applicazioni/doccropper" target="_blank" rel="noopener" class="flex flex-col items-center">
+            <span class="text-xs mb-1">By IlTuoConsulenteIT</span>
+            <img src="/static/logos/footer_logo.png" alt="IlTuoConsulenteIT" class="h-10" />
+          </a>
           <img x-show="clientLogo" :src="clientLogo" alt="Client" :style="'height:'+clientLogoHeight+'px'" />
         </div>
         <div class="text-xs text-gray-500 text-center" x-text="versionInfo()"></div>

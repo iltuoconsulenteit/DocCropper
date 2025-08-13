@@ -124,7 +124,12 @@ def register(app, utils):
             </label>
             <button id='finish'>Finish</button>
         </div>
-        <div style='margin-top:20px;'><img src='/static/logos/footer_logo.png' style='max-height:30px' alt='IlTuoConsulenteIT'></div>
+        <div style='margin-top:20px;text-align:center;'>
+            <a href='https://www.iltuoconsulenteit.it/site/index.php/applicazioni/doccropper' target='_blank' style='display:inline-flex;flex-direction:column;align-items:center;text-decoration:none;color:inherit;'>
+                <span style='font-size:12px;margin-bottom:4px;'>By IlTuoConsulenteIT</span>
+                <img src='/static/logos/footer_logo.png' style='max-height:30px' alt='IlTuoConsulenteIT'>
+            </a>
+        </div>
         <script>
         const padEl=document.getElementById('pad');
         const overlay=document.getElementById('overlay');
