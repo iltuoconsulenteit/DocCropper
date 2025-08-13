@@ -32,9 +32,7 @@
     </header>
     <div id="brandArea">
         <button id="closeBanner" class="close">&times;</button>
-        <img id="clientLogo" alt="Client logo" style="display:none;">
         <img id="sloganImg" src="/static/logos/DocCropper_slogan_en.png" alt="DocCropper slogan">
-        <img id="sponsorLogo" alt="Sponsor logo" style="display:none;">
     </div>
     <div id="instructionsBox">
         <strong data-i18n="instructionsTitle">Instructions</strong><br>
@@ -199,8 +197,11 @@
 
     <h2 data-i18n="processedImages">Processed Images:</h2>
     <p id="reorderHint" data-i18n="reorderHint" style="display:none;"></p>
-    <div id="galleryWrapper">
-        <div id="processedGallery"></div>
+    <div style="margin-bottom:8px;">
+        <button id="layoutToggleBtn">Toggle layout</button>
+    </div>
+    <div id="galleryWrapper" class="horizontal">
+        <div id="processedGallery" class="horizontal"></div>
     </div>
     <img id="processedImage" src="#" alt="Processed Document" style="display:none; max-width: 100%;">
     <div id="imageModal" class="modal" style="display:none;">
@@ -228,14 +229,16 @@
     <p id="statusMessage"></p>
     <a id="signedPdfLink" style="display:none;" download="signed.pdf"></a>
 
-    <footer id="pageFooter">
-        <div id="footerBrand">
-            <span data-i18n="realizzato">Powered by IlTuoConsulenteIT</span>
-            <img id="footerLogo" src="/static/logos/footer_logo.png" onerror="this.onerror=null;this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO3RqqEAAAAASUVORK5CYII='" alt="IlTuoConsulenteIT logo">
-        </div>
+      <footer id="pageFooter">
         <img id="sponsorBadge" src="/static/logos/sponsor_logo.png" alt="Sponsor logo" style="display:none;">
-        <div id="donateBox" style="display:none;"></div>
-        <span id="versionBox"></span>
+        <div id="footerBrand">
+            <a href="https://www.iltuoconsulenteit.it/site/index.php/applicazioni/doccropper" target="_blank" rel="noopener" style="display:flex;flex-direction:column;align-items:center;text-decoration:none;color:inherit;">
+                <span data-i18n="realizzato">By IlTuoConsulenteIT</span>
+                <img id="footerLogo" src="/static/logos/footer_logo.png" onerror="this.onerror=null;this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO3RqqEAAAAASUVORK5CYII='" alt="IlTuoConsulenteIT logo">
+            </a>
+            <span id="versionBox"></span>
+        </div>
+        <img id="clientBadge" src="/static/logos/client_logo.png" alt="Client logo" style="display:none;">
       </footer>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>

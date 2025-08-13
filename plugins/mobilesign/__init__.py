@@ -96,9 +96,12 @@ def register(app, utils):
         #pad{ border:1px solid #000; display:none; margin-top:10px; width:100%; height:200px }
         </style>
         <script src='https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js'></script>
+        <script src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'></script>
         </head><body>
         <img src='/static/logos/header_logo.png' style='max-width:150px;margin-top:10px' alt='DocCropper'>
         <p style='font-size:small;color:#a00;margin-top:5px;font-weight:bold'>DocCropper e i suoi autori declinano ogni responsabilità per un uso non conforme alla legge.<br>DocCropper and its authors accept no liability for illegal use.</p>
+        <label for='pageSelect' style='display:block;margin-top:10px;'>Page:</label>
+        <select id='pageSelect' style='margin-top:4px'></select>
         <label style='display:block;margin-top:5px;'><input type='checkbox' id='consentFlag'> Consento il trattamento dei dati</label>
         <input id='nameInput' type='text' placeholder='Nome' value='{name}' style='width:90%;max-width:300px;margin-top:5px;'>
         <input id='emailInput' type='email' placeholder='Email' value='{email}' style='width:90%;max-width:300px;margin-top:5px;'>
@@ -108,7 +111,6 @@ def register(app, utils):
         <button id='waPdfBtn' style='display:none;margin-left:10px;'>WhatsApp</button>
         <button id='emailPdfBtn' style='display:none;margin-left:10px;'>Email</button>
         <p>Tap the document then draw your signature</p>
-        <select id='pageSelect' style='margin-top:10px'></select>
         <div id='container'>
             <img id='docImg' src='{img}' alt='doc'>
             <canvas id='overlay'></canvas>
@@ -122,7 +124,12 @@ def register(app, utils):
             </label>
             <button id='finish'>Finish</button>
         </div>
-        <div style='margin-top:20px;'><img src='/static/logos/footer_logo.png' style='max-width:120px' alt='IlTuoConsulenteIT'></div>
+        <div style='margin-top:20px;text-align:center;'>
+            <a href='https://www.iltuoconsulenteit.it/site/index.php/applicazioni/doccropper' target='_blank' style='display:inline-flex;flex-direction:column;align-items:center;text-decoration:none;color:inherit;'>
+                <span style='font-size:12px;margin-bottom:4px;'>By IlTuoConsulenteIT</span>
+                <img src='/static/logos/footer_logo.png' style='max-height:30px' alt='IlTuoConsulenteIT'>
+            </a>
+        </div>
         <script>
         const padEl=document.getElementById('pad');
         const overlay=document.getElementById('overlay');
@@ -137,12 +144,21 @@ def register(app, utils):
         const phoneInput=document.getElementById('phoneInput');
         const consentFlag=document.getElementById('consentFlag');
         const scaleInput=document.getElementById('scaleRange');
+        const container=document.getElementById('container');
         let scale=1;
+        let activeSign=null;
         if(scaleInput){
-            scaleInput.oninput=()=>{ scale=parseFloat(scaleInput.value); };
+            scaleInput.oninput=()=>{
+                scale=parseFloat(scaleInput.value);
+                if(activeSign){
+                    activeSign.scale=scale;
+                    positionAllSigns();
+                }
+            };
         }
         const images={images_json};
         const spots={spots_json};
+        const signs=[];
         async function loadPages(){
             try{
                 const resp=await fetch('/sign-pages/{token}');
@@ -155,8 +171,8 @@ def register(app, utils):
             }catch{}
             images.forEach((img,idx)=>{const opt=document.createElement('option');opt.value=idx;opt.textContent=(idx+1);pageSelect.appendChild(opt);});
             pageSelect.value={page};
+            docImg.onload=()=>{resize(); drawSpots(); positionAllSigns();};
             docImg.src=images[pageSelect.value];
-            drawSpots();
         }
         loadPages();
         let pos=null;
@@ -164,8 +180,9 @@ def register(app, utils):
         function resize(){
             padEl.width=window.innerWidth*0.9; padEl.height=200;
             overlay.width=docImg.clientWidth; overlay.height=docImg.clientHeight;
+            positionAllSigns();
         }
-        resize(); window.addEventListener('resize',resize);
+        window.addEventListener('resize',resize);
         const pad=new SignaturePad(padEl);
         function drawSpots(){
             const ctx=overlay.getContext('2d');
@@ -175,54 +192,118 @@ def register(app, utils):
             ctx.lineWidth=2;
             list.forEach(pt=>{const x=pt.x*overlay.width;const y=pt.y*overlay.height;ctx.beginPath();ctx.moveTo(x-10,y);ctx.lineTo(x+10,y);ctx.moveTo(x,y-10);ctx.lineTo(x,y+10);ctx.stroke();});
         }
-        pageSelect.onchange=()=>{ docImg.src=images[pageSelect.value]; drawSpots(); pos=null; };
+        function positionAllSigns(){
+            const rect=docImg.getBoundingClientRect();
+            signs.forEach(s=>{
+                const h=rect.height/10*s.scale;
+                const w=h*(s.ratio||1);
+                const x=s.x*rect.width - w/2;
+                const y=s.y*rect.height - h/2;
+                s.element.style.width=w+'px';
+                s.element.style.height=h+'px';
+                s.element.style.left=x+'px';
+                s.element.style.top=y+'px';
+                s.element.style.display = (s.page==parseInt(pageSelect.value)) ? 'block':'none';
+            });
+        }
+        function makeDraggable(el,s){
+            let sx=0, sy=0, dragging=false;
+            el.addEventListener('pointerdown',e=>{
+                dragging=true; sx=e.clientX; sy=e.clientY; el.setPointerCapture(e.pointerId);
+                activeSign=s;
+                if(scaleInput){ scaleInput.value=s.scale; }
+                scale=s.scale;
+            });
+            el.addEventListener('pointermove',e=>{
+                if(!dragging) return; const dx=e.clientX-sx; const dy=e.clientY-sy; const left=parseFloat(el.style.left)+dx; const top=parseFloat(el.style.top)+dy; el.style.left=left+'px'; el.style.top=top+'px'; const rect=docImg.getBoundingClientRect(); s.x=(left+el.offsetWidth/2)/rect.width; s.y=(top+el.offsetHeight/2)/rect.height; sx=e.clientX; sy=e.clientY;
+            });
+            el.addEventListener('pointerup',e=>{ dragging=false; el.releasePointerCapture(e.pointerId); });
+        }
+        pageSelect.onchange=()=>{ docImg.onload=()=>{resize(); drawSpots(); positionAllSigns();}; docImg.src=images[pageSelect.value]; pos=null; };
         docImg.onclick=e=>{ if(finished) return; const r=e.target.getBoundingClientRect(); pos={x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}; padEl.style.display='block'; controls.style.display='block'; };
         clearBtn.onclick=()=>pad.clear();
-        async function submitCurrent(){
+        function placeCurrent(){
             if(!pos||pad.isEmpty())return false;
             const img=pad.toDataURL('image/png');
-            await fetch('/submit-signature/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:img,x:pos.x,y:pos.y,page:parseInt(pageSelect.value),scale})});
-            const ctx=overlay.getContext('2d');
-            const tmp=new Image();
-            tmp.onload=()=>{
-                const w=tmp.width*(overlay.height/10)*scale/tmp.height;
-                const h=overlay.height/10*scale;
-                const x=pos.x*overlay.width - w/2;
-                const y=pos.y*overlay.height - h/2;
-                ctx.drawImage(tmp,x,y,w,h);
-            };
-            tmp.src=img;
+            const sign={img,x:pos.x,y:pos.y,scale:scale,page:parseInt(pageSelect.value)};
+            const el=new Image();
+            el.src=img; el.style.position='absolute'; el.style.touchAction='none';
+            sign.element=el;
+            el.onload=()=>{ sign.ratio=el.width/el.height; positionAllSigns(); };
+            makeDraggable(el,sign);
+            container.appendChild(el);
+            signs.push(sign);
             pad.clear();
             padEl.style.display='none';
             drawSpots();
+            activeSign=sign;
+            if(scaleInput){ scaleInput.value=sign.scale; }
             return true;
         }
-        submitBtn.onclick=submitCurrent;
+        submitBtn.onclick=placeCurrent;
         const finishMsg=document.getElementById('finishMsg');
         const pdfLink=document.getElementById('pdfLink');
         const waPdfBtn=document.getElementById('waPdfBtn');
         const emailPdfBtn=document.getElementById('emailPdfBtn');
-        async function pollPdf(){
+
+        function loadImage(src){
+            return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});
+        }
+
+        async function generatePdf(){
             try{
-                const r=await fetch('/signed-pdf/{token}',{cache:'no-store'});
-                if(r.status===200){
+                const { jsPDF } = window.jspdf || {};
+                if(!jsPDF) throw new Error('jsPDF missing');
+                const imgs=[];
+                for(const src of images){ imgs.push(await loadImage(src)); }
+                const pdf=new jsPDF({orientation:'p',unit:'px',format:[imgs[0].width,imgs[0].height]});
+                imgs.forEach((img,idx)=>{
+                    if(idx>0) pdf.addPage([img.width,img.height]);
+                    const c=document.createElement('canvas');
+                    c.width=img.width; c.height=img.height;
+                    c.getContext('2d').drawImage(img,0,0);
+                    const jpg=c.toDataURL('image/jpeg',0.85);
+                    pdf.addImage(jpg,'JPEG',0,0,img.width,img.height,'','FAST');
+                    signs.filter(s=>s.page===idx).forEach(s=>{
+                        const h=img.height/10*s.scale;
+                        const w=h*(s.ratio||1);
+                        const x=s.x*img.width - w/2;
+                        const y=s.y*img.height - h/2;
+                        pdf.addImage(s.img,'PNG',x,y,w,h);
+                    });
+                });
+                const data=pdf.output('datauristring');
+                const r=await fetch('/store-signed-pdf/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pdf:data})});
+                if(r.ok){
                     const d=await r.json();
-                    if(d.url){
+                    if(d.url&&d.hash){
+                        try{
+                            const fr=await fetch(d.url);
+                            const buf=await fr.arrayBuffer();
+                            const digest=await crypto.subtle.digest('SHA-256',buf);
+                            const hash=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+                            if(hash!==d.hash){
+                                finishMsg.textContent='Hash mismatch';
+                                return;
+                            }
+                        }catch{}
                         pdfLink.href=d.url;
                         pdfLink.textContent='Download PDF';
                         pdfLink.style.display='block';
-                        finishMsg.textContent='Signatures sent. Download your PDF:';
+                        finishMsg.textContent='Signatures sent. SHA256: '+d.hash;
                         if(waPdfBtn){
                             waPdfBtn.onclick=()=>{
-                                const p=(d.phone||'').replace(/[^0-9]/g,'');
-                                const u=p?`https://wa.me/${p}?text=${encodeURIComponent(d.url)}`:`https://wa.me/?text=${encodeURIComponent(d.url)}`;
+                                const p=(phoneInput.value||'').replace(/[^0-9]/g,'');
+                                const params=new URLSearchParams({text:d.url});
+                                if(p) params.set('phone',p);
+                                const u=`https://web.whatsapp.com/send?${params.toString()}`;
                                 window.open(u,'_blank');
                             };
                             waPdfBtn.style.display='inline';
                         }
                         if(emailPdfBtn){
                             emailPdfBtn.onclick=()=>{
-                                const m=d.email?encodeURIComponent(d.email):'';
+                                const m=emailInput.value?encodeURIComponent(emailInput.value):'';
                                 const mailto=`mailto:${m}?body=${encodeURIComponent(d.url)}`;
                                 window.open(mailto,'_blank');
                             };
@@ -231,22 +312,27 @@ def register(app, utils):
                         return;
                     }
                 }
-            }catch{}
-            setTimeout(pollPdf,3000);
+                finishMsg.textContent='PDF generation failed';
+            }catch(err){
+                finishMsg.textContent='PDF generation failed';
+            }
         }
         finishBtn.onclick=async()=>{
             if(finished) return;
-            if(!pad.isEmpty()) await submitCurrent();
+            if(!pad.isEmpty()) placeCurrent();
             finishMsg.textContent='Sending signatures...';
             finishMsg.style.display='block';
+            for(const s of signs){
+                await fetch('/submit-signature/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:s.img,x:s.x,y:s.y,page:s.page,scale:s.scale})});
+            }
             await fetch('/finish-signing/{token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:nameInput.value||'',email:emailInput.value||'',phone:phoneInput.value||'',consent:consentFlag.checked})});
-            finishMsg.textContent='Signatures sent. Waiting for PDF...';
+            finishMsg.textContent='Generating PDF...';
             finished=true;
             finishBtn.disabled=true;
             submitBtn.disabled=true;
             clearBtn.disabled=true;
             docImg.onclick=null;
-            pollPdf();
+            await generatePdf();
         };
         </script>
         </body></html>
@@ -383,21 +469,73 @@ def register(app, utils):
             return JSONResponse(status_code=404, content={'message': 'Not found'})
         with open(info_path, 'r') as fh:
             info = json.load(fh)
-        hash_hex = hashlib.sha256(pdf_bytes).hexdigest()
         ts = info.get('timestamp') or datetime.utcnow().isoformat()
         name = info.get('name', '')
         ip = request.client.host or ''
         email = info.get('email', '')
-        legal = f"Firmato elettronicamente in data {ts} da {name} con firma elettronica semplice ai sensi del Regolamento eIDAS (UE 910/2014). IP: {ip} | Email: {email} | SHA256: {hash_hex}"
+        phone = info.get('phone', '')
+        consent = info.get('consent', False)
         try:
             doc = fitz.open(stream=pdf_bytes, filetype='pdf')
-            page = doc[-1]
-            rect = fitz.Rect(50, page.rect.height - 40, page.rect.width - 50, page.rect.height - 10)
-            page.insert_textbox(rect, legal, fontsize=8, align=1)
-            pdf_bytes = doc.tobytes()
+            # Reapply recorded signatures to guarantee the server copy is signed
+            for sig in info.get('signatures', []) or []:
+                try:
+                    page_num = sig.get('page', info.get('page', 0))
+                    page = doc[page_num]
+                    img_path = sig.get('image_path')
+                    if not img_path or not os.path.exists(img_path):
+                        continue
+                    x = float(sig.get('x', 0.5))
+                    y = float(sig.get('y', 0.5))
+                    scale = float(sig.get('scale', 1.0))
+                    pix = fitz.Pixmap(img_path)
+                    h = page.rect.height / 10 * scale
+                    w = h * pix.width / pix.height
+                    x0 = x * page.rect.width - w / 2
+                    y0 = y * page.rect.height - h / 2
+                    page.insert_image(fitz.Rect(x0, y0, x0 + w, y0 + h), filename=img_path)
+                except Exception:
+                    continue
+            doc_bytes = doc.tobytes(
+                clean=True,
+                garbage=4,
+                deflate=True,
+                deflate_images=True,
+                deflate_fonts=True,
+            )
+            doc.close()
+        except Exception:
+            logging.exception('Failed to reapply signatures')
+            doc_bytes = pdf_bytes
+        content_hash = hashlib.sha256(doc_bytes).hexdigest()
+        legal = f"Firmato elettronicamente in data {ts} da {name} con firma elettronica semplice ai sensi del Regolamento eIDAS(UE 910/2014). IP: {ip} | Email: {email} | SHA256: {content_hash}"
+        try:
+            doc = fitz.open(stream=doc_bytes, filetype='pdf')
+            try:
+                page = doc[-1]
+                rect = fitz.Rect(50, page.rect.height - 40, page.rect.width - 50, page.rect.height - 10)
+                page.insert_textbox(rect, legal, fontsize=8, align=1)
+            except Exception:
+                pass
+            try:
+                info_page = doc.new_page()
+                text = f"Nome: {name}\nEmail: {email}\nTelefono: {phone}\nData: {ts}\nSHA256: {content_hash}\nConsenso: {consent}"
+                info_rect = fitz.Rect(50,50, info_page.rect.width-50, info_page.rect.height-50)
+                info_page.insert_textbox(info_rect, text, fontsize=12, align=0)
+            except Exception:
+                pass
+            pdf_bytes = doc.tobytes(
+                clean=True,
+                garbage=4,
+                deflate=True,
+                deflate_images=True,
+                deflate_fonts=True,
+            )
             doc.close()
         except Exception:
             logging.exception('Failed to append legal text')
+            pdf_bytes = doc_bytes
+        hash_hex = hashlib.sha256(pdf_bytes).hexdigest()
         pdf_path = os.path.join(signatures_dir, f'signed_{token}.pdf')
         with open(pdf_path, 'wb') as fh:
             fh.write(pdf_bytes)
@@ -405,12 +543,14 @@ def register(app, utils):
         info['pdf_file'] = pdf_path
         info['pdf_url'] = str(url)
         info['pdf_hash'] = hash_hex
+        info['content_hash'] = content_hash
         with open(info_path, 'w') as fh:
             json.dump(info, fh)
         log_entry = {
             'token': token,
             'pdf_file': os.path.basename(pdf_path),
             'hash': hash_hex,
+            'content_hash': content_hash,
             'timestamp': ts,
             'ip': ip,
             'user_agent': request.headers.get('user-agent', ''),
@@ -422,8 +562,8 @@ def register(app, utils):
         with open(os.path.join('log_firme', f'firma_{token}.json'), 'w') as fh:
             json.dump(log_entry, fh, indent=2)
         if email:
-            send_mail(email, 'Documento firmato', f'SHA256: {hash_hex}', pdf_path)
-        return {'status': 'ok', 'url': str(url)}
+            send_mail(email, 'Documento firmato', f'SHA256: {content_hash}', pdf_path)
+        return {'status': 'ok', 'url': str(url), 'hash': hash_hex, 'email': email, 'phone': phone}
 
     @app.get('/signed-pdf/{token}')
     async def signed_pdf(request: Request, token: str):
@@ -442,9 +582,9 @@ def register(app, utils):
                 return JSONResponse(status_code=202, content={'message': 'Pending'})
             url = request.url_for('download_signed_pdf', token=token)
             result['url'] = str(url)
-        for key in ('name', 'email', 'phone'):
+        for key in ('name', 'email', 'phone', 'pdf_hash'):
             if key in info:
-                result[key] = info[key]
+                result[key if key != 'pdf_hash' else 'hash'] = info[key]
         return result
 
     @app.get('/download-signed/{token}.pdf', name='download_signed_pdf')
