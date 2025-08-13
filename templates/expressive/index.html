@@ -23,7 +23,7 @@
         padding: 10px;
         z-index: 1000;
         text-align: center;
-        width: 260px;
+        width: 300px;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       }
@@ -37,8 +37,8 @@
         margin-bottom: 4px;
       }
       #layoutPreview {
-        width: 180px;
-        height: 220px;
+        width: 220px;
+        height: 260px;
         border: 1px dashed #666;
         margin-top: 10px;
         display: none;
@@ -313,7 +313,28 @@
             contrast:'Contrast',
             scale:'Scale',
             delete:'Delete',
-            removeBg:'Remove BG'
+            removeBg:'Remove BG',
+            previewLayout:'Preview layout',
+            imagesPerPage:'Images per page',
+            orientation:'Orientation',
+            layout:'Layout',
+            imageSize:'Image size',
+            colorMode:'Color mode',
+            portrait:'Portrait',
+            landscape:'Landscape',
+            auto:'Auto',
+            horizontal:'Horizontal',
+            vertical:'Vertical',
+            grid:'Grid',
+            fillCell:'Fill cell',
+            original:'Original',
+            scalePercent:'Scale (%)',
+            color:'Color',
+            gray:'Grayscale',
+            bw:'B/W',
+            downloadPdf:'Download PDF',
+            whatsapp:'WhatsApp',
+            email:'Email'
           },
           it:{
             commands:'Comandi',
@@ -349,7 +370,28 @@
             contrast:'Contrasto',
             scale:'Scala',
             delete:'Elimina',
-            removeBg:'Rimuovi sfondo'
+            removeBg:'Rimuovi sfondo',
+            previewLayout:'Anteprima layout',
+            imagesPerPage:'Immagini per pagina',
+            orientation:'Orientamento',
+            layout:'Disposizione',
+            imageSize:'Dimensione immagine',
+            colorMode:'Modalità colore',
+            portrait:'Verticale',
+            landscape:'Orizzontale',
+            auto:'Auto',
+            horizontal:'Orizzontale',
+            vertical:'Verticale',
+            grid:'Griglia',
+            fillCell:'Riempi cella',
+            original:'Originale',
+            scalePercent:'Scala (%)',
+            color:'Colore',
+            gray:'Scala di grigi',
+            bw:'B/N',
+            downloadPdf:'Scarica PDF',
+            whatsapp:'WhatsApp',
+            email:'Email'
           }
         };
         // Expose translations so external plugins (e.g., mobile sign) can reuse them
@@ -927,9 +969,9 @@
     <div id="exportOptions" style="display:none;">
       <button id="closeExportBtn" style="position:absolute; top:2px; right:2px;">×</button>
       <div id="layoutControls" style="display:none; text-align:left; margin-bottom:8px; font-size:12px;">
-        <div><button id="togglePreviewBtn">Preview layout</button></div>
+        <div><button id="togglePreviewBtn" class="w-full px-2 py-1 bg-gray-200 rounded" x-text="t('previewLayout')"></button></div>
         <div>
-          <label for="layoutSelect">Images per page:</label>
+          <label for="layoutSelect" x-text="t('imagesPerPage')"></label>
           <select id="layoutSelect">
             <option value="1">1</option>
             <option value="2">2</option>
@@ -937,45 +979,45 @@
           </select>
         </div>
         <div>
-          <label for="orientationSelect">Orientation:</label>
+          <label for="orientationSelect" x-text="t('orientation')"></label>
           <select id="orientationSelect">
-            <option value="portrait">Portrait</option>
-            <option value="landscape">Landscape</option>
+            <option value="portrait" x-text="t('portrait')"></option>
+            <option value="landscape" x-text="t('landscape')"></option>
           </select>
         </div>
         <div>
-          <label for="arrangeSelect">Layout:</label>
+          <label for="arrangeSelect" x-text="t('layout')"></label>
           <select id="arrangeSelect">
-            <option value="auto">Auto</option>
-            <option value="horizontal">Horizontal</option>
-            <option value="vertical">Vertical</option>
-            <option value="grid">Grid</option>
+            <option value="auto" x-text="t('auto')"></option>
+            <option value="horizontal" x-text="t('horizontal')"></option>
+            <option value="vertical" x-text="t('vertical')"></option>
+            <option value="grid" x-text="t('grid')"></option>
           </select>
         </div>
         <div>
-          <label for="scaleMode">Image size:</label>
+          <label for="scaleMode" x-text="t('imageSize')"></label>
           <select id="scaleMode">
-            <option value="fit">Fill cell</option>
-            <option value="original">Original</option>
-            <option value="percent">Scale (%)</option>
+            <option value="fit" x-text="t('fillCell')"></option>
+            <option value="original" x-text="t('original')"></option>
+            <option value="percent" x-text="t('scalePercent')"></option>
           </select>
           <input type="number" id="scalePercent" value="100" min="10" max="300" step="10" style="width:60px; display:none;" />
           <span id="scalePercentSymbol" style="display:none;">%</span>
         </div>
         <div>
-          <label for="colorModeSelect">Color mode:</label>
+          <label for="colorModeSelect" x-text="t('colorMode')"></label>
           <select id="colorModeSelect">
-            <option value="color">Color</option>
-            <option value="gray">Grayscale</option>
-            <option value="bw">B/W</option>
+            <option value="color" x-text="t('color')"></option>
+            <option value="gray" x-text="t('gray')"></option>
+            <option value="bw" x-text="t('bw')"></option>
           </select>
         </div>
       </div>
       <div id="layoutPreview"></div>
       <iframe id="exportPreviewFrame" style="width:100%; height:260px; border:1px solid #888; border-radius:4px; margin-bottom:8px; display:none;"></iframe>
-      <button id="downloadPdfBtn" style="display:none;">Download PDF</button>
-      <button id="waShareBtn" style="display:none;">WhatsApp</button>
-      <button id="emailShareBtn" style="display:none;">Email</button>
+      <button id="downloadPdfBtn" class="w-full px-2 py-1 bg-blue-500 text-white rounded text-sm" style="display:none;" x-text="t('downloadPdf')"></button>
+      <button id="waShareBtn" class="w-full px-2 py-1 bg-green-500 text-white rounded text-sm" style="display:none;" x-text="t('whatsapp')"></button>
+      <button id="emailShareBtn" class="w-full px-2 py-1 bg-gray-500 text-white rounded text-sm" style="display:none;" x-text="t('email')"></button>
     </div>
     <script type="module">
       import { initSignaturePlugin } from '/static/plugins/mobilesign.js';
@@ -1008,8 +1050,8 @@
         const images = window.getProcessedImages ? window.getProcessedImages() : [];
         const mode = document.getElementById('colorModeSelect')?.value || 'color';
         preview.innerHTML = '';
-        preview.style.width = orientation === 'portrait' ? '180px' : '220px';
-        preview.style.height = orientation === 'portrait' ? '220px' : '180px';
+        preview.style.width = orientation === 'portrait' ? '220px' : '260px';
+        preview.style.height = orientation === 'portrait' ? '260px' : '220px';
         preview.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
         preview.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
         const total = cols * rows;
@@ -1168,11 +1210,11 @@
           frame.style.display = 'block';
         }
         if (downloadBtn) {
-          downloadBtn.style.display = 'inline-block';
+          downloadBtn.style.display = 'block';
           downloadBtn.onclick = () => window.DC.download();
         }
         if (waBtn) {
-          waBtn.style.display = 'inline-block';
+          waBtn.style.display = 'block';
           waBtn.onclick = () => {
             const p = (window.lastSignPhone || '').replace(/[^0-9]/g, '');
             const params = new URLSearchParams({ text: url });
@@ -1181,7 +1223,7 @@
           };
         }
         if (emailBtn) {
-          emailBtn.style.display = 'inline-block';
+          emailBtn.style.display = 'block';
           emailBtn.onclick = () => {
             const m = window.lastSignEmail ? encodeURIComponent(window.lastSignEmail) : '';
             window.open(`mailto:${m}?body=${encodeURIComponent(url)}`, '_blank');
