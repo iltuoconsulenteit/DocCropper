@@ -205,14 +205,19 @@ button:hover {
 
 #galleryWrapper {
     display: block;
+    width: 100%;
+    position: relative;
 }
 #galleryWrapper.horizontal {
     overflow-x: auto;
+    overflow-y: hidden;
     white-space: nowrap;
+    width: 100%;
 }
 #galleryWrapper.vertical {
     overflow-y: auto;
     white-space: normal;
+    width: 100%;
 }
 
 #processedGallery {
@@ -222,6 +227,7 @@ button:hover {
 #processedGallery.horizontal {
     display: inline-flex;
     flex-wrap: nowrap;
+    align-items: flex-start;
 }
 #processedGallery.vertical {
     display: flex;

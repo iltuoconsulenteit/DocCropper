@@ -624,13 +624,13 @@ function updateGalleryLayout() {
         galleryWrapper.classList.remove('vertical');
         processedGallery.classList.add('horizontal');
         processedGallery.classList.remove('vertical');
-        layoutToggleBtn.textContent = t('verticalView');
+        layoutToggleBtn.textContent = t('horizontalView');
     } else {
         galleryWrapper.classList.add('vertical');
         galleryWrapper.classList.remove('horizontal');
         processedGallery.classList.add('vertical');
         processedGallery.classList.remove('horizontal');
-        layoutToggleBtn.textContent = t('horizontalView');
+        layoutToggleBtn.textContent = t('verticalView');
     }
 }
 
