@@ -137,13 +137,15 @@
                   <div class="relative">
                     <button @click="crop(idx)" title="Crop" class="absolute top-0 left-0 m-1 bg-white/70 w-8 h-8 rounded flex items-center justify-center text-lg">✂</button>
                     <button @click="remove(idx)" title="Delete" class="absolute top-0 right-0 m-1 bg-white/70 w-8 h-8 rounded flex items-center justify-center text-lg">✖</button>
-                    <img :src="file.url" :alt="file.name" class="w-full h-72 lg:h-96 object-contain cursor-pointer" @click="view(file.url)" />
+                    <img :src="file.url" :alt="file.name" class="w-full h-64 lg:h-80 object-contain cursor-pointer" @click="view(file.url)" />
                   </div>
                   <div class="flex justify-center gap-2 mt-1">
                     <button @click="rotate(idx)" title="Rotate" class="text-base">↻</button>
+                    <button @click="flip(idx)" :title="t('flip')" class="text-base">⇄</button>
                     <button @click="toGray(idx)" title="Gray" class="text-base">🌑</button>
                     <button @click="toBW(idx)" title="B/W" class="text-base">⬛</button>
                     <button @click="toColor(idx)" title="Color" class="text-base">🎨</button>
+                    <button x-show="removeBgEnabled" @click="removeBg(idx)" :title="t('removeBg')" class="text-base">⌦</button>
                     <button @click="signPage(idx)" title="Sign" class="text-base">✒</button>
                   </div>
                 </div>
@@ -415,6 +417,7 @@
             brightness:'Brightness',
             contrast:'Contrast',
             scale:'Scale',
+            flip:'Flip',
             delete:'Delete',
             removeBg:'Remove BG',
             previewLayout:'Preview layout',
@@ -490,6 +493,7 @@
             brightness:'Luminosità',
             contrast:'Contrasto',
             scale:'Scala',
+            flip:'Capovolgi',
             delete:'Elimina',
             removeBg:'Rimuovi sfondo',
             previewLayout:'Anteprima layout',
@@ -550,6 +554,7 @@
           signatureImageData:null,
           signatures:[],
           removeSigBg:true,
+          removeBgEnabled:false,
           sigScale:1,
           activeSig:null,
           signatureAspect:1,
@@ -617,6 +622,7 @@
               this.sponsorLogo = this.settings.sponsorLogo ? `/static/logos/${this.settings.sponsorLogo}` : null;
               this.clientLogoHeight = this.settings.clientLogoHeight;
               this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
+              this.removeBgEnabled = !!cfg.enable_removebg;
               this.version = cfg.version || '';
               this.versionDate = cfg.version_date || '';
               this.licenseKey = cfg.license_key || '';
@@ -777,9 +783,42 @@
             };
             img.src = this.files[idx].url;
           },
+          flip(idx){
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width;
+              canvas.height = img.height;
+              const ctx = canvas.getContext('2d');
+              ctx.translate(canvas.width,0);
+              ctx.scale(-1,1);
+              ctx.drawImage(img,0,0);
+              const out = canvas.toDataURL('image/png');
+              this.files[idx].url = out;
+              this.files[idx].original = out;
+            };
+            img.src = this.files[idx].url;
+          },
           toGray(idx){ this._convertColor(idx,'gray'); },
           toBW(idx){ this._convertColor(idx,'bw'); },
           toColor(idx){ this.files[idx].url = this.files[idx].original; this.files = [...this.files]; },
+          async removeBg(idx){
+            try{
+              const resp = await fetch(this.files[idx].url);
+              const blob = await resp.blob();
+              const fd = new FormData();
+              fd.append('image_file', blob, `image${idx}.png`);
+              const r = await fetch('/remove-background/', {method:'POST', body:fd});
+              if(!r.ok) return;
+              const data = await r.json();
+              if(data.image){
+                const url = 'data:image/png;base64,' + data.image;
+                this.files[idx].url = url;
+                this.files[idx].original = url;
+                this.files = [...this.files];
+              }
+            }catch(e){ console.error('remove background error', e); }
+          },
           _convertColor(idx, mode){
             const img = new Image();
             img.onload=()=>{
