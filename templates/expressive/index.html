@@ -935,13 +935,11 @@
     </div>
     <div id="layoutPreview"></div>
     <div id="exportOptions" style="display:none;">
+      <iframe id="exportPreviewFrame" style="width:200px; height:260px; border:1px solid #666; margin-bottom:8px; display:none;"></iframe>
       <a id="signedPdfLink" style="display:none; margin-bottom:8px; color:#2563eb; text-decoration:underline;" download="signed.pdf"></a>
       <button id="downloadPdfBtn">Download PDF</button>
       <button id="waShareBtn">WhatsApp</button>
       <button id="emailShareBtn">Email</button>
-    </div>
-    <div id="pdfPreviewModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; z-index:1000;">
-      <iframe id="pdfPreviewFrame" style="width:80%; height:80%; border:1px solid #666; background:white;"></iframe>
     </div>
     <script type="module">
       import { initSignaturePlugin } from '/static/plugins/mobilesign.js';
@@ -952,8 +950,7 @@
         const url = e.detail.url;
         const exportBox = document.getElementById('exportOptions');
         const link = document.getElementById('signedPdfLink');
-        const frameModal = document.getElementById('pdfPreviewModal');
-        const frame = document.getElementById('pdfPreviewFrame');
+        const frame = document.getElementById('exportPreviewFrame');
         const waBtn = document.getElementById('waShareBtn');
         const emailBtn = document.getElementById('emailShareBtn');
         if (exportBox) exportBox.style.display = 'block';
@@ -962,9 +959,9 @@
           link.textContent = trans['downloadPdf'] || 'Download PDF';
           link.style.display = 'inline';
         }
-        if (frame && frameModal) {
+        if (frame) {
           frame.src = url;
-          frameModal.style.display = 'flex';
+          frame.style.display = 'block';
         }
         if (waBtn) {
           waBtn.onclick = () => {
@@ -979,9 +976,6 @@
             const m = window.lastSignEmail ? encodeURIComponent(window.lastSignEmail) : '';
             window.open(`mailto:${m}?body=${encodeURIComponent(url)}`, '_blank');
           };
-        }
-        if (frameModal) {
-          frameModal.addEventListener('click', () => { frameModal.style.display = 'none'; });
         }
       });
     </script>

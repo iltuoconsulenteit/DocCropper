@@ -43,8 +43,7 @@ const processedImageElement = document.getElementById('processedImage');
 const processedGallery = document.getElementById('processedGallery');
 const statusMessageElement = document.getElementById('statusMessage');
 const signedPdfLink = document.getElementById('signedPdfLink');
-const pdfPreviewModal = document.getElementById('pdfPreviewModal');
-const pdfPreviewFrame = document.getElementById('pdfPreviewFrame');
+const exportPreviewFrame = document.getElementById('exportPreviewFrame');
 const reorderHint = document.getElementById('reorderHint');
 const imageModal = document.getElementById('imageModal');
 const modalImage = document.getElementById('modalImage');
@@ -272,7 +271,6 @@ if (digitalSignBtn) {
             statusMessageElement.textContent = translations['docusealError'] || 'Docuseal request failed';
         }
         exportOptions.style.display = 'none';
-        if (pdfPreviewModal) pdfPreviewModal.style.display = 'none';
     });
 }
 
@@ -1710,7 +1708,7 @@ async function generatePdf() {
     }
     await mergeAllSignatures();
     if (signedPdfLink) signedPdfLink.style.display = 'none';
-    if (pdfPreviewModal) pdfPreviewModal.style.display = 'none';
+    if (exportPreviewFrame) exportPreviewFrame.style.display = 'none';
     statusMessageElement.textContent = 'Generating PDF...';
     const layout = parseInt(layoutSelect.value || '1');
     const orientation = orientationSelect.value || 'portrait';
@@ -1751,9 +1749,9 @@ async function generatePdf() {
                     signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
                     signedPdfLink.style.display = 'inline';
                 }
-                if (pdfPreviewFrame && pdfPreviewModal) {
-                    pdfPreviewFrame.src = url;
-                    pdfPreviewModal.style.display = 'flex';
+                if (exportPreviewFrame) {
+                    exportPreviewFrame.src = url;
+                    exportPreviewFrame.style.display = 'block';
                 }
                 if (window.lastSignPhone) shareWhatsAppLink(window.lastSignPhone, url);
                 if (window.lastSignEmail) shareEmailLink(window.lastSignEmail, url);
@@ -1769,9 +1767,9 @@ async function generatePdf() {
                     signedPdfLink.href = url;
                     signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
                     signedPdfLink.style.display = 'inline';
-                    if (pdfPreviewFrame && pdfPreviewModal) {
-                        pdfPreviewFrame.src = url;
-                        pdfPreviewModal.style.display = 'flex';
+                    if (exportPreviewFrame) {
+                        exportPreviewFrame.src = url;
+                        exportPreviewFrame.style.display = 'block';
                     }
                 }
             }
@@ -1899,7 +1897,6 @@ if (downloadPdfBtn) {
         link.click();
         URL.revokeObjectURL(url);
         exportOptions.style.display = 'none';
-        if (pdfPreviewModal) pdfPreviewModal.style.display = 'none';
     });
 }
 
@@ -1907,7 +1904,6 @@ if (waShareBtn) {
     waShareBtn.addEventListener('click', async () => {
         await shareWhatsApp(window.lastSignPhone);
         exportOptions.style.display = 'none';
-        if (pdfPreviewModal) pdfPreviewModal.style.display = 'none';
     });
 }
 
@@ -1915,7 +1911,6 @@ if (emailShareBtn) {
     emailShareBtn.addEventListener('click', async () => {
         await shareEmail(window.lastSignEmail);
         exportOptions.style.display = 'none';
-        if (pdfPreviewModal) pdfPreviewModal.style.display = 'none';
     });
 }
 
@@ -2325,10 +2320,9 @@ window.addEventListener('signedPdfAvailable', (e) => {
         signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
         signedPdfLink.style.display = 'inline';
     }
-    if (pdfPreviewFrame && pdfPreviewModal) {
-        pdfPreviewFrame.src = url;
-        pdfPreviewModal.style.display = 'flex';
-        pdfPreviewModal.addEventListener('click', () => { pdfPreviewModal.style.display = 'none'; }, { once: true });
+    if (exportPreviewFrame) {
+        exportPreviewFrame.src = url;
+        exportPreviewFrame.style.display = 'block';
     }
     if (e.detail.hash) {
         window.lastPdfHash = e.detail.hash;
