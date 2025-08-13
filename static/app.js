@@ -900,6 +900,26 @@ function flipImage(index) {
     img.src = originalImages[index] || processedImages[index];
 }
 
+function invertImage(index) {
+    const img = new Image();
+    img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.translate(canvas.width, canvas.height);
+        ctx.rotate(Math.PI);
+        ctx.drawImage(img, 0, 0);
+        const invertedData = canvas.toDataURL('image/png');
+        processedImages[index] = invertedData;
+        if (originalImages[index]) originalImages[index] = invertedData;
+        const container = processedGallery.children[index];
+        container.querySelector('img').src = invertedData;
+        window.dispatchEvent(new CustomEvent('imageUpdated', { detail: { index, src: invertedData } }));
+    };
+    img.src = originalImages[index] || processedImages[index];
+}
+
 function convertColor(index, mode) {
     if (mode === 'color') {
         if (originalImages[index]) {
@@ -1088,6 +1108,7 @@ function addThumbnail(src, index) {
     addOption('', 'chooseAction');
     addOption('rotate', 'rotate');
     addOption('flip', 'flip');
+    addOption('invert', 'invert');
     if (isLicensed && currentLicenseLevel !== 'free') {
         addOption('gray', 'toGray');
         addOption('bw', 'toBW');
@@ -1142,6 +1163,17 @@ function addThumbnail(src, index) {
         flipImage(idx);
     });
     actions.appendChild(flipBtnEl);
+
+    const invertBtnEl = document.createElement('button');
+    invertBtnEl.className = 'thumbBtn invertBtn';
+    invertBtnEl.textContent = '⇅';
+    invertBtnEl.title = t('invert');
+    invertBtnEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(container.dataset.index);
+        invertImage(idx);
+    });
+    actions.appendChild(invertBtnEl);
 
     if (removeBgEnabled) {
         const bgBtnEl = document.createElement('button');
@@ -1212,6 +1244,9 @@ function addThumbnail(src, index) {
                 break;
             case 'flip':
                 flipImage(idx);
+                break;
+            case 'invert':
+                invertImage(idx);
                 break;
             case 'gray':
                 convertColor(idx, 'gray');
