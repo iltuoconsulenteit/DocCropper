@@ -270,7 +270,6 @@ if (digitalSignBtn) {
             console.error('Docuseal sign error', e);
             statusMessageElement.textContent = translations['docusealError'] || 'Docuseal request failed';
         }
-        exportOptions.style.display = 'none';
     });
 }
 
@@ -405,6 +404,14 @@ async function importPdfPages(file) {
         if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
         if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
         layoutControls.style.display = 'block';
+        if (exportOptions) {
+            exportOptions.style.display = 'block';
+        }
+        if (signedPdfLink) signedPdfLink.style.display = 'none';
+        if (exportPreviewFrame) exportPreviewFrame.style.display = 'none';
+        if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
+        if (waShareBtn) waShareBtn.style.display = 'none';
+        if (emailShareBtn) emailShareBtn.style.display = 'none';
         if (blankControls) blankControls.style.display = 'block';
         if (signatureImg) {
             signaturePreview.style.display = 'block';
@@ -873,6 +880,12 @@ function deleteImage(index) {
         ocrBtn.style.display = 'none';
         ocrOutput.style.display = 'none';
         layoutControls.style.display = 'none';
+        if (exportOptions) exportOptions.style.display = 'none';
+        if (signedPdfLink) signedPdfLink.style.display = 'none';
+        if (exportPreviewFrame) exportPreviewFrame.style.display = 'none';
+        if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
+        if (waShareBtn) waShareBtn.style.display = 'none';
+        if (emailShareBtn) emailShareBtn.style.display = 'none';
         if (blankControls) blankControls.style.display = 'none';
         signatureControls.style.display = 'none';
         signaturePreview.style.display = 'none';
@@ -913,6 +926,12 @@ function cropImage(index) {
     ocrBtn.style.display = 'none';
     ocrOutput.style.display = 'none';
     layoutControls.style.display = 'none';
+    if (exportOptions) exportOptions.style.display = 'none';
+    if (signedPdfLink) signedPdfLink.style.display = 'none';
+    if (exportPreviewFrame) exportPreviewFrame.style.display = 'none';
+    if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
+    if (waShareBtn) waShareBtn.style.display = 'none';
+    if (emailShareBtn) emailShareBtn.style.display = 'none';
     if (blankControls) blankControls.style.display = 'none';
     signatureControls.style.display = 'none';
     if (legalDisclaimerEl) legalDisclaimerEl.style.display = 'none';
@@ -1494,6 +1513,14 @@ async function addFiles(newFiles) {
         if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
         if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
         layoutControls.style.display = 'block';
+        if (exportOptions) {
+            exportOptions.style.display = 'block';
+        }
+        if (signedPdfLink) signedPdfLink.style.display = 'none';
+        if (exportPreviewFrame) exportPreviewFrame.style.display = 'none';
+        if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
+        if (waShareBtn) waShareBtn.style.display = 'none';
+        if (emailShareBtn) emailShareBtn.style.display = 'none';
         if (blankControls) blankControls.style.display = 'block';
         if (signatureImg) {
             signaturePreview.style.display = 'block';
@@ -1648,8 +1675,16 @@ submitBtn.addEventListener('click', () => {
                 if (signBtn && signEnabled) signBtn.style.display = 'inline-block';
                 if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
                 if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
-                layoutControls.style.display = 'block';
-                if (blankControls) blankControls.style.display = 'block';
+        layoutControls.style.display = 'block';
+        if (exportOptions) {
+            exportOptions.style.display = 'block';
+        }
+        if (signedPdfLink) signedPdfLink.style.display = 'none';
+        if (exportPreviewFrame) exportPreviewFrame.style.display = 'none';
+        if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
+        if (waShareBtn) waShareBtn.style.display = 'none';
+        if (emailShareBtn) emailShareBtn.style.display = 'none';
+        if (blankControls) blankControls.style.display = 'block';
                 updateLayoutPreview();
             } else {
                 processedImages[currentFileIndex] = data.processed_image;
@@ -1680,6 +1715,14 @@ submitBtn.addEventListener('click', () => {
                     if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
                     if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                     layoutControls.style.display = 'block';
+                    if (exportOptions) {
+                        exportOptions.style.display = 'block';
+                    }
+                    if (signedPdfLink) signedPdfLink.style.display = 'none';
+                    if (exportPreviewFrame) exportPreviewFrame.style.display = 'none';
+                    if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
+                    if (waShareBtn) waShareBtn.style.display = 'none';
+                    if (emailShareBtn) emailShareBtn.style.display = 'none';
                     if (blankControls) blankControls.style.display = 'block';
                     if (signatureImg) {
                         signaturePreview.style.display = 'block';
@@ -1741,6 +1784,9 @@ async function generatePdf() {
             const byteArray = new Uint8Array(byteNumbers);
             currentPdfBlob = new Blob([byteArray], {type: 'application/pdf'});
             exportOptions.style.display = 'block';
+            if (downloadPdfBtn) downloadPdfBtn.style.display = 'inline-block';
+            if (waShareBtn) waShareBtn.style.display = 'inline-block';
+            if (emailShareBtn) emailShareBtn.style.display = 'inline-block';
             statusMessageElement.textContent = 'PDF ready.';
             if (window.lastSignToken) {
                 const url = window.lastSignedUrl || URL.createObjectURL(currentPdfBlob);
@@ -1896,21 +1942,18 @@ if (downloadPdfBtn) {
         link.download = 'documents.pdf';
         link.click();
         URL.revokeObjectURL(url);
-        exportOptions.style.display = 'none';
     });
 }
 
 if (waShareBtn) {
     waShareBtn.addEventListener('click', async () => {
         await shareWhatsApp(window.lastSignPhone);
-        exportOptions.style.display = 'none';
     });
 }
 
 if (emailShareBtn) {
     emailShareBtn.addEventListener('click', async () => {
         await shareEmail(window.lastSignEmail);
-        exportOptions.style.display = 'none';
     });
 }
 
@@ -2324,6 +2367,9 @@ window.addEventListener('signedPdfAvailable', (e) => {
         exportPreviewFrame.src = url;
         exportPreviewFrame.style.display = 'block';
     }
+    if (downloadPdfBtn) downloadPdfBtn.style.display = 'inline-block';
+    if (waShareBtn) waShareBtn.style.display = 'inline-block';
+    if (emailShareBtn) emailShareBtn.style.display = 'inline-block';
     if (e.detail.hash) {
         window.lastPdfHash = e.detail.hash;
     }
