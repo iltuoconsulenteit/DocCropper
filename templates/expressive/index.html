@@ -58,8 +58,7 @@
     <!-- Sidebar / Drawer -->
     <div class="fixed inset-y-0 left-0 w-40 bg-gray-800 text-white flex flex-col transform transition-transform duration-200" :class="(drawer || pinned) ? 'translate-x-0' : '-translate-x-full'" x-transition>
       <div class="p-4 flex items-center">
-        <img src="/static/logos/app_logo.png" alt="DocCropper" class="h-8 mr-2" />
-        <span class="font-bold">DocCropper</span>
+        <img src="/static/logos/app_logo.png" alt="DocCropper" class="h-8" />
       </div>
       <nav class="flex-1 overflow-y-auto">
         <h2 class="px-4 text-xs uppercase text-gray-400" x-text="t('commands')"></h2>
@@ -69,12 +68,6 @@
           </li>
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('export')" x-text="t('export')"></button>
-          </li>
-          <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('download')" x-text="t('download')"></button>
-          </li>
-          <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('sign')" x-text="t('sign')"></button>
           </li>
           <li>
             <button id="mobileSignBtn" class="w-full text-left p-2 hover:bg-gray-700" @click="command('mobileSign')" x-text="t('mobileSign')"></button>
@@ -91,11 +84,12 @@
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('donate')" x-text="t('donate')"></button>
           </li>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('settings')" x-text="t('settings')"></button>
+          </li>
         </ul>
       </nav>
-      <div class="p-4 space-y-2 text-center">
-        <img x-show="clientLogo" :src="clientLogo" alt="Client" class="h-6 mx-auto" />
-        <img x-show="sponsorLogo" :src="sponsorLogo" alt="Sponsor" class="h-6 mx-auto" />
+      <div class="p-4 text-center">
         <div id="donateBox" x-show="donateLink" class="mt-2">
           <button @click="donate()" class="bg-yellow-400 text-black px-2 py-1 rounded text-xs" x-text="t('donate')"></button>
         </div>
@@ -107,7 +101,7 @@
       <header class="bg-gray-100 p-2 flex items-center shadow space-x-2">
         <button class="mr-2" @click="pinned ? pinned=false : drawer=!drawer">☰</button>
         <img src="/static/logos/header_logo.png" alt="IlTuoConsulenteIT" class="h-8" />
-        <h1 class="text-xl font-semibold flex-1">DocCropper</h1>
+        <div class="flex-1"></div>
         <span class="text-xs text-gray-600" x-text="licenseInfo()"></span>
         <button @click="licenseModal=true" class="text-xs underline" x-text="t('licenses')"></button>
         <select x-model="lang" @change="setLang" class="border rounded p-1 text-sm">
@@ -147,11 +141,18 @@
             </template>
           </div>
         </div>
-        <div x-show="tab!=='files'" class="text-gray-600" x-text="t('selectCommand')"></div>
+        <div x-show="tab==='guide'" class="w-full h-full">
+          <iframe :src="`/wiki/${lang}/index.html`" class="w-full h-[80vh]"></iframe>
+        </div>
+        <div x-show="tab!=='files' && tab!=='guide'" class="text-gray-600" x-text="t('selectCommand')"></div>
       </main>
-      <footer class="p-4 text-center mt-auto space-y-2">
-        <img src="/static/logos/footer_logo.png" alt="IlTuoConsulenteIT" class="h-8 mx-auto" />
-        <div class="text-xs text-gray-500" x-text="versionInfo()"></div>
+      <footer class="p-4 mt-auto space-y-2">
+        <div class="flex items-center justify-between">
+          <img x-show="sponsorLogo" :src="sponsorLogo" alt="Sponsor" class="h-6" />
+          <img src="/static/logos/footer_logo.png" alt="IlTuoConsulenteIT" class="h-8" />
+          <img x-show="clientLogo" :src="clientLogo" alt="Client" class="h-6" />
+        </div>
+        <div class="text-xs text-gray-500 text-center" x-text="versionInfo()"></div>
       </footer>
     </div>
 
@@ -252,6 +253,25 @@
       </div>
     </div>
 
+    <!-- Settings Modal -->
+    <div x-show="settingsModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded w-72 space-y-2">
+        <h2 class="text-lg" x-text="t('settings')"></h2>
+        <div>
+          <label class="block text-sm" x-text="t('clientLogo')"></label>
+          <input type="text" class="border w-full p-1" x-model="settings.clientLogo" />
+        </div>
+        <div>
+          <label class="block text-sm" x-text="t('sponsorLogo')"></label>
+          <input type="text" class="border w-full p-1" x-model="settings.sponsorLogo" />
+        </div>
+        <div class="text-right space-x-2 pt-2">
+          <button class="px-3 py-1 bg-gray-300 rounded" @click="settingsModal=false" x-text="t('cancel')"></button>
+          <button class="px-3 py-1 bg-blue-500 text-white rounded" @click="saveSettings" x-text="t('apply')"></button>
+        </div>
+      </div>
+    </div>
+
     <!-- Mobile Sign Overlay and Details Modal -->
     <div id="signQR" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); padding:1rem; text-align:center; align-items:center; justify-content:center; flex-direction:column;">
       <img id="signQrImg" alt="QR" style="max-width:20rem; margin-bottom:0.5rem;" />
@@ -290,6 +310,11 @@
             files:'Files',
             guide:'Guide',
             donate:'Donate',
+            settings:'Settings',
+            enterPassword:'Enter password',
+            wrongPassword:'Wrong password',
+            clientLogo:'Client logo',
+            sponsorLogo:'Sponsor logo',
             noFiles:'No files available.',
             selectCommand:'Select a command from the menu.',
             pin:'Pin menu',
@@ -347,6 +372,11 @@
             files:'File',
             guide:'Guida',
             donate:'Dona',
+            settings:'Impostazioni',
+            enterPassword:'Inserisci password',
+            wrongPassword:'Password errata',
+            clientLogo:'Logo cliente',
+            sponsorLogo:'Logo sponsor',
             noFiles:'Nessun file disponibile.',
             selectCommand:'Seleziona un comando dal menu.',
             pin:'Fissa menu',
@@ -431,6 +461,8 @@
           clientLogo:null,
           sponsorLogo:null,
           donateLink:null,
+          settingsModal:false,
+          settings:{clientLogo:'', sponsorLogo:''},
           version:'',
           versionDate:'',
           licenseKey:'',
@@ -463,15 +495,8 @@
             }
             window.removeSignatureBackground = this.removeSigBg;
             this.setLang();
-            const mq = window.matchMedia('(min-width:768px)');
-            this.pinned = false;
-            this.drawer = false;
-            mq.addEventListener('change', e=>{
-              if(!e.matches){
-                this.pinned = false;
-                this.drawer = false;
-              }
-            });
+            this.pinned = true;
+            this.drawer = true;
             setInterval(()=>{
               if (this.showSlides) {
                 this.slideIndex = (this.slideIndex+1) % this.slides[this.lang].length;
@@ -479,8 +504,10 @@
               }
             },5000);
             fetch('/settings/').then(r=>r.json()).then(cfg=>{
-              this.clientLogo = cfg.client_logo ? `/static/logos/${cfg.client_logo}` : null;
-              this.sponsorLogo = cfg.sponsor_logo ? `/static/logos/${cfg.sponsor_logo}` : null;
+              this.settings.clientLogo = cfg.client_logo || '';
+              this.settings.sponsorLogo = cfg.sponsor_logo || '';
+              this.clientLogo = this.settings.clientLogo ? `/static/logos/${this.settings.clientLogo}` : null;
+              this.sponsorLogo = this.settings.sponsorLogo ? `/static/logos/${this.settings.sponsorLogo}` : null;
               this.version = cfg.version || '';
               this.versionDate = cfg.version_date || '';
               this.licenseKey = cfg.license_key || '';
@@ -511,9 +538,6 @@
               case 'download':
                 await window.DC.download();
                 break;
-              case 'sign':
-                await window.DC.sign();
-                break;
               case 'import':
                 await window.DC.import();
                 break;
@@ -521,16 +545,37 @@
                 await window.DC.mobileSign();
                 break;
               case 'guide':
-                window.DC.guide();
+                this.tab='guide';
                 break;
               case 'donate':
                 window.DC.donate();
+                break;
+              case 'settings':
+                this.openSettings();
                 break;
             }
           },
           setLang(){
             document.documentElement.lang = this.lang;
             this.refreshSlides();
+          },
+          openSettings(){
+            const pwd = prompt(this.t('enterPassword'));
+            if(pwd === null) return;
+            if(pwd === 'secret'){
+              this.settingsModal = true;
+            } else {
+              alert(this.t('wrongPassword'));
+            }
+          },
+          saveSettings(){
+            const payload = {client_logo:this.settings.clientLogo, sponsor_logo:this.settings.sponsorLogo};
+            fetch('/settings/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
+              .then(()=>{
+                this.clientLogo = this.settings.clientLogo ? `/static/logos/${this.settings.clientLogo}` : null;
+                this.sponsorLogo = this.settings.sponsorLogo ? `/static/logos/${this.settings.sponsorLogo}` : null;
+                this.settingsModal = false;
+              });
           },
           donate(){ window.DC.donate(); },
           licenseInfo(){
