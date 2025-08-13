@@ -43,6 +43,7 @@ let blankThreshold = 95;
 let skipBlank = true;
 const processedImageElement = document.getElementById('processedImage');
 const processedGallery = document.getElementById('processedGallery');
+const galleryWrapper = document.getElementById('galleryWrapper');
 const statusMessageElement = document.getElementById('statusMessage');
 const signedPdfLink = document.getElementById('signedPdfLink');
 const exportPreviewFrame = document.getElementById('exportPreviewFrame');
@@ -58,6 +59,8 @@ const purchaseBox = document.getElementById('purchaseBox');
 const licenseBox = document.getElementById('licenseBox');
 const settingsBox = document.getElementById('settingsBox');
 const loginArea = document.getElementById('loginArea');
+const layoutToggleBtn = document.getElementById('layoutToggleBtn');
+let galleryHorizontal = true;
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
 const donateBox = document.getElementById('donateBox');
@@ -610,6 +613,30 @@ function t(key) {
     return translations[key] || key;
 }
 
+function updateGalleryLayout() {
+    if (!galleryWrapper || !processedGallery || !layoutToggleBtn) return;
+    if (galleryHorizontal) {
+        galleryWrapper.classList.add('horizontal');
+        galleryWrapper.classList.remove('vertical');
+        processedGallery.classList.add('horizontal');
+        processedGallery.classList.remove('vertical');
+        layoutToggleBtn.textContent = t('verticalView');
+    } else {
+        galleryWrapper.classList.add('vertical');
+        galleryWrapper.classList.remove('horizontal');
+        processedGallery.classList.add('vertical');
+        processedGallery.classList.remove('horizontal');
+        layoutToggleBtn.textContent = t('horizontalView');
+    }
+}
+
+if (layoutToggleBtn) {
+    layoutToggleBtn.addEventListener('click', () => {
+        galleryHorizontal = !galleryHorizontal;
+        updateGalleryLayout();
+    });
+}
+
 function applyTranslations() {
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const k = el.getAttribute('data-i18n');
@@ -668,6 +695,7 @@ function applyTranslations() {
     if (autoDetectHint) {
         autoDetectHint.textContent = translations['autoHint'] || 'Double click to auto-detect';
     }
+    updateGalleryLayout();
     updateWikiLinks();
     startBannerRotation();
 }

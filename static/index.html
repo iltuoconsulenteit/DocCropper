@@ -197,8 +197,11 @@
 
     <h2 data-i18n="processedImages">Processed Images:</h2>
     <p id="reorderHint" data-i18n="reorderHint" style="display:none;"></p>
-    <div id="galleryWrapper">
-        <div id="processedGallery"></div>
+    <div style="margin-bottom:8px;">
+        <button id="layoutToggleBtn">Toggle layout</button>
+    </div>
+    <div id="galleryWrapper" class="horizontal">
+        <div id="processedGallery" class="horizontal"></div>
     </div>
     <img id="processedImage" src="#" alt="Processed Document" style="display:none; max-width: 100%;">
     <div id="imageModal" class="modal" style="display:none;">
@@ -233,10 +236,9 @@
                 <span data-i18n="realizzato">By IlTuoConsulenteIT</span>
                 <img id="footerLogo" src="/static/logos/footer_logo.png" onerror="this.onerror=null;this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO3RqqEAAAAASUVORK5CYII='" alt="IlTuoConsulenteIT logo">
             </a>
+            <span id="versionBox"></span>
         </div>
         <img id="clientBadge" src="/static/logos/client_logo.png" alt="Client logo" style="display:none;">
-        <div id="donateBox" style="display:none;"></div>
-        <span id="versionBox"></span>
       </footer>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>

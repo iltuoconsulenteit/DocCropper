@@ -98,29 +98,26 @@ h1, h2 {
 
 #pageFooter {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     gap: 10px;
     text-align: center;
     margin-top: 20px;
     color: #555;
     font-size: 0.9em;
-    padding: 10px 5px;
-    position: relative;
+    padding: 4px 10px;
 }
 
 #footerBrand {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 5px;
-    justify-content: center;
-    flex-grow: 1;
+    gap: 2px;
 }
 
 #versionBox {
     font-style: italic;
-    margin-left: auto;
+    font-size: 0.8em;
 }
 
 #sponsorBadge, #clientBadge {
@@ -208,15 +205,27 @@ button:hover {
 
 #galleryWrapper {
     display: block;
+}
+#galleryWrapper.horizontal {
     overflow-x: auto;
     white-space: nowrap;
 }
+#galleryWrapper.vertical {
+    overflow-y: auto;
+    white-space: normal;
+}
 
 #processedGallery {
-    display: inline-flex;
-    flex-wrap: nowrap;
     gap: 16px;
     margin-top: 24px;
+}
+#processedGallery.horizontal {
+    display: inline-flex;
+    flex-wrap: nowrap;
+}
+#processedGallery.vertical {
+    display: flex;
+    flex-direction: column;
 }
 
 #sloganImg {

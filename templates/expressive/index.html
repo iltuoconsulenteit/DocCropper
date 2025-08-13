@@ -126,7 +126,10 @@
           <template x-if="files.length === 0">
             <p class="text-gray-600" x-text="t('noFiles')"></p>
           </template>
-          <div x-show="files.length > 0" x-ref="fileGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div x-show="files.length > 0" class="text-right mb-2">
+            <button class="px-2 py-1 border rounded text-xs" @click="toggleLayout" x-text="layoutHorizontal ? t('verticalView') : t('horizontalView')"></button>
+          </div>
+          <div x-show="files.length > 0" x-ref="fileGrid" :class="layoutHorizontal ? 'flex overflow-x-auto space-x-4' : 'grid grid-cols-1 lg:grid-cols-2 gap-4'">
             <template x-for="(file, idx) in files" :key="file.id">
               <div class="mb-4">
                 <p class="text-xs text-center mb-1 truncate" x-text="(idx+1)+' - '+file.name"></p>
@@ -187,15 +190,17 @@
         </div>
         <div x-show="tab!=='files' && tab!=='guide' && tab!=='updates' && tab!=='tutorials' && tab!=='purchase'" class="text-gray-600" x-text="t('selectCommand')"></div>
       </main>
-      <footer class="p-4 mt-auto">
-        <div class="relative flex items-center justify-center w-full gap-4">
+      <footer class="mt-auto py-1 px-4">
+        <div class="flex items-center justify-between w-full">
           <img x-show="sponsorLogo" :src="sponsorLogo" alt="Sponsor" :style="'height:'+sponsorLogoHeight+'px'" />
-          <a href="https://www.iltuoconsulenteit.it/site/index.php/applicazioni/doccropper" target="_blank" rel="noopener" class="flex flex-col items-center">
-            <span class="text-xs mb-1">By IlTuoConsulenteIT</span>
-            <img src="/static/logos/footer_logo.png" alt="IlTuoConsulenteIT" class="h-10" />
-          </a>
+          <div class="flex flex-col items-center">
+            <a href="https://www.iltuoconsulenteit.it/site/index.php/applicazioni/doccropper" target="_blank" rel="noopener" class="flex flex-col items-center">
+              <span class="text-xs mb-1">By IlTuoConsulenteIT</span>
+              <img src="/static/logos/footer_logo.png" alt="IlTuoConsulenteIT" class="h-10" />
+            </a>
+            <span class="text-xs text-gray-500" x-text="versionInfo()"></span>
+          </div>
           <img x-show="clientLogo" :src="clientLogo" alt="Client" :style="'height:'+clientLogoHeight+'px'" />
-          <div class="absolute right-0 text-xs text-gray-500" x-text="versionInfo()"></div>
         </div>
       </footer>
     </div>
@@ -416,6 +421,8 @@
             imagesPerPage:'Images per page',
             orientation:'Orientation',
             layout:'Layout',
+            horizontalView:'Horizontal bar',
+            verticalView:'Vertical bar',
             imageSize:'Image size',
             colorMode:'Color mode',
             portrait:'Portrait',
@@ -489,6 +496,8 @@
             imagesPerPage:'Immagini per pagina',
             orientation:'Orientamento',
             layout:'Disposizione',
+            horizontalView:'Barra orizzontale',
+            verticalView:'Barra verticale',
             imageSize:'Dimensione immagine',
             colorMode:'Modalità colore',
             portrait:'Verticale',
@@ -532,6 +541,7 @@
           cropContrast:100,
           lastTap:0,
           files:[],
+          layoutHorizontal:false,
           signModal:false,
           drawModal:false,
           drawing:false,
@@ -574,6 +584,7 @@
             it:['Migliorato il flusso di firma e opzioni di esportazione.']
           },
           t(key){ return this.strings[this.lang][key] || key; },
+          toggleLayout(){ this.layoutHorizontal = !this.layoutHorizontal; },
           refreshSlides(){
             this.slideIndex = 0;
             this.currentSlide = this.showSlides ? this.slides[this.lang][0] : '';
