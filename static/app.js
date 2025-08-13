@@ -754,6 +754,11 @@ function updateLayoutPreview() {
             img.style.width = '100%';
             img.style.height = '100%';
             img.style.objectFit = scaleMode.value === 'fit' ? 'cover' : 'contain';
+            if (globalColorMode === 'gray') {
+                img.style.filter = 'grayscale(100%)';
+            } else if (globalColorMode === 'bw') {
+                img.style.filter = 'grayscale(100%) contrast(200%)';
+            }
             cell.appendChild(img);
         }
         layoutPreview.appendChild(cell);
@@ -1809,7 +1814,7 @@ async function generatePdf() {
                     signedPdfLink.style.display = 'inline';
                 }
                 if (exportPreviewFrame) {
-                    exportPreviewFrame.src = url;
+                    exportPreviewFrame.src = url + '#toolbar=0&navpanes=0';
                     exportPreviewFrame.style.display = 'block';
                 }
                 if (window.lastSignPhone) shareWhatsAppLink(window.lastSignPhone, url);
@@ -1827,7 +1832,7 @@ async function generatePdf() {
                     signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
                     signedPdfLink.style.display = 'inline';
                     if (exportPreviewFrame) {
-                        exportPreviewFrame.src = url;
+                        exportPreviewFrame.src = url + '#toolbar=0&navpanes=0';
                         exportPreviewFrame.style.display = 'block';
                     }
                 }
@@ -2149,6 +2154,7 @@ scalePercent.addEventListener('change', () => {
 colorModeSelect.addEventListener("change", () => {
     globalColorMode = colorModeSelect.value;
     saveSettings({ color_mode: globalColorMode });
+    updateLayoutPreview();
     maybeRegenerate();
 });
 if (closeExportBtn) {
@@ -2402,7 +2408,7 @@ window.addEventListener('signedPdfAvailable', (e) => {
         signedPdfLink.style.display = 'inline';
     }
     if (exportPreviewFrame) {
-        exportPreviewFrame.src = url;
+        exportPreviewFrame.src = url + '#toolbar=0&navpanes=0';
         exportPreviewFrame.style.display = 'block';
     }
     if (downloadPdfBtn) downloadPdfBtn.style.display = 'inline-block';

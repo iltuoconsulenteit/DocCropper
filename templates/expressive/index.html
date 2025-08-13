@@ -23,10 +23,18 @@
         padding: 10px;
         z-index: 1000;
         text-align: center;
-        width: 220px;
+        width: 260px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       }
       #exportOptions button {
         margin: 5px;
+      }
+      #layoutControls div {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
       }
       #layoutPreview {
         width: 180px;
@@ -964,8 +972,7 @@
         </div>
       </div>
       <div id="layoutPreview"></div>
-      <iframe id="exportPreviewFrame" style="width:100%; height:260px; border:1px solid #666; margin-bottom:8px; display:none;"></iframe>
-      <a id="signedPdfLink" style="display:none; margin-bottom:8px; color:#2563eb; text-decoration:underline;" download="signed.pdf"></a>
+      <iframe id="exportPreviewFrame" style="width:100%; height:260px; border:1px solid #888; border-radius:4px; margin-bottom:8px; display:none;"></iframe>
       <button id="downloadPdfBtn" style="display:none;">Download PDF</button>
       <button id="waShareBtn" style="display:none;">WhatsApp</button>
       <button id="emailShareBtn" style="display:none;">Email</button>
@@ -999,6 +1006,7 @@
         const { cols, rows } = calculateGrid();
         const orientation = document.getElementById('orientationSelect')?.value || 'portrait';
         const images = window.getProcessedImages ? window.getProcessedImages() : [];
+        const mode = document.getElementById('colorModeSelect')?.value || 'color';
         preview.innerHTML = '';
         preview.style.width = orientation === 'portrait' ? '180px' : '220px';
         preview.style.height = orientation === 'portrait' ? '220px' : '180px';
@@ -1015,6 +1023,11 @@
             img.style.width = '100%';
             img.style.height = '100%';
             img.style.objectFit = document.getElementById('scaleMode')?.value === 'fit' ? 'cover' : 'contain';
+            if (mode === 'gray') {
+              img.style.filter = 'grayscale(100%)';
+            } else if (mode === 'bw') {
+              img.style.filter = 'grayscale(100%) contrast(200%)';
+            }
             cell.appendChild(img);
           }
           preview.appendChild(cell);
@@ -1035,6 +1048,7 @@
       const scaleSel = document.getElementById('scaleMode');
       const scalePct = document.getElementById('scalePercent');
       const scaleSym = document.getElementById('scalePercentSymbol');
+      const colorSel = document.getElementById('colorModeSelect');
 
       function toggleScaleInput() {
         const show = scaleSel && scaleSel.value === 'percent';
@@ -1049,6 +1063,7 @@
       arrangeSel?.addEventListener('change', () => { updateLayoutPreview(); maybeRegenerate(); });
       scaleSel?.addEventListener('change', () => { toggleScaleInput(); updateLayoutPreview(); maybeRegenerate(); });
       scalePct?.addEventListener('change', () => { updateLayoutPreview(); maybeRegenerate(); });
+      colorSel?.addEventListener('change', () => { updateLayoutPreview(); maybeRegenerate(); });
       document.getElementById('togglePreviewBtn')?.addEventListener('click', () => {
         const lp = document.getElementById('layoutPreview');
         lp.classList.toggle('visible');
@@ -1127,12 +1142,10 @@
       document.getElementById('closeExportBtn')?.addEventListener('click', () => {
         const box = document.getElementById('exportOptions');
         const frame = document.getElementById('exportPreviewFrame');
-        const link = document.getElementById('signedPdfLink');
         const dl = document.getElementById('downloadPdfBtn');
         const wa = document.getElementById('waShareBtn');
         const em = document.getElementById('emailShareBtn');
         if (frame) { frame.src = ''; frame.style.display = 'none'; }
-        if (link) link.style.display = 'none';
         if (dl) dl.style.display = 'none';
         if (wa) wa.style.display = 'none';
         if (em) em.style.display = 'none';
@@ -1142,7 +1155,6 @@
       window.addEventListener('signedPdfAvailable', (e) => {
         const url = e.detail.url;
         const exportBox = document.getElementById('exportOptions');
-        const link = document.getElementById('signedPdfLink');
         const frame = document.getElementById('exportPreviewFrame');
         const downloadBtn = document.getElementById('downloadPdfBtn');
         const waBtn = document.getElementById('waShareBtn');
@@ -1151,13 +1163,8 @@
         if (exportBox) exportBox.style.display = 'block';
         if (controls) controls.style.display = 'block';
         updateLayoutPreview();
-        if (link) {
-          link.href = url;
-          link.textContent = trans['downloadPdf'] || 'Download PDF';
-          link.style.display = 'inline';
-        }
         if (frame) {
-          frame.src = url;
+          frame.src = url + '#toolbar=0&navpanes=0';
           frame.style.display = 'block';
         }
         if (downloadBtn) {
