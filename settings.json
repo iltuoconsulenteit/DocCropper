@@ -38,6 +38,7 @@
   "enable_mobilesign": false,
   "enable_remotesign": false,
   "enable_removebg": true,
+  "enable_compresspdf": false,
   "enable_sponsor_video": false,
   "banner_images": ["DocCropper_slogan_{{lang}}.png"],
   "banner_interval": 5000,

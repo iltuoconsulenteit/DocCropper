@@ -45,6 +45,7 @@ from plugins.mobilesign import register as register_mobilesign
 from plugins.remotesign import register as register_remotesign
 from plugins.crop import register as register_crop
 from plugins.removebg import register as register_removebg
+from plugins.compresspdf import register as register_compresspdf
 
 try:
     import stripe
@@ -513,6 +514,7 @@ enable_sign = str(os.getenv('DOCROPPER_ENABLE_SIGN', settings.get('enable_sign',
 enable_mobilesign = str(os.getenv('DOCROPPER_ENABLE_MOBILESIGN', settings.get('enable_mobilesign', False))).lower() == 'true'
 enable_remotesign = str(os.getenv('DOCROPPER_ENABLE_REMOTESIGN', settings.get('enable_remotesign', False))).lower() == 'true'
 enable_removebg = str(os.getenv('DOCROPPER_ENABLE_REMOVEBG', settings.get('enable_removebg', False))).lower() == 'true'
+enable_compresspdf = str(os.getenv('DOCROPPER_ENABLE_COMPRESSPDF', settings.get('enable_compresspdf', False))).lower() == 'true'
 
 if enable_sign:
     register_sign(app, plugin_utils)
@@ -522,6 +524,8 @@ if enable_remotesign:
     register_remotesign(app, plugin_utils)
 if enable_removebg:
     register_removebg(app, plugin_utils)
+if enable_compresspdf and settings.get('license_level', 'free').lower() != 'free':
+    register_compresspdf(app, plugin_utils)
 
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):
@@ -744,7 +748,9 @@ async def create_pdf(
     signature_image: str | None = Body(None),
     remove_signature_bg: bool = Body(True),
     signatures: list[dict] = Body(default_factory=list),
-    sign_info: dict | None = Body(default_factory=dict)
+    sign_info: dict | None = Body(default_factory=dict),
+    compression: str = Body("none"),
+    jpeg_quality: int = Body(75),
 ):
     try:
         settings = load_settings()
@@ -993,6 +999,9 @@ async def create_pdf(
                 pdf_bytes = signed_io.getvalue()
             except Exception:
                 logger.exception("PDF signing failed")
+        compressor = plugin_utils.get("compress_pdf")
+        if compressor and (compression and compression.lower() != "none"):
+            pdf_bytes = compressor(pdf_bytes, compression, jpeg_quality)
 
         pdf_path = os.path.join(session_dir, "output.pdf" + ENC_SUFFIX)
         try:

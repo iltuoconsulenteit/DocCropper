@@ -1,6 +1,7 @@
 import interact from 'https://cdn.interactjs.io/v1.10.11/interactjs/index.js';
 import { initSignaturePlugin } from './plugins/mobilesign.js';
 import { initRemoveBgPlugin } from './plugins/removebg.js';
+import { initPdfCompressPlugin } from './plugins/compresspdf.js';
 
 let scaling_factor_w;
 let scaling_factor_h;
@@ -184,6 +185,7 @@ let signEnabled = true;
 let mobileSignEnabled = false;
 let remoteSignEnabled = false;
 let removeBgEnabled = false;
+let compressEnabled = false;
 
 let translations = {};
 let currentLang = 'en';
@@ -574,6 +576,7 @@ function applySettings(cfg) {
     mobileSignEnabled = !!cfg.enable_mobilesign;
     remoteSignEnabled = !!cfg.enable_remotesign;
     removeBgEnabled = !!cfg.enable_removebg;
+    compressEnabled = !!cfg.enable_compresspdf && currentLicenseLevel !== 'free';
     if (digitalSignBtn) {
         digitalSignBtn.disabled = !docusealEnabled || currentLicenseLevel === 'free' || !remoteSignEnabled;
     }
@@ -1920,7 +1923,9 @@ async function generatePdf() {
     const arrangement = arrangeSelect.value || 'auto';
     const scale_mode = scaleMode.value || 'fit';
     const scale_percent = parseInt(scalePercent.value || '100');
-    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures, remove_signature_bg: window.removeSignatureBackground !== false };
+    const compression = window.getCompressionLevel ? window.getCompressionLevel() : 'none';
+    const jpeg_quality = window.getJpegQuality ? window.getJpegQuality() : 75;
+    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures, remove_signature_bg: window.removeSignatureBackground !== false, compression, jpeg_quality };
     if (window.lastSignEmail || window.lastSignPhone || window.lastSignName) {
         payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
     }
@@ -3022,6 +3027,7 @@ loadSettings().then(async (cfg) => {
     applyTranslations();
     initSignaturePlugin(translations, mobileSignEnabled);
     initRemoveBgPlugin(translations, removeBgEnabled);
+    initPdfCompressPlugin(translations, compressEnabled);
     renderPaymentBox(cfg);
     renderLicenseBox();
     renderLogin(cfg);
