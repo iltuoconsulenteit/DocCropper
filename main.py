@@ -125,7 +125,7 @@ MAX_UPLOAD_MB = int(os.getenv("DOCROPPER_MAX_UPLOAD_MB", "20"))
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 
 DEFAULT_SETTINGS = {
-    "language": "en",
+    "language": "it",
     "layout": 1,
     "orientation": "portrait",
     "arrangement": "auto",
@@ -160,7 +160,7 @@ DEFAULT_SETTINGS = {
     "skip_blank": True,
     "max_upload_files": 10,
     "enable_sponsor_video": False,
-    "banner_images": ["DocCropper_slogan_{{lang}}.png"],
+    "banner_images": ["DocCropper_slogan_main_{{lang}}.png"],
     "developer_watermark": False,
     "demo_full_mode": False,
     "docuseal_api_url": "",
@@ -540,8 +540,7 @@ async def favicon():
     icon_path = os.path.join(os.path.dirname(__file__), 'static', 'logos', 'app_logo.png')
     return FileResponse(icon_path, headers={"Cache-Control": "no-cache"})
 
-@app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
+def make_index_response(request: Request, lang: str) -> HTMLResponse:
     cleanup_old_sessions()
     session_id = request.cookies.get("session_id")
     if not session_id:
@@ -565,7 +564,6 @@ async def read_root(request: Request):
 
         with open(index_path, "r", encoding="utf-8") as f:
             content = f.read()
-        lang = load_settings().get("language", "en")
         content = content.replace('<html lang="en">', f'<html lang="{lang}">')
         content = content.replace('</head>', f'<script>window.DC_LANG="{lang}";</script></head>')
         if CACHE_BUST:
@@ -575,8 +573,10 @@ async def read_root(request: Request):
             content = content.replace("app_logo.png", f"app_logo.png{CACHE_BUST}")
             content = content.replace("header_logo.png", f"header_logo.png{CACHE_BUST}")
             content = content.replace("footer_logo.png", f"footer_logo.png{CACHE_BUST}")
-            content = content.replace("DocCropper_slogan_en.png", f"DocCropper_slogan_en.png{CACHE_BUST}")
-            content = content.replace("DocCropper_slogan_it.png", f"DocCropper_slogan_it.png{CACHE_BUST}")
+            content = content.replace("DocCropper_slogan_main_en.png", f"DocCropper_slogan_main_en.png{CACHE_BUST}")
+            content = content.replace("DocCropper_slogan_main_it.png", f"DocCropper_slogan_main_it.png{CACHE_BUST}")
+            content = content.replace("DocCropper_slogan_sign_en.png", f"DocCropper_slogan_sign_en.png{CACHE_BUST}")
+            content = content.replace("DocCropper_slogan_sign_it.png", f"DocCropper_slogan_sign_it.png{CACHE_BUST}")
     except FileNotFoundError:
         logger.error(f"{index_path} not found")
         return HTMLResponse(content="Frontend not found.", status_code=500)
@@ -585,6 +585,17 @@ async def read_root(request: Request):
     response.headers["Pragma"] = "no-cache"
     response.set_cookie("session_id", session_id, httponly=True)
     return response
+
+
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    lang = load_settings().get("language", "it")
+    return make_index_response(request, lang)
+
+
+@app.get("/{lang:en|it}", response_class=HTMLResponse)
+async def read_root_lang(lang: str, request: Request):
+    return make_index_response(request, lang)
 
 
 async def require_superuser(user: User = Depends(fastapi_users.current_user())):
@@ -1037,7 +1048,7 @@ async def extract_text(request: Request, images: list[str] = Body(...)):
         return JSONResponse(status_code=503, content={"message": "OCR not available"})
     try:
         settings = load_settings()
-        lang = settings.get("language", "en")
+        lang = settings.get("language", "it")
         text_parts = []
         for img_b64 in images:
             if img_b64.startswith('data:'):
