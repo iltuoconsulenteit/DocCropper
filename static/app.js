@@ -579,14 +579,24 @@ function applySettings(cfg) {
             sponsorBadge.style.display = 'none';
         }
     }
-    if (Array.isArray(cfg.banner_images)) {
-        bannerImages = cfg.banner_images;
-    } else {
-        bannerImages = ['DocCropper_slogan_{{lang}}.png'];
-    }
-    bannerInterval = parseInt(cfg.banner_interval || 5000);
-    bannerIndex = 0;
-    startBannerRotation();
+    let fallback = Array.isArray(cfg.banner_images) ? cfg.banner_images : ['DocCropper_slogan_{{lang}}.png'];
+    fetch(`/slides/${currentLang}`).then(r => r.ok ? r.json() : [])
+        .then(list => {
+            if (Array.isArray(list) && list.length) {
+                bannerImages = list;
+            } else {
+                bannerImages = fallback.map(img => img.replace('{{lang}}', currentLang));
+            }
+            bannerInterval = parseInt(cfg.banner_interval || 5000);
+            bannerIndex = 0;
+            startBannerRotation();
+        })
+        .catch(() => {
+            bannerImages = fallback.map(img => img.replace('{{lang}}', currentLang));
+            bannerInterval = parseInt(cfg.banner_interval || 5000);
+            bannerIndex = 0;
+            startBannerRotation();
+        });
     brandHeight = parseInt(cfg.brand_height || 80);
     brandGap = parseInt(cfg.brand_gap || 20);
     if (bannerBox) {
@@ -737,14 +747,13 @@ function applyTranslations() {
         }
     }
     if (sloganImg) {
-        sloganImg.src = `/static/logos/DocCropper_slogan_${currentLang}.png`;
+        sloganImg.src = `/static/slides/DocCropper_slogan_${currentLang}.png`;
     }
     if (autoDetectHint) {
         autoDetectHint.textContent = translations['autoHint'] || 'Double click to auto-detect';
     }
     updateGalleryLayout();
     updateWikiLinks();
-    startBannerRotation();
 }
 
 function updateWikiLinks() {
@@ -756,8 +765,7 @@ function updateWikiLinks() {
 function updateBannerImage() {
     if (!sloganImg || bannerImages.length === 0) return;
     let img = bannerImages[bannerIndex % bannerImages.length];
-    img = img.replace('{{lang}}', currentLang);
-    sloganImg.src = `/static/logos/${img}`;
+    sloganImg.src = `/static/slides/${img}`;
 }
 
 function startBannerRotation() {
@@ -2382,6 +2390,22 @@ langSelect.addEventListener('change', async () => {
     renderPaymentBox(currentSettings);
     renderLicenseBox();
     settingsBox.innerHTML = '';
+    let fallback = Array.isArray(currentSettings.banner_images) ? currentSettings.banner_images : ['DocCropper_slogan_{{lang}}.png'];
+    fetch(`/slides/${currentLang}`).then(r => r.ok ? r.json() : [])
+        .then(list => {
+            if (Array.isArray(list) && list.length) {
+                bannerImages = list;
+            } else {
+                bannerImages = fallback.map(img => img.replace('{{lang}}', currentLang));
+            }
+            bannerIndex = 0;
+            startBannerRotation();
+        })
+        .catch(() => {
+            bannerImages = fallback.map(img => img.replace('{{lang}}', currentLang));
+            bannerIndex = 0;
+            startBannerRotation();
+        });
     saveSettings({ language: currentLang });
 });
 

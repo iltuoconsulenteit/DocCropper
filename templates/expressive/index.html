@@ -617,10 +617,7 @@
           licenseModal:false,
           lang: window.DC_LANG || 'en',
           strings,
-          slides:{
-            en:['/static/logos/DocCropper_slogan_en.png','/static/logos/DocCropper_slogan_sign_en.png'],
-            it:['/static/logos/DocCropper_slogan_it.png','/static/logos/DocCropper_slogan_sign_it.png']
-          },
+          slides:[],
           slideIndex:0,
           showSlides:true,
           currentSlide:'',
@@ -641,9 +638,15 @@
             setTimeout(()=>{ this.status=''; },3000);
             this.showClearConfirm = false;
           },
-          refreshSlides(){
-            this.slideIndex = 0;
-            this.currentSlide = this.showSlides ? this.slides[this.lang][0] : '';
+          loadSlides(){
+            fetch(`/slides/${this.lang}`).then(r=>r.ok?r.json():[]).then(list=>{
+              this.slides = list.map(f=>`/static/slides/${f}`);
+              this.slideIndex = 0;
+              this.currentSlide = this.showSlides && this.slides.length ? this.slides[0] : '';
+            }).catch(()=>{
+              this.slides = [];
+              this.currentSlide = '';
+            });
           },
           versionInfo(){
             if(!this.version) return '';
@@ -669,9 +672,9 @@
               }
             });
             setInterval(()=>{
-              if (this.showSlides) {
-                this.slideIndex = (this.slideIndex+1) % this.slides[this.lang].length;
-                this.currentSlide = this.slides[this.lang][this.slideIndex];
+              if (this.showSlides && this.slides.length) {
+                this.slideIndex = (this.slideIndex+1) % this.slides.length;
+                this.currentSlide = this.slides[this.slideIndex];
               }
             },5000);
             fetch('/settings/').then(r=>r.json()).then(cfg=>{
@@ -683,6 +686,10 @@
               this.sponsorLogo = this.settings.sponsorLogo ? `/static/logos/${this.settings.sponsorLogo}` : null;
               this.clientLogoHeight = this.settings.clientLogoHeight;
               this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
+              if (cfg.language) {
+                this.lang = cfg.language;
+                this.setLang();
+              }
               this.removeBgEnabled = !!cfg.enable_removebg;
               this.watermarkEnabled = !!cfg.enable_watermark;
               this.maxUpload = parseInt(cfg.max_upload_files || 10);
@@ -756,7 +763,7 @@
           },
           setLang(){
             document.documentElement.lang = this.lang;
-            this.refreshSlides();
+            this.loadSlides();
           },
           openSettings(){
             this.passwordInput='';

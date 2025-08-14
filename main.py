@@ -647,6 +647,25 @@ async def update_user_settings_endpoint(request: Request, settings: dict = Body(
     data["version_date"] = VERSION_DATE
     return data
 
+@app.get("/slides/{lang}")
+async def list_slides(lang: str):
+    folder = os.path.join("static", "slides")
+    files: list[str] = []
+    if os.path.isdir(folder):
+        for name in sorted(os.listdir(folder)):
+            path = os.path.join(folder, name)
+            if not os.path.isfile(path):
+                continue
+            base, ext = os.path.splitext(name)
+            if ext.lower() not in [".png", ".jpg", ".jpeg", ".gif", ".webp"]:
+                continue
+            parts = base.rsplit("_", 1)
+            if len(parts) == 2 and len(parts[1]) == 2:
+                if parts[1].lower() == lang.lower():
+                    files.append(name)
+            else:
+                files.append(name)
+    return files
 
 @app.post("/stripe-checkout/")
 async def stripe_checkout(level: str = Body(...)):
