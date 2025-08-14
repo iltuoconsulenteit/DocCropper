@@ -147,6 +147,8 @@
   "skipBlank": "Salta pagine bianche",
   "removeBlank": "Rimuovi pagine bianche",
   "restoreBlank": "Ripristina pagine",
+  "clearImages": "Cancella immagini",
+  "confirmClearImages": "Rimuovere tutte le immagini?",
   "pagesRemoved": "Rimosse {n} pagine bianche",
   "pagesRestored": "Pagine ripristinate",
   "drawSignature": "Disegna firma",

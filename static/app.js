@@ -40,6 +40,7 @@ const blankThresholdLabel = document.querySelector("label[for='blankThreshold']"
 const skipBlankCheckbox = document.getElementById('skipBlank');
 const removeBlankBtn = document.getElementById('removeBlankBtn');
 const restoreBlankBtn = document.getElementById('restoreBlankBtn');
+const clearImagesBtn = document.getElementById('clearImagesBtn');
 let globalColorMode = 'color';
 let blankThreshold = 95;
 let skipBlank = true;
@@ -425,7 +426,7 @@ async function importPdfPages(file) {
         if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
         if (waShareBtn) waShareBtn.style.display = 'none';
         if (emailShareBtn) emailShareBtn.style.display = 'none';
-        if (blankControls) blankControls.style.display = 'block';
+        if (blankControls) blankControls.style.display = 'flex';
         if (signatureImg) {
             signaturePreview.style.display = 'block';
             signatureHint.style.display = 'block';
@@ -636,13 +637,13 @@ function updateGalleryLayout() {
         galleryWrapper.classList.remove('vertical');
         processedGallery.classList.add('horizontal');
         processedGallery.classList.remove('vertical');
-        layoutToggleBtn.textContent = t('horizontalView');
+        layoutToggleBtn.textContent = t('verticalView');
     } else {
         galleryWrapper.classList.add('vertical');
         galleryWrapper.classList.remove('horizontal');
         processedGallery.classList.add('vertical');
         processedGallery.classList.remove('horizontal');
-        layoutToggleBtn.textContent = t('verticalView');
+        layoutToggleBtn.textContent = t('horizontalView');
     }
 }
 
@@ -1721,7 +1722,7 @@ async function addFiles(newFiles) {
         if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
         if (waShareBtn) waShareBtn.style.display = 'none';
         if (emailShareBtn) emailShareBtn.style.display = 'none';
-        if (blankControls) blankControls.style.display = 'block';
+        if (blankControls) blankControls.style.display = 'flex';
         if (signatureImg) {
             signaturePreview.style.display = 'block';
             signatureHint.style.display = 'block';
@@ -1892,7 +1893,7 @@ submitBtn.addEventListener('click', () => {
         if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
         if (waShareBtn) waShareBtn.style.display = 'none';
         if (emailShareBtn) emailShareBtn.style.display = 'none';
-        if (blankControls) blankControls.style.display = 'block';
+        if (blankControls) blankControls.style.display = 'flex';
                 updateLayoutPreview();
             } else {
                 processedImages[currentFileIndex] = data.processed_image;
@@ -1931,7 +1932,7 @@ submitBtn.addEventListener('click', () => {
                     if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
                     if (waShareBtn) waShareBtn.style.display = 'none';
                     if (emailShareBtn) emailShareBtn.style.display = 'none';
-                    if (blankControls) blankControls.style.display = 'block';
+                    if (blankControls) blankControls.style.display = 'flex';
                     if (signatureImg) {
                         signaturePreview.style.display = 'block';
                         signatureHint.style.display = 'block';
@@ -2377,6 +2378,15 @@ if (removeBlankBtn) {
 }
 if (restoreBlankBtn) {
     restoreBlankBtn.addEventListener('click', restoreBlankPages);
+}
+if (clearImagesBtn) {
+    clearImagesBtn.addEventListener('click', () => {
+        if (confirm(t('confirmClearImages'))) {
+            while (processedImages.length > 0) {
+                deleteImage(processedImages.length - 1);
+            }
+        }
+    });
 }
 
 brightnessRange.addEventListener('input', () => {

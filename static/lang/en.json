@@ -147,6 +147,8 @@
   "skipBlank": "Skip blank pages",
   "removeBlank": "Remove blank pages",
   "restoreBlank": "Restore pages",
+  "clearImages": "Clear images",
+  "confirmClearImages": "Remove all images?",
   "pagesRemoved": "{n} blank pages removed",
   "pagesRestored": "Removed pages restored",
   "drawSignature": "Draw signature",
