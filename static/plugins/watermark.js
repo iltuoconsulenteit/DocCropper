@@ -171,24 +171,17 @@ export function initWatermarkPlugin(translations, enabled = true) {
                 ? window.getProcessedImages()
                 : (window.processedImages || []);
             const targets = all.checked ? imgs.map((_, i) => i) : [index];
+            const applied = [];
             for (const p of targets) {
                 if (!imgs[p]) continue;
-                if (all.checked) {
-                    if (!originals[p]) originals[p] = imgs[p];
-                    const merged = await mergeImage(imgs[p], dataUrl, 0.8, 0.8, 1, opts.angle);
-                    if (typeof window.setProcessedImage === 'function') {
-                        window.setProcessedImage(p, merged);
-                    } else {
-                        imgs[p] = merged;
-                        if (window.originalImages) window.originalImages[p] = merged;
-                    }
-                    const imgEl = document.querySelector(`.thumbContainer[data-index="${p}"] img`);
-                    if (imgEl) imgEl.src = merged;
-                } else {
-                    if (!originals[p]) originals[p] = imgs[p];
-                    createOverlay(dataUrl, p, opts.angle);
-                }
+                if (!originals[p]) originals[p] = imgs[p];
+                createOverlay(dataUrl, p, opts.angle);
+                applied.push(p);
             }
+            if (all.checked) {
+                await mergeAllWatermarks();
+            }
+            document.dispatchEvent(new CustomEvent('watermark-applied', { detail: { pages: applied } }));
             txt.value = '';
             img.value = '';
             all.checked = false;
@@ -240,6 +233,7 @@ export function initWatermarkPlugin(translations, enabled = true) {
             if (imgEl) imgEl.src = url;
             delete originals[page];
         }
+        document.dispatchEvent(new CustomEvent('watermark-removed', { detail: { page } }));
     }
 
     function hasWatermark(page) {

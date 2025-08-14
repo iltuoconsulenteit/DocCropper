@@ -1274,8 +1274,11 @@ function addThumbnail(src, index) {
     if (watermarkEnabled) {
         const wmBtn = document.createElement('button');
         wmBtn.className = 'thumbBtn watermarkBtn';
-        wmBtn.textContent = '🖆';
         wmBtn.title = t('watermark');
+        const refreshWm = () => {
+            const idx = parseInt(container.dataset.index);
+            wmBtn.textContent = (window.hasWatermark && window.hasWatermark(idx)) ? '↺' : '🖆';
+        };
         wmBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             const idx = parseInt(container.dataset.index);
@@ -1287,7 +1290,17 @@ function addThumbnail(src, index) {
                 window.openWatermarkDialog(idx);
             }
         });
+        document.addEventListener('watermark-applied', (ev) => {
+            const pages = ev.detail && ev.detail.pages ? ev.detail.pages : [];
+            const idx = parseInt(container.dataset.index);
+            if (pages.includes(idx)) refreshWm();
+        });
+        document.addEventListener('watermark-removed', (ev) => {
+            const idx = parseInt(container.dataset.index);
+            if (ev.detail && ev.detail.page === idx) refreshWm();
+        });
         actions.appendChild(wmBtn);
+        refreshWm();
     }
 
     if (isLicensed && currentLicenseLevel !== 'free') {
