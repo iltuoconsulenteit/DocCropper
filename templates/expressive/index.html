@@ -123,7 +123,7 @@
                   <div class="relative">
                     <button @click="crop(idx)" title="Crop" class="absolute top-0 left-0 m-1 bg-white/70 w-8 h-8 rounded flex items-center justify-center text-lg">✂</button>
                     <button @click="remove(idx)" title="Delete" class="absolute top-0 right-0 m-1 bg-white/70 w-8 h-8 rounded flex items-center justify-center text-lg">✖</button>
-                    <img :src="file.url" :alt="file.name" class="w-full h-64 lg:h-80 object-contain cursor-pointer" @click="view(file.url)" />
+                    <img :src="file.url" :alt="file.name" class="w-full h-56 lg:h-72 object-contain cursor-pointer" @click="view(file.url)" />
                   </div>
                   <div class="flex justify-center gap-2 mt-1">
                     <button @click="rotate(idx)" title="Rotate" class="text-base">↻</button>
