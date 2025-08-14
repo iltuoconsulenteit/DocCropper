@@ -2,6 +2,7 @@ import interact from 'https://cdn.interactjs.io/v1.10.11/interactjs/index.js';
 import { initSignaturePlugin } from './plugins/mobilesign.js';
 import { initRemoveBgPlugin } from './plugins/removebg.js';
 import { initPdfCompressPlugin } from './plugins/compresspdf.js';
+import { initWatermarkPlugin } from './plugins/watermark.js';
 
 let scaling_factor_w;
 let scaling_factor_h;
@@ -44,6 +45,7 @@ const clearImagesBtn = document.getElementById('clearImagesBtn');
 let globalColorMode = 'color';
 let blankThreshold = 95;
 let skipBlank = true;
+let watermarkEnabled = false;
 const processedImageElement = document.getElementById('processedImage');
 const processedGallery = document.getElementById('processedGallery');
 const galleryWrapper = document.getElementById('galleryWrapper');
@@ -603,8 +605,12 @@ function applySettings(cfg) {
     mobileSignEnabled = !!cfg.enable_mobilesign;
     remoteSignEnabled = !!cfg.enable_remotesign;
     removeBgEnabled = !!cfg.enable_removebg;
+    watermarkEnabled = !!cfg.enable_watermark;
     if (typeof initRemoveBgPlugin === 'function' && Object.keys(translations).length) {
         initRemoveBgPlugin(translations, removeBgEnabled);
+    }
+    if (typeof initWatermarkPlugin === 'function' && Object.keys(translations).length) {
+        initWatermarkPlugin(translations, watermarkEnabled);
     }
     compressEnabled = !!cfg.enable_compresspdf && currentLicenseLevel !== 'free';
     if (digitalSignBtn) {
@@ -1263,6 +1269,21 @@ function addThumbnail(src, index) {
             openSignatureForPage(idx);
         });
         actions.appendChild(signPageBtn);
+    }
+
+    if (watermarkEnabled) {
+        const wmBtn = document.createElement('button');
+        wmBtn.className = 'thumbBtn watermarkBtn';
+        wmBtn.textContent = 'WM';
+        wmBtn.title = t('watermark');
+        wmBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            if (typeof window.openWatermarkDialog === 'function') {
+                window.openWatermarkDialog(idx);
+            }
+        });
+        actions.appendChild(wmBtn);
     }
 
     if (isLicensed && currentLicenseLevel !== 'free') {
@@ -3110,6 +3131,7 @@ loadSettings().then(async (cfg) => {
     initSignaturePlugin(translations, mobileSignEnabled);
     initRemoveBgPlugin(translations, removeBgEnabled);
     initPdfCompressPlugin(translations, compressEnabled);
+    initWatermarkPlugin(translations, watermarkEnabled);
     renderPaymentBox(cfg);
     renderLicenseBox();
     renderLogin(cfg);

@@ -1379,11 +1379,13 @@
       import { initSignaturePlugin } from '/static/plugins/mobilesign.js';
       import { initPdfCompressPlugin } from '/static/plugins/compresspdf.js';
       import { initPdfaPlugin } from '/static/plugins/pdfa.js';
+      import { initWatermarkPlugin } from '/static/plugins/watermark.js';
       const lang = window.DC_LANG || document.documentElement.lang || 'en';
       const trans = (window.dcStrings && window.dcStrings[lang]) ? window.dcStrings[lang] : {};
       initSignaturePlugin(trans, true);
       initPdfCompressPlugin(trans, true);
       initPdfaPlugin(trans, true);
+      initWatermarkPlugin(trans, true);
 
       function calculateGrid() {
         const layout = parseInt(document.getElementById('layoutSelect')?.value || '1');

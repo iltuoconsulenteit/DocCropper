@@ -46,6 +46,7 @@ from plugins.remotesign import register as register_remotesign
 from plugins.crop import register as register_crop
 from plugins.removebg import register as register_removebg
 from plugins.compresspdf import register as register_compresspdf
+from plugins.watermark import register as register_watermark
 
 try:
     import stripe
@@ -515,6 +516,7 @@ enable_mobilesign = str(os.getenv('DOCROPPER_ENABLE_MOBILESIGN', settings.get('e
 enable_remotesign = str(os.getenv('DOCROPPER_ENABLE_REMOTESIGN', settings.get('enable_remotesign', False))).lower() == 'true'
 enable_removebg = str(os.getenv('DOCROPPER_ENABLE_REMOVEBG', settings.get('enable_removebg', False))).lower() == 'true'
 enable_compresspdf = str(os.getenv('DOCROPPER_ENABLE_COMPRESSPDF', settings.get('enable_compresspdf', False))).lower() == 'true'
+enable_watermark = str(os.getenv('DOCROPPER_ENABLE_WATERMARK', settings.get('enable_watermark', False))).lower() == 'true'
 
 if enable_sign:
     register_sign(app, plugin_utils)
@@ -526,6 +528,8 @@ if enable_removebg:
     register_removebg(app, plugin_utils)
 if enable_compresspdf and settings.get('license_level', 'free').lower() != 'free':
     register_compresspdf(app, plugin_utils)
+if enable_watermark:
+    register_watermark(app, plugin_utils)
 
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):

@@ -18,6 +18,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🎨 Restore color later with a dedicated button
 - 🪄 Remove backgrounds with an adjustable threshold and restore originals when needed (Pro)
 - 🔁 Flip pages horizontally or invert upside-down scans
+- 🖍️ Add text or image watermarks with custom size, angle, color, font and optional propagation to all pages
  - 🧹 Skip blank pages when importing PDFs using a configurable threshold (Pro)
 - 📄 Create PDFs ready for download or sharing
 - 📦 Compress PDFs with Low, Medium or Extreme settings and optional JPEG quality tuning (Pro)
@@ -52,6 +53,7 @@ The frontend allows the user to:
 - Double click/tap an image to auto-detect its edges
 - Flip or invert images if they were scanned mirrored or upside-down
 - Remove backgrounds with a dedicated button and fine‑tune the threshold via the settings panel
+- Overlay watermarks using text or images, choosing size, angle, color and font, and optionally apply to all pages
 - Submit data (image, coordinates, size) to the backend
 - Export all processed images to PDF
 - Choose a PDF compression level (Low, Medium, Extreme) and customize JPEG quality when needed
