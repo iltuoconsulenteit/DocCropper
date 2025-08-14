@@ -25,6 +25,7 @@ export function initWatermarkPlugin(translations, enabled = true) {
             <label>${translations.watermarkColor || 'Color'}<input id="wmColor" type="color" value="#000000" style="width:100%"></label>
             <label>${translations.watermarkFont || 'Font'}<input id="wmFont" type="text" value="arial.ttf" style="width:100%"></label>
             <label><input type="checkbox" id="wmAll"> ${translations.applyToAll || 'Apply to all pages'}</label>
+            <p style="font-size:0.75rem;color:#6b7280;">${translations.legalDisclaimer || ''}</p>
             <div style="margin-top:8px; text-align:right;">
                 <button id="wmCancel" style="margin-right:8px;">${translations.cancel || 'Cancel'}</button>
                 <button id="wmOk">${translations.ok || 'OK'}</button>

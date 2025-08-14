@@ -13,11 +13,16 @@ export function initSignaturePlugin(translations, enabled = true) {
     const detailsPhone = document.getElementById('mobilePhoneInput');
     const detailsStart = document.getElementById('mobileDetailsStart');
     const detailsCancel = document.getElementById('mobileDetailsCancel');
+    const msDisclaimer = document.getElementById('msDisclaimer');
     window.lastSignToken = '';
 
     if (!enabled) {
         if (mobileSignBtn) mobileSignBtn.style.display = 'none';
         return;
+    }
+
+    if (msDisclaimer) {
+        msDisclaimer.textContent = translations['legalDisclaimer'] || 'DocCropper and its authors accept no liability for illegal use.';
     }
 
     async function pollPdf(token) {
