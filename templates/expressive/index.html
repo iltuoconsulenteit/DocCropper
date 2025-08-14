@@ -89,7 +89,7 @@
       </div>
     </div>
 
-    <div class="flex-1 flex flex-col transition-all duration-200" :class="pinned ? 'ml-40' : 'ml-0'">
+    <div class="flex-1 flex flex-col transition-all duration-200" :class="(drawer || pinned) ? 'ml-40' : 'ml-0'">
       <!-- Top bar -->
       <header class="bg-gray-100 p-2 flex items-center shadow space-x-2">
         <button class="mr-2" @click="pinned ? (pinned=false, drawer=false) : drawer=!drawer">☰</button>
@@ -99,7 +99,7 @@
         <button @click="licenseModal=true" class="text-xs underline" x-text="t('licenses')"></button>
         <select x-model="lang" @change="setLang" class="border rounded p-1 text-sm">
           <option value="en">EN</option>
-          <option value="it">IT</option>
+          <option value="it" selected>IT</option>
         </select>
       </header>
       <!-- Content -->
@@ -616,11 +616,11 @@
           licenseNameInput:'',
           licenseLevel:'free',
           licenseModal:false,
-          lang: window.DC_LANG || 'en',
+          lang: window.DC_LANG || 'it',
           strings,
           slides:{
-            en:['/static/logos/DocCropper_slogan_en.png','/static/logos/DocCropper_slogan_sign_en.png'],
-            it:['/static/logos/DocCropper_slogan_it.png','/static/logos/DocCropper_slogan_sign_it.png']
+            en:['/static/slide/DocCropper_slogan_main_en.png','/static/slide/DocCropper_slogan_sign_en.png'],
+            it:['/static/slide/DocCropper_slogan_main_it.png','/static/slide/DocCropper_slogan_sign_it.png']
           },
           slideIndex:0,
           showSlides:true,

@@ -14,7 +14,7 @@ import json
 import time
 from dotenv import load_dotenv
 
-LANG = 'en'
+LANG = 'it'
 TRANSLATIONS = {}
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -42,9 +42,9 @@ def load_language():
     try:
         with open(BASE_DIR / 'settings.json') as fh:
             data = json.load(fh)
-        LANG = data.get('language', 'en')
+        LANG = data.get('language', 'it')
     except Exception:
-        LANG = 'en'
+        LANG = 'it'
     try:
         with open(BASE_DIR / 'static' / 'lang' / f'{LANG}.json') as fh:
             TRANSLATIONS = json.load(fh)

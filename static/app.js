@@ -208,7 +208,7 @@ let removeBgEnabled = false;
 let compressEnabled = false;
 
 let translations = {};
-let currentLang = 'en';
+let currentLang = window.DC_LANG || 'it';
 let currentSettings = {};
 
 async function enumerateCameras() {
@@ -489,10 +489,9 @@ function saveSettings(data) {
 function applySettings(cfg) {
     currentSettings = cfg;
     currentSettings.enable_sponsor_video = !!cfg.enable_sponsor_video;
-    if (cfg.language) {
-        currentLang = cfg.language;
-        langSelect.value = cfg.language;
-    }
+    const urlLang = window.DC_LANG;
+    currentLang = urlLang || cfg.language || 'it';
+    langSelect.value = currentLang;
     if (cfg.layout) {
         layoutSelect.value = cfg.layout;
     }
@@ -582,7 +581,7 @@ function applySettings(cfg) {
     if (Array.isArray(cfg.banner_images)) {
         bannerImages = cfg.banner_images;
     } else {
-        bannerImages = ['DocCropper_slogan_{{lang}}.png'];
+        bannerImages = ['DocCropper_slogan_main_{{lang}}.png'];
     }
     bannerInterval = parseInt(cfg.banner_interval || 5000);
     bannerIndex = 0;
@@ -737,7 +736,7 @@ function applyTranslations() {
         }
     }
     if (sloganImg) {
-        sloganImg.src = `/static/logos/DocCropper_slogan_${currentLang}.png`;
+        sloganImg.src = `/static/slide/DocCropper_slogan_main_${currentLang}.png`;
     }
     if (autoDetectHint) {
         autoDetectHint.textContent = translations['autoHint'] || 'Double click to auto-detect';
@@ -757,7 +756,7 @@ function updateBannerImage() {
     if (!sloganImg || bannerImages.length === 0) return;
     let img = bannerImages[bannerIndex % bannerImages.length];
     img = img.replace('{{lang}}', currentLang);
-    sloganImg.src = `/static/logos/${img}`;
+    sloganImg.src = `/static/slide/${img}`;
 }
 
 function startBannerRotation() {
@@ -2360,6 +2359,10 @@ if (signaturePreview) {
 
 langSelect.addEventListener('change', async () => {
     currentLang = langSelect.value;
+    const newPath = `/${currentLang}`;
+    if (window.location.pathname !== newPath) {
+        window.history.replaceState({}, '', newPath);
+    }
     await loadTranslations(currentLang);
     applyTranslations();
     renderPaymentBox(currentSettings);
@@ -2507,13 +2510,14 @@ function addCurrentSignature() {
         const pageSigs = signatures.filter(s => s.page === page);
         scaleTarget = (pageSigs.length - 1).toString();
     }
+    // Render and update before shifting the default position so the first signature appears correctly.
+    renderSignaturePreview();
+    updateSignatureTargetOptions();
     const OFFSET = 0.05;
     signaturePosition.x += OFFSET;
     if (signaturePosition.x > 0.95) signaturePosition.x = OFFSET;
     signaturePosition.y += OFFSET;
     if (signaturePosition.y > 0.95) signaturePosition.y = OFFSET;
-    renderSignaturePreview();
-    updateSignatureTargetOptions();
 }
 
 if (addSignatureBtn) {

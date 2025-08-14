@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0">
     <meta name="description" content="DocCropper is a web-based app for batch document perspective correction, multi-image cropping, mobile signing, and PDF export.">
@@ -16,7 +16,7 @@
             <label for="langSelect" data-i18n="language">Language:</label>
             <select id="langSelect">
                 <option value="en" data-i18n="english">English</option>
-                <option value="it" data-i18n="italian">Italiano</option>
+                <option value="it" data-i18n="italian" selected>Italiano</option>
             </select>
         </div>
         <div id="loginArea"><a href="/auth/google" id="loginBtn">Login with Google</a></div>
@@ -32,13 +32,13 @@
     </header>
     <div id="brandArea">
         <button id="closeBanner" class="close">&times;</button>
-        <img id="sloganImg" src="/static/logos/DocCropper_slogan_en.png" alt="DocCropper slogan">
+        <img id="sloganImg" src="/static/slide/DocCropper_slogan_main_it.png" alt="DocCropper slogan">
     </div>
     <div id="instructionsBox">
         <strong data-i18n="instructionsTitle">Instructions</strong><br>
         <span data-i18n="instructionsComing">Browse the wiki below.</span>
-        <iframe id="wikiFrame" src="/wiki/en/index.html"></iframe>
-        <a id="openWikiLink" href="/wiki/en/index.html" target="_blank" data-i18n="openWiki">Open Wiki</a>
+        <iframe id="wikiFrame" src="/wiki/it/index.html"></iframe>
+        <a id="openWikiLink" href="/wiki/it/index.html" target="_blank" data-i18n="openWiki">Open Wiki</a>
     </div>
 
     <div id="purchaseBox" style="display:none;"></div>
