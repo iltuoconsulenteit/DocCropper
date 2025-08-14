@@ -2507,13 +2507,14 @@ function addCurrentSignature() {
         const pageSigs = signatures.filter(s => s.page === page);
         scaleTarget = (pageSigs.length - 1).toString();
     }
+    // Render and update before shifting the default position so the first signature appears correctly.
+    renderSignaturePreview();
+    updateSignatureTargetOptions();
     const OFFSET = 0.05;
     signaturePosition.x += OFFSET;
     if (signaturePosition.x > 0.95) signaturePosition.x = OFFSET;
     signaturePosition.y += OFFSET;
     if (signaturePosition.y > 0.95) signaturePosition.y = OFFSET;
-    renderSignaturePreview();
-    updateSignatureTargetOptions();
 }
 
 if (addSignatureBtn) {
