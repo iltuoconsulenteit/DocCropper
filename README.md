@@ -229,7 +229,7 @@ DocCropper ships with three editions. A **Licenses** button in the header opens 
 - **Full** – All features unlocked including unrestricted LAN access and any
   optional plugins
 - *Demo Full* is a hidden license that behaves like the Full edition but keeps
-  the watermark, enables mobile signing, and shows a demo notice.
+  a default bottom watermark, enables mobile signing, and shows a demo notice.
   When this license is active the **Purchase** button turns into a PayPal
   donation link that opens in a new tab.
 

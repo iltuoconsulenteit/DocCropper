@@ -98,6 +98,7 @@ def save_license_overrides(update: dict) -> dict:
 DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "")
 DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
 DEMO_FULL_LICENSE_KEY = "DEMO-FULL-DC"
+DEMO_WATERMARK_TEXT = "DocCropper Demo"
 
 try:
     VERSION = subprocess.check_output(
@@ -939,6 +940,20 @@ async def create_pdf(
                     ty = fy + (fl.height - th) // 2
                     draw.text((tx, ty), text, fill="black", font=font)
                     page.paste(fl, (fx, fy), fl)
+                if settings.get("demo_full_mode"):
+                    wm_font_size = max(20, page_h // 25)
+                    try:
+                        wm_font = ImageFont.truetype("DejaVuSans.ttf", wm_font_size)
+                    except Exception:
+                        wm_font = ImageFont.load_default()
+                    if hasattr(draw, "textbbox"):
+                        bbox = draw.textbbox((0, 0), DEMO_WATERMARK_TEXT, font=wm_font)
+                        wmw, wmh = bbox[2] - bbox[0], bbox[3] - bbox[1]
+                    else:
+                        wmw, wmh = wm_font.getsize(DEMO_WATERMARK_TEXT)
+                    wx = (page_w - wmw) // 2
+                    wy = page_h - wmh - margin
+                    draw.text((wx, wy), DEMO_WATERMARK_TEXT, fill=(128, 128, 128), font=wm_font)
             if sig_img and signatures and placements:
                 footer_h = fl.height if (not licensed and fl) else 0
                 img_off_x, img_off_y, img_w, img_h = placements[0]
