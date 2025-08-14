@@ -54,14 +54,14 @@ export function initWatermarkPlugin(translations, enabled = true) {
         img.src = dataUrl;
         Object.assign(img.style, {
             position: 'absolute',
-            top: '80%',
-            left: '80%',
+            top: '50%',
+            left: '50%',
             transform: `translate(-50%, -50%) rotate(${angle}deg) scale(1)`,
             cursor: 'move',
             maxWidth: '80%'
         });
         container.appendChild(img);
-        const wm = { page, el: img, data: dataUrl, x: 0.8, y: 0.8, scale: 1, angle };
+        const wm = { page, el: img, data: dataUrl, x: 0.5, y: 0.5, scale: 1, angle };
         watermarks.push(wm);
 
         let dragging = false;
@@ -140,6 +140,9 @@ export function initWatermarkPlugin(translations, enabled = true) {
                 : (window.processedImages || []);
             const targets = all.checked ? imgs.map((_, i) => i) : [index];
             targets.forEach(p => createOverlay(dataUrl, p, opts.angle));
+            if (all.checked) {
+                await mergeAllWatermarks();
+            }
             txt.value = '';
             img.value = '';
             all.checked = false;

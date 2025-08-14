@@ -36,7 +36,7 @@ def register(app, utils: dict[str, Any]):
                     wm = wm.resize((int(w * scale), int(h * scale)))
                 if angle:
                     wm = wm.rotate(angle, expand=True)
-                pos = (base_img.width - wm.width - 10, base_img.height - wm.height - 10)
+                pos = ((base_img.width - wm.width) // 2, (base_img.height - wm.height) // 2)
                 base_img.alpha_composite(wm, dest=pos)
             elif text:
                 try:
@@ -51,7 +51,7 @@ def register(app, utils: dict[str, Any]):
                 draw_tmp.text((0, 0), text, fill=color, font=font)
                 if angle:
                     tmp = tmp.rotate(angle, expand=True)
-                pos = (base_img.width - tmp.width - 10, base_img.height - tmp.height - 10)
+                pos = ((base_img.width - tmp.width) // 2, (base_img.height - tmp.height) // 2)
                 txt_layer.alpha_composite(tmp, dest=pos)
                 base_img = Image.alpha_composite(base_img, txt_layer)
             buf = io.BytesIO()
