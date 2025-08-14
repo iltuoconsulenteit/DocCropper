@@ -1,83 +1,114 @@
 export function initWatermarkPlugin(translations, enabled = true) {
     if (!enabled) {
         window.openWatermarkDialog = () => {};
+        window.mergeAllWatermarks = async () => {};
         return;
     }
+
+    const watermarks = [];
     let modal;
+
     function ensureModal() {
         if (modal) return;
         modal = document.createElement('div');
         modal.id = 'watermarkModal';
-        Object.assign(modal.style, {
-            position: 'fixed', top: '0', left: '0', right: '0', bottom: '0',
-            background: 'rgba(0,0,0,0.6)', display: 'none', alignItems: 'center', justifyContent: 'center',
-            zIndex: '1000'
-        });
-        const box = document.createElement('div');
-        Object.assign(box.style, {
-            background: '#fff', padding: '10px', borderRadius: '4px', width: '260px'
-        });
-        box.innerHTML = `
-            <label>${translations.watermarkText || 'Text'}<input id="wmText" type="text" style="width:100%"></label>
-            <label>${translations.watermarkImage || 'Image'}<input id="wmImage" type="file" accept="image/*" style="width:100%"></label>
-            <label>${translations.watermarkSize || 'Size'}<input id="wmSize" type="number" value="20" style="width:100%"></label>
-            <label>${translations.watermarkAngle || 'Angle'}<input id="wmAngle" type="number" value="0" style="width:100%"></label>
-            <label>${translations.watermarkColor || 'Color'}<input id="wmColor" type="color" value="#000000" style="width:100%"></label>
-            <label>${translations.watermarkFont || 'Font'}<input id="wmFont" type="text" value="arial.ttf" style="width:100%"></label>
-            <label><input type="checkbox" id="wmAll"> ${translations.applyToAll || 'Apply to all pages'}</label>
-            <p style="font-size:0.75rem;color:#6b7280;">${translations.legalDisclaimer || ''}</p>
-            <div style="margin-top:8px; text-align:right;">
-                <button id="wmCancel" style="margin-right:8px;">${translations.cancel || 'Cancel'}</button>
-                <button id="wmOk">${translations.ok || 'OK'}</button>
-            </div>
-        `;
-        modal.appendChild(box);
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width:300px;padding:10px;text-align:left;">
+                <label style="display:block;margin-bottom:4px;">${translations.watermarkText || 'Text'}<br>
+                    <input id="wmText" type="text" style="width:100%">
+                </label>
+                <label style="display:block;margin-bottom:4px;">${translations.watermarkImage || 'Image'}<br>
+                    <input id="wmImage" type="file" accept="image/*" style="width:100%">
+                </label>
+                <label style="display:block;margin-bottom:4px;">${translations.watermarkSize || 'Size'}<br>
+                    <input id="wmSize" type="number" value="20" style="width:100%">
+                </label>
+                <label style="display:block;margin-bottom:4px;">${translations.watermarkAngle || 'Angle'}<br>
+                    <input id="wmAngle" type="number" value="0" style="width:100%">
+                </label>
+                <label style="display:block;margin-bottom:4px;">${translations.watermarkColor || 'Color'}<br>
+                    <input id="wmColor" type="color" value="#000000" style="width:100%">
+                </label>
+                <label style="display:block;margin-bottom:4px;">${translations.watermarkFont || 'Font'}<br>
+                    <input id="wmFont" type="text" value="Arial" style="width:100%">
+                </label>
+                <label style="display:block;margin-bottom:4px;">
+                    <input type="checkbox" id="wmAll"> ${translations.applyToAll || 'Apply to all pages'}
+                </label>
+                <p style="font-size:0.75rem;color:#6b7280;">${translations.legalDisclaimer || ''}</p>
+                <div style="text-align:right;margin-top:8px;">
+                    <button id="wmCancel" style="margin-right:8px;">${translations.cancel || 'Cancel'}</button>
+                    <button id="wmOk">${translations.ok || 'OK'}</button>
+                </div>
+            </div>`;
         document.body.appendChild(modal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
     }
-    async function applyWatermark(index, opts, applyAll) {
-        const imgs = typeof window.getProcessedImages === 'function'
-            ? window.getProcessedImages()
-            : (window.processedImages || []);
-        const targets = applyAll ? imgs.map((_, i) => i) : [index];
-        for (const idx of targets) {
-            const src = imgs[idx];
-            if (!src) continue;
-            const resp = await fetch(src);
-            const blob = await resp.blob();
-            const fd = new FormData();
-            fd.append('image_file', blob, `img${idx}.png`);
-            if (opts.text) fd.append('text', opts.text);
-            if (opts.file) fd.append('watermark_image', opts.file);
-            fd.append('font_size', opts.size);
-            fd.append('angle', opts.angle);
-            fd.append('color', opts.color);
-            fd.append('font_name', opts.font);
-            fd.append('scale', opts.scale);
-            const r = await fetch('/watermark/', { method: 'POST', body: fd });
-            if (r.ok) {
-                const data = await r.json();
-                if (data.image) {
-                    const url = 'data:image/png;base64,' + data.image;
-                    if (typeof window.setProcessedImage === 'function') {
-                        window.setProcessedImage(idx, url);
-                    } else if (window.processedImages) {
-                        window.processedImages[idx] = url;
-                        if (window.originalImages && window.originalImages[idx]) {
-                            window.originalImages[idx] = url;
-                        }
-                    }
-                    const imgEl = document.querySelector(`.thumbContainer[data-index="${idx}"] img`);
-                    if (imgEl) imgEl.src = url;
-                    window.dispatchEvent(new CustomEvent('imageUpdated', { detail: { index: idx, src: url } }));
-                }
-            } else {
-                alert(translations.watermarkFailed || 'Watermark failed');
-            }
-        }
+
+    function createOverlay(dataUrl, page, angle) {
+        const container = document.querySelector(`.thumbContainer[data-index="${page}"]`);
+        if (!container) return;
+        container.style.position = 'relative';
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        Object.assign(img.style, {
+            position: 'absolute',
+            top: '80%',
+            left: '80%',
+            transform: `translate(-50%, -50%) rotate(${angle}deg) scale(1)`,
+            cursor: 'move',
+            maxWidth: '80%'
+        });
+        container.appendChild(img);
+        const wm = { page, el: img, data: dataUrl, x: 0.8, y: 0.8, scale: 1, angle };
+        watermarks.push(wm);
+
+        let dragging = false;
+        img.addEventListener('mousedown', (e) => { dragging = true; e.preventDefault(); });
+        window.addEventListener('mousemove', (e) => {
+            if (!dragging) return;
+            const rect = container.getBoundingClientRect();
+            wm.x = (e.clientX - rect.left) / rect.width;
+            wm.y = (e.clientY - rect.top) / rect.height;
+            img.style.left = (wm.x * 100) + '%';
+            img.style.top = (wm.y * 100) + '%';
+        });
+        window.addEventListener('mouseup', () => { dragging = false; });
+        img.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            wm.scale = Math.max(0.1, wm.scale + (e.deltaY < 0 ? 0.1 : -0.1));
+            img.style.transform = `translate(-50%, -50%) rotate(${wm.angle}deg) scale(${wm.scale})`;
+        });
     }
+
+    function generateTextData(opts) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.font = `${opts.size}px ${opts.font}`;
+        const metrics = ctx.measureText(opts.text);
+        const w = metrics.width;
+        const h = opts.size * 1.2;
+        canvas.width = w;
+        canvas.height = h;
+        ctx.font = `${opts.size}px ${opts.font}`;
+        ctx.fillStyle = opts.color;
+        ctx.textBaseline = 'top';
+        ctx.fillText(opts.text, 0, 0);
+        return canvas.toDataURL('image/png');
+    }
+
+    async function fileToDataURL(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(file);
+        });
+    }
+
     function openWatermarkDialog(index) {
         ensureModal();
-        modal.style.display = 'flex';
+        modal.style.display = 'block';
         const txt = document.getElementById('wmText');
         const img = document.getElementById('wmImage');
         const size = document.getElementById('wmSize');
@@ -85,9 +116,7 @@ export function initWatermarkPlugin(translations, enabled = true) {
         const color = document.getElementById('wmColor');
         const font = document.getElementById('wmFont');
         const all = document.getElementById('wmAll');
-        document.getElementById('wmCancel').onclick = () => {
-            modal.style.display = 'none';
-        };
+        document.getElementById('wmCancel').onclick = () => { modal.style.display = 'none'; };
         document.getElementById('wmOk').onclick = async () => {
             modal.style.display = 'none';
             const opts = {
@@ -96,14 +125,78 @@ export function initWatermarkPlugin(translations, enabled = true) {
                 size: parseInt(size.value, 10) || 20,
                 angle: parseFloat(angle.value) || 0,
                 color: color.value || '#000000',
-                font: font.value || 'arial.ttf',
-                scale: 1.0
+                font: font.value || 'Arial'
             };
-            await applyWatermark(index, opts, all.checked);
+            let dataUrl = '';
+            if (opts.file) {
+                dataUrl = await fileToDataURL(opts.file);
+            } else if (opts.text) {
+                dataUrl = generateTextData(opts);
+            } else {
+                return;
+            }
+            const imgs = typeof window.getProcessedImages === 'function'
+                ? window.getProcessedImages()
+                : (window.processedImages || []);
+            const targets = all.checked ? imgs.map((_, i) => i) : [index];
+            targets.forEach(p => createOverlay(dataUrl, p, opts.angle));
             txt.value = '';
             img.value = '';
             all.checked = false;
         };
     }
+
+    async function mergeAllWatermarks() {
+        if (watermarks.length === 0) return;
+        const imgs = typeof window.getProcessedImages === 'function'
+            ? window.getProcessedImages()
+            : (window.processedImages || []);
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        async function loadImage(src) {
+            return new Promise((resolve) => {
+                const im = new Image();
+                im.onload = () => resolve(im);
+                im.src = src;
+            });
+        }
+
+        for (const wm of watermarks) {
+            const baseSrc = imgs[wm.page];
+            if (!baseSrc) continue;
+            const base = await loadImage(baseSrc);
+            canvas.width = base.width;
+            canvas.height = base.height;
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.drawImage(base,0,0);
+            const wImg = await loadImage(wm.data);
+            const w = wImg.width * wm.scale;
+            const h = wImg.height * wm.scale;
+            const x = wm.x * canvas.width - w/2;
+            const y = wm.y * canvas.height - h/2;
+            ctx.save();
+            ctx.translate(x + w/2, y + h/2);
+            ctx.rotate((wm.angle || 0) * Math.PI / 180);
+            ctx.drawImage(wImg, -w/2, -h/2, w, h);
+            ctx.restore();
+            const url = canvas.toDataURL('image/png');
+            if (typeof window.setProcessedImage === 'function') {
+                window.setProcessedImage(wm.page, url);
+            } else {
+                imgs[wm.page] = url;
+                if (window.originalImages && window.originalImages[wm.page]) {
+                    window.originalImages[wm.page] = url;
+                }
+            }
+            const imgEl = document.querySelector(`.thumbContainer[data-index="${wm.page}"] img`);
+            if (imgEl) imgEl.src = url;
+            if (wm.el && wm.el.parentNode) wm.el.remove();
+        }
+        watermarks.length = 0;
+    }
+
     window.openWatermarkDialog = openWatermarkDialog;
+    window.mergeAllWatermarks = mergeAllWatermarks;
 }
+
