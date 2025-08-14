@@ -16,19 +16,19 @@
       main { scrollbar-width: auto; scrollbar-color: #9ca3af #f3f4f6; }
       #exportOptions {
         position: fixed;
-        right: 10px;
-        bottom: 10px;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 260px;
         background: #fff;
-        border: 1px solid #888;
+        border-left: 1px solid #888;
         padding: 10px;
         z-index: 1000;
-        text-align: center;
-        width: 300px;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow-y: auto;
+        display: none;
       }
       #exportOptions button {
-        margin: 5px;
+        margin: 4px 0;
       }
       #layoutControls div {
         display: flex;
@@ -1318,56 +1318,62 @@
         }
       }
     </script>
-    <div id="exportOptions" style="display:none;">
+    <div id="exportOptions">
       <button id="closeExportBtn" style="position:absolute; top:2px; right:2px;">×</button>
-      <div id="layoutControls" style="display:none; text-align:left; margin-bottom:8px; font-size:12px;">
-        <div>
-          <label for="layoutSelect" x-text="t('imagesPerPage')"></label>
-          <select id="layoutSelect">
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="4">4</option>
-          </select>
+      <details open>
+        <summary class="font-semibold" x-text="t('layout')"></summary>
+        <div id="layoutControls" style="display:none; text-align:left; margin:8px 0; font-size:12px;">
+          <div>
+            <label for="layoutSelect" x-text="t('imagesPerPage')"></label>
+            <select id="layoutSelect">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+          <div>
+            <label for="orientationSelect" x-text="t('orientation')"></label>
+            <select id="orientationSelect">
+              <option value="portrait" x-text="t('portrait')"></option>
+              <option value="landscape" x-text="t('landscape')"></option>
+            </select>
+          </div>
+          <div>
+            <label for="arrangeSelect" x-text="t('layout')"></label>
+            <select id="arrangeSelect">
+              <option value="auto" x-text="t('auto')"></option>
+              <option value="horizontal" x-text="t('horizontal')"></option>
+              <option value="vertical" x-text="t('vertical')"></option>
+              <option value="grid" x-text="t('grid')"></option>
+            </select>
+          </div>
+          <div>
+            <label for="scaleMode" x-text="t('imageSize')"></label>
+            <select id="scaleMode">
+              <option value="fit" x-text="t('fillCell')"></option>
+              <option value="original" x-text="t('original')"></option>
+              <option value="percent" x-text="t('scalePercent')"></option>
+            </select>
+            <input type="number" id="scalePercent" value="100" min="10" max="300" step="10" style="width:60px; display:none;" />
+            <span id="scalePercentSymbol" style="display:none;">%</span>
+          </div>
+          <div>
+            <label for="colorModeSelect" x-text="t('colorMode')"></label>
+            <select id="colorModeSelect">
+              <option value="color" x-text="t('color')"></option>
+              <option value="gray" x-text="t('gray')"></option>
+              <option value="bw" x-text="t('bw')"></option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label for="orientationSelect" x-text="t('orientation')"></label>
-          <select id="orientationSelect">
-            <option value="portrait" x-text="t('portrait')"></option>
-            <option value="landscape" x-text="t('landscape')"></option>
-          </select>
-        </div>
-        <div>
-          <label for="arrangeSelect" x-text="t('layout')"></label>
-          <select id="arrangeSelect">
-            <option value="auto" x-text="t('auto')"></option>
-            <option value="horizontal" x-text="t('horizontal')"></option>
-            <option value="vertical" x-text="t('vertical')"></option>
-            <option value="grid" x-text="t('grid')"></option>
-          </select>
-        </div>
-        <div>
-          <label for="scaleMode" x-text="t('imageSize')"></label>
-          <select id="scaleMode">
-            <option value="fit" x-text="t('fillCell')"></option>
-            <option value="original" x-text="t('original')"></option>
-            <option value="percent" x-text="t('scalePercent')"></option>
-          </select>
-          <input type="number" id="scalePercent" value="100" min="10" max="300" step="10" style="width:60px; display:none;" />
-          <span id="scalePercentSymbol" style="display:none;">%</span>
-        </div>
-        <div>
-          <label for="colorModeSelect" x-text="t('colorMode')"></label>
-          <select id="colorModeSelect">
-            <option value="color" x-text="t('color')"></option>
-            <option value="gray" x-text="t('gray')"></option>
-            <option value="bw" x-text="t('bw')"></option>
-          </select>
-        </div>
-      </div>
-      <iframe id="exportPreviewFrame" style="width:100%; height:260px; border:1px solid #888; border-radius:4px; margin-bottom:8px; display:none;"></iframe>
-      <button id="downloadPdfBtn" class="w-full px-2 py-1 bg-blue-500 text-white rounded text-sm" style="display:none;" x-text="t('downloadPdf')"></button>
-      <button id="waShareBtn" class="w-full px-2 py-1 bg-green-500 text-white rounded text-sm" style="display:none;" x-text="t('whatsapp')"></button>
-      <button id="emailShareBtn" class="w-full px-2 py-1 bg-gray-500 text-white rounded text-sm" style="display:none;" x-text="t('email')"></button>
+      </details>
+      <details open>
+        <summary class="font-semibold" x-text="t('preview')"></summary>
+        <iframe id="exportPreviewFrame" style="width:100%; height:260px; border:1px solid #888; border-radius:4px; margin:8px 0; display:none;"></iframe>
+        <button id="downloadPdfBtn" class="w-full px-2 py-1 bg-blue-500 text-white rounded text-sm" style="display:none;" x-text="t('downloadPdf')"></button>
+        <button id="waShareBtn" class="w-full px-2 py-1 bg-green-500 text-white rounded text-sm" style="display:none;" x-text="t('whatsapp')"></button>
+        <button id="emailShareBtn" class="w-full px-2 py-1 bg-gray-500 text-white rounded text-sm" style="display:none;" x-text="t('email')"></button>
+      </details>
     </div>
     <script type="module">
       import { initSignaturePlugin } from '/static/plugins/mobilesign.js';
