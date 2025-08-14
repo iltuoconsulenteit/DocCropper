@@ -13,12 +13,33 @@ export function initSignaturePlugin(translations, enabled = true) {
     const detailsPhone = document.getElementById('mobilePhoneInput');
     const detailsStart = document.getElementById('mobileDetailsStart');
     const detailsCancel = document.getElementById('mobileDetailsCancel');
-    const signaturePage = document.getElementById('signaturePage');
+    const msDisclaimer = document.getElementById('msDisclaimer');
     window.lastSignToken = '';
 
     if (!enabled) {
         if (mobileSignBtn) mobileSignBtn.style.display = 'none';
         return;
+    }
+
+    if (msDisclaimer) {
+        msDisclaimer.textContent = translations['legalDisclaimer'] || 'DocCropper and its authors accept no liability for illegal use.';
+    }
+
+    async function pollPdf(token) {
+        try {
+            const r = await fetch(`/signed-pdf/${token}`);
+            if (r.status === 200) {
+                const d = await r.json();
+                if (d.url) {
+                    window.lastSignedUrl = d.url;
+                    window.dispatchEvent(new CustomEvent('signedPdfAvailable', { detail: d }));
+                    return;
+                }
+            }
+        } catch (err) {
+            console.error('pdf poll error', err);
+        }
+        setTimeout(() => pollPdf(token), 3000);
     }
 
     async function pollSignature(token) {
@@ -38,6 +59,7 @@ export function initSignaturePlugin(translations, enabled = true) {
                 }
                 window.dispatchEvent(new Event('mobileSignComplete'));
                 signQR.style.display = 'none';
+                pollPdf(token);
                 return;
             } else if (resp.status === 202) {
                 setTimeout(() => pollSignature(token), 3000);
@@ -53,20 +75,15 @@ export function initSignaturePlugin(translations, enabled = true) {
     async function startQrSign() {
         if (window.showLoading) window.showLoading(translations['loading'] || 'Loading...');
         try {
-            const images = window.processedImages || [];
-            if (!images.length) return;
-            if (signaturePage && signaturePage.options.length === 0) {
-                signaturePage.innerHTML = '';
-                for (let i = 0; i < images.length; i++) {
-                    const opt = document.createElement('option');
-                    opt.value = i;
-                    opt.textContent = (i + 1).toString();
-                    signaturePage.appendChild(opt);
-                }
+            const images = typeof window.getProcessedImages === 'function'
+                ? window.getProcessedImages()
+                : (window.processedImages || []);
+            if (!images.length) {
+                alert(translations['noFiles'] || 'No files available.');
+                return;
             }
-            const page = parseInt(signaturePage?.value || '0');
-            const payload = { page, images };
-            payload.image = images[page];
+            const payload = { page: 0, images };
+            payload.image = images[0];
             if (window.mobileSignPoints && Object.keys(window.mobileSignPoints).length) {
                 payload.points = window.mobileSignPoints;
             }
@@ -86,7 +103,7 @@ export function initSignaturePlugin(translations, enabled = true) {
                     signQrLink.textContent = data.url;
                     signQrLink.href = data.url;
                 }
-                signQR.style.display = 'block';
+                signQR.style.display = 'flex';
                 window.lastSignToken = data.token;
                 pollSignature(data.token);
             }
@@ -101,7 +118,7 @@ export function initSignaturePlugin(translations, enabled = true) {
         if (detailsName) detailsName.value = window.lastSignName || '';
         if (detailsEmail) detailsEmail.value = window.lastSignEmail || '';
         if (detailsPhone) detailsPhone.value = window.lastSignPhone || '';
-        detailsModal.style.display = 'block';
+        detailsModal.style.display = 'flex';
     }
     // Expose starter so global adapter can trigger the mobile signing flow
     window.startMobileSign = openDetailsModal;
@@ -128,7 +145,25 @@ export function initSignaturePlugin(translations, enabled = true) {
     if (copySignLink) {
         copySignLink.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (signQrLink) navigator.clipboard.writeText(signQrLink.href);
+            if (!signQrLink) return;
+            const text = signQrLink.href;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text);
+            } else {
+                const tmp = document.createElement('textarea');
+                tmp.value = text;
+                document.body.appendChild(tmp);
+                tmp.select();
+                document.execCommand('copy');
+                document.body.removeChild(tmp);
+            }
+            const original = copySignLink.textContent;
+            copySignLink.style.background = '#4ade80';
+            copySignLink.textContent = translations['copied'] || 'Copied!';
+            setTimeout(() => {
+                copySignLink.style.background = '#e5e7eb';
+                copySignLink.textContent = original;
+            }, 1200);
         });
     }
     if (waSignLink) {
@@ -136,8 +171,9 @@ export function initSignaturePlugin(translations, enabled = true) {
             e.stopPropagation();
             const url = signQrLink ? signQrLink.href : '';
             const phone = window.lastSignPhone ? window.lastSignPhone.replace(/[^0-9]/g, '') : '';
-            const wa = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(url)}` :
-                `https://wa.me/?text=${encodeURIComponent(url)}`;
+            const params = new URLSearchParams({ text: url });
+            if (phone) params.set('phone', phone);
+            const wa = `https://web.whatsapp.com/send?${params.toString()}`;
             window.open(wa, '_blank');
         });
     }
