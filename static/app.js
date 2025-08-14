@@ -2507,8 +2507,7 @@ function addCurrentSignature() {
         const pageSigs = signatures.filter(s => s.page === page);
         scaleTarget = (pageSigs.length - 1).toString();
     }
-    // Update preview and controls before shifting the default position for the next signature.
-    // This ensures the first signature is rendered at the expected location.
+    // Render and update before shifting the default position so the first signature appears correctly.
     renderSignaturePreview();
     updateSignatureTargetOptions();
     const OFFSET = 0.05;

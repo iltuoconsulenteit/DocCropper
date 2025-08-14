@@ -123,6 +123,20 @@ ENC_SUFFIX = ".enc"
 SESSION_KEYS: dict[str, bytes] = {}
 MAX_UPLOAD_MB = int(os.getenv("DOCROPPER_MAX_UPLOAD_MB", "20"))
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
+SLIDES_DIR = "slide"
+
+
+def ensure_slide_assets():
+    os.makedirs(SLIDES_DIR, exist_ok=True)
+    defaults = ["DocCropper_slogan_en.png", "DocCropper_slogan_it.png"]
+    for name in defaults:
+        src = os.path.join("static", "logos", name)
+        dst = os.path.join(SLIDES_DIR, name)
+        if os.path.exists(src) and not os.path.exists(dst):
+            shutil.copyfile(src, dst)
+
+
+ensure_slide_assets()
 
 DEFAULT_SETTINGS = {
     "language": "en",
