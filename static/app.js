@@ -1994,8 +1994,8 @@ async function generatePdf() {
     const scale_percent = parseInt(scalePercent.value || '100');
     const compression = window.getCompressionLevel ? window.getCompressionLevel() : 'none';
     const jpeg_quality = window.getJpegQuality ? window.getJpegQuality() : 75;
-    const pdfa = document.getElementById('pdfaCheck')?.checked || false;
-    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures, remove_signature_bg: window.removeSignatureBackground !== false, compression, jpeg_quality, pdfa };
+    const pdfa_version = window.getPdfaVersion ? window.getPdfaVersion() : null;
+    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures, remove_signature_bg: window.removeSignatureBackground !== false, compression, jpeg_quality, pdfa_version };
     if (window.lastSignEmail || window.lastSignPhone || window.lastSignName) {
         payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
     }
