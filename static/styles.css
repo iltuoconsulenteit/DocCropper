@@ -406,20 +406,6 @@ button:hover {
     margin-left: 5px;
 }
 
-#layoutPreview {
-    width: 180px;
-    height: 220px;
-    border: 1px dashed #666;
-    margin-bottom: 10px;
-    display: grid;
-    gap: 4px;
-}
-
-#layoutPreview .cell {
-    border: 1px solid #aaa;
-    background: repeating-linear-gradient(45deg, #f9f9f9, #f9f9f9 10px, #efefef 10px, #efefef 20px);
-}
-
 #adjustControls {
     margin-top: 10px;
     display: none;
