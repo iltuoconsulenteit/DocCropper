@@ -91,7 +91,7 @@
     <div class="flex-1 flex flex-col transition-all duration-200" :class="pinned ? 'ml-40' : 'ml-0'">
       <!-- Top bar -->
       <header class="bg-gray-100 p-2 flex items-center shadow space-x-2">
-        <button class="mr-2" @click="pinned ? pinned=false : drawer=!drawer">☰</button>
+        <button class="mr-2" @click="pinned ? (pinned=false, drawer=false) : drawer=!drawer">☰</button>
         <img src="/static/logos/header_logo.png" alt="IlTuoConsulenteIT" class="h-8 cursor-pointer" @click="command('files')" />
         <div class="flex-1"></div>
         <span class="text-xs text-gray-600" x-text="licenseInfo()"></span>
@@ -626,7 +626,7 @@
           },
           maxUpload:10,
           showClearConfirm:false,
-          isMobile: window.innerWidth < 640,
+          isMobile: /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 640,
           t(key){ return this.strings[this.lang][key] || key; },
           toggleLayout(){ this.layoutHorizontal = !this.layoutHorizontal; },
           displaySponsorHeight(){ return this.isMobile ? Math.round(this.sponsorLogoHeight*0.6) : this.sponsorLogoHeight; },
@@ -652,19 +652,17 @@
             }
             window.removeSignatureBackground = this.removeSigBg;
             this.setLang();
-            this.pinned = window.innerWidth >= 768;
+            this.isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 640;
+            this.pinned = !this.isMobile && window.innerWidth >= 768;
             this.drawer = this.pinned;
-            this.isMobile = window.innerWidth < 640;
             window.addEventListener('resize', () => {
-              const wide = window.innerWidth >= 768;
-              if (wide) {
-                this.pinned = true;
-                this.drawer = true;
-              } else {
+              this.isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 640;
+              if (this.isMobile) {
                 this.pinned = false;
                 this.drawer = false;
+              } else if (window.innerWidth >= 768 && this.pinned) {
+                this.drawer = true;
               }
-              this.isMobile = window.innerWidth < 640;
             });
             setInterval(()=>{
               if (this.showSlides) {
