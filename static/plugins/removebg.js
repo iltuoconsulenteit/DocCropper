@@ -5,6 +5,20 @@ export function initRemoveBgPlugin(translations, enabled = true) {
         return;
     }
     let threshold = 50;
+    const originals = window.bgOriginals || [];
+    window.bgOriginals = originals;
+
+    function updateBtn(index, removed) {
+        const btn = document.querySelector(`.thumbContainer[data-index="${index}"] .removeBgBtn`);
+        if (!btn) return;
+        if (removed) {
+            btn.title = translations.restoreBg || 'Restore background';
+            btn.textContent = '↺';
+        } else {
+            btn.title = translations.removeBg || 'Remove background';
+            btn.textContent = '⌦';
+        }
+    }
     function setRemoveBgThreshold() {
         const val = prompt(
             translations.removeBgThresholdPrompt || 'Threshold (%)',
@@ -17,8 +31,20 @@ export function initRemoveBgPlugin(translations, enabled = true) {
     }
     async function removeBackground(index) {
         try {
+            if (originals[index]) {
+                const url = originals[index];
+                window.processedImages[index] = url;
+                if (window.originalImages) window.originalImages[index] = url;
+                const imgEl = document.querySelector(`.thumbContainer[data-index="${index}"] img`);
+                if (imgEl) imgEl.src = url;
+                originals[index] = null;
+                updateBtn(index, false);
+                window.dispatchEvent(new CustomEvent('imageUpdated', { detail: { index, src: url } }));
+                return;
+            }
             const src = window.processedImages ? window.processedImages[index] : null;
             if (!src) return;
+            originals[index] = src;
             const resp = await fetch(src);
             const blob = await resp.blob();
             const fd = new FormData();
@@ -29,6 +55,7 @@ export function initRemoveBgPlugin(translations, enabled = true) {
             });
             if (!r.ok) {
                 alert(translations.removeBgFailed || 'Background removal failed');
+                originals[index] = null;
                 return;
             }
             const data = await r.json();
@@ -40,7 +67,10 @@ export function initRemoveBgPlugin(translations, enabled = true) {
                 }
                 const container = document.querySelector(`.thumbContainer[data-index="${index}"] img`);
                 if (container) container.src = url;
+                updateBtn(index, true);
                 window.dispatchEvent(new CustomEvent('imageUpdated', { detail: { index, src: url } }));
+            } else {
+                originals[index] = null;
             }
         } catch (e) {
             console.error('remove background error', e);

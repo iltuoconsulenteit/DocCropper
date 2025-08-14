@@ -166,6 +166,8 @@ let currentFileIndex = 0;
 let processedImages = [];
 window.processedImages = processedImages;
 let originalImages = [];
+let bgOriginals = [];
+window.bgOriginals = bgOriginals;
 let processedFiles = [];
 let removedPages = [];
 let editingIndex = null;
@@ -406,6 +408,7 @@ async function importPdfPages(file) {
         const dataUrl = await fileToDataURL(imgFile);
         processedImages.push(dataUrl);
         originalImages.push(dataUrl);
+        bgOriginals.push(null);
         addThumbnail(dataUrl, processedImages.length - 1);
     }
     if (processedImages.length > 0) {
@@ -980,6 +983,7 @@ function convertColor(index, mode) {
 function deleteImage(index) {
     processedImages.splice(index, 1);
     originalImages.splice(index, 1);
+    bgOriginals.splice(index, 1);
     processedFiles.splice(index, 1);
     processedGallery.removeChild(processedGallery.children[index]);
     refreshThumbnailIndexes();
@@ -1190,8 +1194,13 @@ function addThumbnail(src, index) {
     if (removeBgEnabled) {
         const bgBtnEl = document.createElement('button');
         bgBtnEl.className = 'thumbBtn removeBgBtn';
-        bgBtnEl.textContent = '⌦';
-        bgBtnEl.title = t('removeBg');
+        if (bgOriginals[index]) {
+            bgBtnEl.textContent = '↺';
+            bgBtnEl.title = t('restoreBg');
+        } else {
+            bgBtnEl.textContent = '⌦';
+            bgBtnEl.title = t('removeBg');
+        }
         bgBtnEl.addEventListener('click', (e) => {
             e.stopPropagation();
             const idx = parseInt(container.dataset.index);
@@ -1313,16 +1322,20 @@ function updateProcessedArrays() {
     const newImages = [];
     const newFiles = [];
     const newOriginals = [];
+    const newBg = [];
     Array.from(processedGallery.children).forEach(c => {
         const idx = parseInt(c.dataset.index);
         newImages.push(processedImages[idx]);
         newFiles.push(processedFiles[idx]);
         newOriginals.push(originalImages[idx]);
+        newBg.push(bgOriginals[idx]);
     });
     processedImages = newImages;
     window.processedImages = processedImages;
     processedFiles = newFiles;
     originalImages = newOriginals;
+    bgOriginals = newBg;
+    window.bgOriginals = bgOriginals;
     refreshThumbnailIndexes();
 }
 
@@ -1375,20 +1388,24 @@ async function removeBlankPages() {
     const keepImages = [];
     const keepFiles = [];
     const keepOriginals = [];
+    const keepBg = [];
     for (let i = 0; i < processedImages.length; i++) {
         const blank = await isBlankImage(processedImages[i], thr);
         if (blank) {
-            removedPages.push({ index: i, image: processedImages[i], file: processedFiles[i], original: originalImages[i] });
+            removedPages.push({ index: i, image: processedImages[i], file: processedFiles[i], original: originalImages[i], bgOriginal: bgOriginals[i] });
         } else {
             keepImages.push(processedImages[i]);
             keepFiles.push(processedFiles[i]);
             keepOriginals.push(originalImages[i]);
+            keepBg.push(bgOriginals[i]);
         }
     }
     processedImages = keepImages;
     window.processedImages = processedImages;
     processedFiles = keepFiles;
     originalImages = keepOriginals;
+    bgOriginals = keepBg;
+    window.bgOriginals = bgOriginals;
     rebuildGallery();
     hideLoading();
     if (removedPages.length > 0) {
@@ -1405,6 +1422,7 @@ function restoreBlankPages() {
         processedImages.splice(idx, 0, p.image);
         processedFiles.splice(idx, 0, p.file);
         originalImages.splice(idx, 0, p.original);
+        bgOriginals.splice(idx, 0, p.bgOriginal || null);
     }
     removedPages = [];
     rebuildGallery();
@@ -1666,6 +1684,8 @@ async function addFiles(newFiles) {
         processedGallery.innerHTML = '';
         processedFiles = [];
         originalImages = [];
+        bgOriginals = [];
+        window.bgOriginals = bgOriginals;
         editingIndex = null;
     }
     for (const f of compressed) {
@@ -1674,6 +1694,7 @@ async function addFiles(newFiles) {
         const dataUrl = await fileToDataURL(f);
         processedImages.push(dataUrl);
         originalImages.push(dataUrl);
+        bgOriginals.push(null);
         addThumbnail(dataUrl, processedImages.length - 1);
     }
     if (files.length > processedImages.length && wrapperElement.style.display === 'none') {

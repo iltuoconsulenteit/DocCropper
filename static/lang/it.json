@@ -24,6 +24,7 @@
   "edit": "Ritaglia",
   "delete": "Elimina",
   "removeBg": "Rimuovi sfondo",
+  "restoreBg": "Ripristina sfondo",
   "setRemoveBgThreshold": "Imposta soglia sfondo",
   "removeBgThresholdPrompt": "Soglia rimozione sfondo (%)",
   "removeBgFailed": "Rimozione sfondo fallita",
