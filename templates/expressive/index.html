@@ -192,7 +192,7 @@
       </main>
       <footer class="mt-auto py-1 px-4">
         <div class="flex flex-col sm:flex-row items-center justify-between w-full space-y-2 sm:space-y-0">
-          <img x-show="sponsorLogo" :src="sponsorLogo" alt="Sponsor" :style="'height:'+sponsorLogoHeight+'px'" />
+          <img x-show="sponsorLogo" :src="sponsorLogo" alt="Sponsor" :style="'height:'+displaySponsorHeight()+'px'" />
           <div class="flex flex-col items-center">
             <a href="https://www.iltuoconsulenteit.it/site/index.php/applicazioni/doccropper" target="_blank" rel="noopener" class="flex flex-col items-center">
               <span class="text-xs mb-1">By IlTuoConsulenteIT</span>
@@ -200,7 +200,7 @@
             </a>
             <span class="text-xs text-gray-500" x-text="versionInfo()"></span>
           </div>
-          <img x-show="clientLogo" :src="clientLogo" alt="Client" :style="'height:'+clientLogoHeight+'px'" />
+          <img x-show="clientLogo" :src="clientLogo" alt="Client" :style="'height:'+displayClientHeight()+'px'" />
         </div>
       </footer>
     </div>
@@ -272,6 +272,17 @@
         <div class="mt-2 flex justify-end gap-2 text-sm">
           <button @click="clearDraw" class="px-2 py-1 bg-gray-200 rounded" x-text="t('clear') || 'Clear'"></button>
           <button @click="useDraw" class="px-2 py-1 bg-blue-500 text-white rounded" x-text="t('apply')"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clear Images Modal -->
+    <div x-show="showClearConfirm" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded">
+        <p class="mb-4" x-text="t('confirmClearImages')"></p>
+        <div class="text-right space-x-2">
+          <button @click="showClearConfirm=false" class="bg-gray-300 px-3 py-1 rounded" x-text="t('cancel')"></button>
+          <button @click="confirmClear" class="bg-red-500 text-white px-3 py-1 rounded" x-text="t('confirm')"></button>
         </div>
       </div>
     </div>
@@ -401,6 +412,7 @@
             version:'Version',
             apply:'Apply',
             cancel:'Cancel',
+            confirm:'Confirm',
             licensedTo:'Licensed to',
             demoVersion:'DEMO - PRO features disabled',
             licenses:'Licenses',
@@ -488,6 +500,7 @@
             version:'Versione',
             apply:'Applica',
             cancel:'Annulla',
+            confirm:'Conferma',
             licensedTo:'Licenziato a',
             demoVersion:'DEMO - funzionalità PRO disabilitate',
             licenses:'Licenze',
@@ -612,8 +625,18 @@
             it:['Migliorato il flusso di firma e opzioni di esportazione.']
           },
           maxUpload:10,
+          showClearConfirm:false,
+          isMobile: window.innerWidth < 640,
           t(key){ return this.strings[this.lang][key] || key; },
           toggleLayout(){ this.layoutHorizontal = !this.layoutHorizontal; },
+          displaySponsorHeight(){ return this.isMobile ? Math.round(this.sponsorLogoHeight*0.6) : this.sponsorLogoHeight; },
+          displayClientHeight(){ return this.isMobile ? Math.round(this.clientLogoHeight*0.6) : this.clientLogoHeight; },
+          confirmClear(){
+            this.files = [];
+            this.status = this.t('imagesCleared');
+            setTimeout(()=>{ this.status=''; },3000);
+            this.showClearConfirm = false;
+          },
           refreshSlides(){
             this.slideIndex = 0;
             this.currentSlide = this.showSlides ? this.slides[this.lang][0] : '';
@@ -631,6 +654,7 @@
             this.setLang();
             this.pinned = window.innerWidth >= 768;
             this.drawer = this.pinned;
+            this.isMobile = window.innerWidth < 640;
             window.addEventListener('resize', () => {
               const wide = window.innerWidth >= 768;
               if (wide) {
@@ -640,6 +664,7 @@
                 this.pinned = false;
                 this.drawer = false;
               }
+              this.isMobile = window.innerWidth < 640;
             });
             setInterval(()=>{
               if (this.showSlides) {
@@ -930,11 +955,7 @@
             }
           },
           clearImages(){
-            if(confirm(this.t('confirmClearImages'))){
-              this.files = [];
-              this.status = this.t('imagesCleared');
-              setTimeout(()=>{ this.status=''; },3000);
-            }
+            this.showClearConfirm = true;
           },
           _convertColor(idx, mode){
             const img = new Image();
