@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DocCropper Expressive</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.11/dist/interact.min.js"></script>
@@ -14,6 +14,29 @@
       main::-webkit-scrollbar-track { background: #f3f4f6; }
       main::-webkit-scrollbar-thumb { background-color: #9ca3af; border-radius: 8px; }
       main { scrollbar-width: auto; scrollbar-color: #9ca3af #f3f4f6; }
+      #exportOptions {
+        position: fixed;
+        top: 48px;
+        right: 0;
+        bottom: 0;
+        width: 260px;
+        background: #fff;
+        border-left: 1px solid #ccc;
+        box-shadow: -2px 0 4px rgba(0,0,0,0.1);
+        padding: 10px;
+        z-index: 1000;
+        overflow-y: auto;
+        display: none;
+      }
+      #exportOptions button {
+        margin: 4px 0;
+      }
+      #layoutControls div {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+      }
     </style>
   </head>
   <body x-data="dcApp()" class="h-screen flex">
@@ -21,9 +44,8 @@
     <div x-show="drawer && !pinned" @click="drawer=false" class="fixed inset-0 bg-black/50 md:hidden"></div>
     <!-- Sidebar / Drawer -->
     <div class="fixed inset-y-0 left-0 w-40 bg-gray-800 text-white flex flex-col transform transition-transform duration-200" :class="(drawer || pinned) ? 'translate-x-0' : '-translate-x-full'" x-transition>
-      <div class="p-4 flex items-center">
-        <img src="/static/logos/app_logo.png" alt="DocCropper" class="h-8 mr-2" />
-        <span class="font-bold">DocCropper</span>
+      <div class="p-4 flex items-center justify-center">
+        <img src="/static/logos/app_logo.png" alt="DocCropper" class="h-8 cursor-pointer" @click="command('files')" />
       </div>
       <nav class="flex-1 overflow-y-auto">
         <h2 class="px-4 text-xs uppercase text-gray-400" x-text="t('commands')"></h2>
@@ -35,43 +57,44 @@
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('export')" x-text="t('export')"></button>
           </li>
           <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('download')" x-text="t('download')"></button>
-          </li>
-          <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('sign')" x-text="t('sign')"></button>
-          </li>
-          <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('mobileSign')" x-text="t('mobileSign')"></button>
+            <button id="mobileSignBtn" class="w-full text-left p-2 hover:bg-gray-700" @click="command('mobileSign')" x-text="t('mobileSign')"></button>
           </li>
         </ul>
         <h2 class="px-4 mt-4 text-xs uppercase text-gray-400" x-text="t('navigation')"></h2>
         <ul>
           <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="tab='files'; drawer=false" x-text="t('files')"></button>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('files')" x-text="t('files')"></button>
           </li>
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('guide')" x-text="t('guide')"></button>
           </li>
           <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('donate')" x-text="t('donate')"></button>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('updates')" x-text="t('updates')"></button>
+          </li>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('tutorials')" x-text="t('tutorials')"></button>
+          </li>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('purchase')" x-text="t('purchase')"></button>
+          </li>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('settings')" x-text="t('settings')"></button>
           </li>
         </ul>
       </nav>
-      <div class="p-4 space-y-2 text-center">
-        <img x-show="clientLogo" :src="clientLogo" alt="Client" class="h-6 mx-auto" />
-        <img x-show="sponsorLogo" :src="sponsorLogo" alt="Sponsor" class="h-6 mx-auto" />
+      <div class="p-4 text-center">
         <div id="donateBox" x-show="donateLink" class="mt-2">
           <button @click="donate()" class="bg-yellow-400 text-black px-2 py-1 rounded text-xs" x-text="t('donate')"></button>
         </div>
       </div>
     </div>
 
-    <div class="flex-1 flex flex-col transition-all duration-200" :class="pinned ? 'ml-40' : (drawer ? 'ml-40' : 'ml-0')">
+    <div class="flex-1 flex flex-col transition-all duration-200" :class="pinned ? 'ml-40' : 'ml-0'">
       <!-- Top bar -->
       <header class="bg-gray-100 p-2 flex items-center shadow space-x-2">
-        <button class="mr-2" @click="pinned ? pinned=false : drawer=!drawer">☰</button>
-        <img src="/static/logos/header_logo.png" alt="IlTuoConsulenteIT" class="h-8" />
-        <h1 class="text-xl font-semibold flex-1">DocCropper</h1>
+        <button class="mr-2" @click="pinned ? (pinned=false, drawer=false) : drawer=!drawer">☰</button>
+        <img src="/static/logos/header_logo.png" alt="IlTuoConsulenteIT" class="h-8 cursor-pointer" @click="command('files')" />
+        <div class="flex-1"></div>
         <span class="text-xs text-gray-600" x-text="licenseInfo()"></span>
         <button @click="licenseModal=true" class="text-xs underline" x-text="t('licenses')"></button>
         <select x-model="lang" @change="setLang" class="border rounded p-1 text-sm">
@@ -82,52 +105,106 @@
       <!-- Content -->
       <main class="flex-1 p-4 space-y-4 overflow-y-auto" x-cloak>
         <input type="file" id="imageUpload" class="hidden" multiple accept="image/*,application/pdf" @change="handleImport">
-        <div class="mb-4 flex justify-center" x-show="showSlides && currentSlide && files.length===0">
+        <div class="mb-4 flex justify-center" x-show="showSlides && currentSlide && files.length===0 && tab==='files'">
           <img :src="currentSlide" alt="slogan" class="max-h-64 w-auto object-contain" />
         </div>
+        <div x-show="files.length===0 && tab==='files' && updates[lang] && updates[lang].length" class="text-center text-sm text-gray-600" x-text="t('lastUpdate') + ': ' + updates[lang][0]"></div>
         <div x-show="tab==='files'">
-          <template x-if="files.length === 0">
+        <template x-if="files.length === 0">
             <p class="text-gray-600" x-text="t('noFiles')"></p>
           </template>
-          <div x-show="files.length > 0" x-ref="fileGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div x-show="status" id="statusMessage" class="mb-2 p-2 bg-blue-100 text-blue-800 text-sm rounded" x-text="status"></div>
+          <div x-show="files.length > 0" class="flex items-center justify-between gap-2 mb-2">
+            <div class="flex items-center gap-2">
+              <label class="text-xs" for="blankThreshold" x-text="t('blankThreshold')"></label>
+              <input id="blankThreshold" type="number" min="80" max="100" step="1" class="w-16 border rounded text-xs" x-model.number="blankThreshold">
+              <button class="px-2 py-1 border rounded text-xs" @click="removeBlankPages" x-text="t('removeBlank')"></button>
+            </div>
+            <button id="clearImagesBtn" class="px-2 py-1 border rounded text-xs" @click="clearImages" x-text="t('clearImages')"></button>
+            <button class="px-2 py-1 border rounded text-xs" @click="toggleLayout" x-text="layoutHorizontal ? t('horizontalView') : t('verticalView')"></button>
+          </div>
+          <div x-show="files.length > 0" x-ref="fileGrid" :class="layoutHorizontal ? 'flex overflow-x-auto space-x-4' : 'grid grid-cols-1 lg:grid-cols-2 gap-4'">
             <template x-for="(file, idx) in files" :key="file.id">
-              <div class="mb-4">
+              <div class="mb-4 thumbContainer" :data-index="idx">
                 <p class="text-xs text-center mb-1 truncate" x-text="(idx+1)+' - '+file.name"></p>
                 <div class="border p-1">
                   <div class="relative">
                     <button @click="crop(idx)" title="Crop" class="absolute top-0 left-0 m-1 bg-white/70 w-8 h-8 rounded flex items-center justify-center text-lg">✂</button>
                     <button @click="remove(idx)" title="Delete" class="absolute top-0 right-0 m-1 bg-white/70 w-8 h-8 rounded flex items-center justify-center text-lg">✖</button>
-                    <img :src="file.url" :alt="file.name" class="w-full h-72 lg:h-96 object-contain cursor-pointer" @click="view(file.url)" />
+                    <img :src="file.url" :alt="file.name" class="w-full h-56 lg:h-72 object-contain cursor-pointer" @click="view(file.url)" />
                   </div>
                   <div class="flex justify-center gap-2 mt-1">
                     <button @click="rotate(idx)" title="Rotate" class="text-base">↻</button>
+                    <button @click="flip(idx)" :title="t('flip')" class="text-base">⇄</button>
+                    <button @click="invert(idx)" :title="t('invert')" class="text-base">⇅</button>
                     <button @click="toGray(idx)" title="Gray" class="text-base">🌑</button>
                     <button @click="toBW(idx)" title="B/W" class="text-base">⬛</button>
                     <button @click="toColor(idx)" title="Color" class="text-base">🎨</button>
+                    <button x-show="watermarkEnabled" @click="watermark(idx)" :title="t('watermark')" class="text-base">🖆</button>
+                    <button x-show="removeBgEnabled" @click="removeBg(idx)" :title="file.bgOriginal ? t('restoreBg') : t('removeBg')" class="text-base" x-text="file.bgOriginal ? '↩' : '⌦'"></button>
                     <button @click="signPage(idx)" title="Sign" class="text-base">✒</button>
+                  </div>
+                  <div x-show="removeBgEnabled" class="flex flex-col items-center mt-1">
+                    <label class="text-xs" x-text="t('removeBgThresholdPrompt')"></label>
+                    <input type="range" min="0" max="100" x-model.number="file.removeBgThreshold" @input="window.setRemoveBgThreshold && window.setRemoveBgThreshold(idx, file.removeBgThreshold)" class="w-24" />
                   </div>
                 </div>
               </div>
             </template>
           </div>
         </div>
-        <div x-show="tab!=='files'" class="text-gray-600" x-text="t('selectCommand')"></div>
-      </main>
-      <footer class="p-4 text-center mt-auto space-y-2">
-        <img src="/static/logos/footer_logo.png" alt="IlTuoConsulenteIT" class="h-8 mx-auto" />
-        <div class="text-xs text-gray-500" x-text="versionInfo()"></div>
-      </footer>
-    </div>
-
-    <!-- Modal -->
-    <div x-show="modal" x-transition class="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center">
-      <div class="bg-white w-full md:w-96 p-4 rounded-t-lg md:rounded-lg">
-        <h2 class="text-lg mb-4" x-text="t('exportComplete')"></h2>
-        <div class="flex justify-end space-x-2">
-          <button class="px-4 py-2 bg-blue-500 text-white rounded" @click="download()" x-text="t('download')"></button>
-          <button class="px-4 py-2 bg-green-500 text-white rounded" @click="sign()" x-text="t('sign')"></button>
+        <div x-show="tab==='guide'" class="w-full h-full">
+          <iframe :src="`/wiki/${lang}/index.html`" class="w-full h-[80vh]"></iframe>
         </div>
-      </div>
+        <div x-show="tab==='updates'" class="p-4 space-y-2">
+          <template x-for="(note, idx) in updates[lang]" :key="idx">
+            <div class="border-b pb-2" x-text="note"></div>
+          </template>
+        </div>
+        <div x-show="tab==='tutorials'" class="w-full h-full">
+          <div id="tutorialsArea" class="w-full h-[80vh] flex items-center justify-center text-gray-500" x-text="t('tutorialsPlaceholder')"></div>
+        </div>
+        <div x-show="tab==='purchase'" class="p-4 space-y-4" x-data="{choice:null}">
+          <div class="grid grid-cols-1 gap-4" x-show="!choice">
+            <div class="border p-4 cursor-pointer" @click="choice='purchase'">
+              <h3 class="font-semibold" x-text="t('purchase')"></h3>
+              <p class="text-sm" x-text="t('purchaseInfo')"></p>
+            </div>
+            <div class="border p-4 cursor-pointer" @click="choice='subscriptions'">
+              <h3 class="font-semibold" x-text="t('subscriptions')"></h3>
+              <p class="text-sm" x-text="t('subscriptionsInfo')"></p>
+            </div>
+            <div class="border p-4 cursor-pointer" @click="choice='donate'">
+              <h3 class="font-semibold" x-text="t('donate')"></h3>
+              <p class="text-sm" x-text="t('donationInfo')"></p>
+            </div>
+          </div>
+          <div x-show="choice==='purchase'">
+            <p x-text="t('purchaseInfo')"></p>
+          </div>
+          <div x-show="choice==='subscriptions'">
+            <p x-text="t('subscriptionsInfo')"></p>
+          </div>
+          <div x-show="choice==='donate'" class="space-y-2">
+            <p x-text="t('donationInfo')"></p>
+            <button @click="donate()" class="bg-yellow-400 text-black px-4 py-2 rounded text-sm" x-text="t('donate')"></button>
+          </div>
+        </div>
+        <div x-show="tab!=='files' && tab!=='guide' && tab!=='updates' && tab!=='tutorials' && tab!=='purchase'" class="text-gray-600" x-text="t('selectCommand')"></div>
+      </main>
+      <footer class="mt-auto py-1 px-4">
+        <div class="flex flex-col sm:flex-row items-center justify-between w-full space-y-2 sm:space-y-0">
+          <img x-show="sponsorLogo" :src="sponsorLogo" alt="Sponsor" :style="'height:'+displaySponsorHeight()+'px'" />
+          <div class="flex flex-col items-center">
+            <a href="https://www.iltuoconsulenteit.it/site/index.php/applicazioni/doccropper" target="_blank" rel="noopener" class="flex flex-col items-center">
+              <span class="text-xs mb-1">By IlTuoConsulenteIT</span>
+              <img src="/static/logos/footer_logo.png" alt="IlTuoConsulenteIT" class="h-10" />
+            </a>
+            <span class="text-xs text-gray-500" x-text="versionInfo()"></span>
+          </div>
+          <img x-show="clientLogo" :src="clientLogo" alt="Client" :style="'height:'+displayClientHeight()+'px'" />
+        </div>
+      </footer>
     </div>
 
     <!-- Crop Modal -->
@@ -159,6 +236,8 @@
       <div class="bg-white p-4 rounded">
         <div class="flex gap-4">
           <div class="relative" x-ref="signWrap">
+            <p class="text-xs text-gray-500 mb-1" x-text="t('dblClickHint') || 'Double click the image to add your signature'"></p>
+            <p class="text-xs text-gray-500 mb-1" x-text="t('legalDisclaimer')"></p>
             <img x-ref="signImg" :src="files[signIndex]?.url" @dblclick.stop="addSignature($event)" class="max-w-full max-h-[70vh] cursor-crosshair" />
             <template x-for="(sig,i) in signatures.filter(s=>s.page===signIndex)" :key="i">
               <img :id="'sig'+i" :src="signatureImageData" class="absolute cursor-move" @mousedown.stop="selectSig(i)">
@@ -170,6 +249,7 @@
           </div>
           <div class="flex flex-col space-y-2 w-40 text-xs">
             <input type="file" accept="image/*" @change="loadSignature" class="text-xs">
+            <button @click="drawModal=true" class="px-2 py-1 bg-gray-200 rounded" x-text="t('draw') || 'Draw'"></button>
             <label class="flex items-center gap-1"><input type="checkbox" x-model="removeSigBg" @change="window.removeSignatureBackground = removeSigBg"><span x-text="t('removeBg')"></span></label>
             <div class="border-t pt-2 space-y-1">
               <template x-for="(sig,i) in signatures.filter(s=>s.page===signIndex)" :key="'list'+i">
@@ -184,6 +264,28 @@
               <button @click="closeSign" class="bg-gray-300 px-2 py-1 rounded" x-text="t('cancel')"></button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Draw Modal -->
+    <div x-show="drawModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded">
+        <canvas x-ref="drawCanvas" width="300" height="150" class="border" @mousedown="startDraw($event)" @mousemove="moveDraw($event)" @mouseup="endDraw" @mouseleave="endDraw" @touchstart.prevent="startDraw($event)" @touchmove.prevent="moveDraw($event)" @touchend="endDraw"></canvas>
+        <div class="mt-2 flex justify-end gap-2 text-sm">
+          <button @click="clearDraw" class="px-2 py-1 bg-gray-200 rounded" x-text="t('clear') || 'Clear'"></button>
+          <button @click="useDraw" class="px-2 py-1 bg-blue-500 text-white rounded" x-text="t('apply')"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clear Images Modal -->
+    <div x-show="showClearConfirm" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded">
+        <p class="mb-4" x-text="t('confirmClearImages')"></p>
+        <div class="text-right space-x-2">
+          <button @click="showClearConfirm=false" class="bg-gray-300 px-3 py-1 rounded" x-text="t('cancel')"></button>
+          <button @click="confirmClear" class="bg-red-500 text-white px-3 py-1 rounded" x-text="t('confirm')"></button>
         </div>
       </div>
     </div>
@@ -214,26 +316,65 @@
       </div>
     </div>
 
-    <!-- Mobile Sign Overlay and Details Modal -->
-    <div id="signQR" style="display:none;" class="fixed inset-0 bg-black/70 flex flex-col items-center justify-center p-4 text-center">
-      <img id="signQrImg" class="max-w-xs mb-2" alt="QR" />
-      <p id="signQrHint" class="text-white text-sm mb-2"></p>
-      <a id="signQrLink" href="#" target="_blank" class="break-all text-blue-300 underline mb-2"></a>
-      <div class="space-x-2">
-        <button id="copySignLink" class="px-2 py-1 bg-gray-200 rounded">Copy</button>
-        <button id="waSignLink" class="px-2 py-1 bg-green-500 text-white rounded">WhatsApp</button>
-        <button id="emailSignLink" class="px-2 py-1 bg-blue-500 text-white rounded">Email</button>
+    <!-- Password Modal -->
+    <div x-show="passwordModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded w-64 space-y-2">
+        <h2 class="text-lg" x-text="t('enterPassword')"></h2>
+        <input type="password" class="border w-full p-1" x-model="passwordInput" />
+        <div class="text-right space-x-2 pt-2">
+          <button class="px-3 py-1 bg-gray-300 rounded" @click="passwordModal=false" x-text="t('cancel')"></button>
+          <button class="px-3 py-1 bg-blue-500 text-white rounded" @click="checkPassword" x-text="t('apply')"></button>
+        </div>
       </div>
     </div>
-    <div id="mobileDetailsModal" style="display:none;" class="fixed inset-0 bg-black/50 flex items-center justify-center">
-      <div class="bg-white p-4 rounded w-72 space-y-2 text-center">
-        <select id="signaturePage" class="border w-full p-1"></select>
-        <input id="mobileNameInput" type="text" placeholder="Name" class="border w-full p-1" />
-        <input id="mobileEmailInput" type="email" placeholder="Email" class="border w-full p-1" />
-        <input id="mobilePhoneInput" type="tel" placeholder="Phone" class="border w-full p-1" />
-        <div class="pt-2 space-x-2">
-          <button id="mobileDetailsStart" class="bg-blue-500 text-white px-3 py-1 rounded">Start</button>
-          <button id="mobileDetailsCancel" class="bg-gray-300 px-3 py-1 rounded">Cancel</button>
+
+    <!-- Settings Modal -->
+    <div x-show="settingsModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded w-72 space-y-2">
+        <h2 class="text-lg" x-text="t('settings')"></h2>
+        <div>
+          <label class="block text-sm" x-text="t('clientLogo')"></label>
+          <input type="text" class="border w-full p-1" x-model="settings.clientLogo" />
+        </div>
+        <div>
+          <label class="block text-sm" x-text="t('sponsorLogo')"></label>
+          <input type="text" class="border w-full p-1" x-model="settings.sponsorLogo" />
+        </div>
+        <div>
+          <label class="block text-sm" x-text="t('clientLogoHeight')"></label>
+          <input type="number" class="border w-full p-1" x-model.number="settings.clientLogoHeight" />
+        </div>
+        <div>
+          <label class="block text-sm" x-text="t('sponsorLogoHeight')"></label>
+          <input type="number" class="border w-full p-1" x-model.number="settings.sponsorLogoHeight" />
+        </div>
+        <div class="text-right space-x-2 pt-2">
+          <button class="px-3 py-1 bg-gray-300 rounded" @click="settingsModal=false" x-text="t('cancel')"></button>
+          <button class="px-3 py-1 bg-blue-500 text-white rounded" @click="saveSettings" x-text="t('apply')"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Sign Overlay and Details Modal -->
+    <div id="signQR" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); padding:1rem; text-align:center; align-items:center; justify-content:center; flex-direction:column;">
+      <img id="signQrImg" alt="QR" style="max-width:20rem; margin-bottom:0.5rem;" />
+      <p id="signQrHint" style="color:#fff; font-size:0.875rem; margin-bottom:0.5rem;"></p>
+      <a id="signQrLink" href="#" target="_blank" style="word-break:break-all; color:#93c5fd; text-decoration:underline; margin-bottom:0.5rem;"></a>
+      <div style="display:flex; gap:0.5rem;">
+        <button id="copySignLink" style="padding:0.25rem 0.5rem; background:#e5e7eb; border-radius:0.25rem;">Copy</button>
+        <button id="waSignLink" style="padding:0.25rem 0.5rem; background:#22c55e; color:#fff; border-radius:0.25rem;">WhatsApp</button>
+        <button id="emailSignLink" style="padding:0.25rem 0.5rem; background:#3b82f6; color:#fff; border-radius:0.25rem;">Email</button>
+      </div>
+    </div>
+    <div id="mobileDetailsModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+      <div style="background:#fff; padding:1rem; border-radius:0.25rem; width:18rem; text-align:center; display:flex; flex-direction:column; gap:0.5rem;">
+        <input id="mobileNameInput" type="text" placeholder="Name" style="border:1px solid #d1d5db; width:100%; padding:0.25rem;" />
+        <input id="mobileEmailInput" type="email" placeholder="Email" style="border:1px solid #d1d5db; width:100%; padding:0.25rem;" />
+        <input id="mobilePhoneInput" type="tel" placeholder="Phone" style="border:1px solid #d1d5db; width:100%; padding:0.25rem;" />
+        <p id="msDisclaimer" style="font-size:0.75rem;color:#6b7280;"></p>
+        <div style="padding-top:0.5rem; display:flex; gap:0.5rem; justify-content:center;">
+          <button id="mobileDetailsStart" style="background:#3b82f6; color:#fff; padding:0.25rem 0.75rem; border-radius:0.25rem;">Start</button>
+          <button id="mobileDetailsCancel" style="background:#d1d5db; padding:0.25rem 0.75rem; border-radius:0.25rem;">Cancel</button>
         </div>
       </div>
     </div>
@@ -249,18 +390,33 @@
             sign:'Sign',
             import:'Import',
             mobileSign:'Mobile Sign',
+            compression:'Compression',
             navigation:'Navigation',
             files:'Files',
             guide:'Guide',
+            updates:'Updates',
+            tutorials:'Tutorials',
+            purchase:'Purchase',
+            subscriptions:'Subscriptions',
+            purchaseInfo:'Purchase or subscription options will appear here.',
+            subscriptionsInfo:'Subscription plans will appear here.',
+            donationInfo:'Support the project via the button below.',
             donate:'Donate',
+            settings:'Settings',
+            enterPassword:'Enter password',
+            wrongPassword:'Wrong password',
+            clientLogo:'Client logo',
+            sponsorLogo:'Sponsor logo',
+            clientLogoHeight:'Client logo height',
+            sponsorLogoHeight:'Sponsor logo height',
             noFiles:'No files available.',
             selectCommand:'Select a command from the menu.',
-            exportComplete:'Export complete',
             pin:'Pin menu',
             unpin:'Unpin menu',
             version:'Version',
             apply:'Apply',
             cancel:'Cancel',
+            confirm:'Confirm',
             licensedTo:'Licensed to',
             demoVersion:'DEMO - PRO features disabled',
             licenses:'Licenses',
@@ -276,8 +432,44 @@
             brightness:'Brightness',
             contrast:'Contrast',
             scale:'Scale',
+            flip:'Mirror',
+            invert:'Upside down',
             delete:'Delete',
-            removeBg:'Remove BG'
+            removeBg:'Remove BG',
+            restoreBg:'Restore BG',
+            removeBgThresholdPrompt:'Background removal threshold (%)',
+            removeBgFailed:'Background removal failed',
+            imagesPerPage:'Images per page',
+            orientation:'Orientation',
+            layout:'Layout',
+            horizontalView:'Vertical bar',
+            verticalView:'Horizontal bar',
+            blankThreshold:'Blank page threshold (%)',
+            removeBlank:'Remove blank pages',
+            clearImages:'Clear images',
+            confirmClearImages:'Remove all images?',
+            pagesRemoved:'{n} blank pages removed',
+            imagesCleared:'All images cleared',
+            imageSize:'Image size',
+            colorMode:'Color mode',
+            portrait:'Portrait',
+            landscape:'Landscape',
+            auto:'Auto',
+            horizontal:'Horizontal',
+            vertical:'Vertical',
+            grid:'Grid',
+            fillCell:'Fill cell',
+            original:'Original',
+            scalePercent:'Scale (%)',
+            color:'Color',
+            gray:'Grayscale',
+            bw:'B/W',
+            downloadPdf:'Download PDF',
+            whatsapp:'WhatsApp',
+            email:'Email',
+            maxUploadLimit:'Maximum {n} files per upload',
+            lastUpdate:'Last update',
+            tutorialsPlaceholder:'Tutorial videos coming soon.'
           },
           it:{
             commands:'Comandi',
@@ -286,18 +478,33 @@
             sign:'Firma',
             import:'Importa',
             mobileSign:'Firma Mobile',
+            compression:'Compressione',
             navigation:'Navigazione',
             files:'File',
             guide:'Guida',
+            updates:'Aggiornamenti',
+            tutorials:'Tutorial',
+            purchase:'Acquisto',
+            subscriptions:'Abbonamenti',
+            purchaseInfo:'Opzioni di acquisto o abbonamento saranno mostrate qui.',
+            subscriptionsInfo:'I piani di abbonamento saranno mostrati qui.',
+            donationInfo:'Sostieni il progetto con il pulsante qui sotto.',
             donate:'Dona',
+            settings:'Impostazioni',
+            enterPassword:'Inserisci password',
+            wrongPassword:'Password errata',
+            clientLogo:'Logo cliente',
+            sponsorLogo:'Logo sponsor',
+            clientLogoHeight:'Altezza logo cliente',
+            sponsorLogoHeight:'Altezza logo sponsor',
             noFiles:'Nessun file disponibile.',
             selectCommand:'Seleziona un comando dal menu.',
-            exportComplete:'Esportazione completata',
             pin:'Fissa menu',
             unpin:'Sblocca menu',
             version:'Versione',
             apply:'Applica',
             cancel:'Annulla',
+            confirm:'Conferma',
             licensedTo:'Licenziato a',
             demoVersion:'DEMO - funzionalità PRO disabilitate',
             licenses:'Licenze',
@@ -313,8 +520,44 @@
             brightness:'Luminosità',
             contrast:'Contrasto',
             scale:'Scala',
+            flip:'Specchia',
+            invert:'Capovolgi',
             delete:'Elimina',
-            removeBg:'Rimuovi sfondo'
+            removeBg:'Rimuovi sfondo',
+            restoreBg:'Ripristina sfondo',
+            removeBgThresholdPrompt:'Soglia rimozione sfondo (%)',
+            removeBgFailed:'Rimozione sfondo fallita',
+            imagesPerPage:'Immagini per pagina',
+            orientation:'Orientamento',
+            layout:'Disposizione',
+            horizontalView:'Barra verticale',
+            verticalView:'Barra orizzontale',
+            blankThreshold:'Soglia pagina bianca (%)',
+            removeBlank:'Rimuovi pagine bianche',
+            clearImages:'Azzera immagini',
+            confirmClearImages:'Rimuovere tutte le immagini?',
+            pagesRemoved:'Rimosse {n} pagine bianche',
+            imagesCleared:'Tutte le immagini cancellate',
+            imageSize:'Dimensione immagine',
+            colorMode:'Modalità colore',
+            portrait:'Verticale',
+            landscape:'Orizzontale',
+            auto:'Auto',
+            horizontal:'Orizzontale',
+            vertical:'Verticale',
+            grid:'Griglia',
+            fillCell:'Riempi cella',
+            original:'Originale',
+            scalePercent:'Scala (%)',
+            color:'Colore',
+            gray:'Scala di grigi',
+            bw:'B/N',
+            downloadPdf:'Scarica PDF',
+            whatsapp:'WhatsApp',
+            email:'Email',
+            maxUploadLimit:'Massimo {n} file per caricamento',
+            lastUpdate:'Ultimo aggiornamento',
+            tutorialsPlaceholder:'Prossimamente video tutorial.'
           }
         };
         // Expose translations so external plugins (e.g., mobile sign) can reuse them
@@ -322,9 +565,9 @@
         const DEFAULT_PAYPAL = 'https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY';
         return {
           drawer:false,
-          pinned:true,
+          pinned: window.innerWidth >= 768,
           tab:'files',
-          modal:false,
+          status:'',
           cropModal:false,
           cropIndex:null,
           sortable:null,
@@ -340,17 +583,31 @@
           cropContrast:100,
           lastTap:0,
           files:[],
+          layoutHorizontal:false,
+          blankThreshold:95,
           signModal:false,
+          drawModal:false,
+          drawing:false,
+          lastPoint:null,
           signIndex:null,
           signatureImageData:null,
           signatures:[],
           removeSigBg:true,
+          removeBgEnabled:false,
+          watermarkEnabled:false,
           sigScale:1,
           activeSig:null,
           signatureAspect:1,
+          pendingSigPos:null,
           clientLogo:null,
           sponsorLogo:null,
           donateLink:null,
+          settingsModal:false,
+          passwordModal:false,
+          passwordInput:'',
+          settings:{clientLogo:'', sponsorLogo:'', clientLogoHeight:125, sponsorLogoHeight:125},
+          clientLogoHeight:125,
+          sponsorLogoHeight:125,
           version:'',
           versionDate:'',
           licenseKey:'',
@@ -360,17 +617,36 @@
           licenseModal:false,
           lang: window.DC_LANG || 'en',
           strings,
-          slides:{
-            en:['/static/logos/DocCropper_slogan_en.png','/static/logos/DocCropper_slogan_sign_en.png'],
-            it:['/static/logos/DocCropper_slogan_it.png','/static/logos/DocCropper_slogan_sign_it.png']
-          },
+          slides:[],
           slideIndex:0,
           showSlides:true,
           currentSlide:'',
+          updates:{
+            en:['Improved signing workflow and export options.'],
+            it:['Migliorato il flusso di firma e opzioni di esportazione.']
+          },
+          maxUpload:10,
+          showClearConfirm:false,
+          isMobile: /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 640,
           t(key){ return this.strings[this.lang][key] || key; },
-          refreshSlides(){
-            this.slideIndex = 0;
-            this.currentSlide = this.showSlides ? this.slides[this.lang][0] : '';
+          toggleLayout(){ this.layoutHorizontal = !this.layoutHorizontal; },
+          displaySponsorHeight(){ return this.isMobile ? Math.round(this.sponsorLogoHeight*0.6) : this.sponsorLogoHeight; },
+          displayClientHeight(){ return this.isMobile ? Math.round(this.clientLogoHeight*0.6) : this.clientLogoHeight; },
+          confirmClear(){
+            this.files = [];
+            this.status = this.t('imagesCleared');
+            setTimeout(()=>{ this.status=''; },3000);
+            this.showClearConfirm = false;
+          },
+          loadSlides(){
+            fetch(`/slides/${this.lang}`).then(r=>r.ok?r.json():[]).then(list=>{
+              this.slides = list.map(f=>`/static/slides/${f}`);
+              this.slideIndex = 0;
+              this.currentSlide = this.showSlides && this.slides.length ? this.slides[0] : '';
+            }).catch(()=>{
+              this.slides = [];
+              this.currentSlide = '';
+            });
           },
           versionInfo(){
             if(!this.version) return '';
@@ -383,25 +659,41 @@
             }
             window.removeSignatureBackground = this.removeSigBg;
             this.setLang();
-            const mq = window.matchMedia('(min-width:768px)');
-            this.pinned = false;
-            this.drawer = false;
-            mq.addEventListener('change', e=>{
-              if(!e.matches){
+            this.isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 640;
+            this.pinned = !this.isMobile && window.innerWidth >= 768;
+            this.drawer = this.pinned;
+            window.addEventListener('resize', () => {
+              this.isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 640;
+              if (this.isMobile) {
                 this.pinned = false;
                 this.drawer = false;
+              } else if (window.innerWidth >= 768 && this.pinned) {
+                this.drawer = true;
               }
             });
             setInterval(()=>{
-              if (this.showSlides) {
-                this.slideIndex = (this.slideIndex+1) % this.slides[this.lang].length;
-                this.currentSlide = this.slides[this.lang][this.slideIndex];
+              if (this.showSlides && this.slides.length) {
+                this.slideIndex = (this.slideIndex+1) % this.slides.length;
+                this.currentSlide = this.slides[this.slideIndex];
               }
             },5000);
-            window.addEventListener('dc-exported', () => { this.modal = true; });
             fetch('/settings/').then(r=>r.json()).then(cfg=>{
-              this.clientLogo = cfg.client_logo ? `/static/logos/${cfg.client_logo}` : null;
-              this.sponsorLogo = cfg.sponsor_logo ? `/static/logos/${cfg.sponsor_logo}` : null;
+              this.settings.clientLogo = cfg.client_logo || '';
+              this.settings.sponsorLogo = cfg.sponsor_logo || '';
+              this.settings.clientLogoHeight = parseInt(cfg.client_logo_height || 125);
+              this.settings.sponsorLogoHeight = parseInt(cfg.sponsor_logo_height || 125);
+              this.clientLogo = this.settings.clientLogo ? `/static/logos/${this.settings.clientLogo}` : null;
+              this.sponsorLogo = this.settings.sponsorLogo ? `/static/logos/${this.settings.sponsorLogo}` : null;
+              this.clientLogoHeight = this.settings.clientLogoHeight;
+              this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
+              if (cfg.language) {
+                this.lang = cfg.language;
+                this.setLang();
+              }
+              this.removeBgEnabled = !!cfg.enable_removebg;
+              this.watermarkEnabled = !!cfg.enable_watermark;
+              this.maxUpload = parseInt(cfg.max_upload_files || 10);
+              this.blankThreshold = parseInt(cfg.blank_threshold || 95);
               this.version = cfg.version || '';
               this.versionDate = cfg.version_date || '';
               this.licenseKey = cfg.license_key || '';
@@ -421,19 +713,26 @@
             window.startSign = () => {
               if (this.files.length > 0) this.signPage(0);
             };
+            window.getProcessedImages = () => this.files.map(f => f.url);
+            window.setProcessedImage = (i, src) => {
+              if (this.files[i]) {
+                this.files[i].url = src;
+                this.files[i].original = src;
+                this.files = [...this.files];
+              }
+            };
           },
           async command(action){
-            if(!this.pinned) this.drawer=false;
             switch(action){
+              case 'files':
+                this.tab='files';
+                this.showSlides=true;
+                break;
               case 'export':
-                this.modal=false;
                 await window.DC.export();
                 break;
               case 'download':
                 await window.DC.download();
-                break;
-              case 'sign':
-                await window.DC.sign();
                 break;
               case 'import':
                 await window.DC.import();
@@ -442,19 +741,58 @@
                 await window.DC.mobileSign();
                 break;
               case 'guide':
-                window.DC.guide();
+                this.tab='guide';
+                this.showSlides=false;
                 break;
-              case 'donate':
-                window.DC.donate();
+              case 'updates':
+                this.tab='updates';
+                this.showSlides=false;
+                break;
+              case 'tutorials':
+                this.tab='tutorials';
+                this.showSlides=false;
+                break;
+              case 'purchase':
+                this.tab='purchase';
+                this.showSlides=false;
+                break;
+              case 'settings':
+                this.openSettings();
                 break;
             }
           },
           setLang(){
             document.documentElement.lang = this.lang;
-            this.refreshSlides();
+            this.loadSlides();
           },
-          download(){ this.modal=false; window.DC.download(); },
-          sign(){ this.modal=false; window.DC.sign(); },
+          openSettings(){
+            this.passwordInput='';
+            this.passwordModal=true;
+          },
+          checkPassword(){
+            if(this.passwordInput==='secret'){
+              this.passwordModal=false;
+              this.settingsModal=true;
+            } else {
+              alert(this.t('wrongPassword'));
+            }
+          },
+          saveSettings(){
+            const payload = {
+              client_logo:this.settings.clientLogo,
+              sponsor_logo:this.settings.sponsorLogo,
+              client_logo_height:this.settings.clientLogoHeight,
+              sponsor_logo_height:this.settings.sponsorLogoHeight
+            };
+            fetch('/settings/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
+              .then(()=>{
+                this.clientLogo = this.settings.clientLogo ? `/static/logos/${this.settings.clientLogo}` : null;
+                this.sponsorLogo = this.settings.sponsorLogo ? `/static/logos/${this.settings.sponsorLogo}` : null;
+                this.clientLogoHeight = this.settings.clientLogoHeight;
+                this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
+                this.settingsModal = false;
+              });
+          },
           donate(){ window.DC.donate(); },
           licenseInfo(){
             if(this.licenseName){
@@ -471,7 +809,11 @@
               .catch(()=>{ this.licenseModal=false; });
           },
           async handleImport(e){
-            const selected = Array.from(e.target.files || []);
+            let selected = Array.from(e.target.files || []);
+            if(selected.length > this.maxUpload){
+              alert(this.t('maxUploadLimit').replace('{n}', this.maxUpload));
+              selected = selected.slice(0, this.maxUpload);
+            }
             const loaded = [];
             for (const f of selected) {
               if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
@@ -486,7 +828,7 @@
                     canvas.height = viewport.height;
                     await page.render({ canvasContext: ctx, viewport }).promise;
                     const data = canvas.toDataURL();
-                    loaded.push({ id: Date.now()+Math.random(), name: `${f.name} p${i}`, url: data, original: data });
+                    loaded.push({ id: Date.now()+Math.random(), name: `${f.name} p${i}`, url: data, original: data, removeBgThreshold:50 });
                   }
                 } catch (err) {
                   console.error('PDF import failed', err);
@@ -498,7 +840,7 @@
                   reader.onerror = reject;
                   reader.readAsDataURL(f);
                 });
-                loaded.push({ id: Date.now()+Math.random(), name: f.name, url: data, original: data });
+                loaded.push({ id: Date.now()+Math.random(), name: f.name, url: data, original: data, removeBgThreshold:50 });
               }
             }
             this.files.push(...loaded);
@@ -523,9 +865,111 @@
             };
             img.src = this.files[idx].url;
           },
+          flip(idx){
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width;
+              canvas.height = img.height;
+              const ctx = canvas.getContext('2d');
+              ctx.translate(canvas.width,0);
+              ctx.scale(-1,1);
+              ctx.drawImage(img,0,0);
+              const out = canvas.toDataURL('image/png');
+              this.files[idx].url = out;
+              this.files[idx].original = out;
+            };
+            img.src = this.files[idx].url;
+          },
+          invert(idx){
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width;
+              canvas.height = img.height;
+              const ctx = canvas.getContext('2d');
+              ctx.translate(canvas.width, canvas.height);
+              ctx.rotate(Math.PI);
+              ctx.drawImage(img,0,0);
+              const out = canvas.toDataURL('image/png');
+              this.files[idx].url = out;
+              this.files[idx].original = out;
+            };
+            img.src = this.files[idx].url;
+          },
           toGray(idx){ this._convertColor(idx,'gray'); },
           toBW(idx){ this._convertColor(idx,'bw'); },
           toColor(idx){ this.files[idx].url = this.files[idx].original; this.files = [...this.files]; },
+          watermark(idx){ if(typeof window.openWatermarkDialog==='function'){ window.openWatermarkDialog(idx); } },
+          async removeBg(idx){
+            try{
+              const f = this.files[idx];
+              if(f.bgOriginal){
+                f.url = f.bgOriginal;
+                f.original = f.bgOriginal;
+                f.bgOriginal = null;
+                this.files = [...this.files];
+                return;
+              }
+              const resp = await fetch(f.url);
+              const blob = await resp.blob();
+              const fd = new FormData();
+              fd.append('image_file', blob, `image${idx}.png`);
+              const thr = this.files[idx].removeBgThreshold ?? 50;
+              const r = await fetch(`/remove-background/?threshold=${thr}`, {method:'POST', body:fd});
+              if(!r.ok){ alert(this.t('removeBgFailed')); return; }
+              const data = await r.json();
+              if(data.image){
+                f.bgOriginal = f.url;
+                f.url = 'data:image/png;base64,' + data.image;
+                f.original = f.url;
+                this.files = [...this.files];
+              } else {
+                alert(this.t('removeBgFailed'));
+              }
+            }catch(e){
+              console.error('remove background error', e);
+              alert(this.t('removeBgFailed'));
+            }
+          },
+          isBlankImage(src, thr){
+            return new Promise(resolve => {
+              const img = new Image();
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const scale = Math.min(100 / img.width, 100 / img.height, 1);
+                canvas.width = Math.floor(img.width * scale);
+                canvas.height = Math.floor(img.height * scale);
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img,0,0,canvas.width,canvas.height);
+                const data = ctx.getImageData(0,0,canvas.width,canvas.height).data;
+                let white = 0;
+                for(let i=0;i<data.length;i+=4){
+                  if(data[i]>240 && data[i+1]>240 && data[i+2]>240) white++;
+                }
+                const ratio = white / (data.length/4);
+                resolve(ratio >= thr);
+              };
+              img.src = src;
+            });
+          },
+          async removeBlankPages(){
+            const thr = this.blankThreshold/100;
+            const keep = [];
+            let removed = 0;
+            for(const f of this.files){
+              const blank = await this.isBlankImage(f.url, thr);
+              if(!blank) keep.push(f); else removed++;
+            }
+            this.files = keep;
+            if(removed>0){
+              this.status = this.t('pagesRemoved').replace('{n}', removed);
+              setTimeout(()=>{ this.status=''; },3000);
+            }
+          },
+          clearImages(){
+            this.showClearConfirm = true;
+          },
           _convertColor(idx, mode){
             const img = new Image();
             img.onload=()=>{
@@ -556,10 +1000,6 @@
             this.signatureAspect = window.signatureAspect || this.signatureAspect;
             this.signModal = true;
             this.$nextTick(() => {
-              if(!this.signatureImageData){
-                const inp = this.$el.querySelector('input[type=file]');
-                if(inp) inp.click();
-              }
               this.renderSignatures();
             });
           },
@@ -604,14 +1044,14 @@
             e.target.value='';
           },
           addSignature(ev){
-            if(!this.signatureImageData){
-              const inp = this.$el.querySelector('input[type=file]');
-              if(inp) inp.click();
-              return;
-            }
             const rect = this.$refs.signImg.getBoundingClientRect();
             const x = (ev.clientX - rect.left) / rect.width;
             const y = (ev.clientY - rect.top) / rect.height;
+            if(!this.signatureImageData){
+              this.pendingSigPos = {x, y};
+              this.drawModal = true;
+              return;
+            }
             console.debug('addSignature dblclick', { page: this.signIndex, clientX: ev.clientX, clientY: ev.clientY, x, y });
             const sig = {page:this.signIndex, x, y, scale:this.sigScale};
             this.signatures.push(sig);
@@ -673,7 +1113,79 @@
             else if(this.activeSig>i) this.activeSig--;
             this.renderSignatures();
           },
+          getDrawPos(e){
+            const rect=this.$refs.drawCanvas.getBoundingClientRect();
+            const x=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
+            const y=(e.touches?e.touches[0].clientY:e.clientY)-rect.top;
+            return {x,y};
+          },
+          startDraw(e){ this.drawing=true; this.lastPoint=this.getDrawPos(e); },
+          moveDraw(e){
+            if(!this.drawing) return;
+            const ctx=this.$refs.drawCanvas.getContext('2d');
+            const p=this.getDrawPos(e);
+            ctx.beginPath();
+            ctx.moveTo(this.lastPoint.x,this.lastPoint.y);
+            ctx.lineTo(p.x,p.y);
+            ctx.stroke();
+            this.lastPoint=p;
+          },
+          endDraw(){ this.drawing=false; },
+          clearDraw(){
+            const c=this.$refs.drawCanvas;
+            c.getContext('2d').clearRect(0,0,c.width,c.height);
+          },
+          useDraw(){
+            const data=this.$refs.drawCanvas.toDataURL('image/png');
+            this.signatureImageData=data;
+            window.signatureImageData=data;
+            const img=new Image();
+            img.onload=()=>{
+              this.signatureAspect=img.height/img.width;
+              window.signatureAspect=this.signatureAspect;
+              if(this.pendingSigPos){
+                const sig={page:this.signIndex,x:this.pendingSigPos.x,y:this.pendingSigPos.y,scale:this.sigScale};
+                this.signatures.push(sig);
+                window.signatures=this.signatures;
+                this.activeSig=this.signatures.filter(s=>s.page===this.signIndex).length-1;
+                this.pendingSigPos=null;
+              }
+              this.renderSignatures();
+            };
+            img.src=data;
+            this.drawModal=false;
+          },
           saveSignModal(){
+            if(this.signIndex!==null && this.signatureImageData && this.signatures.some(s=>s.page===this.signIndex)){
+              const idx=this.signIndex;
+              const base=new Image();
+              base.onload=()=>{
+                const canvas=document.createElement('canvas');
+                canvas.width=base.width; canvas.height=base.height;
+                const ctx=canvas.getContext('2d');
+                ctx.drawImage(base,0,0);
+                const sigImg=new Image();
+                sigImg.onload=()=>{
+                  const baseRatio=(canvas.height/10)/sigImg.height;
+                  this.signatures.filter(s=>s.page===idx).forEach(s=>{
+                    const w=sigImg.width*baseRatio*s.scale;
+                    const h=sigImg.height*baseRatio*s.scale;
+                    const x=s.x*canvas.width - w/2;
+                    const y=s.y*canvas.height - h/2;
+                    ctx.drawImage(sigImg,x,y,w,h);
+                  });
+                  const url=canvas.toDataURL('image/png');
+                  this.files[idx].url=url;
+                  this.files[idx].original=url;
+                  this.files=[...this.files];
+                  this.signatures=this.signatures.filter(s=>s.page!==idx);
+                  window.signatures=this.signatures;
+                  window.updateLayoutPreview && window.updateLayoutPreview();
+                };
+                sigImg.src=this.signatureImageData;
+              };
+              base.src=this.files[idx].url;
+            }
             this.signModal=false;
           },
           closeSign(){
@@ -804,7 +1316,7 @@
               .then(d=>{ if(d.processed_image){ this.files[this.cropIndex].url=d.processed_image; this.files[this.cropIndex].original=d.processed_image; this.files=[...this.files]; } })
               .finally(()=>{ this.closeCrop(); });
           },
-          initSortable(){
+      initSortable(){
             if(!this.$refs.fileGrid) return;
             if(this.sortable){ this.sortable.destroy(); }
             this.sortable = Sortable.create(this.$refs.fileGrid, {
@@ -821,11 +1333,283 @@
         }
       }
     </script>
+    <div id="exportOptions">
+      <button id="closeExportBtn" style="position:absolute; top:2px; right:2px;">×</button>
+      <details open>
+        <summary class="font-semibold" x-text="t('layout')"></summary>
+        <div id="layoutControls" style="display:none; text-align:left; margin:8px 0; font-size:12px;">
+          <div>
+            <label for="layoutSelect" x-text="t('imagesPerPage')"></label>
+            <select id="layoutSelect">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+          <div>
+            <label for="orientationSelect" x-text="t('orientation')"></label>
+            <select id="orientationSelect">
+              <option value="portrait" x-text="t('portrait')"></option>
+              <option value="landscape" x-text="t('landscape')"></option>
+            </select>
+          </div>
+          <div>
+            <label for="arrangeSelect" x-text="t('layout')"></label>
+            <select id="arrangeSelect">
+              <option value="auto" x-text="t('auto')"></option>
+              <option value="horizontal" x-text="t('horizontal')"></option>
+              <option value="vertical" x-text="t('vertical')"></option>
+              <option value="grid" x-text="t('grid')"></option>
+            </select>
+          </div>
+          <div>
+            <label for="scaleMode" x-text="t('imageSize')"></label>
+            <select id="scaleMode">
+              <option value="fit" x-text="t('fillCell')"></option>
+              <option value="original" x-text="t('original')"></option>
+              <option value="percent" x-text="t('scalePercent')"></option>
+            </select>
+            <input type="number" id="scalePercent" value="100" min="10" max="300" step="10" style="width:60px; display:none;" />
+            <span id="scalePercentSymbol" style="display:none;">%</span>
+          </div>
+          <div>
+            <label for="colorModeSelect" x-text="t('colorMode')"></label>
+            <select id="colorModeSelect">
+              <option value="color" x-text="t('color')"></option>
+              <option value="gray" x-text="t('gray')"></option>
+              <option value="bw" x-text="t('bw')"></option>
+            </select>
+          </div>
+        </div>
+      </details>
+      <details open>
+        <summary class="font-semibold" x-text="t('preview')"></summary>
+        <iframe id="exportPreviewFrame" style="width:100%; height:260px; border:1px solid #888; border-radius:4px; margin:8px 0; display:none;"></iframe>
+        <button id="downloadPdfBtn" class="w-full px-2 py-1 bg-blue-500 text-white rounded text-sm" style="display:none;" x-text="t('downloadPdf')"></button>
+        <button id="waShareBtn" class="w-full px-2 py-1 bg-green-500 text-white rounded text-sm" style="display:none;" x-text="t('whatsapp')"></button>
+        <button id="emailShareBtn" class="w-full px-2 py-1 bg-gray-500 text-white rounded text-sm" style="display:none;" x-text="t('email')"></button>
+      </details>
+    </div>
     <script type="module">
       import { initSignaturePlugin } from '/static/plugins/mobilesign.js';
+      import { initPdfCompressPlugin } from '/static/plugins/compresspdf.js';
+      import { initPdfaPlugin } from '/static/plugins/pdfa.js';
+      import { initWatermarkPlugin } from '/static/plugins/watermark.js';
       const lang = window.DC_LANG || document.documentElement.lang || 'en';
       const trans = (window.dcStrings && window.dcStrings[lang]) ? window.dcStrings[lang] : {};
       initSignaturePlugin(trans, true);
+      initPdfCompressPlugin(trans, true);
+      initPdfaPlugin(trans, true);
+      initWatermarkPlugin(trans, true);
+
+      function calculateGrid() {
+        const layout = parseInt(document.getElementById('layoutSelect')?.value || '1');
+        const orientation = document.getElementById('orientationSelect')?.value || 'portrait';
+        const arrangement = document.getElementById('arrangeSelect')?.value || 'auto';
+        let cols = 1, rows = 1;
+        if (layout === 2) {
+          if (arrangement === 'horizontal') { cols = 2; rows = 1; }
+          else if (arrangement === 'vertical') { cols = 1; rows = 2; }
+          else if (orientation === 'landscape') { cols = 2; rows = 1; } else { cols = 1; rows = 2; }
+        } else if (layout === 4) {
+          if (arrangement === 'horizontal') { cols = 4; rows = 1; }
+          else if (arrangement === 'vertical') { cols = 1; rows = 4; }
+          else { cols = 2; rows = 2; }
+        }
+        return { cols, rows };
+      }
+
+      function updateLayoutPreview() {
+        const preview = document.getElementById('layoutPreview');
+        if (!preview || preview.style.display === 'none') return;
+        const { cols, rows } = calculateGrid();
+        const orientation = document.getElementById('orientationSelect')?.value || 'portrait';
+        const images = window.getProcessedImages ? window.getProcessedImages() : [];
+        const mode = document.getElementById('colorModeSelect')?.value || 'color';
+        preview.innerHTML = '';
+        preview.style.width = orientation === 'portrait' ? '220px' : '260px';
+        preview.style.height = orientation === 'portrait' ? '260px' : '220px';
+        preview.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        preview.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+        const total = cols * rows;
+        for (let i = 0; i < total; i++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          const src = images[i];
+          if (src) {
+            const img = document.createElement('img');
+            img.src = src;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = document.getElementById('scaleMode')?.value === 'fit' ? 'cover' : 'contain';
+            if (mode === 'gray') {
+              img.style.filter = 'grayscale(100%)';
+            } else if (mode === 'bw') {
+              img.style.filter = 'grayscale(100%) contrast(200%)';
+            }
+            cell.appendChild(img);
+          }
+          preview.appendChild(cell);
+        }
+      }
+
+      window.updateLayoutPreview = updateLayoutPreview;
+
+      function maybeRegenerate() {
+        if (window.currentPdfBlob && typeof window.generatePdf === 'function') {
+          window.generatePdf();
+        }
+      }
+
+      const layoutSel = document.getElementById('layoutSelect');
+      const orientSel = document.getElementById('orientationSelect');
+      const arrangeSel = document.getElementById('arrangeSelect');
+      const scaleSel = document.getElementById('scaleMode');
+      const scalePct = document.getElementById('scalePercent');
+      const scaleSym = document.getElementById('scalePercentSymbol');
+      const colorSel = document.getElementById('colorModeSelect');
+
+      function toggleScaleInput() {
+        const show = scaleSel && scaleSel.value === 'percent';
+        if (scalePct) scalePct.style.display = show ? 'inline-block' : 'none';
+        if (scaleSym) scaleSym.style.display = show ? 'inline' : 'none';
+      }
+
+      toggleScaleInput();
+
+      layoutSel?.addEventListener('change', () => { updateLayoutPreview(); maybeRegenerate(); });
+      orientSel?.addEventListener('change', () => { updateLayoutPreview(); maybeRegenerate(); });
+      arrangeSel?.addEventListener('change', () => { updateLayoutPreview(); maybeRegenerate(); });
+      scaleSel?.addEventListener('change', () => { toggleScaleInput(); updateLayoutPreview(); maybeRegenerate(); });
+      scalePct?.addEventListener('change', () => { updateLayoutPreview(); maybeRegenerate(); });
+      colorSel?.addEventListener('change', () => { updateLayoutPreview(); maybeRegenerate(); });
+
+      async function loadImage(src) {
+        return new Promise(res => {
+          const img = new Image();
+          img.onload = () => res(img);
+          img.src = src;
+        });
+      }
+
+      async function mergeAllSignatures(images) {
+        if (!window.signatureImageData || !window.signatures || window.signatures.length === 0) return images;
+        const sig = await loadImage(window.signatureImageData);
+        const aspect = sig.height / sig.width;
+        const out = images.slice();
+        const pages = new Set(window.signatures.map(s => s.page));
+        for (const page of pages) {
+          const base = await loadImage(out[page]);
+          const canvas = document.createElement('canvas');
+          canvas.width = base.width;
+          canvas.height = base.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(base, 0, 0);
+          const pageSigs = window.signatures.filter(s => s.page === page);
+          for (const s of pageSigs) {
+            const w = (base.width / 5) * s.scale;
+            const h = w * aspect;
+            const x = s.x * base.width - w / 2;
+            const y = s.y * base.height - h / 2;
+            ctx.drawImage(sig, x, y, w, h);
+          }
+          out[page] = canvas.toDataURL('image/png');
+        }
+        window.signatures.length = 0;
+        window.signatureImageData = null;
+        return out;
+      }
+
+      window.generatePdf = async function () {
+        const getter = window.getProcessedImages;
+        if (!getter) return;
+        let images = getter();
+        if (!images.length) return;
+        images = await mergeAllSignatures(images);
+        const layout = parseInt(document.getElementById('layoutSelect')?.value || '1');
+        const orientation = document.getElementById('orientationSelect')?.value || 'portrait';
+        const arrangement = document.getElementById('arrangeSelect')?.value || 'auto';
+        const scale_mode = document.getElementById('scaleMode')?.value || 'fit';
+        const scale_percent = parseInt(document.getElementById('scalePercent')?.value || '100');
+        const color_mode = document.getElementById('colorModeSelect')?.value || 'color';
+        const payload = { images, layout, orientation, arrangement, scale_mode, scale_percent, color_mode };
+        if (window.lastSignEmail || window.lastSignPhone || window.lastSignName) {
+          payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
+        }
+        const resp = await fetch('/create-pdf/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (data.pdf) {
+          const base64 = data.pdf.split(',')[1];
+          const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          window.currentPdfBlob = blob;
+          const url = URL.createObjectURL(blob);
+          window.lastPdfUrl = url;
+          window.dispatchEvent(new CustomEvent('signedPdfAvailable', { detail: { url } }));
+        }
+      };
+
+      document.getElementById('closeExportBtn')?.addEventListener('click', () => {
+        const box = document.getElementById('exportOptions');
+        const frame = document.getElementById('exportPreviewFrame');
+        const dl = document.getElementById('downloadPdfBtn');
+        const wa = document.getElementById('waShareBtn');
+        const em = document.getElementById('emailShareBtn');
+        if (frame) { frame.src = ''; frame.style.display = 'none'; }
+        if (dl) dl.style.display = 'none';
+        if (wa) wa.style.display = 'none';
+        if (em) em.style.display = 'none';
+        if (box) box.style.display = 'none';
+      });
+
+      window.addEventListener('signedPdfAvailable', (e) => {
+        const url = e.detail.url;
+        const exportBox = document.getElementById('exportOptions');
+        const frame = document.getElementById('exportPreviewFrame');
+        const downloadBtn = document.getElementById('downloadPdfBtn');
+        const waBtn = document.getElementById('waShareBtn');
+        const emailBtn = document.getElementById('emailShareBtn');
+        const controls = document.getElementById('layoutControls');
+        if (exportBox) exportBox.style.display = 'block';
+        if (controls) controls.style.display = 'block';
+        updateLayoutPreview();
+        if (frame) {
+          frame.src = url + '#toolbar=0&navpanes=0';
+          frame.style.display = 'block';
+        }
+        if (downloadBtn) {
+          downloadBtn.style.display = 'block';
+          downloadBtn.onclick = () => {
+            if (!window.currentPdfBlob) return;
+            const u = URL.createObjectURL(window.currentPdfBlob);
+            const a = document.createElement('a');
+            a.href = u;
+            a.download = 'document.pdf';
+            a.click();
+            URL.revokeObjectURL(u);
+          };
+        }
+        if (waBtn) {
+          waBtn.style.display = 'block';
+          waBtn.onclick = () => {
+            const p = (window.lastSignPhone || '').replace(/[^0-9]/g, '');
+            const params = new URLSearchParams({ text: url });
+            if (p) params.set('phone', p);
+            window.open(`https://web.whatsapp.com/send?${params.toString()}`, '_blank');
+          };
+        }
+        if (emailBtn) {
+          emailBtn.style.display = 'block';
+          emailBtn.onclick = () => {
+            const m = window.lastSignEmail ? encodeURIComponent(window.lastSignEmail) : '';
+            window.open(`mailto:${m}?body=${encodeURIComponent(url)}`, '_blank');
+          };
+        }
+      });
     </script>
   </body>
 </html>

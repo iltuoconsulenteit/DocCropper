@@ -44,6 +44,9 @@ from app.auth.models import User
 from plugins.mobilesign import register as register_mobilesign
 from plugins.remotesign import register as register_remotesign
 from plugins.crop import register as register_crop
+from plugins.removebg import register as register_removebg
+from plugins.compresspdf import register as register_compresspdf
+from plugins.watermark import register as register_watermark
 
 try:
     import stripe
@@ -95,6 +98,7 @@ def save_license_overrides(update: dict) -> dict:
 DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "")
 DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
 DEMO_FULL_LICENSE_KEY = "DEMO-FULL-DC"
+DEMO_WATERMARK_TEXT = "DocCropper Demo"
 
 try:
     VERSION = subprocess.check_output(
@@ -155,6 +159,7 @@ DEFAULT_SETTINGS = {
     "brand_gap": 20,
     "blank_threshold": 95,
     "skip_blank": True,
+    "max_upload_files": 10,
     "enable_sponsor_video": False,
     "banner_images": ["DocCropper_slogan_{{lang}}.png"],
     "developer_watermark": False,
@@ -510,6 +515,9 @@ settings = load_settings()
 enable_sign = str(os.getenv('DOCROPPER_ENABLE_SIGN', settings.get('enable_sign', True))).lower() != 'false'
 enable_mobilesign = str(os.getenv('DOCROPPER_ENABLE_MOBILESIGN', settings.get('enable_mobilesign', False))).lower() == 'true'
 enable_remotesign = str(os.getenv('DOCROPPER_ENABLE_REMOTESIGN', settings.get('enable_remotesign', False))).lower() == 'true'
+enable_removebg = str(os.getenv('DOCROPPER_ENABLE_REMOVEBG', settings.get('enable_removebg', False))).lower() == 'true'
+enable_compresspdf = str(os.getenv('DOCROPPER_ENABLE_COMPRESSPDF', settings.get('enable_compresspdf', False))).lower() == 'true'
+enable_watermark = str(os.getenv('DOCROPPER_ENABLE_WATERMARK', settings.get('enable_watermark', False))).lower() == 'true'
 
 if enable_sign:
     register_sign(app, plugin_utils)
@@ -517,6 +525,12 @@ if enable_mobilesign:
     register_mobilesign(app, plugin_utils)
 if enable_remotesign:
     register_remotesign(app, plugin_utils)
+if enable_removebg:
+    register_removebg(app, plugin_utils)
+if enable_compresspdf and settings.get('license_level', 'free').lower() != 'free':
+    register_compresspdf(app, plugin_utils)
+if enable_watermark:
+    register_watermark(app, plugin_utils)
 
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):
@@ -633,6 +647,25 @@ async def update_user_settings_endpoint(request: Request, settings: dict = Body(
     data["version_date"] = VERSION_DATE
     return data
 
+@app.get("/slides/{lang}")
+async def list_slides(lang: str):
+    folder = os.path.join("static", "slides")
+    files: list[str] = []
+    if os.path.isdir(folder):
+        for name in sorted(os.listdir(folder)):
+            path = os.path.join(folder, name)
+            if not os.path.isfile(path):
+                continue
+            base, ext = os.path.splitext(name)
+            if ext.lower() not in [".png", ".jpg", ".jpeg", ".gif", ".webp"]:
+                continue
+            parts = base.rsplit("_", 1)
+            if len(parts) == 2 and len(parts[1]) == 2:
+                if parts[1].lower() == lang.lower():
+                    files.append(name)
+            else:
+                files.append(name)
+    return files
 
 @app.post("/stripe-checkout/")
 async def stripe_checkout(level: str = Body(...)):
@@ -739,7 +772,10 @@ async def create_pdf(
     signature_image: str | None = Body(None),
     remove_signature_bg: bool = Body(True),
     signatures: list[dict] = Body(default_factory=list),
-    sign_info: dict | None = Body(default_factory=dict)
+    sign_info: dict | None = Body(default_factory=dict),
+    compression: str = Body("none"),
+    jpeg_quality: int = Body(75),
+    pdfa_version: int | None = Body(None),
 ):
     try:
         settings = load_settings()
@@ -923,6 +959,20 @@ async def create_pdf(
                     ty = fy + (fl.height - th) // 2
                     draw.text((tx, ty), text, fill="black", font=font)
                     page.paste(fl, (fx, fy), fl)
+                if settings.get("demo_full_mode"):
+                    wm_font_size = max(20, page_h // 25)
+                    try:
+                        wm_font = ImageFont.truetype("DejaVuSans.ttf", wm_font_size)
+                    except Exception:
+                        wm_font = ImageFont.load_default()
+                    if hasattr(draw, "textbbox"):
+                        bbox = draw.textbbox((0, 0), DEMO_WATERMARK_TEXT, font=wm_font)
+                        wmw, wmh = bbox[2] - bbox[0], bbox[3] - bbox[1]
+                    else:
+                        wmw, wmh = wm_font.getsize(DEMO_WATERMARK_TEXT)
+                    wx = (page_w - wmw) // 2
+                    wy = page_h - wmh - margin
+                    draw.text((wx, wy), DEMO_WATERMARK_TEXT, fill=(128, 128, 128), font=wm_font)
             if sig_img and signatures and placements:
                 footer_h = fl.height if (not licensed and fl) else 0
                 img_off_x, img_off_y, img_w, img_h = placements[0]
@@ -988,6 +1038,15 @@ async def create_pdf(
                 pdf_bytes = signed_io.getvalue()
             except Exception:
                 logger.exception("PDF signing failed")
+        compressor = plugin_utils.get("compress_pdf")
+        if compressor and (compression and compression.lower() != "none"):
+            pdf_bytes = compressor(pdf_bytes, compression, jpeg_quality)
+        if pdfa_version is not None:
+            try:
+                doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+                pdf_bytes = doc.tobytes(deflate=True, clean=True, garbage=4, pdfa=int(pdfa_version) - 1)
+            except Exception:
+                logger.exception("PDF/A conversion failed")
 
         pdf_path = os.path.join(session_dir, "output.pdf" + ENC_SUFFIX)
         try:

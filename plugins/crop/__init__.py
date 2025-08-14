@@ -34,7 +34,14 @@ def register(app, utils: dict[str, Any]):
     def detect_document_corners(img: np.ndarray) -> np.ndarray | None:
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (5, 5), 0)
-        edged = cv2.Canny(gray, 50, 200)
+        # Auto-tune Canny thresholds based on image median to improve detection
+        v = np.median(gray)
+        lower = int(max(0, 0.66 * v))
+        upper = int(min(255, 1.33 * v))
+        edged = cv2.Canny(gray, lower, upper)
+        # Clean up edges to reduce noise
+        edged = cv2.dilate(edged, None, iterations=1)
+        edged = cv2.erode(edged, None, iterations=1)
         cnts, _ = cv2.findContours(edged, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
         for c in cnts:

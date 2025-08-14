@@ -32,9 +32,7 @@
     </header>
     <div id="brandArea">
         <button id="closeBanner" class="close">&times;</button>
-        <img id="clientLogo" alt="Client logo" style="display:none;">
-        <img id="sloganImg" src="/static/logos/DocCropper_slogan_en.png" alt="DocCropper slogan">
-        <img id="sponsorLogo" alt="Sponsor logo" style="display:none;">
+        <img id="sloganImg" src="/static/slides/DocCropper_slogan_en.png" alt="DocCropper slogan">
     </div>
     <div id="instructionsBox">
         <strong data-i18n="instructionsTitle">Instructions</strong><br>
@@ -60,7 +58,12 @@
         <div id="cameraControls" style="display:none;">
             <label for="cameraSelect" data-i18n="cameraSelectLabel">Camera:</label>
             <select id="cameraSelect"></select>
-            <video id="cameraPreview" autoplay playsinline></video>
+            <div id="cameraPreviewWrapper">
+                <video id="cameraPreview" autoplay playsinline></video>
+                <div id="cameraOverlay"></div>
+            </div>
+            <label for="cameraMargin" data-i18n="cameraMargin">Margin:</label>
+            <input type="range" id="cameraMargin" min="0" max="40" value="10">
             <button id="captureBtn" data-i18n="capturePhoto" data-i18n-title="capturePhoto" title="Capture">Capture</button>
             <input type="file" id="cameraFileInput" accept="image/*" capture="environment" multiple style="display:none;">
         </div>
@@ -87,6 +90,7 @@
     </div>
 
     <button id="submitBtn" data-i18n="processImage" data-i18n-title="processImage" title="Process Image">Process Image</button>
+    <button id="addPhotoBtn" style="display:none;" data-i18n="addPhoto" data-i18n-title="addPhoto" title="Add Photo">Add Photo</button>
     <button id="exportPdfBtn" style="display:none;" data-i18n="exportPdf" data-i18n-title="exportPdf" title="Create PDF">Create PDF</button>
     <button id="signBtn" style="display:none;" data-i18n="sign" data-i18n-title="sign" title="Sign">Sign</button>
     <button id="mobileSignBtn" class="iconTextBtn" style="display:none;" data-i18n-title="mobileSign" title="Mobile Sign">📱 <span data-i18n="mobileSign"></span></button>
@@ -98,15 +102,7 @@
     </div>
     <button id="ocrBtn" style="display:none;" data-i18n="extractText" data-i18n-title="extractText" title="Extract Text">Extract Text</button>
     <textarea id="ocrOutput" readonly style="display:none;width:100%;height:150px;"></textarea>
-    <div id="blankControls" style="display:none;">
-        <label for="blankThreshold" data-i18n="blankThreshold">Blank page threshold (%):</label>
-        <input type="number" id="blankThreshold" value="95" min="80" max="100" step="1" style="width:60px;">
-        <label><input type="checkbox" id="skipBlank" checked> <span data-i18n="skipBlank"></span></label>
-        <button id="removeBlankBtn" data-i18n="removeBlank">Remove blank pages</button>
-        <button id="restoreBlankBtn" data-i18n="restoreBlank" style="display:none;">Restore pages</button>
-    </div>
     <div id="layoutControls" style="display:none;">
-        <button id="togglePreviewBtn" data-i18n="togglePreview">Preview layout</button>
         <label for="layoutSelect" data-i18n="imagesPerPage">Images per page:</label>
         <select id="layoutSelect">
             <option value="1">1</option>
@@ -139,7 +135,6 @@
             <option value="bw" data-i18n="bw">B/W</option>
         </select>
     </div>
-    <div id="layoutPreview"></div>
 
     <div id="signatureControls" style="display:none;">
         <div id="signatureExtra" style="display:none;">
@@ -199,8 +194,17 @@
 
     <h2 data-i18n="processedImages">Processed Images:</h2>
     <p id="reorderHint" data-i18n="reorderHint" style="display:none;"></p>
-    <div id="galleryWrapper">
-        <div id="processedGallery"></div>
+    <div id="blankControls" style="margin-bottom:8px; display:none;">
+        <button id="layoutToggleBtn">Toggle layout</button>
+        <label for="blankThreshold" data-i18n="blankThreshold">Blank page threshold (%):</label>
+        <input type="number" id="blankThreshold" value="95" min="80" max="100" step="1" style="width:60px;">
+        <label><input type="checkbox" id="skipBlank" checked> <span data-i18n="skipBlank"></span></label>
+        <button id="removeBlankBtn" data-i18n="removeBlank">Remove blank pages</button>
+        <button id="restoreBlankBtn" data-i18n="restoreBlank" style="display:none;">Restore pages</button>
+        <button id="clearImagesBtn" data-i18n="clearImages">Clear images</button>
+    </div>
+    <div id="galleryWrapper" class="horizontal">
+        <div id="processedGallery" class="horizontal"></div>
     </div>
     <img id="processedImage" src="#" alt="Processed Document" style="display:none; max-width: 100%;">
     <div id="imageModal" class="modal" style="display:none;">
@@ -228,19 +232,24 @@
     <p id="statusMessage"></p>
     <a id="signedPdfLink" style="display:none;" download="signed.pdf"></a>
 
-    <footer id="pageFooter">
-        <div id="footerBrand">
-            <span data-i18n="realizzato">Powered by IlTuoConsulenteIT</span>
-            <img id="footerLogo" src="/static/logos/footer_logo.png" onerror="this.onerror=null;this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO3RqqEAAAAASUVORK5CYII='" alt="IlTuoConsulenteIT logo">
-        </div>
+      <footer id="pageFooter">
         <img id="sponsorBadge" src="/static/logos/sponsor_logo.png" alt="Sponsor logo" style="display:none;">
-        <div id="donateBox" style="display:none;"></div>
-        <span id="versionBox"></span>
+        <div id="footerBrand">
+            <a href="https://www.iltuoconsulenteit.it/site/index.php/applicazioni/doccropper" target="_blank" rel="noopener" style="display:flex;flex-direction:column;align-items:center;text-decoration:none;color:inherit;">
+                <span data-i18n="realizzato">By IlTuoConsulenteIT</span>
+                <img id="footerLogo" src="/static/logos/footer_logo.png" onerror="this.onerror=null;this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO3RqqEAAAAASUVORK5CYII='" alt="IlTuoConsulenteIT logo">
+            </a>
+            <span id="versionBox"></span>
+        </div>
+        <img id="clientBadge" src="/static/logos/client_logo.png" alt="Client logo" style="display:none;">
       </footer>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <script type="module" src="/static/app.js"></script>
     <script type="module" src="/static/plugins/mobilesign.js"></script>
+    <script type="module" src="/static/plugins/removebg.js"></script>
+    <script type="module" src="/static/plugins/compresspdf.js"></script>
+    <script type="module" src="/static/plugins/watermark.js"></script>
 </body>
 </html>
