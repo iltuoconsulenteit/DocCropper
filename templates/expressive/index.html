@@ -146,7 +146,7 @@
                   </div>
                   <div x-show="removeBgEnabled" class="flex flex-col items-center mt-1">
                     <label class="text-xs" x-text="t('removeBgThresholdPrompt')"></label>
-                    <input type="range" min="0" max="100" x-model.number="removeBgThreshold" @input="updateRemoveBgThreshold" class="w-24" />
+                    <input type="range" min="0" max="100" x-model.number="file.removeBgThreshold" @input="window.setRemoveBgThreshold && window.setRemoveBgThreshold(idx, file.removeBgThreshold)" class="w-24" />
                   </div>
                 </div>
               </div>
@@ -595,7 +595,6 @@
           removeSigBg:true,
           removeBgEnabled:false,
           watermarkEnabled:false,
-          removeBgThreshold:50,
           sigScale:1,
           activeSig:null,
           signatureAspect:1,
@@ -715,7 +714,6 @@
                 this.files = [...this.files];
               }
             };
-            this.updateRemoveBgThreshold();
           },
           async command(action){
             switch(action){
@@ -823,7 +821,7 @@
                     canvas.height = viewport.height;
                     await page.render({ canvasContext: ctx, viewport }).promise;
                     const data = canvas.toDataURL();
-                    loaded.push({ id: Date.now()+Math.random(), name: `${f.name} p${i}`, url: data, original: data });
+                    loaded.push({ id: Date.now()+Math.random(), name: `${f.name} p${i}`, url: data, original: data, removeBgThreshold:50 });
                   }
                 } catch (err) {
                   console.error('PDF import failed', err);
@@ -835,7 +833,7 @@
                   reader.onerror = reject;
                   reader.readAsDataURL(f);
                 });
-                loaded.push({ id: Date.now()+Math.random(), name: f.name, url: data, original: data });
+                loaded.push({ id: Date.now()+Math.random(), name: f.name, url: data, original: data, removeBgThreshold:50 });
               }
             }
             this.files.push(...loaded);
@@ -910,7 +908,8 @@
               const blob = await resp.blob();
               const fd = new FormData();
               fd.append('image_file', blob, `image${idx}.png`);
-              const r = await fetch(`/remove-background/?threshold=${this.removeBgThreshold}`, {method:'POST', body:fd});
+              const thr = this.files[idx].removeBgThreshold ?? 50;
+              const r = await fetch(`/remove-background/?threshold=${thr}`, {method:'POST', body:fd});
               if(!r.ok){ alert(this.t('removeBgFailed')); return; }
               const data = await r.json();
               if(data.image){
@@ -924,11 +923,6 @@
             }catch(e){
               console.error('remove background error', e);
               alert(this.t('removeBgFailed'));
-            }
-          },
-          updateRemoveBgThreshold(){
-            if (typeof window.setRemoveBgThreshold === 'function') {
-              window.setRemoveBgThreshold(this.removeBgThreshold);
             }
           },
           isBlankImage(src, thr){

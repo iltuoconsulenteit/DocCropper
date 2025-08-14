@@ -4,7 +4,7 @@ export function initRemoveBgPlugin(translations, enabled = true) {
         window.setRemoveBgThreshold = () => {};
         return;
     }
-    let threshold = 50;
+    const thresholds = [];
     const originals = window.bgOriginals || [];
     window.bgOriginals = originals;
 
@@ -19,11 +19,15 @@ export function initRemoveBgPlugin(translations, enabled = true) {
             btn.textContent = '⌦';
         }
     }
-    function setRemoveBgThreshold(val) {
+    function setRemoveBgThreshold(index, val) {
         const num = parseInt(val, 10);
         if (!isNaN(num) && num >= 0 && num <= 100) {
-            threshold = num;
+            thresholds[index] = num;
         }
+    }
+    function getRemoveBgThreshold(index) {
+        const val = thresholds[index];
+        return typeof val === 'number' ? val : 50;
     }
     async function removeBackground(index) {
         try {
@@ -45,7 +49,8 @@ export function initRemoveBgPlugin(translations, enabled = true) {
             const blob = await resp.blob();
             const fd = new FormData();
             fd.append('image_file', blob, `image${index}.png`);
-            const r = await fetch(`/remove-background/?threshold=${threshold}`, {
+            const thr = getRemoveBgThreshold(index);
+            const r = await fetch(`/remove-background/?threshold=${thr}`, {
                 method: 'POST',
                 body: fd,
             });
@@ -75,4 +80,5 @@ export function initRemoveBgPlugin(translations, enabled = true) {
     }
     window.removeBackground = removeBackground;
     window.setRemoveBgThreshold = setRemoveBgThreshold;
+    window.getRemoveBgThreshold = getRemoveBgThreshold;
 }

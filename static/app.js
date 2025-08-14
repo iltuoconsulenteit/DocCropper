@@ -1247,12 +1247,12 @@ function addThumbnail(src, index) {
         thrInput.type = 'range';
         thrInput.min = '0';
         thrInput.max = '100';
-        thrInput.value = '50';
+        thrInput.value = window.getRemoveBgThreshold ? window.getRemoveBgThreshold(index) : '50';
         thrInput.title = t('removeBgThresholdPrompt');
         thrInput.addEventListener('input', (e) => {
             e.stopPropagation();
             if (typeof window.setRemoveBgThreshold === 'function') {
-                window.setRemoveBgThreshold(parseInt(e.target.value, 10));
+                window.setRemoveBgThreshold(index, parseInt(e.target.value, 10));
             }
         });
         thrWrap.appendChild(thrInput);
