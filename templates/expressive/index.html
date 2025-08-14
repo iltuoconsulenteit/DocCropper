@@ -1264,9 +1264,13 @@
     </div>
     <script type="module">
       import { initSignaturePlugin } from '/static/plugins/mobilesign.js';
+      import { initRemoveBgPlugin } from '/static/plugins/removebg.js';
+      import { initPdfCompressPlugin } from '/static/plugins/compresspdf.js';
       const lang = window.DC_LANG || document.documentElement.lang || 'en';
       const trans = (window.dcStrings && window.dcStrings[lang]) ? window.dcStrings[lang] : {};
       initSignaturePlugin(trans, true);
+      initRemoveBgPlugin(trans, true);
+      initPdfCompressPlugin(trans, true);
 
       function calculateGrid() {
         const layout = parseInt(document.getElementById('layoutSelect')?.value || '1');
