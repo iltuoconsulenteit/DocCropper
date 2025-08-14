@@ -67,7 +67,13 @@
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('import')" x-text="t('import')"></button>
           </li>
           <li>
+            <button id="signBtn" class="w-full text-left p-2 hover:bg-gray-700" @click="command('sign')" x-text="t('sign')"></button>
+          </li>
+          <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('export')" x-text="t('export')"></button>
+          </li>
+          <li x-show="compressEnabled">
+            <button id="compressBtn" class="w-full text-left p-2 hover:bg-gray-700" @click="command('compress')" x-text="t('compression')"></button>
           </li>
           <li>
             <button id="mobileSignBtn" class="w-full text-left p-2 hover:bg-gray-700" @click="command('mobileSign')" x-text="t('mobileSign')"></button>
@@ -378,6 +384,7 @@
             sign:'Sign',
             import:'Import',
             mobileSign:'Mobile Sign',
+            compression:'Compression',
             navigation:'Navigation',
             files:'Files',
             guide:'Guide',
@@ -456,6 +463,7 @@
             sign:'Firma',
             import:'Importa',
             mobileSign:'Firma Mobile',
+            compression:'Compressione',
             navigation:'Navigazione',
             files:'File',
             guide:'Guida',
@@ -560,6 +568,7 @@
           signatures:[],
           removeSigBg:true,
           removeBgEnabled:false,
+          compressEnabled:false,
           sigScale:1,
           activeSig:null,
           signatureAspect:1,
@@ -636,6 +645,7 @@
               this.licenseName = cfg.license_name || '';
               this.licenseNameInput = this.licenseName;
               this.licenseLevel = (cfg.license_level || 'free').toLowerCase();
+              this.compressEnabled = !!cfg.enable_compresspdf && this.licenseLevel !== 'free';
               const mode = cfg.payment_mode && cfg.payment_mode.toLowerCase();
               if(mode==='donation'){
                 this.donateLink = cfg.paypal_link || DEFAULT_PAYPAL;
@@ -666,8 +676,14 @@
               case 'import':
                 await window.DC.import();
                 break;
+              case 'sign':
+                await window.DC.sign();
+                break;
               case 'mobileSign':
                 await window.DC.mobileSign();
+                break;
+              case 'compress':
+                await window.DC.export();
                 break;
               case 'guide':
                 this.tab='guide';
