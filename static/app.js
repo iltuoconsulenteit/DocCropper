@@ -1274,7 +1274,7 @@ function addThumbnail(src, index) {
     if (watermarkEnabled) {
         const wmBtn = document.createElement('button');
         wmBtn.className = 'thumbBtn watermarkBtn';
-        wmBtn.textContent = 'WM';
+        wmBtn.textContent = '🖆';
         wmBtn.title = t('watermark');
         wmBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -2003,6 +2003,9 @@ async function generatePdf() {
     if (processedImages.length === 0) {
         statusMessageElement.textContent = 'No processed images to export.';
         return;
+    }
+    if (window.mergeAllWatermarks) {
+        await window.mergeAllWatermarks();
     }
     await mergeAllSignatures();
     if (signedPdfLink) signedPdfLink.style.display = 'none';
