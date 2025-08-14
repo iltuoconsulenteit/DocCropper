@@ -58,7 +58,10 @@
         <div id="cameraControls" style="display:none;">
             <label for="cameraSelect" data-i18n="cameraSelectLabel">Camera:</label>
             <select id="cameraSelect"></select>
-            <video id="cameraPreview" autoplay playsinline></video>
+            <div id="cameraPreviewWrapper">
+                <video id="cameraPreview" autoplay playsinline></video>
+                <div id="cameraOverlay"></div>
+            </div>
             <button id="captureBtn" data-i18n="capturePhoto" data-i18n-title="capturePhoto" title="Capture">Capture</button>
             <input type="file" id="cameraFileInput" accept="image/*" capture="environment" multiple style="display:none;">
         </div>

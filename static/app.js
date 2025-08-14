@@ -295,7 +295,7 @@ function stopCamera() {
     cameraAvailable = false;
 }
 
-function capturePhoto() {
+async function capturePhoto() {
     if (!cameraStream || !cameraAvailable) {
         cameraFileInput.click();
         return;
@@ -311,10 +311,11 @@ function capturePhoto() {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL('image/jpeg', CAPTURE_QUALITY);
     const blob = dataURItoBlob(dataUrl);
-    files.push(blob);
-    currentFileIndex = files.length - 1;
-    currentFile = blob;
-    setupImage(dataUrl);
+    const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+    await addFiles([file]);
+    if (statusMessageElement) {
+        statusMessageElement.textContent = t('photoAdded');
+    }
 }
 
 function dataURItoBlob(dataURI) {

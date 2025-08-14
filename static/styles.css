@@ -625,6 +625,21 @@ button:hover {
     margin-top: 10px;
 }
 
+#cameraPreviewWrapper {
+    position: relative;
+}
+
+#cameraOverlay {
+    position: absolute;
+    top: 10%;
+    left: 10%;
+    width: 80%;
+    height: 80%;
+    border: 2px dashed rgba(255,255,255,0.8);
+    pointer-events: none;
+    box-sizing: border-box;
+}
+
 #wikiFrame {
     width: 100%;
     height: 300px;
