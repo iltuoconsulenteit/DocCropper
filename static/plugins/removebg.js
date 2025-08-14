@@ -13,17 +13,13 @@ export function initRemoveBgPlugin(translations, enabled = true) {
         if (!btn) return;
         if (removed) {
             btn.title = translations.restoreBg || 'Restore background';
-            btn.textContent = '↺';
+            btn.textContent = '↩';
         } else {
             btn.title = translations.removeBg || 'Remove background';
             btn.textContent = '⌦';
         }
     }
-    function setRemoveBgThreshold() {
-        const val = prompt(
-            translations.removeBgThresholdPrompt || 'Threshold (%)',
-            String(threshold)
-        );
+    function setRemoveBgThreshold(val) {
         const num = parseInt(val, 10);
         if (!isNaN(num) && num >= 0 && num <= 100) {
             threshold = num;

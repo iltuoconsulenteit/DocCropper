@@ -25,7 +25,6 @@
   "delete": "Delete",
   "removeBg": "Remove background",
   "restoreBg": "Restore background",
-  "setRemoveBgThreshold": "Set background threshold",
   "removeBgThresholdPrompt": "Background removal threshold (%)",
   "removeBgFailed": "Background removal failed",
   "compression": "Compression",

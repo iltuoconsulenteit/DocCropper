@@ -1130,7 +1130,6 @@ function addThumbnail(src, index) {
     addOption('edit', 'edit');
     if (removeBgEnabled) {
         addOption('removeBg', 'removeBg');
-        addOption('setRemoveBgThreshold', 'setRemoveBgThreshold');
     }
     addOption('delete', 'delete');
 
@@ -1191,11 +1190,12 @@ function addThumbnail(src, index) {
     });
     actions.appendChild(invertBtnEl);
 
+    let thrWrap;
     if (removeBgEnabled) {
         const bgBtnEl = document.createElement('button');
         bgBtnEl.className = 'thumbBtn removeBgBtn';
         if (bgOriginals[index]) {
-            bgBtnEl.textContent = '↺';
+            bgBtnEl.textContent = '↩';
             bgBtnEl.title = t('restoreBg');
         } else {
             bgBtnEl.textContent = '⌦';
@@ -1210,17 +1210,21 @@ function addThumbnail(src, index) {
         });
         actions.appendChild(bgBtnEl);
 
-        const bgThrBtn = document.createElement('button');
-        bgThrBtn.className = 'thumbBtn removeBgThresholdBtn';
-        bgThrBtn.textContent = '%';
-        bgThrBtn.title = t('setRemoveBgThreshold');
-        bgThrBtn.addEventListener('click', (e) => {
+        thrWrap = document.createElement('div');
+        thrWrap.className = 'thumbBgThreshold';
+        const thrInput = document.createElement('input');
+        thrInput.type = 'range';
+        thrInput.min = '0';
+        thrInput.max = '100';
+        thrInput.value = '50';
+        thrInput.title = t('removeBgThresholdPrompt');
+        thrInput.addEventListener('input', (e) => {
             e.stopPropagation();
             if (typeof window.setRemoveBgThreshold === 'function') {
-                window.setRemoveBgThreshold();
+                window.setRemoveBgThreshold(parseInt(e.target.value, 10));
             }
         });
-        actions.appendChild(bgThrBtn);
+        thrWrap.appendChild(thrInput);
     }
 
     if (signEnabled) {
@@ -1299,14 +1303,12 @@ function addThumbnail(src, index) {
             case 'removeBg':
                 if (typeof window.removeBackground === 'function') window.removeBackground(idx);
                 break;
-            case 'setRemoveBgThreshold':
-                if (typeof window.setRemoveBgThreshold === 'function') window.setRemoveBgThreshold();
-                break;
         }
         menu.value = '';
     });
 
     container.appendChild(actions);
+    if (removeBgEnabled) container.appendChild(thrWrap);
     container.appendChild(menu);
     processedGallery.appendChild(container);
     originalImages[index] = src;

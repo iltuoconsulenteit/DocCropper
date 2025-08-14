@@ -132,9 +132,12 @@
                     <button @click="toGray(idx)" title="Gray" class="text-base">🌑</button>
                     <button @click="toBW(idx)" title="B/W" class="text-base">⬛</button>
                     <button @click="toColor(idx)" title="Color" class="text-base">🎨</button>
-                    <button x-show="removeBgEnabled" @click="removeBg(idx)" :title="file.bgOriginal ? t('restoreBg') : t('removeBg')" class="text-base" x-text="file.bgOriginal ? '↺' : '⌦'"></button>
-                    <button x-show="removeBgEnabled" @click="setRemoveBgThreshold" :title="t('setRemoveBgThreshold')" class="text-base">%</button>
+                    <button x-show="removeBgEnabled" @click="removeBg(idx)" :title="file.bgOriginal ? t('restoreBg') : t('removeBg')" class="text-base" x-text="file.bgOriginal ? '↩' : '⌦'"></button>
                     <button @click="signPage(idx)" title="Sign" class="text-base">✒</button>
+                  </div>
+                  <div x-show="removeBgEnabled" class="flex flex-col items-center mt-1">
+                    <label class="text-xs" x-text="t('removeBgThresholdPrompt')"></label>
+                    <input type="range" min="0" max="100" x-model.number="removeBgThreshold" @input="updateRemoveBgThreshold" class="w-24" />
                   </div>
                 </div>
               </div>
@@ -411,7 +414,6 @@
             delete:'Delete',
             removeBg:'Remove BG',
             restoreBg:'Restore BG',
-            setRemoveBgThreshold:'Set background threshold',
             removeBgThresholdPrompt:'Background removal threshold (%)',
             removeBgFailed:'Background removal failed',
             imagesPerPage:'Images per page',
@@ -493,7 +495,6 @@
             delete:'Elimina',
             removeBg:'Rimuovi sfondo',
             restoreBg:'Ripristina sfondo',
-            setRemoveBgThreshold:'Imposta soglia sfondo',
             removeBgThresholdPrompt:'Soglia rimozione sfondo (%)',
             removeBgFailed:'Rimozione sfondo fallita',
             imagesPerPage:'Immagini per pagina',
@@ -646,6 +647,7 @@
               if (this.files.length > 0) this.signPage(0);
             };
             window.getProcessedImages = () => this.files.map(f => f.url);
+            this.updateRemoveBgThreshold();
           },
           async command(action){
             switch(action){
@@ -855,10 +857,10 @@
               alert(this.t('removeBgFailed'));
             }
           },
-          setRemoveBgThreshold(){
-            const val = prompt(this.t('removeBgThresholdPrompt'), String(this.removeBgThreshold));
-            const num = parseInt(val,10);
-            if(!isNaN(num) && num>=0 && num<=100) this.removeBgThreshold = num;
+          updateRemoveBgThreshold(){
+            if (typeof window.setRemoveBgThreshold === 'function') {
+              window.setRemoveBgThreshold(this.removeBgThreshold);
+            }
           },
           _convertColor(idx, mode){
             const img = new Image();
