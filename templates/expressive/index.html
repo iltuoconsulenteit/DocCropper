@@ -112,8 +112,12 @@
           <template x-if="files.length === 0">
             <p class="text-gray-600" x-text="t('noFiles')"></p>
           </template>
-          <div x-show="files.length > 0" class="text-right mb-2">
-            <button class="px-2 py-1 border rounded text-xs" @click="toggleLayout" x-text="layoutHorizontal ? t('verticalView') : t('horizontalView')"></button>
+          <div x-show="files.length > 0" class="flex flex-wrap items-center justify-end gap-2 mb-2">
+            <button class="px-2 py-1 border rounded text-xs" @click="toggleLayout" x-text="layoutHorizontal ? t('horizontalView') : t('verticalView')"></button>
+            <label class="text-xs" for="blankThreshold" x-text="t('blankThreshold')"></label>
+            <input id="blankThreshold" type="number" min="80" max="100" step="1" class="w-16 border rounded text-xs" x-model.number="blankThreshold">
+            <button class="px-2 py-1 border rounded text-xs" @click="removeBlankPages" x-text="t('removeBlank')"></button>
+            <button class="px-2 py-1 border rounded text-xs" @click="clearImages" x-text="t('clearImages')"></button>
           </div>
           <div x-show="files.length > 0" x-ref="fileGrid" :class="layoutHorizontal ? 'flex overflow-x-auto space-x-4' : 'grid grid-cols-1 lg:grid-cols-2 gap-4'">
             <template x-for="(file, idx) in files" :key="file.id">
@@ -419,8 +423,12 @@
             imagesPerPage:'Images per page',
             orientation:'Orientation',
             layout:'Layout',
-            horizontalView:'Horizontal bar',
-            verticalView:'Vertical bar',
+            horizontalView:'Vertical bar',
+            verticalView:'Horizontal bar',
+            blankThreshold:'Blank page threshold (%)',
+            removeBlank:'Remove blank pages',
+            clearImages:'Clear images',
+            confirmClearImages:'Remove all images?',
             imageSize:'Image size',
             colorMode:'Color mode',
             portrait:'Portrait',
@@ -500,8 +508,12 @@
             imagesPerPage:'Immagini per pagina',
             orientation:'Orientamento',
             layout:'Disposizione',
-            horizontalView:'Barra orizzontale',
-            verticalView:'Barra verticale',
+            horizontalView:'Barra verticale',
+            verticalView:'Barra orizzontale',
+            blankThreshold:'Soglia pagina bianca (%)',
+            removeBlank:'Rimuovi pagine bianche',
+            clearImages:'Azzera immagini',
+            confirmClearImages:'Rimuovere tutte le immagini?',
             imageSize:'Dimensione immagine',
             colorMode:'Modalità colore',
             portrait:'Verticale',
@@ -547,6 +559,7 @@
           lastTap:0,
           files:[],
           layoutHorizontal:false,
+          blankThreshold:95,
           signModal:false,
           drawModal:false,
           drawing:false,
@@ -627,6 +640,7 @@
               this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
               this.removeBgEnabled = !!cfg.enable_removebg;
               this.maxUpload = parseInt(cfg.max_upload_files || 10);
+              this.blankThreshold = parseInt(cfg.blank_threshold || 95);
               this.version = cfg.version || '';
               this.versionDate = cfg.version_date || '';
               this.licenseKey = cfg.license_key || '';
@@ -860,6 +874,41 @@
           updateRemoveBgThreshold(){
             if (typeof window.setRemoveBgThreshold === 'function') {
               window.setRemoveBgThreshold(this.removeBgThreshold);
+            }
+          },
+          isBlankImage(src, thr){
+            return new Promise(resolve => {
+              const img = new Image();
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const scale = Math.min(100 / img.width, 100 / img.height, 1);
+                canvas.width = Math.floor(img.width * scale);
+                canvas.height = Math.floor(img.height * scale);
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img,0,0,canvas.width,canvas.height);
+                const data = ctx.getImageData(0,0,canvas.width,canvas.height).data;
+                let white = 0;
+                for(let i=0;i<data.length;i+=4){
+                  if(data[i]>240 && data[i+1]>240 && data[i+2]>240) white++;
+                }
+                const ratio = white / (data.length/4);
+                resolve(ratio >= thr);
+              };
+              img.src = src;
+            });
+          },
+          async removeBlankPages(){
+            const thr = this.blankThreshold/100;
+            const keep = [];
+            for(const f of this.files){
+              const blank = await this.isBlankImage(f.url, thr);
+              if(!blank) keep.push(f);
+            }
+            this.files = keep;
+          },
+          clearImages(){
+            if(confirm(this.t('confirmClearImages'))){
+              this.files = [];
             }
           },
           _convertColor(idx, mode){
