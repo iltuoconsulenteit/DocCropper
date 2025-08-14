@@ -1,5 +1,7 @@
 import interact from 'https://cdn.interactjs.io/v1.10.11/interactjs/index.js';
 import { initSignaturePlugin } from './plugins/mobilesign.js';
+import { initRemoveBgPlugin } from './plugins/removebg.js';
+import { initPdfCompressPlugin } from './plugins/compresspdf.js';
 
 let scaling_factor_w;
 let scaling_factor_h;
@@ -22,6 +24,7 @@ const exportOptions = document.getElementById('exportOptions');
 const downloadPdfBtn = document.getElementById('downloadPdfBtn');
 const waShareBtn = document.getElementById('waShareBtn');
 const emailShareBtn = document.getElementById('emailShareBtn');
+const closeExportBtn = document.getElementById('closeExportBtn');
 const layoutControls = document.getElementById('layoutControls');
 const blankControls = document.getElementById('blankControls');
 const layoutSelect = document.getElementById('layoutSelect');
@@ -29,6 +32,7 @@ const orientationSelect = document.getElementById('orientationSelect');
 const arrangeSelect = document.getElementById('arrangeSelect');
 const scaleMode = document.getElementById('scaleMode');
 const scalePercent = document.getElementById('scalePercent');
+const scalePercentSymbol = document.getElementById('scalePercentSymbol');
 const colorModeSelect = document.getElementById('colorModeSelect');
 const colorModeLabel = document.querySelector("label[for='colorModeSelect']");
 const blankThresholdInput = document.getElementById('blankThreshold');
@@ -36,25 +40,29 @@ const blankThresholdLabel = document.querySelector("label[for='blankThreshold']"
 const skipBlankCheckbox = document.getElementById('skipBlank');
 const removeBlankBtn = document.getElementById('removeBlankBtn');
 const restoreBlankBtn = document.getElementById('restoreBlankBtn');
+const clearImagesBtn = document.getElementById('clearImagesBtn');
 let globalColorMode = 'color';
 let blankThreshold = 95;
 let skipBlank = true;
 const processedImageElement = document.getElementById('processedImage');
 const processedGallery = document.getElementById('processedGallery');
+const galleryWrapper = document.getElementById('galleryWrapper');
 const statusMessageElement = document.getElementById('statusMessage');
 const signedPdfLink = document.getElementById('signedPdfLink');
+const exportPreviewFrame = document.getElementById('exportPreviewFrame');
 const reorderHint = document.getElementById('reorderHint');
 const imageModal = document.getElementById('imageModal');
 const modalImage = document.getElementById('modalImage');
 const closeModal = document.getElementById('closeModal');
 const langSelect = document.getElementById('langSelect');
 const layoutPreview = document.getElementById('layoutPreview');
-const togglePreviewBtn = document.getElementById('togglePreviewBtn');
 const licenseInfo = document.getElementById('licenseInfo');
 const purchaseBox = document.getElementById('purchaseBox');
 const licenseBox = document.getElementById('licenseBox');
 const settingsBox = document.getElementById('settingsBox');
 const loginArea = document.getElementById('loginArea');
+const layoutToggleBtn = document.getElementById('layoutToggleBtn');
+let galleryHorizontal = true;
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
 const donateBox = document.getElementById('donateBox');
@@ -76,6 +84,7 @@ const openWikiLink = document.getElementById('openWikiLink');
 const clientLogo = document.getElementById('clientLogo');
 const sponsorLogo = document.getElementById('sponsorLogo');
 const sponsorBadge = document.getElementById('sponsorBadge');
+const clientBadge = document.getElementById('clientBadge');
 const headerLogo = document.getElementById('headerLogo');
 const footerLogo = document.getElementById('footerLogo');
 const autoDetectHint = document.getElementById('autoDetectHint');
@@ -136,10 +145,25 @@ const cameraControls = document.getElementById('cameraControls');
 const cameraPreview = document.getElementById('cameraPreview');
 const cameraSelect = document.getElementById('cameraSelect');
 const captureBtn = document.getElementById('captureBtn');
+const cameraOverlay = document.getElementById('cameraOverlay');
+const cameraMargin = document.getElementById('cameraMargin');
 const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 const cameraFileInput = document.getElementById('cameraFileInput');
 const CAPTURE_MAX_DIM = 1600;
 const CAPTURE_QUALITY = 0.8;
+
+function updateCameraOverlay() {
+    if (!cameraOverlay || !cameraMargin) return;
+    const m = parseInt(cameraMargin.value || '0');
+    cameraOverlay.style.top = m + '%';
+    cameraOverlay.style.left = m + '%';
+    cameraOverlay.style.width = (100 - 2 * m) + '%';
+    cameraOverlay.style.height = (100 - 2 * m) + '%';
+}
+if (cameraMargin) {
+    cameraMargin.addEventListener('input', updateCameraOverlay);
+    updateCameraOverlay();
+}
 
 let isLicensed = false;
 let licenseName = '';
@@ -151,12 +175,15 @@ let demoFullMode = false;
 const MAX_IMAGES_FREE = 5;
 const MAX_FILE_MB = 20;
 const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
+let MAX_UPLOAD_FILES = 10;
 
 let files = [];
 let currentFileIndex = 0;
 let processedImages = [];
 window.processedImages = processedImages;
 let originalImages = [];
+let bgOriginals = [];
+window.bgOriginals = bgOriginals;
 let processedFiles = [];
 let removedPages = [];
 let editingIndex = null;
@@ -174,6 +201,8 @@ let docusealEnabled = false;
 let signEnabled = true;
 let mobileSignEnabled = false;
 let remoteSignEnabled = false;
+let removeBgEnabled = false;
+let compressEnabled = false;
 
 let translations = {};
 let currentLang = 'en';
@@ -269,7 +298,6 @@ if (digitalSignBtn) {
             console.error('Docuseal sign error', e);
             statusMessageElement.textContent = translations['docusealError'] || 'Docuseal request failed';
         }
-        exportOptions.style.display = 'none';
     });
 }
 
@@ -282,7 +310,7 @@ function stopCamera() {
     cameraAvailable = false;
 }
 
-function capturePhoto() {
+async function capturePhoto() {
     if (!cameraStream || !cameraAvailable) {
         cameraFileInput.click();
         return;
@@ -290,18 +318,24 @@ function capturePhoto() {
     const video = cameraPreview;
     let w = video.videoWidth;
     let h = video.videoHeight;
-    const scale = Math.min(1, CAPTURE_MAX_DIM / Math.max(w, h));
+    const m = cameraMargin ? parseInt(cameraMargin.value || '0') : 0;
+    const cropX = (w * m) / 100;
+    const cropY = (h * m) / 100;
+    const sw = w - 2 * cropX;
+    const sh = h - 2 * cropY;
+    const scale = Math.min(1, CAPTURE_MAX_DIM / Math.max(sw, sh));
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(w * scale);
-    canvas.height = Math.round(h * scale);
+    canvas.width = Math.round(sw * scale);
+    canvas.height = Math.round(sh * scale);
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, cropX, cropY, sw, sh, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL('image/jpeg', CAPTURE_QUALITY);
     const blob = dataURItoBlob(dataUrl);
-    files.push(blob);
-    currentFileIndex = files.length - 1;
-    currentFile = blob;
-    setupImage(dataUrl);
+    const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+    await addFiles([file]);
+    if (statusMessageElement) {
+        statusMessageElement.textContent = t('photoAdded');
+    }
 }
 
 function dataURItoBlob(dataURI) {
@@ -396,6 +430,7 @@ async function importPdfPages(file) {
         const dataUrl = await fileToDataURL(imgFile);
         processedImages.push(dataUrl);
         originalImages.push(dataUrl);
+        bgOriginals.push(null);
         addThumbnail(dataUrl, processedImages.length - 1);
     }
     if (processedImages.length > 0) {
@@ -404,7 +439,15 @@ async function importPdfPages(file) {
         if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
         if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
         layoutControls.style.display = 'block';
-        if (blankControls) blankControls.style.display = 'block';
+        if (exportOptions) {
+            exportOptions.style.display = 'block';
+        }
+        if (signedPdfLink) signedPdfLink.style.display = 'none';
+        if (exportPreviewFrame) exportPreviewFrame.style.display = 'none';
+        if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
+        if (waShareBtn) waShareBtn.style.display = 'none';
+        if (emailShareBtn) emailShareBtn.style.display = 'none';
+        if (blankControls) blankControls.style.display = 'flex';
         if (signatureImg) {
             signaturePreview.style.display = 'block';
             signatureHint.style.display = 'block';
@@ -457,6 +500,7 @@ function applySettings(cfg) {
     if (cfg.scale_mode) {
         scaleMode.value = cfg.scale_mode;
         scalePercent.style.display = scaleMode.value === 'percent' ? 'inline-block' : 'none';
+        if (scalePercentSymbol) scalePercentSymbol.style.display = scaleMode.value === 'percent' ? 'inline' : 'none';
     }
     if (cfg.scale_percent !== undefined) {
         scalePercent.value = cfg.scale_percent;
@@ -472,6 +516,9 @@ function applySettings(cfg) {
     if (cfg.skip_blank !== undefined) {
         skipBlank = !!cfg.skip_blank;
         if (skipBlankCheckbox) skipBlankCheckbox.checked = skipBlank;
+    }
+    if (cfg.max_upload_files !== undefined) {
+        MAX_UPLOAD_FILES = parseInt(cfg.max_upload_files);
     }
     if (cfg.license_level) {
         currentLicenseLevel = cfg.license_level.toLowerCase();
@@ -509,10 +556,20 @@ function applySettings(cfg) {
             sponsorLogo.style.display = 'none';
         }
     }
+    if (clientBadge) {
+        if (cfg.client_logo) {
+            clientBadge.src = `/static/logos/${cfg.client_logo}`;
+            clientBadge.style.display = 'block';
+            clientBadge.style.maxHeight = (cfg.client_logo_height || 125) + 'px';
+        } else {
+            clientBadge.style.display = 'none';
+        }
+    }
     if (sponsorBadge) {
         if (cfg.sponsor_logo) {
             sponsorBadge.src = `/static/logos/${cfg.sponsor_logo}`;
             sponsorBadge.style.display = 'block';
+            sponsorBadge.style.maxHeight = (cfg.sponsor_logo_height || 125) + 'px';
         } else {
             sponsorBadge.style.display = 'none';
         }
@@ -542,10 +599,16 @@ function applySettings(cfg) {
     signEnabled = cfg.enable_sign !== false;
     mobileSignEnabled = !!cfg.enable_mobilesign;
     remoteSignEnabled = !!cfg.enable_remotesign;
+    removeBgEnabled = !!cfg.enable_removebg;
+    if (typeof initRemoveBgPlugin === 'function' && Object.keys(translations).length) {
+        initRemoveBgPlugin(translations, removeBgEnabled);
+    }
+    compressEnabled = !!cfg.enable_compresspdf && currentLicenseLevel !== 'free';
     if (digitalSignBtn) {
         digitalSignBtn.disabled = !docusealEnabled || currentLicenseLevel === 'free' || !remoteSignEnabled;
     }
     if (mobileSignBtn) mobileSignBtn.style.display = mobileSignEnabled ? 'inline-block' : 'none';
+    // remove background buttons added per thumbnail when enabled
     if (signBtn && !signEnabled) signBtn.style.display = 'none';
     if (demoNotice) demoNotice.style.display = demoFullMode ? 'block' : 'none';
     if (purchaseBtn) {
@@ -586,6 +649,30 @@ async function loadTranslations(lang) {
 
 function t(key) {
     return translations[key] || key;
+}
+
+function updateGalleryLayout() {
+    if (!galleryWrapper || !processedGallery || !layoutToggleBtn) return;
+    if (galleryHorizontal) {
+        galleryWrapper.classList.add('horizontal');
+        galleryWrapper.classList.remove('vertical');
+        processedGallery.classList.add('horizontal');
+        processedGallery.classList.remove('vertical');
+        layoutToggleBtn.textContent = t('verticalView');
+    } else {
+        galleryWrapper.classList.add('vertical');
+        galleryWrapper.classList.remove('horizontal');
+        processedGallery.classList.add('vertical');
+        processedGallery.classList.remove('horizontal');
+        layoutToggleBtn.textContent = t('horizontalView');
+    }
+}
+
+if (layoutToggleBtn) {
+    layoutToggleBtn.addEventListener('click', () => {
+        galleryHorizontal = !galleryHorizontal;
+        updateGalleryLayout();
+    });
 }
 
 function applyTranslations() {
@@ -646,6 +733,7 @@ function applyTranslations() {
     if (autoDetectHint) {
         autoDetectHint.textContent = translations['autoHint'] || 'Double click to auto-detect';
     }
+    updateGalleryLayout();
     updateWikiLinks();
     startBannerRotation();
 }
@@ -724,7 +812,7 @@ function calculateGrid() {
 }
 
 function updateLayoutPreview() {
-    if (!layoutPreview.classList.contains('visible')) return;
+    if (!layoutPreview || layoutPreview.style.display === 'none') return;
     const {cols, rows} = calculateGrid();
     layoutPreview.innerHTML = '';
     const orientation = orientationSelect.value || 'portrait';
@@ -736,9 +824,24 @@ function updateLayoutPreview() {
     for (let i = 0; i < total; i++) {
         const cell = document.createElement('div');
         cell.className = 'cell';
+        const src = processedImages[i];
+        if (src) {
+            const img = document.createElement('img');
+            img.src = src;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = scaleMode.value === 'fit' ? 'cover' : 'contain';
+            if (globalColorMode === 'gray') {
+                img.style.filter = 'grayscale(100%)';
+            } else if (globalColorMode === 'bw') {
+                img.style.filter = 'grayscale(100%) contrast(200%)';
+            }
+            cell.appendChild(img);
+        }
         layoutPreview.appendChild(cell);
     }
 }
+window.updateLayoutPreview = updateLayoutPreview;
 
 function openModal(src) {
     modalImage.src = src;
@@ -811,6 +914,46 @@ function rotateImage(index) {
     img.src = originalImages[index] || processedImages[index];
 }
 
+function flipImage(index) {
+    const img = new Image();
+    img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(img, 0, 0);
+        const flippedData = canvas.toDataURL('image/png');
+        processedImages[index] = flippedData;
+        if (originalImages[index]) originalImages[index] = flippedData;
+        const container = processedGallery.children[index];
+        container.querySelector('img').src = flippedData;
+        window.dispatchEvent(new CustomEvent('imageUpdated', { detail: { index, src: flippedData } }));
+    };
+    img.src = originalImages[index] || processedImages[index];
+}
+
+function invertImage(index) {
+    const img = new Image();
+    img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.translate(canvas.width, canvas.height);
+        ctx.rotate(Math.PI);
+        ctx.drawImage(img, 0, 0);
+        const invertedData = canvas.toDataURL('image/png');
+        processedImages[index] = invertedData;
+        if (originalImages[index]) originalImages[index] = invertedData;
+        const container = processedGallery.children[index];
+        container.querySelector('img').src = invertedData;
+        window.dispatchEvent(new CustomEvent('imageUpdated', { detail: { index, src: invertedData } }));
+    };
+    img.src = originalImages[index] || processedImages[index];
+}
+
 function convertColor(index, mode) {
     if (mode === 'color') {
         if (originalImages[index]) {
@@ -862,6 +1005,7 @@ function convertColor(index, mode) {
 function deleteImage(index) {
     processedImages.splice(index, 1);
     originalImages.splice(index, 1);
+    bgOriginals.splice(index, 1);
     processedFiles.splice(index, 1);
     processedGallery.removeChild(processedGallery.children[index]);
     refreshThumbnailIndexes();
@@ -872,6 +1016,12 @@ function deleteImage(index) {
         ocrBtn.style.display = 'none';
         ocrOutput.style.display = 'none';
         layoutControls.style.display = 'none';
+        if (exportOptions) exportOptions.style.display = 'none';
+        if (signedPdfLink) signedPdfLink.style.display = 'none';
+        if (exportPreviewFrame) exportPreviewFrame.style.display = 'none';
+        if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
+        if (waShareBtn) waShareBtn.style.display = 'none';
+        if (emailShareBtn) emailShareBtn.style.display = 'none';
         if (blankControls) blankControls.style.display = 'none';
         signatureControls.style.display = 'none';
         signaturePreview.style.display = 'none';
@@ -883,6 +1033,7 @@ function deleteImage(index) {
 function openSignatureForPage(idx) {
     populateSignaturePages();
     signaturePage.value = idx;
+    scaleTarget = 'current';
     updateSignatureTargetOptions();
     signatureControls.style.display = 'block';
     signatureExtra.style.display = 'block';
@@ -891,6 +1042,10 @@ function openSignatureForPage(idx) {
     if (legalDisclaimerEl) legalDisclaimerEl.style.display = 'block';
     renderSignaturePreview();
 }
+
+// Expose signature helpers for global adapters
+window.openSignatureForPage = openSignatureForPage;
+window.startSign = () => openSignatureForPage(0);
 
 function cropImage(index) {
     editingIndex = index;
@@ -907,6 +1062,12 @@ function cropImage(index) {
     ocrBtn.style.display = 'none';
     ocrOutput.style.display = 'none';
     layoutControls.style.display = 'none';
+    if (exportOptions) exportOptions.style.display = 'none';
+    if (signedPdfLink) signedPdfLink.style.display = 'none';
+    if (exportPreviewFrame) exportPreviewFrame.style.display = 'none';
+    if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
+    if (waShareBtn) waShareBtn.style.display = 'none';
+    if (emailShareBtn) emailShareBtn.style.display = 'none';
     if (blankControls) blankControls.style.display = 'none';
     signatureControls.style.display = 'none';
     if (legalDisclaimerEl) legalDisclaimerEl.style.display = 'none';
@@ -921,17 +1082,18 @@ async function shareWhatsApp(phone) {
     }
     phone = phone ? phone.replace(/[^0-9]/g, '') : '';
     const url = window.lastSignedUrl || URL.createObjectURL(currentPdfBlob);
-    const wa = phone ?
-        `https://wa.me/${phone}?text=${encodeURIComponent(url)}` :
-        `https://wa.me/?text=${encodeURIComponent(url)}`;
+    const params = new URLSearchParams({ text: url });
+    if (phone) params.set('phone', phone);
+    const wa = `https://web.whatsapp.com/send?${params.toString()}`;
     window.open(wa, '_blank');
 }
 
 function shareWhatsAppLink(phone, link) {
     if (!link) return;
     phone = phone ? phone.replace(/[^0-9]/g, '') : '';
-    const wa = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(link)}` :
-        `https://wa.me/?text=${encodeURIComponent(link)}`;
+    const params = new URLSearchParams({ text: link });
+    if (phone) params.set('phone', phone);
+    const wa = `https://web.whatsapp.com/send?${params.toString()}`;
     window.open(wa, '_blank');
 }
 
@@ -980,12 +1142,17 @@ function addThumbnail(src, index) {
 
     addOption('', 'chooseAction');
     addOption('rotate', 'rotate');
+    addOption('flip', 'flip');
+    addOption('invert', 'invert');
     if (isLicensed && currentLicenseLevel !== 'free') {
         addOption('gray', 'toGray');
         addOption('bw', 'toBW');
         addOption('color', 'toColor');
     }
     addOption('edit', 'edit');
+    if (removeBgEnabled) {
+        addOption('removeBg', 'removeBg');
+    }
     addOption('delete', 'delete');
 
     const cropBtnEl = document.createElement('button');
@@ -1022,6 +1189,65 @@ function addThumbnail(src, index) {
         rotateImage(idx);
     });
     actions.appendChild(rotateBtnEl);
+
+    const flipBtnEl = document.createElement('button');
+    flipBtnEl.className = 'thumbBtn flipBtn';
+    flipBtnEl.textContent = '⇄';
+    flipBtnEl.title = t('flip');
+    flipBtnEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(container.dataset.index);
+        flipImage(idx);
+    });
+    actions.appendChild(flipBtnEl);
+
+    const invertBtnEl = document.createElement('button');
+    invertBtnEl.className = 'thumbBtn invertBtn';
+    invertBtnEl.textContent = '⇅';
+    invertBtnEl.title = t('invert');
+    invertBtnEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(container.dataset.index);
+        invertImage(idx);
+    });
+    actions.appendChild(invertBtnEl);
+
+    let thrWrap;
+    if (removeBgEnabled) {
+        const bgBtnEl = document.createElement('button');
+        bgBtnEl.className = 'thumbBtn removeBgBtn';
+        if (bgOriginals[index]) {
+            bgBtnEl.textContent = '↩';
+            bgBtnEl.title = t('restoreBg');
+        } else {
+            bgBtnEl.textContent = '⌦';
+            bgBtnEl.title = t('removeBg');
+        }
+        bgBtnEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            if (typeof window.removeBackground === 'function') {
+                window.removeBackground(idx);
+            }
+        });
+        actions.appendChild(bgBtnEl);
+
+        thrWrap = document.createElement('div');
+        thrWrap.className = 'thumbBgThreshold';
+        const thrInput = document.createElement('input');
+        thrInput.type = 'range';
+        thrInput.min = '0';
+        thrInput.max = '100';
+        thrInput.value = '50';
+        thrInput.title = t('removeBgThresholdPrompt');
+        thrInput.addEventListener('input', (e) => {
+            e.stopPropagation();
+            if (typeof window.setRemoveBgThreshold === 'function') {
+                window.setRemoveBgThreshold(parseInt(e.target.value, 10));
+            }
+        });
+        thrWrap.appendChild(thrInput);
+    }
 
     if (signEnabled) {
         const signPageBtn = document.createElement('button');
@@ -1075,6 +1301,12 @@ function addThumbnail(src, index) {
             case 'rotate':
                 rotateImage(idx);
                 break;
+            case 'flip':
+                flipImage(idx);
+                break;
+            case 'invert':
+                invertImage(idx);
+                break;
             case 'gray':
                 convertColor(idx, 'gray');
                 break;
@@ -1090,11 +1322,15 @@ function addThumbnail(src, index) {
             case 'delete':
                 deleteImage(idx);
                 break;
+            case 'removeBg':
+                if (typeof window.removeBackground === 'function') window.removeBackground(idx);
+                break;
         }
         menu.value = '';
     });
 
     container.appendChild(actions);
+    if (removeBgEnabled) container.appendChild(thrWrap);
     container.appendChild(menu);
     processedGallery.appendChild(container);
     originalImages[index] = src;
@@ -1110,16 +1346,20 @@ function updateProcessedArrays() {
     const newImages = [];
     const newFiles = [];
     const newOriginals = [];
+    const newBg = [];
     Array.from(processedGallery.children).forEach(c => {
         const idx = parseInt(c.dataset.index);
         newImages.push(processedImages[idx]);
         newFiles.push(processedFiles[idx]);
         newOriginals.push(originalImages[idx]);
+        newBg.push(bgOriginals[idx]);
     });
     processedImages = newImages;
     window.processedImages = processedImages;
     processedFiles = newFiles;
     originalImages = newOriginals;
+    bgOriginals = newBg;
+    window.bgOriginals = bgOriginals;
     refreshThumbnailIndexes();
 }
 
@@ -1172,20 +1412,24 @@ async function removeBlankPages() {
     const keepImages = [];
     const keepFiles = [];
     const keepOriginals = [];
+    const keepBg = [];
     for (let i = 0; i < processedImages.length; i++) {
         const blank = await isBlankImage(processedImages[i], thr);
         if (blank) {
-            removedPages.push({ index: i, image: processedImages[i], file: processedFiles[i], original: originalImages[i] });
+            removedPages.push({ index: i, image: processedImages[i], file: processedFiles[i], original: originalImages[i], bgOriginal: bgOriginals[i] });
         } else {
             keepImages.push(processedImages[i]);
             keepFiles.push(processedFiles[i]);
             keepOriginals.push(originalImages[i]);
+            keepBg.push(bgOriginals[i]);
         }
     }
     processedImages = keepImages;
     window.processedImages = processedImages;
     processedFiles = keepFiles;
     originalImages = keepOriginals;
+    bgOriginals = keepBg;
+    window.bgOriginals = bgOriginals;
     rebuildGallery();
     hideLoading();
     if (removedPages.length > 0) {
@@ -1202,6 +1446,7 @@ function restoreBlankPages() {
         processedImages.splice(idx, 0, p.image);
         processedFiles.splice(idx, 0, p.file);
         originalImages.splice(idx, 0, p.original);
+        bgOriginals.splice(idx, 0, p.bgOriginal || null);
     }
     removedPages = [];
     rebuildGallery();
@@ -1463,6 +1708,8 @@ async function addFiles(newFiles) {
         processedGallery.innerHTML = '';
         processedFiles = [];
         originalImages = [];
+        bgOriginals = [];
+        window.bgOriginals = bgOriginals;
         editingIndex = null;
     }
     for (const f of compressed) {
@@ -1471,6 +1718,7 @@ async function addFiles(newFiles) {
         const dataUrl = await fileToDataURL(f);
         processedImages.push(dataUrl);
         originalImages.push(dataUrl);
+        bgOriginals.push(null);
         addThumbnail(dataUrl, processedImages.length - 1);
     }
     if (files.length > processedImages.length && wrapperElement.style.display === 'none') {
@@ -1487,7 +1735,15 @@ async function addFiles(newFiles) {
         if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
         if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
         layoutControls.style.display = 'block';
-        if (blankControls) blankControls.style.display = 'block';
+        if (exportOptions) {
+            exportOptions.style.display = 'block';
+        }
+        if (signedPdfLink) signedPdfLink.style.display = 'none';
+        if (exportPreviewFrame) exportPreviewFrame.style.display = 'none';
+        if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
+        if (waShareBtn) waShareBtn.style.display = 'none';
+        if (emailShareBtn) emailShareBtn.style.display = 'none';
+        if (blankControls) blankControls.style.display = 'flex';
         if (signatureImg) {
             signaturePreview.style.display = 'block';
             signatureHint.style.display = 'block';
@@ -1502,7 +1758,11 @@ async function addFiles(newFiles) {
 }
 
 imageUploadElement.addEventListener('change', async (event) => {
-    const list = Array.from(event.target.files);
+    const all = Array.from(event.target.files);
+    const list = all.slice(0, MAX_UPLOAD_FILES);
+    if (all.length > MAX_UPLOAD_FILES) {
+        statusMessageElement.textContent = t('maxUploadLimit').replace('{n}', MAX_UPLOAD_FILES);
+    }
     const toProcess = [];
     for (const f of list) {
         if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
@@ -1526,7 +1786,11 @@ imageUploadElement.addEventListener('change', async (event) => {
 async function handleDrop(event) {
     event.preventDefault();
     if (event.dataTransfer && event.dataTransfer.files) {
-        const list = Array.from(event.dataTransfer.files);
+        const all = Array.from(event.dataTransfer.files);
+        const list = all.slice(0, MAX_UPLOAD_FILES);
+        if (all.length > MAX_UPLOAD_FILES) {
+            statusMessageElement.textContent = t('maxUploadLimit').replace('{n}', MAX_UPLOAD_FILES);
+        }
         const toProcess = [];
         for (const f of list) {
             if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
@@ -1641,8 +1905,16 @@ submitBtn.addEventListener('click', () => {
                 if (signBtn && signEnabled) signBtn.style.display = 'inline-block';
                 if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
                 if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
-                layoutControls.style.display = 'block';
-                if (blankControls) blankControls.style.display = 'block';
+        layoutControls.style.display = 'block';
+        if (exportOptions) {
+            exportOptions.style.display = 'block';
+        }
+        if (signedPdfLink) signedPdfLink.style.display = 'none';
+        if (exportPreviewFrame) exportPreviewFrame.style.display = 'none';
+        if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
+        if (waShareBtn) waShareBtn.style.display = 'none';
+        if (emailShareBtn) emailShareBtn.style.display = 'none';
+        if (blankControls) blankControls.style.display = 'flex';
                 updateLayoutPreview();
             } else {
                 processedImages[currentFileIndex] = data.processed_image;
@@ -1673,7 +1945,15 @@ submitBtn.addEventListener('click', () => {
                     if (mobileSignBtn && mobileSignEnabled) mobileSignBtn.style.display = 'inline-block';
                     if (OCR_ENABLED) ocrBtn.style.display = 'inline-block';
                     layoutControls.style.display = 'block';
-                    if (blankControls) blankControls.style.display = 'block';
+                    if (exportOptions) {
+                        exportOptions.style.display = 'block';
+                    }
+                    if (signedPdfLink) signedPdfLink.style.display = 'none';
+                    if (exportPreviewFrame) exportPreviewFrame.style.display = 'none';
+                    if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
+                    if (waShareBtn) waShareBtn.style.display = 'none';
+                    if (emailShareBtn) emailShareBtn.style.display = 'none';
+                    if (blankControls) blankControls.style.display = 'flex';
                     if (signatureImg) {
                         signaturePreview.style.display = 'block';
                         signatureHint.style.display = 'block';
@@ -1694,19 +1974,24 @@ submitBtn.addEventListener('click', () => {
     });
 });
 
-function generatePdf() {
+async function generatePdf() {
     if (processedImages.length === 0) {
         statusMessageElement.textContent = 'No processed images to export.';
         return;
     }
+    await mergeAllSignatures();
     if (signedPdfLink) signedPdfLink.style.display = 'none';
+    if (exportPreviewFrame) exportPreviewFrame.style.display = 'none';
     statusMessageElement.textContent = 'Generating PDF...';
     const layout = parseInt(layoutSelect.value || '1');
     const orientation = orientationSelect.value || 'portrait';
     const arrangement = arrangeSelect.value || 'auto';
     const scale_mode = scaleMode.value || 'fit';
     const scale_percent = parseInt(scalePercent.value || '100');
-    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures, remove_signature_bg: window.removeSignatureBackground !== false };
+    const compression = window.getCompressionLevel ? window.getCompressionLevel() : 'none';
+    const jpeg_quality = window.getJpegQuality ? window.getJpegQuality() : 75;
+    const pdfa = document.getElementById('pdfaCheck')?.checked || false;
+    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures, remove_signature_bg: window.removeSignatureBackground !== false, compression, jpeg_quality, pdfa };
     if (window.lastSignEmail || window.lastSignPhone || window.lastSignName) {
         payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
     }
@@ -1732,26 +2017,23 @@ function generatePdf() {
             const byteArray = new Uint8Array(byteNumbers);
             currentPdfBlob = new Blob([byteArray], {type: 'application/pdf'});
             exportOptions.style.display = 'block';
+            if (downloadPdfBtn) downloadPdfBtn.style.display = 'inline-block';
+            if (waShareBtn) waShareBtn.style.display = 'inline-block';
+            if (emailShareBtn) emailShareBtn.style.display = 'inline-block';
             statusMessageElement.textContent = 'PDF ready.';
             if (window.lastSignToken) {
-                fetch('/store-signed-pdf/' + window.lastSignToken, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pdf: data.pdf })
-                })
-                .then(r => r.json())
-                .then(d => {
-                    if (d.url) {
-                        window.lastSignedUrl = d.url;
-                        if (signedPdfLink) {
-                            signedPdfLink.href = d.url;
-                            signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
-                            signedPdfLink.style.display = 'inline';
-                        }
-                    }
-                    if (window.lastSignPhone) shareWhatsAppLink(window.lastSignPhone, d.url);
-                    if (window.lastSignEmail) shareEmailLink(window.lastSignEmail, d.url);
-                });
+                const url = window.lastSignedUrl || URL.createObjectURL(currentPdfBlob);
+                if (signedPdfLink) {
+                    signedPdfLink.href = url;
+                    signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
+                    signedPdfLink.style.display = 'inline';
+                }
+                if (exportPreviewFrame) {
+                    exportPreviewFrame.src = url + '#toolbar=0&navpanes=0';
+                    exportPreviewFrame.style.display = 'block';
+                }
+                if (window.lastSignPhone) shareWhatsAppLink(window.lastSignPhone, url);
+                if (window.lastSignEmail) shareEmailLink(window.lastSignEmail, url);
             } else {
                 if (window.lastSignPhone) {
                     shareWhatsApp(window.lastSignPhone);
@@ -1764,6 +2046,10 @@ function generatePdf() {
                     signedPdfLink.href = url;
                     signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
                     signedPdfLink.style.display = 'inline';
+                    if (exportPreviewFrame) {
+                        exportPreviewFrame.src = url + '#toolbar=0&navpanes=0';
+                        exportPreviewFrame.style.display = 'block';
+                    }
                 }
             }
         } else {
@@ -1778,7 +2064,7 @@ function generatePdf() {
 
 exportPdfBtn.addEventListener('click', async () => {
     await showSponsorModal();
-    generatePdf();
+    await generatePdf();
 });
 
 if (OCR_ENABLED) {
@@ -1822,7 +2108,7 @@ imageElement.addEventListener('dblclick', (e) => {
     console.debug('dblclick on imageElement', { x: e.clientX, y: e.clientY });
     autoDetectCorners();
 });
-imageElement.addEventListener('touchend', (e) => {
+imageElement.addEventListener('touchstart', (e) => {
     const now = Date.now();
     if (now - lastTap < 300) {
         e.preventDefault();
@@ -1889,27 +2175,29 @@ if (downloadPdfBtn) {
         link.download = 'documents.pdf';
         link.click();
         URL.revokeObjectURL(url);
-        exportOptions.style.display = 'none';
     });
 }
 
 if (waShareBtn) {
     waShareBtn.addEventListener('click', async () => {
         await shareWhatsApp(window.lastSignPhone);
-        exportOptions.style.display = 'none';
     });
 }
 
 if (emailShareBtn) {
     emailShareBtn.addEventListener('click', async () => {
         await shareEmail(window.lastSignEmail);
-        exportOptions.style.display = 'none';
     });
 }
 
 cameraFileInput.addEventListener('change', (e) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    addFiles(e.target.files);
+    const all = Array.from(e.target.files);
+    const list = all.slice(0, MAX_UPLOAD_FILES);
+    if (all.length > MAX_UPLOAD_FILES) {
+        statusMessageElement.textContent = t('maxUploadLimit').replace('{n}', MAX_UPLOAD_FILES);
+    }
+    addFiles(list);
 });
 
 if (signatureUpload) {
@@ -2024,7 +2312,7 @@ if (signaturePreview) {
         if (signatureImg) {
             signaturePosition.x = x;
             signaturePosition.y = y;
-            renderSignaturePreview();
+            addCurrentSignature();
         } else {
             pendingSigPos = { x, y };
             signatureModal.style.display = 'block';
@@ -2042,40 +2330,59 @@ langSelect.addEventListener('change', async () => {
     saveSettings({ language: currentLang });
 });
 
+function maybeRegenerate() {
+    if (currentPdfBlob) generatePdf();
+}
+
 layoutSelect.addEventListener('change', () => {
     updateLayoutPreview();
     saveSettings({ layout: parseInt(layoutSelect.value || '1') });
+    maybeRegenerate();
 });
 
 orientationSelect.addEventListener('change', () => {
     updateLayoutPreview();
     saveSettings({ orientation: orientationSelect.value });
+    maybeRegenerate();
 });
 
 arrangeSelect.addEventListener('change', () => {
     updateLayoutPreview();
     saveSettings({ arrangement: arrangeSelect.value });
+    maybeRegenerate();
 });
 
-if (togglePreviewBtn) {
-    togglePreviewBtn.addEventListener('click', () => {
-        layoutPreview.classList.toggle('visible');
-        updateLayoutPreview();
-    });
-}
-
 scaleMode.addEventListener('change', () => {
-    scalePercent.style.display = scaleMode.value === 'percent' ? 'inline-block' : 'none';
+    const show = scaleMode.value === 'percent';
+    scalePercent.style.display = show ? 'inline-block' : 'none';
+    if (scalePercentSymbol) scalePercentSymbol.style.display = show ? 'inline' : 'none';
     saveSettings({ scale_mode: scaleMode.value, scale_percent: parseInt(scalePercent.value || '100') });
+    maybeRegenerate();
 });
 
 scalePercent.addEventListener('change', () => {
     saveSettings({ scale_percent: parseInt(scalePercent.value || '100') });
+    maybeRegenerate();
 });
 colorModeSelect.addEventListener("change", () => {
     globalColorMode = colorModeSelect.value;
     saveSettings({ color_mode: globalColorMode });
+    updateLayoutPreview();
+    maybeRegenerate();
 });
+if (closeExportBtn) {
+    closeExportBtn.addEventListener('click', () => {
+        if (exportPreviewFrame) {
+            exportPreviewFrame.src = '';
+            exportPreviewFrame.style.display = 'none';
+        }
+        if (signedPdfLink) signedPdfLink.style.display = 'none';
+        if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
+        if (waShareBtn) waShareBtn.style.display = 'none';
+        if (emailShareBtn) emailShareBtn.style.display = 'none';
+        if (exportOptions) exportOptions.style.display = 'none';
+    });
+}
 if (blankThresholdInput) {
     blankThresholdInput.addEventListener('change', () => {
         blankThreshold = parseInt(blankThresholdInput.value || '95');
@@ -2093,6 +2400,15 @@ if (removeBlankBtn) {
 }
 if (restoreBlankBtn) {
     restoreBlankBtn.addEventListener('click', restoreBlankPages);
+}
+if (clearImagesBtn) {
+    clearImagesBtn.addEventListener('click', () => {
+        if (confirm(t('confirmClearImages'))) {
+            while (processedImages.length > 0) {
+                deleteImage(processedImages.length - 1);
+            }
+        }
+    });
 }
 
 brightnessRange.addEventListener('input', () => {
@@ -2150,6 +2466,8 @@ function addCurrentSignature() {
         mobileSignPoints[page].push({ x: signaturePosition.x, y: signaturePosition.y });
     } else {
         signatures.push({ page, x: signaturePosition.x, y: signaturePosition.y, scale: signatureScale });
+        const pageSigs = signatures.filter(s => s.page === page);
+        scaleTarget = (pageSigs.length - 1).toString();
     }
     const OFFSET = 0.05;
     signaturePosition.x += OFFSET;
@@ -2224,6 +2542,49 @@ if (discardSignatureBtn) {
     });
 }
 
+async function mergeAllSignatures() {
+    if (!signatureImg) return;
+    const pages = new Set(signatures.map(s => s.page));
+    const current = parseInt(signaturePage.value || '0');
+    pages.add(current);
+    for (const page of pages) {
+        let stamps = signatures.filter(s => s.page === page);
+        if (page === current) {
+            stamps = stamps.concat([{ page, x: signaturePosition.x, y: signaturePosition.y, scale: signatureScale }]);
+        }
+        if (stamps.length === 0) continue;
+        const base = new Image();
+        await new Promise(res => { base.onload = res; base.src = processedImages[page]; });
+        const canvas = document.createElement('canvas');
+        canvas.width = base.width;
+        canvas.height = base.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(base, 0, 0);
+        const baseRatio = (canvas.height / 10) / signatureImg.height;
+        for (const sig of stamps) {
+            const w = signatureImg.width * baseRatio * sig.scale;
+            const h = signatureImg.height * baseRatio * sig.scale;
+            const x = sig.x * canvas.width - w / 2;
+            const y = sig.y * canvas.height - h / 2;
+            ctx.drawImage(signatureImg, x, y, w, h);
+        }
+        const url = canvas.toDataURL('image/png');
+        processedImages[page] = url;
+        if (originalImages[page]) originalImages[page] = url;
+        const container = processedGallery.children[page];
+        if (container) container.querySelector('img').src = url;
+        try {
+            const blob = await (await fetch(url)).blob();
+            processedFiles[page] = new File([blob], processedFiles[page]?.name || `image_${page}.png`, { type: 'image/png' });
+        } catch {}
+    }
+    signatures = [];
+    signatureImageData = null;
+    signatureImg = null;
+    renderSignaturePreview();
+    updateSignatureTargetOptions();
+}
+
 async function applyRemoteSignature(data) {
     const pageIdx = parseInt(data.page || 0);
     const base = new Image();
@@ -2258,7 +2619,29 @@ async function applyRemoteSignature(data) {
 
 window.addEventListener('remoteSignature', (e) => applyRemoteSignature(e.detail));
 window.addEventListener('mobileSignComplete', () => {
-    if (exportPdfBtn) exportPdfBtn.click();
+    statusMessageElement.textContent = translations['waitingPdf'] || 'Waiting for signed PDF...';
+});
+window.addEventListener('signedPdfAvailable', (e) => {
+    const url = e.detail.url;
+    exportOptions.style.display = 'block';
+    if (signedPdfLink) {
+        signedPdfLink.href = url;
+        signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
+        signedPdfLink.style.display = 'inline';
+    }
+    if (exportPreviewFrame) {
+        exportPreviewFrame.src = url + '#toolbar=0&navpanes=0';
+        exportPreviewFrame.style.display = 'block';
+    }
+    if (downloadPdfBtn) downloadPdfBtn.style.display = 'inline-block';
+    if (waShareBtn) waShareBtn.style.display = 'inline-block';
+    if (emailShareBtn) emailShareBtn.style.display = 'inline-block';
+    if (e.detail.hash) {
+        window.lastPdfHash = e.detail.hash;
+    }
+    statusMessageElement.textContent = translations['pdfReady'] || 'PDF ready.';
+    if (window.lastSignPhone) shareWhatsAppLink(window.lastSignPhone, url);
+    if (window.lastSignEmail) shareEmailLink(window.lastSignEmail, url);
 });
 
 function updateImageFilters() {
@@ -2396,6 +2779,9 @@ function updateSignatureTargetOptions() {
         signatureTargetSelect.appendChild(optAll);
     }
     signatureTargetSelect.value = scaleTarget;
+    if (signatureTargetSelect.value !== scaleTarget) {
+        scaleTarget = signatureTargetSelect.value;
+    }
     if (signatureScaleInput) {
         if (scaleTarget === 'current') {
             signatureScaleInput.value = signatureScale;
@@ -2708,6 +3094,8 @@ loadSettings().then(async (cfg) => {
     await loadTranslations(currentLang);
     applyTranslations();
     initSignaturePlugin(translations, mobileSignEnabled);
+    initRemoveBgPlugin(translations, removeBgEnabled);
+    initPdfCompressPlugin(translations, compressEnabled);
     renderPaymentBox(cfg);
     renderLicenseBox();
     renderLogin(cfg);

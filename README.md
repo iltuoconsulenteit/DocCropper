@@ -8,7 +8,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 
 ## ✨ Key Features
 
-- ✅ Multi-image upload and batch processing
+- ✅ Multi-image upload and batch processing (configurable limit, 10 by default)
 - 📥 Import PDF files and place each page directly in the gallery for later editing (Pro)
 - 🔄 Automatic or manual perspective correction
 - 🖼️ Interactive cropping and preview
@@ -16,8 +16,12 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 🎚️ Adjust brightness and contrast with live preview
 - 🖌️ Convert images to grayscale or black & white to reduce PDF size (Pro)
 - 🎨 Restore color later with a dedicated button
+- 🪄 Remove backgrounds with an adjustable threshold and restore originals when needed (Pro)
+- 🔁 Flip pages horizontally or invert upside-down scans
  - 🧹 Skip blank pages when importing PDFs using a configurable threshold (Pro)
 - 📄 Create PDFs ready for download or sharing
+- 📦 Compress PDFs with Low, Medium or Extreme settings and optional JPEG quality tuning (Pro)
+- 📚 Export as PDF/A for archival and legal compliance
 - 🔏 Optional digital signature on exported PDFs. Drag and add multiple stamps per page before export (Free - watermark applied)
 - ✍️ Sign from your phone via QR code and save the drawing for later use (Pro)
 - 📤 Share PDFs via WhatsApp Web or Email, attaching files via the Web Share API when possible (Pro)
@@ -31,6 +35,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 👤 Multi-user environment support (optional)
 - 🔒 Uploaded files are encrypted and wiped after your session
 - 📏 Uploads larger than 20&nbsp;MB are rejected (adjust with `DOCROPPER_MAX_UPLOAD_MB`)
+- 📁 Limit simultaneous uploads with the `max_upload_files` setting (10 by default)
 - 🚀 Cache busting (`?v=<commit>`) ensures browsers fetch updated files
 
 ---
@@ -40,13 +45,16 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 This project uses [Interact.JS](https://github.com/taye/interact.js) for managing draggable corner points.
 
 The frontend allows the user to:
- - Upload images with the file picker. On mobile devices the file picker is shown by default but you can switch to the camera mode and choose which camera to use. Desktop users may also drag and drop files
+- Upload images with the file picker. On mobile devices the file picker is shown by default but you can switch to the camera mode and choose which camera to use. Desktop users may also drag and drop files. Up to `max_upload_files` images can be imported at once (10 by default)
  - Import PDF documents which are converted to images and added to the gallery without immediate cropping (Pro)
 - Add more images later without losing previously processed ones
 - Manually adjust the four corners of each image
 - Double click/tap an image to auto-detect its edges
+- Flip or invert images if they were scanned mirrored or upside-down
+- Remove backgrounds with a dedicated button and fine‑tune the threshold via the settings panel
 - Submit data (image, coordinates, size) to the backend
 - Export all processed images to PDF
+- Choose a PDF compression level (Low, Medium, Extreme) and customize JPEG quality when needed
 - Choose how many processed images appear on each PDF page
 - Select portrait or landscape orientation for the PDF
 - Choose whether images are arranged horizontally, vertically or in a grid and preview the layout only when needed

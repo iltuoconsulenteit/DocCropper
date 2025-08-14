@@ -61,7 +61,7 @@ h1, h2 {
 }
 
 #brandArea img {
-    max-height: 80px;
+    max-height: 125px;
 }
 
 #clientLogo, #sloganImg, #sponsorLogo {
@@ -98,36 +98,30 @@ h1, h2 {
 
 #pageFooter {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     gap: 10px;
     text-align: center;
     margin-top: 20px;
     color: #555;
     font-size: 0.9em;
-    padding: 10px 5px;
-    position: relative;
+    padding: 4px 10px;
 }
 
 #footerBrand {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 5px;
-    justify-content: center;
-    flex-grow: 1;
+    gap: 2px;
 }
 
 #versionBox {
     font-style: italic;
-    margin-left: auto;
+    font-size: 0.8em;
 }
 
-#sponsorBadge {
-    position: absolute;
-    right: 10px;
-    bottom: 100px;
-    max-height: 50px;
+#sponsorBadge, #clientBadge {
+    max-height: 125px;
 }
 
 #wrapper {
@@ -205,25 +199,43 @@ button:hover {
 }
 
 #footerLogo {
-    max-height: 40px;
+    max-height: 20px;
     margin-left: 10px;
 }
 
 #galleryWrapper {
     display: block;
+    width: 100%;
+    position: relative;
+}
+#galleryWrapper.horizontal {
     overflow-x: auto;
+    overflow-y: hidden;
     white-space: nowrap;
+    width: 100%;
+}
+#galleryWrapper.vertical {
+    overflow-y: auto;
+    white-space: normal;
+    width: 100%;
 }
 
 #processedGallery {
-    display: inline-flex;
-    flex-wrap: nowrap;
     gap: 16px;
     margin-top: 24px;
 }
+#processedGallery.horizontal {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+}
+#processedGallery.vertical {
+    display: flex;
+    flex-direction: column;
+}
 
 #sloganImg {
-    max-height: 80px;
+    max-height: 125px;
 }
 
 #statusMessage {
@@ -301,6 +313,9 @@ button:hover {
 }
 
 .rotateBtn,
+.flipBtn,
+.invertBtn,
+.removeBgBtn,
 .grayBtn,
 .bwBtn,
 .colorBtn,
@@ -337,6 +352,10 @@ button:hover {
 
 #blankControls {
     margin-bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
 }
 
 #signatureControls {
@@ -389,24 +408,6 @@ button:hover {
 #scalePercent {
     width: 60px;
     margin-left: 5px;
-}
-
-#layoutPreview {
-    width: 180px;
-    height: 220px;
-    border: 1px dashed #666;
-    margin-bottom: 10px;
-    display: none;
-    gap: 4px;
-}
-
-#layoutPreview.visible {
-    display: grid;
-}
-
-#layoutPreview .cell {
-    border: 1px solid #aaa;
-    background: repeating-linear-gradient(45deg, #f9f9f9, #f9f9f9 10px, #efefef 10px, #efefef 20px);
 }
 
 #adjustControls {
@@ -622,6 +623,21 @@ button:hover {
     max-height: 240px;
     border: 1px solid #888;
     margin-top: 10px;
+}
+
+#cameraPreviewWrapper {
+    position: relative;
+}
+
+#cameraOverlay {
+    position: absolute;
+    top: 10%;
+    left: 10%;
+    width: 80%;
+    height: 80%;
+    border: 2px dashed rgba(255,255,255,0.8);
+    pointer-events: none;
+    box-sizing: border-box;
 }
 
 #wikiFrame {

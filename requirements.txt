@@ -4,6 +4,7 @@ python-multipart
 opencv-python
 numpy
 pillow
+rembg
 google-auth
 
 pystray
