@@ -2,11 +2,43 @@ export function initWatermarkPlugin(translations, enabled = true) {
     if (!enabled) {
         window.openWatermarkDialog = () => {};
         window.mergeAllWatermarks = async () => {};
+        window.removeWatermark = () => {};
+        window.hasWatermark = () => false;
         return;
     }
 
     const watermarks = [];
+    const originals = {};
     let modal;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    async function loadImage(src) {
+        return new Promise((resolve) => {
+            const im = new Image();
+            im.onload = () => resolve(im);
+            im.src = src;
+        });
+    }
+
+    async function mergeImage(baseSrc, wmSrc, x, y, scale, angle) {
+        const base = await loadImage(baseSrc);
+        canvas.width = base.width;
+        canvas.height = base.height;
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.drawImage(base,0,0);
+        const wImg = await loadImage(wmSrc);
+        const w = wImg.width * scale;
+        const h = wImg.height * scale;
+        const px = x * canvas.width - w/2;
+        const py = y * canvas.height - h/2;
+        ctx.save();
+        ctx.translate(px + w/2, py + h/2);
+        ctx.rotate((angle || 0) * Math.PI / 180);
+        ctx.drawImage(wImg, -w/2, -h/2, w, h);
+        ctx.restore();
+        return canvas.toDataURL('image/png');
+    }
 
     function ensureModal() {
         if (modal) return;
@@ -139,7 +171,24 @@ export function initWatermarkPlugin(translations, enabled = true) {
                 ? window.getProcessedImages()
                 : (window.processedImages || []);
             const targets = all.checked ? imgs.map((_, i) => i) : [index];
-            targets.forEach(p => createOverlay(dataUrl, p, opts.angle));
+            for (const p of targets) {
+                if (!imgs[p]) continue;
+                if (all.checked) {
+                    if (!originals[p]) originals[p] = imgs[p];
+                    const merged = await mergeImage(imgs[p], dataUrl, 0.8, 0.8, 1, opts.angle);
+                    if (typeof window.setProcessedImage === 'function') {
+                        window.setProcessedImage(p, merged);
+                    } else {
+                        imgs[p] = merged;
+                        if (window.originalImages) window.originalImages[p] = merged;
+                    }
+                    const imgEl = document.querySelector(`.thumbContainer[data-index="${p}"] img`);
+                    if (imgEl) imgEl.src = merged;
+                } else {
+                    if (!originals[p]) originals[p] = imgs[p];
+                    createOverlay(dataUrl, p, opts.angle);
+                }
+            }
             txt.value = '';
             img.value = '';
             all.checked = false;
@@ -151,43 +200,16 @@ export function initWatermarkPlugin(translations, enabled = true) {
         const imgs = typeof window.getProcessedImages === 'function'
             ? window.getProcessedImages()
             : (window.processedImages || []);
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-
-        async function loadImage(src) {
-            return new Promise((resolve) => {
-                const im = new Image();
-                im.onload = () => resolve(im);
-                im.src = src;
-            });
-        }
-
         for (const wm of watermarks) {
             const baseSrc = imgs[wm.page];
             if (!baseSrc) continue;
-            const base = await loadImage(baseSrc);
-            canvas.width = base.width;
-            canvas.height = base.height;
-            ctx.clearRect(0,0,canvas.width,canvas.height);
-            ctx.drawImage(base,0,0);
-            const wImg = await loadImage(wm.data);
-            const w = wImg.width * wm.scale;
-            const h = wImg.height * wm.scale;
-            const x = wm.x * canvas.width - w/2;
-            const y = wm.y * canvas.height - h/2;
-            ctx.save();
-            ctx.translate(x + w/2, y + h/2);
-            ctx.rotate((wm.angle || 0) * Math.PI / 180);
-            ctx.drawImage(wImg, -w/2, -h/2, w, h);
-            ctx.restore();
-            const url = canvas.toDataURL('image/png');
+            if (!originals[wm.page]) originals[wm.page] = baseSrc;
+            const url = await mergeImage(baseSrc, wm.data, wm.x, wm.y, wm.scale, wm.angle);
             if (typeof window.setProcessedImage === 'function') {
                 window.setProcessedImage(wm.page, url);
             } else {
                 imgs[wm.page] = url;
-                if (window.originalImages && window.originalImages[wm.page]) {
-                    window.originalImages[wm.page] = url;
-                }
+                if (window.originalImages) window.originalImages[wm.page] = url;
             }
             const imgEl = document.querySelector(`.thumbContainer[data-index="${wm.page}"] img`);
             if (imgEl) imgEl.src = url;
@@ -196,7 +218,37 @@ export function initWatermarkPlugin(translations, enabled = true) {
         watermarks.length = 0;
     }
 
+    function removeWatermark(page) {
+        const imgs = typeof window.getProcessedImages === 'function'
+            ? window.getProcessedImages()
+            : (window.processedImages || []);
+        const idx = watermarks.findIndex(w => w.page === page);
+        if (idx !== -1) {
+            const wm = watermarks[idx];
+            if (wm.el && wm.el.parentNode) wm.el.remove();
+            watermarks.splice(idx, 1);
+        }
+        if (originals[page]) {
+            const url = originals[page];
+            if (typeof window.setProcessedImage === 'function') {
+                window.setProcessedImage(page, url);
+            } else {
+                imgs[page] = url;
+                if (window.originalImages) window.originalImages[page] = url;
+            }
+            const imgEl = document.querySelector(`.thumbContainer[data-index="${page}"] img`);
+            if (imgEl) imgEl.src = url;
+            delete originals[page];
+        }
+    }
+
+    function hasWatermark(page) {
+        return watermarks.some(w => w.page === page) || !!originals[page];
+    }
+
     window.openWatermarkDialog = openWatermarkDialog;
     window.mergeAllWatermarks = mergeAllWatermarks;
+    window.removeWatermark = removeWatermark;
+    window.hasWatermark = hasWatermark;
 }
 

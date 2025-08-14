@@ -1279,7 +1279,11 @@ function addThumbnail(src, index) {
         wmBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             const idx = parseInt(container.dataset.index);
-            if (typeof window.openWatermarkDialog === 'function') {
+            if (window.hasWatermark && window.hasWatermark(idx)) {
+                if (typeof window.removeWatermark === 'function') {
+                    window.removeWatermark(idx);
+                }
+            } else if (typeof window.openWatermarkDialog === 'function') {
                 window.openWatermarkDialog(idx);
             }
         });
