@@ -8,7 +8,7 @@ export function initPdfCompressPlugin(translations, enabled = false) {
     if (!exportBox) return;
     const controls = document.createElement('div');
     controls.id = 'compressionControls';
-    controls.style.cssText = 'text-align:left; margin-bottom:8px; font-size:13px; padding:6px; border:2px solid #2563eb; border-radius:4px; background:#eff6ff;';
+    controls.style.cssText = 'text-align:left; margin:24px 4px 8px 4px; font-size:13px; padding:6px; border:2px solid #2563eb; border-radius:4px; background:#eff6ff;';
     controls.innerHTML = `
       <div>
         <label for="compressionLevel" style="font-weight:bold;">${translations['compression'] || 'Compression'}</label>

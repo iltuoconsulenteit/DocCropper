@@ -575,6 +575,9 @@ function applySettings(cfg) {
     mobileSignEnabled = !!cfg.enable_mobilesign;
     remoteSignEnabled = !!cfg.enable_remotesign;
     removeBgEnabled = !!cfg.enable_removebg;
+    if (typeof initRemoveBgPlugin === 'function' && Object.keys(translations).length) {
+        initRemoveBgPlugin(translations, removeBgEnabled);
+    }
     compressEnabled = !!cfg.enable_compresspdf && currentLicenseLevel !== 'free';
     if (digitalSignBtn) {
         digitalSignBtn.disabled = !docusealEnabled || currentLicenseLevel === 'free' || !remoteSignEnabled;
