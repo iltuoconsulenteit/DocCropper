@@ -101,6 +101,7 @@
   "modeCamera": "Camera",
   "capturePhoto": "Capture",
   "photoAdded": "Photo added",
+  "addPhoto": "Add photo",
   "cameraSelectLabel": "Camera:",
   "cameraMargin": "Margin",
   "noImage": "Please add an image first",
