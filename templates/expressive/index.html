@@ -124,7 +124,7 @@
           </div>
           <div x-show="files.length > 0" x-ref="fileGrid" :class="layoutHorizontal ? 'flex overflow-x-auto space-x-4' : 'grid grid-cols-1 lg:grid-cols-2 gap-4'">
             <template x-for="(file, idx) in files" :key="file.id">
-              <div class="mb-4">
+              <div class="mb-4 thumbContainer" :data-index="idx">
                 <p class="text-xs text-center mb-1 truncate" x-text="(idx+1)+' - '+file.name"></p>
                 <div class="border p-1">
                   <div class="relative">
@@ -139,6 +139,7 @@
                     <button @click="toGray(idx)" title="Gray" class="text-base">🌑</button>
                     <button @click="toBW(idx)" title="B/W" class="text-base">⬛</button>
                     <button @click="toColor(idx)" title="Color" class="text-base">🎨</button>
+                    <button x-show="watermarkEnabled" @click="watermark(idx)" :title="t('watermark')" class="text-base">WM</button>
                     <button x-show="removeBgEnabled" @click="removeBg(idx)" :title="file.bgOriginal ? t('restoreBg') : t('removeBg')" class="text-base" x-text="file.bgOriginal ? '↩' : '⌦'"></button>
                     <button @click="signPage(idx)" title="Sign" class="text-base">✒</button>
                   </div>
@@ -590,6 +591,7 @@
           signatures:[],
           removeSigBg:true,
           removeBgEnabled:false,
+          watermarkEnabled:false,
           removeBgThreshold:50,
           sigScale:1,
           activeSig:null,
@@ -680,6 +682,7 @@
               this.clientLogoHeight = this.settings.clientLogoHeight;
               this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
               this.removeBgEnabled = !!cfg.enable_removebg;
+              this.watermarkEnabled = !!cfg.enable_watermark;
               this.maxUpload = parseInt(cfg.max_upload_files || 10);
               this.blankThreshold = parseInt(cfg.blank_threshold || 95);
               this.version = cfg.version || '';
@@ -702,6 +705,13 @@
               if (this.files.length > 0) this.signPage(0);
             };
             window.getProcessedImages = () => this.files.map(f => f.url);
+            window.setProcessedImage = (i, src) => {
+              if (this.files[i]) {
+                this.files[i].url = src;
+                this.files[i].original = src;
+                this.files = [...this.files];
+              }
+            };
             this.updateRemoveBgThreshold();
           },
           async command(action){
@@ -882,6 +892,7 @@
           toGray(idx){ this._convertColor(idx,'gray'); },
           toBW(idx){ this._convertColor(idx,'bw'); },
           toColor(idx){ this.files[idx].url = this.files[idx].original; this.files = [...this.files]; },
+          watermark(idx){ if(typeof window.openWatermarkDialog==='function'){ window.openWatermarkDialog(idx); } },
           async removeBg(idx){
             try{
               const f = this.files[idx];

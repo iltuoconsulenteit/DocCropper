@@ -34,9 +34,12 @@ export function initWatermarkPlugin(translations, enabled = true) {
         document.body.appendChild(modal);
     }
     async function applyWatermark(index, opts, applyAll) {
-        const targets = applyAll ? window.processedImages.map((_, i) => i) : [index];
+        const imgs = typeof window.getProcessedImages === 'function'
+            ? window.getProcessedImages()
+            : (window.processedImages || []);
+        const targets = applyAll ? imgs.map((_, i) => i) : [index];
         for (const idx of targets) {
-            const src = window.processedImages[idx];
+            const src = imgs[idx];
             if (!src) continue;
             const resp = await fetch(src);
             const blob = await resp.blob();
@@ -54,9 +57,13 @@ export function initWatermarkPlugin(translations, enabled = true) {
                 const data = await r.json();
                 if (data.image) {
                     const url = 'data:image/png;base64,' + data.image;
-                    window.processedImages[idx] = url;
-                    if (window.originalImages && window.originalImages[idx]) {
-                        window.originalImages[idx] = url;
+                    if (typeof window.setProcessedImage === 'function') {
+                        window.setProcessedImage(idx, url);
+                    } else if (window.processedImages) {
+                        window.processedImages[idx] = url;
+                        if (window.originalImages && window.originalImages[idx]) {
+                            window.originalImages[idx] = url;
+                        }
                     }
                     const imgEl = document.querySelector(`.thumbContainer[data-index="${idx}"] img`);
                     if (imgEl) imgEl.src = url;
