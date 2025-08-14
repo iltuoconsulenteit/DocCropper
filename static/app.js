@@ -147,6 +147,7 @@ const cameraSelect = document.getElementById('cameraSelect');
 const captureBtn = document.getElementById('captureBtn');
 const cameraOverlay = document.getElementById('cameraOverlay');
 const cameraMargin = document.getElementById('cameraMargin');
+const addPhotoBtn = document.getElementById('addPhotoBtn');
 const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 const cameraFileInput = document.getElementById('cameraFileInput');
 const CAPTURE_MAX_DIM = 1600;
@@ -333,6 +334,7 @@ async function capturePhoto() {
     const blob = dataURItoBlob(dataUrl);
     const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
     await addFiles([file]);
+    stopCamera();
     if (statusMessageElement) {
         statusMessageElement.textContent = t('photoAdded');
     }
@@ -442,6 +444,7 @@ async function importPdfPages(file) {
         if (exportOptions) {
             exportOptions.style.display = 'block';
         }
+        if (addPhotoBtn) addPhotoBtn.style.display = 'inline-block';
         if (signedPdfLink) signedPdfLink.style.display = 'none';
         if (exportPreviewFrame) exportPreviewFrame.style.display = 'none';
         if (downloadPdfBtn) downloadPdfBtn.style.display = 'none';
@@ -1711,6 +1714,7 @@ async function addFiles(newFiles) {
         bgOriginals = [];
         window.bgOriginals = bgOriginals;
         editingIndex = null;
+        if (addPhotoBtn) addPhotoBtn.style.display = 'none';
     }
     for (const f of compressed) {
         files.push(f);
@@ -2098,6 +2102,16 @@ if (OCR_ENABLED) {
 
 inputMode.addEventListener('change', updateInputMode);
 captureBtn.addEventListener('click', capturePhoto);
+if (addPhotoBtn) {
+    addPhotoBtn.addEventListener('click', () => {
+        wrapperElement.style.display = 'none';
+        imageElement.style.display = 'none';
+        if (adjustControls) adjustControls.style.display = 'none';
+        if (statusMessageElement) statusMessageElement.textContent = '';
+        inputMode.value = 'camera';
+        updateInputMode();
+    });
+}
 cameraSelect.addEventListener('change', () => {
     if (inputMode.value === 'camera') {
         startCamera();
