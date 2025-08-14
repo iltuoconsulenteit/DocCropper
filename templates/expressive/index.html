@@ -132,7 +132,8 @@
                     <button @click="toGray(idx)" title="Gray" class="text-base">🌑</button>
                     <button @click="toBW(idx)" title="B/W" class="text-base">⬛</button>
                     <button @click="toColor(idx)" title="Color" class="text-base">🎨</button>
-                    <button x-show="removeBgEnabled" @click="removeBg(idx)" :title="t('removeBg')" class="text-base">⌦</button>
+                    <button x-show="removeBgEnabled" @click="removeBg(idx)" :title="file.bgOriginal ? t('restoreBg') : t('removeBg')" class="text-base" x-text="file.bgOriginal ? '↺' : '⌦'"></button>
+                    <button x-show="removeBgEnabled" @click="setRemoveBgThreshold" :title="t('setRemoveBgThreshold')" class="text-base">%</button>
                     <button @click="signPage(idx)" title="Sign" class="text-base">✒</button>
                   </div>
                 </div>
@@ -409,6 +410,10 @@
             invert:'Upside down',
             delete:'Delete',
             removeBg:'Remove BG',
+            restoreBg:'Restore BG',
+            setRemoveBgThreshold:'Set background threshold',
+            removeBgThresholdPrompt:'Background removal threshold (%)',
+            removeBgFailed:'Background removal failed',
             imagesPerPage:'Images per page',
             orientation:'Orientation',
             layout:'Layout',
@@ -487,6 +492,10 @@
             invert:'Capovolgi',
             delete:'Elimina',
             removeBg:'Rimuovi sfondo',
+            restoreBg:'Ripristina sfondo',
+            setRemoveBgThreshold:'Imposta soglia sfondo',
+            removeBgThresholdPrompt:'Soglia rimozione sfondo (%)',
+            removeBgFailed:'Rimozione sfondo fallita',
             imagesPerPage:'Immagini per pagina',
             orientation:'Orientamento',
             layout:'Disposizione',
@@ -546,6 +555,7 @@
           signatures:[],
           removeSigBg:true,
           removeBgEnabled:false,
+          removeBgThreshold:50,
           sigScale:1,
           activeSig:null,
           signatureAspect:1,
@@ -817,20 +827,38 @@
           toColor(idx){ this.files[idx].url = this.files[idx].original; this.files = [...this.files]; },
           async removeBg(idx){
             try{
-              const resp = await fetch(this.files[idx].url);
+              const f = this.files[idx];
+              if(f.bgOriginal){
+                f.url = f.bgOriginal;
+                f.original = f.bgOriginal;
+                f.bgOriginal = null;
+                this.files = [...this.files];
+                return;
+              }
+              const resp = await fetch(f.url);
               const blob = await resp.blob();
               const fd = new FormData();
               fd.append('image_file', blob, `image${idx}.png`);
-              const r = await fetch('/remove-background/', {method:'POST', body:fd});
-              if(!r.ok) return;
+              const r = await fetch(`/remove-background/?threshold=${this.removeBgThreshold}`, {method:'POST', body:fd});
+              if(!r.ok){ alert(this.t('removeBgFailed')); return; }
               const data = await r.json();
               if(data.image){
-                const url = 'data:image/png;base64,' + data.image;
-                this.files[idx].url = url;
-                this.files[idx].original = url;
+                f.bgOriginal = f.url;
+                f.url = 'data:image/png;base64,' + data.image;
+                f.original = f.url;
                 this.files = [...this.files];
+              } else {
+                alert(this.t('removeBgFailed'));
               }
-            }catch(e){ console.error('remove background error', e); }
+            }catch(e){
+              console.error('remove background error', e);
+              alert(this.t('removeBgFailed'));
+            }
+          },
+          setRemoveBgThreshold(){
+            const val = prompt(this.t('removeBgThresholdPrompt'), String(this.removeBgThreshold));
+            const num = parseInt(val,10);
+            if(!isNaN(num) && num>=0 && num<=100) this.removeBgThreshold = num;
           },
           _convertColor(idx, mode){
             const img = new Image();
@@ -1248,12 +1276,10 @@
     </div>
     <script type="module">
       import { initSignaturePlugin } from '/static/plugins/mobilesign.js';
-      import { initRemoveBgPlugin } from '/static/plugins/removebg.js';
       import { initPdfCompressPlugin } from '/static/plugins/compresspdf.js';
       const lang = window.DC_LANG || document.documentElement.lang || 'en';
       const trans = (window.dcStrings && window.dcStrings[lang]) ? window.dcStrings[lang] : {};
       initSignaturePlugin(trans, true);
-      initRemoveBgPlugin(trans, true);
       initPdfCompressPlugin(trans, true);
 
       function calculateGrid() {
