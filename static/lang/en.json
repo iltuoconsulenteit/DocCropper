@@ -150,6 +150,7 @@
   "clearImages": "Clear images",
   "confirmClearImages": "Remove all images?",
   "pagesRemoved": "{n} blank pages removed",
+  "imagesCleared": "All images cleared",
   "pagesRestored": "Removed pages restored",
   "drawSignature": "Draw signature",
   "clearSignature": "Clear",

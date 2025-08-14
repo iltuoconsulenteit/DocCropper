@@ -109,15 +109,18 @@
         </div>
         <div x-show="files.length===0 && tab==='files' && updates[lang] && updates[lang].length" class="text-center text-sm text-gray-600" x-text="t('lastUpdate') + ': ' + updates[lang][0]"></div>
         <div x-show="tab==='files'">
-          <template x-if="files.length === 0">
+        <template x-if="files.length === 0">
             <p class="text-gray-600" x-text="t('noFiles')"></p>
           </template>
-          <div x-show="files.length > 0" class="flex flex-wrap items-center justify-end gap-2 mb-2">
+          <div x-show="status" id="statusMessage" class="mb-2 p-2 bg-blue-100 text-blue-800 text-sm rounded" x-text="status"></div>
+          <div x-show="files.length > 0" class="flex items-center justify-between gap-2 mb-2">
+            <div class="flex items-center gap-2">
+              <label class="text-xs" for="blankThreshold" x-text="t('blankThreshold')"></label>
+              <input id="blankThreshold" type="number" min="80" max="100" step="1" class="w-16 border rounded text-xs" x-model.number="blankThreshold">
+              <button class="px-2 py-1 border rounded text-xs" @click="removeBlankPages" x-text="t('removeBlank')"></button>
+            </div>
+            <button id="clearImagesBtn" class="px-2 py-1 border rounded text-xs" @click="clearImages" x-text="t('clearImages')"></button>
             <button class="px-2 py-1 border rounded text-xs" @click="toggleLayout" x-text="layoutHorizontal ? t('horizontalView') : t('verticalView')"></button>
-            <label class="text-xs" for="blankThreshold" x-text="t('blankThreshold')"></label>
-            <input id="blankThreshold" type="number" min="80" max="100" step="1" class="w-16 border rounded text-xs" x-model.number="blankThreshold">
-            <button class="px-2 py-1 border rounded text-xs" @click="removeBlankPages" x-text="t('removeBlank')"></button>
-            <button class="px-2 py-1 border rounded text-xs" @click="clearImages" x-text="t('clearImages')"></button>
           </div>
           <div x-show="files.length > 0" x-ref="fileGrid" :class="layoutHorizontal ? 'flex overflow-x-auto space-x-4' : 'grid grid-cols-1 lg:grid-cols-2 gap-4'">
             <template x-for="(file, idx) in files" :key="file.id">
@@ -429,6 +432,8 @@
             removeBlank:'Remove blank pages',
             clearImages:'Clear images',
             confirmClearImages:'Remove all images?',
+            pagesRemoved:'{n} blank pages removed',
+            imagesCleared:'All images cleared',
             imageSize:'Image size',
             colorMode:'Color mode',
             portrait:'Portrait',
@@ -514,6 +519,8 @@
             removeBlank:'Rimuovi pagine bianche',
             clearImages:'Azzera immagini',
             confirmClearImages:'Rimuovere tutte le immagini?',
+            pagesRemoved:'Rimosse {n} pagine bianche',
+            imagesCleared:'Tutte le immagini cancellate',
             imageSize:'Dimensione immagine',
             colorMode:'Modalità colore',
             portrait:'Verticale',
@@ -543,6 +550,7 @@
           drawer:false,
           pinned:true,
           tab:'files',
+          status:'',
           cropModal:false,
           cropIndex:null,
           sortable:null,
@@ -900,15 +908,22 @@
           async removeBlankPages(){
             const thr = this.blankThreshold/100;
             const keep = [];
+            let removed = 0;
             for(const f of this.files){
               const blank = await this.isBlankImage(f.url, thr);
-              if(!blank) keep.push(f);
+              if(!blank) keep.push(f); else removed++;
             }
             this.files = keep;
+            if(removed>0){
+              this.status = this.t('pagesRemoved').replace('{n}', removed);
+              setTimeout(()=>{ this.status=''; },3000);
+            }
           },
           clearImages(){
             if(confirm(this.t('confirmClearImages'))){
               this.files = [];
+              this.status = this.t('imagesCleared');
+              setTimeout(()=>{ this.status=''; },3000);
             }
           },
           _convertColor(idx, mode){

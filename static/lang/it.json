@@ -150,6 +150,7 @@
   "clearImages": "Cancella immagini",
   "confirmClearImages": "Rimuovere tutte le immagini?",
   "pagesRemoved": "Rimosse {n} pagine bianche",
+  "imagesCleared": "Tutte le immagini cancellate",
   "pagesRestored": "Pagine ripristinate",
   "drawSignature": "Disegna firma",
   "clearSignature": "Pulisci",
