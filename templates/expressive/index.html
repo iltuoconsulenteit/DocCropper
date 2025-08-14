@@ -1252,7 +1252,8 @@
           </select>
         </div>
       </div>
-      <div id="layoutPreview"></div>
+      <button id="layoutPreviewBtn" class="w-full px-2 py-1 bg-gray-200 rounded text-sm mb-2" x-text="t('previewLayout')"></button>
+      <div id="layoutPreview" style="display:none;"></div>
       <iframe id="exportPreviewFrame" style="width:100%; height:260px; border:1px solid #888; border-radius:4px; margin-bottom:8px; display:none;"></iframe>
       <button id="downloadPdfBtn" class="w-full px-2 py-1 bg-blue-500 text-white rounded text-sm" style="display:none;" x-text="t('downloadPdf')"></button>
       <button id="waShareBtn" class="w-full px-2 py-1 bg-green-500 text-white rounded text-sm" style="display:none;" x-text="t('whatsapp')"></button>
@@ -1287,7 +1288,7 @@
 
       function updateLayoutPreview() {
         const preview = document.getElementById('layoutPreview');
-        if (!preview) return;
+        if (!preview || preview.style.display === 'none') return;
         const { cols, rows } = calculateGrid();
         const orientation = document.getElementById('orientationSelect')?.value || 'portrait';
         const images = window.getProcessedImages ? window.getProcessedImages() : [];
@@ -1334,6 +1335,7 @@
       const scalePct = document.getElementById('scalePercent');
       const scaleSym = document.getElementById('scalePercentSymbol');
       const colorSel = document.getElementById('colorModeSelect');
+      const previewBtn = document.getElementById('layoutPreviewBtn');
 
       function toggleScaleInput() {
         const show = scaleSel && scaleSel.value === 'percent';
@@ -1349,6 +1351,16 @@
       scaleSel?.addEventListener('change', () => { toggleScaleInput(); updateLayoutPreview(); maybeRegenerate(); });
       scalePct?.addEventListener('change', () => { updateLayoutPreview(); maybeRegenerate(); });
       colorSel?.addEventListener('change', () => { updateLayoutPreview(); maybeRegenerate(); });
+      previewBtn?.addEventListener('click', () => {
+        const lp = document.getElementById('layoutPreview');
+        if (!lp) return;
+        if (lp.style.display === 'none') {
+          lp.style.display = 'grid';
+          updateLayoutPreview();
+        } else {
+          lp.style.display = 'none';
+        }
+      });
 
       async function loadImage(src) {
         return new Promise(res => {

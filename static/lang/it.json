@@ -35,6 +35,7 @@
   "toGray": "Grigi",
   "toBW": "B/N",
   "toColor": "Colore",
+  "previewLayout": "Anteprima layout",
   "sign": "Firma",
   "chooseAction": "Seleziona azione",
   "cropHint": "Ritaglia l'immagine e premi Process Image per salvare.",

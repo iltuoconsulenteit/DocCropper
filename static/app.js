@@ -49,6 +49,7 @@ const galleryWrapper = document.getElementById('galleryWrapper');
 const statusMessageElement = document.getElementById('statusMessage');
 const signedPdfLink = document.getElementById('signedPdfLink');
 const exportPreviewFrame = document.getElementById('exportPreviewFrame');
+const layoutPreviewBtn = document.getElementById('layoutPreviewBtn');
 const reorderHint = document.getElementById('reorderHint');
 const imageModal = document.getElementById('imageModal');
 const modalImage = document.getElementById('modalImage');
@@ -784,7 +785,7 @@ function calculateGrid() {
 }
 
 function updateLayoutPreview() {
-    if (!layoutPreview) return;
+    if (!layoutPreview || layoutPreview.style.display === 'none') return;
     const {cols, rows} = calculateGrid();
     layoutPreview.innerHTML = '';
     const orientation = orientationSelect.value || 'portrait';
@@ -2320,6 +2321,15 @@ colorModeSelect.addEventListener("change", () => {
     saveSettings({ color_mode: globalColorMode });
     updateLayoutPreview();
     maybeRegenerate();
+});
+layoutPreviewBtn?.addEventListener('click', () => {
+    if (!layoutPreview) return;
+    if (layoutPreview.style.display === 'none') {
+        layoutPreview.style.display = 'grid';
+        updateLayoutPreview();
+    } else {
+        layoutPreview.style.display = 'none';
+    }
 });
 if (closeExportBtn) {
     closeExportBtn.addEventListener('click', () => {

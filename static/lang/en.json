@@ -35,6 +35,7 @@
   "toGray": "Gray",
   "toBW": "B/W",
   "toColor": "Color",
+  "previewLayout": "Preview layout",
   "sign": "Sign",
   "chooseAction": "Select action",
   "cropHint": "Crop image and press Process Image to save.",
