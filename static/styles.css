@@ -411,12 +411,8 @@ button:hover {
     height: 220px;
     border: 1px dashed #666;
     margin-bottom: 10px;
-    display: none;
-    gap: 4px;
-}
-
-#layoutPreview.visible {
     display: grid;
+    gap: 4px;
 }
 
 #layoutPreview .cell {

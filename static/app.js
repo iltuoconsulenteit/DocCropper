@@ -55,7 +55,6 @@ const modalImage = document.getElementById('modalImage');
 const closeModal = document.getElementById('closeModal');
 const langSelect = document.getElementById('langSelect');
 const layoutPreview = document.getElementById('layoutPreview');
-const togglePreviewBtn = document.getElementById('togglePreviewBtn');
 const licenseInfo = document.getElementById('licenseInfo');
 const purchaseBox = document.getElementById('purchaseBox');
 const licenseBox = document.getElementById('licenseBox');
@@ -785,7 +784,7 @@ function calculateGrid() {
 }
 
 function updateLayoutPreview() {
-    if (!layoutPreview.classList.contains('visible')) return;
+    if (!layoutPreview) return;
     const {cols, rows} = calculateGrid();
     layoutPreview.innerHTML = '';
     const orientation = orientationSelect.value || 'portrait';
@@ -2303,13 +2302,6 @@ arrangeSelect.addEventListener('change', () => {
     saveSettings({ arrangement: arrangeSelect.value });
     maybeRegenerate();
 });
-
-if (togglePreviewBtn) {
-    togglePreviewBtn.addEventListener('click', () => {
-        layoutPreview.classList.toggle('visible');
-        updateLayoutPreview();
-    });
-}
 
 scaleMode.addEventListener('change', () => {
     const show = scaleMode.value === 'percent';

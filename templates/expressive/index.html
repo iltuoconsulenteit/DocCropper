@@ -41,11 +41,8 @@
         height: 260px;
         border: 1px dashed #666;
         margin-top: 10px;
-        display: none;
-        gap: 4px;
-      }
-      #layoutPreview.visible {
         display: grid;
+        gap: 4px;
       }
       #layoutPreview .cell {
         border: 1px solid #aaa;
@@ -423,7 +420,6 @@
             invert:'Upside down',
             delete:'Delete',
             removeBg:'Remove BG',
-            previewLayout:'Preview layout',
             imagesPerPage:'Images per page',
             orientation:'Orientation',
             layout:'Layout',
@@ -502,7 +498,6 @@
             invert:'Capovolgi',
             delete:'Elimina',
             removeBg:'Rimuovi sfondo',
-            previewLayout:'Anteprima layout',
             imagesPerPage:'Immagini per pagina',
             orientation:'Orientamento',
             layout:'Disposizione',
@@ -1214,7 +1209,6 @@
     <div id="exportOptions" style="display:none;">
       <button id="closeExportBtn" style="position:absolute; top:2px; right:2px;">×</button>
       <div id="layoutControls" style="display:none; text-align:left; margin-bottom:8px; font-size:12px;">
-        <div><button id="togglePreviewBtn" class="w-full px-2 py-1 bg-gray-200 rounded" x-text="t('previewLayout')"></button></div>
         <div>
           <label for="layoutSelect" x-text="t('imagesPerPage')"></label>
           <select id="layoutSelect">
@@ -1293,7 +1287,7 @@
 
       function updateLayoutPreview() {
         const preview = document.getElementById('layoutPreview');
-        if (!preview || !preview.classList.contains('visible')) return;
+        if (!preview) return;
         const { cols, rows } = calculateGrid();
         const orientation = document.getElementById('orientationSelect')?.value || 'portrait';
         const images = window.getProcessedImages ? window.getProcessedImages() : [];
@@ -1355,11 +1349,6 @@
       scaleSel?.addEventListener('change', () => { toggleScaleInput(); updateLayoutPreview(); maybeRegenerate(); });
       scalePct?.addEventListener('change', () => { updateLayoutPreview(); maybeRegenerate(); });
       colorSel?.addEventListener('change', () => { updateLayoutPreview(); maybeRegenerate(); });
-      document.getElementById('togglePreviewBtn')?.addEventListener('click', () => {
-        const lp = document.getElementById('layoutPreview');
-        lp.classList.toggle('visible');
-        updateLayoutPreview();
-      });
 
       async function loadImage(src) {
         return new Promise(res => {
@@ -1460,7 +1449,15 @@
         }
         if (downloadBtn) {
           downloadBtn.style.display = 'block';
-          downloadBtn.onclick = () => window.DC.download();
+          downloadBtn.onclick = () => {
+            if (!window.currentPdfBlob) return;
+            const u = URL.createObjectURL(window.currentPdfBlob);
+            const a = document.createElement('a');
+            a.href = u;
+            a.download = 'document.pdf';
+            a.click();
+            URL.revokeObjectURL(u);
+          };
         }
         if (waBtn) {
           waBtn.style.display = 'block';
