@@ -383,6 +383,10 @@ Uploads larger than the configured `DOCROPPER_MAX_UPLOAD_MB` (20&nbsp;MB by defa
 OCR capabilities will be offered in a future licensed edition. The current release hides the **Extract Text** button.
 
 
+## Disclaimer
+
+DocCropper and its authors accept no liability for illegal use.
+
 ## Credits
 
 This project is originally based on [varna9000/image-perspective-crop](https://github.com/varna9000/image-perspective-crop). Significant modifications and new features were added for broader usability.
