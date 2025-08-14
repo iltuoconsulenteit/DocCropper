@@ -21,6 +21,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
  - 🧹 Skip blank pages when importing PDFs using a configurable threshold (Pro)
 - 📄 Create PDFs ready for download or sharing
 - 📦 Compress PDFs with Low, Medium or Extreme settings and optional JPEG quality tuning (Pro)
+- 📚 Export as PDF/A for archival and legal compliance
 - 🔏 Optional digital signature on exported PDFs. Drag and add multiple stamps per page before export (Free - watermark applied)
 - ✍️ Sign from your phone via QR code and save the drawing for later use (Pro)
 - 📤 Share PDFs via WhatsApp Web or Email, attaching files via the Web Share API when possible (Pro)

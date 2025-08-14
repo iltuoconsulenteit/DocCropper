@@ -145,10 +145,25 @@ const cameraControls = document.getElementById('cameraControls');
 const cameraPreview = document.getElementById('cameraPreview');
 const cameraSelect = document.getElementById('cameraSelect');
 const captureBtn = document.getElementById('captureBtn');
+const cameraOverlay = document.getElementById('cameraOverlay');
+const cameraMargin = document.getElementById('cameraMargin');
 const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 const cameraFileInput = document.getElementById('cameraFileInput');
 const CAPTURE_MAX_DIM = 1600;
 const CAPTURE_QUALITY = 0.8;
+
+function updateCameraOverlay() {
+    if (!cameraOverlay || !cameraMargin) return;
+    const m = parseInt(cameraMargin.value || '0');
+    cameraOverlay.style.top = m + '%';
+    cameraOverlay.style.left = m + '%';
+    cameraOverlay.style.width = (100 - 2 * m) + '%';
+    cameraOverlay.style.height = (100 - 2 * m) + '%';
+}
+if (cameraMargin) {
+    cameraMargin.addEventListener('input', updateCameraOverlay);
+    updateCameraOverlay();
+}
 
 let isLicensed = false;
 let licenseName = '';
@@ -303,12 +318,17 @@ async function capturePhoto() {
     const video = cameraPreview;
     let w = video.videoWidth;
     let h = video.videoHeight;
-    const scale = Math.min(1, CAPTURE_MAX_DIM / Math.max(w, h));
+    const m = cameraMargin ? parseInt(cameraMargin.value || '0') : 0;
+    const cropX = (w * m) / 100;
+    const cropY = (h * m) / 100;
+    const sw = w - 2 * cropX;
+    const sh = h - 2 * cropY;
+    const scale = Math.min(1, CAPTURE_MAX_DIM / Math.max(sw, sh));
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(w * scale);
-    canvas.height = Math.round(h * scale);
+    canvas.width = Math.round(sw * scale);
+    canvas.height = Math.round(sh * scale);
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, cropX, cropY, sw, sh, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL('image/jpeg', CAPTURE_QUALITY);
     const blob = dataURItoBlob(dataUrl);
     const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
@@ -1970,7 +1990,8 @@ async function generatePdf() {
     const scale_percent = parseInt(scalePercent.value || '100');
     const compression = window.getCompressionLevel ? window.getCompressionLevel() : 'none';
     const jpeg_quality = window.getJpegQuality ? window.getJpegQuality() : 75;
-    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures, remove_signature_bg: window.removeSignatureBackground !== false, compression, jpeg_quality };
+    const pdfa = document.getElementById('pdfaCheck')?.checked || false;
+    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures, remove_signature_bg: window.removeSignatureBackground !== false, compression, jpeg_quality, pdfa };
     if (window.lastSignEmail || window.lastSignPhone || window.lastSignName) {
         payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
     }
@@ -2087,7 +2108,7 @@ imageElement.addEventListener('dblclick', (e) => {
     console.debug('dblclick on imageElement', { x: e.clientX, y: e.clientY });
     autoDetectCorners();
 });
-imageElement.addEventListener('touchend', (e) => {
+imageElement.addEventListener('touchstart', (e) => {
     const now = Date.now();
     if (now - lastTap < 300) {
         e.preventDefault();

@@ -751,6 +751,7 @@ async def create_pdf(
     sign_info: dict | None = Body(default_factory=dict),
     compression: str = Body("none"),
     jpeg_quality: int = Body(75),
+    pdfa: bool = Body(False),
 ):
     try:
         settings = load_settings()
@@ -1002,6 +1003,12 @@ async def create_pdf(
         compressor = plugin_utils.get("compress_pdf")
         if compressor and (compression and compression.lower() != "none"):
             pdf_bytes = compressor(pdf_bytes, compression, jpeg_quality)
+        if pdfa:
+            try:
+                doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+                pdf_bytes = doc.tobytes(deflate=True, clean=True, garbage=4, pdfa=0)
+            except Exception:
+                logger.exception("PDF/A conversion failed")
 
         pdf_path = os.path.join(session_dir, "output.pdf" + ENC_SUFFIX)
         try:
