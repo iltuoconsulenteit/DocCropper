@@ -225,7 +225,8 @@
           <input type="range" min="0" max="200" x-model.number="cropContrast" class="w-24" />
         </div>
         <div class="mt-2 text-right space-x-2">
-          <button @click="applyCrop" class="bg-blue-500 text-white px-3 py-1 rounded" x-text="t('apply')"></button>
+          <button @click="applyCrop()" class="bg-blue-500 text-white px-3 py-1 rounded" x-text="t('apply')"></button>
+          <button x-show="inputMode && inputMode.value==='camera'" @click="applyCrop(true)" class="bg-blue-500 text-white px-3 py-1 rounded" x-text="t('applyAdd')"></button>
           <button @click="closeCrop" class="bg-gray-300 px-3 py-1 rounded" x-text="t('cancel')"></button>
         </div>
       </div>
@@ -415,6 +416,7 @@
             unpin:'Unpin menu',
             version:'Version',
             apply:'Apply',
+            applyAdd:'Apply & Add',
             cancel:'Cancel',
             confirm:'Confirm',
             licensedTo:'Licensed to',
@@ -503,6 +505,7 @@
             unpin:'Sblocca menu',
             version:'Versione',
             apply:'Applica',
+            applyAdd:'Applica e aggiungi',
             cancel:'Annulla',
             confirm:'Conferma',
             licensedTo:'Licenziato a',
@@ -1307,7 +1310,7 @@
             while(n--) u8[n]=bstr.charCodeAt(n);
             return new Blob([u8],{type:mime});
           },
-          applyCrop(){
+          applyCrop(addAnother=false){
             if(this.currentPoints.length!==8) return;
             const scaled=this.currentPoints.map((v,i)=>i%2===0? v*this.scalingW : v*this.scalingH);
             const blob=this.dataURLtoBlob(this.files[this.cropIndex].url);
@@ -1321,7 +1324,7 @@
             fetch('/process-image/',{method:'POST',body:fd})
               .then(r=>r.json())
               .then(d=>{ if(d.processed_image){ this.files[this.cropIndex].url=d.processed_image; this.files[this.cropIndex].original=d.processed_image; this.files=[...this.files]; } })
-              .finally(()=>{ this.closeCrop(); });
+              .finally(()=>{ this.closeCrop(); if(addAnother){ const inp=document.getElementById('cameraFileInput'); if(inp){ inp.value=''; inp.click(); } } });
           },
       initSortable(){
             if(!this.$refs.fileGrid) return;

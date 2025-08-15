@@ -46,7 +46,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 This project uses [Interact.JS](https://github.com/taye/interact.js) for managing draggable corner points.
 
 The frontend allows the user to:
-- Upload images with the file picker. On mobile devices the file picker is shown by default but you can switch to the camera mode and choose which camera to use. Desktop users may also drag and drop files. Up to `max_upload_files` images can be imported at once (10 by default)
+- Upload images with the file picker. On mobile devices the file picker is shown by default but you can switch to the camera mode and choose which camera to use. An "Apply & Add" button lets you snap another photo right after cropping. Desktop users may also drag and drop files. Up to `max_upload_files` images can be imported at once (10 by default)
  - Import PDF documents which are converted to images and added to the gallery without immediate cropping (Pro)
 - Add more images later without losing previously processed ones
 - Manually adjust the four corners of each image

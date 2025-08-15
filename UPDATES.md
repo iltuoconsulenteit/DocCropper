@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-08-17
+- Added an "Apply & Add" option after cropping in camera mode to quickly capture another photo.
+
 ## 2025-08-16
 - Removed the `multiple` attribute from the hidden camera input so cropped photos from mobile devices import correctly.
 
