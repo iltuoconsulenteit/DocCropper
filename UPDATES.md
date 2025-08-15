@@ -5,3 +5,30 @@
 - Slide rotation is skipped when no slides are configured.
 - Default `banner_images` list includes all provided slides.
 
+## 2025-08-14
+- Added per-page watermark tool with draggable overlays and a watermark button in the Expressive template.
+- Introduced PDF/A export plugin and camera margin controls.
+- Added legal disclaimers to signing and watermark tools.
+- Fixed watermark application, centering, and export sidebar layout.
+
+## 2025-08-12
+- Released Expressive UI template with Tailwind, selectable templates, and improved previews.
+- Restored perspective cropping with auto corner detection, draggable handles, and brightness/contrast controls.
+- Integrated mobile signing plugin and exposed sign modal hook.
+- Routed sign commands through the adapter and used prebuilt Tailwind CSS.
+
+## 2025-08-07
+- Made sponsor video optional.
+- Allowed PDF export without license check.
+
+## 2025-07-31
+- Added LAN user limit plugin and created a default admin via FastAPI Users.
+- Improved Docker setup and environment examples.
+
+## 2025-07-30
+- Implemented remote license verification and admin interface.
+- Added Docker deployment files and refined branding layout.
+
+## 2025-07-29
+- Enhanced signing interface, banner layout, and legal disclaimers.
+
