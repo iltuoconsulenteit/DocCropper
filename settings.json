@@ -41,7 +41,14 @@
   "enable_compresspdf": true,
   "enable_watermark": true,
   "enable_sponsor_video": false,
-  "banner_images": ["DocCropper_slogan_main_{{lang}}.png"],
+  "banner_images": [
+    "DocCropper_slogan_main_{{lang}}.png",
+    "DocCropper_slogan_sign_{{lang}}.png",
+    "DocCropper_slogan_multi_{{lang}}.png",
+    "DocCropper_slogan_removebg_{{lang}}.png",
+    "DocCropper_slogan_mobilesign_{{lang}}.png",
+    "DocCropper_slogan_compress_{{lang}}.png"
+  ],
   "banner_interval": 5000,
   "lan_user_limit": 0
 }

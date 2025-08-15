@@ -619,8 +619,8 @@
           lang: window.DC_LANG || 'it',
           strings,
           slides:{
-            en:['/static/slide/DocCropper_slogan_main_en.png','/static/slide/DocCropper_slogan_sign_en.png'],
-            it:['/static/slide/DocCropper_slogan_main_it.png','/static/slide/DocCropper_slogan_sign_it.png']
+            en:[],
+            it:[]
           },
           slideIndex:0,
           showSlides:true,
@@ -670,7 +670,7 @@
               }
             });
             setInterval(()=>{
-              if (this.showSlides) {
+              if (this.showSlides && this.slides[this.lang].length) {
                 this.slideIndex = (this.slideIndex+1) % this.slides[this.lang].length;
                 this.currentSlide = this.slides[this.lang][this.slideIndex];
               }
@@ -684,6 +684,14 @@
               this.sponsorLogo = this.settings.sponsorLogo ? `/static/logos/${this.settings.sponsorLogo}` : null;
               this.clientLogoHeight = this.settings.clientLogoHeight;
               this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
+              if(Array.isArray(cfg.banner_images)){
+                this.slides.en = cfg.banner_images.map(img=>`/static/slide/${img.replace('{{lang}}','en')}`);
+                this.slides.it = cfg.banner_images.map(img=>`/static/slide/${img.replace('{{lang}}','it')}`);
+              } else {
+                this.slides.en = ['/static/slide/DocCropper_slogan_main_en.png'];
+                this.slides.it = ['/static/slide/DocCropper_slogan_main_it.png'];
+              }
+              this.refreshSlides();
               this.removeBgEnabled = !!cfg.enable_removebg;
               this.watermarkEnabled = !!cfg.enable_watermark;
               this.maxUpload = parseInt(cfg.max_upload_files || 10);
