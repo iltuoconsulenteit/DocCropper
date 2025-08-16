@@ -1,5 +1,8 @@
 # Updates
 
+## 2024-09-07
+- Added rollback command accessible from the update menu, tray, and API to restore the previously installed version when an update causes issues.
+
 ## 2024-09-06
 - Removed empty sponsor tier list, added placeholder pricing row, and positioned the contact button below the table.
 

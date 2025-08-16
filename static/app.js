@@ -64,6 +64,7 @@ let updateTimer;
 const updateBox = document.getElementById('updateBox');
 const updatePinInput = document.getElementById('updatePinInput');
 const updatePinSubmit = document.getElementById('updatePinSubmit');
+const rollbackPinSubmit = document.getElementById('rollbackPinSubmit');
 const updatePinCancel = document.getElementById('updatePinCancel');
 
 async function checkForUpdate(first = false) {
@@ -75,18 +76,19 @@ async function checkForUpdate(first = false) {
         clearTimeout(timeoutId);
         if (resp.ok) {
             const data = await resp.json();
-            updateBell.style.display = data.available ? 'inline-block' : 'none';
+            updateBell.classList.toggle('has-update', !!data.available);
             return true;
         }
     } catch (e) {
         console.error('Update check failed', e);
     }
-    updateBell.style.display = 'none';
+    updateBell.classList.remove('has-update');
     if (first && updateTimer) clearInterval(updateTimer);
     return false;
 }
 
 if (updateBell) {
+    updateBell.style.display = 'inline-block';
     updateBell.addEventListener('click', () => {
         const rect = updateBell.getBoundingClientRect();
         updateBox.style.display = 'block';
@@ -110,6 +112,22 @@ if (updateBell) {
             updateBox.classList.remove('visible');
         } catch (e) {
             alert(t('updateFailed'));
+            updateBox.classList.remove('visible');
+        }
+    });
+    rollbackPinSubmit.addEventListener('click', async () => {
+        const pin = updatePinInput.value.trim();
+        if (!pin) return;
+        try {
+            const resp = await fetch('/rollback/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pin })
+            });
+            alert(resp.ok ? t('rollbackStarted') : t('rollbackFailed'));
+            updateBox.classList.remove('visible');
+        } catch (e) {
+            alert(t('rollbackFailed'));
             updateBox.classList.remove('visible');
         }
     });

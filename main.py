@@ -30,6 +30,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from cryptography.fernet import Fernet
 import subprocess
 import sys
+import platform
 import tempfile
 from dotenv import load_dotenv
 import urllib.request
@@ -174,6 +175,17 @@ def run_update_script():
     env.setdefault("BRANCH", "main")
     script = BASE_DIR / "install" / "install_DocCropper.sh"
     subprocess.Popen(["bash", str(script)], cwd=BASE_DIR, env=env)
+
+def run_rollback_script():
+    system = platform.system()
+    script = {
+        "Windows": BASE_DIR / "scripts" / "rollback_DocCropper.bat",
+        "Darwin": BASE_DIR / "scripts" / "rollback_DocCropper.command",
+    }.get(system, BASE_DIR / "scripts" / "rollback_DocCropper.sh")
+    if system == "Windows":
+        subprocess.Popen(["cmd", "/c", str(script)], cwd=BASE_DIR)
+    else:
+        subprocess.Popen(["bash", str(script)], cwd=BASE_DIR)
 
 DEFAULT_SETTINGS = {
     "language": "it",
@@ -747,6 +759,16 @@ async def update_app(data: dict = Body(...)):
     if pin != settings.get("update_pin", ""):
         raise HTTPException(status_code=403, detail="Invalid PIN")
     run_update_script()
+    return {"status": "started"}
+
+
+@app.post("/rollback/")
+async def rollback_app(data: dict = Body(...)):
+    pin = data.get("pin", "")
+    settings = load_settings()
+    if pin != settings.get("update_pin", ""):
+        raise HTTPException(status_code=403, detail="Invalid PIN")
+    run_rollback_script()
     return {"status": "started"}
 
 

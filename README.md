@@ -42,6 +42,7 @@ All project changes are documented in [UPDATES.md](UPDATES.md). The in-app **Upd
 - 📁 Limit simultaneous uploads with the `max_upload_files` setting (10 by default)
 - 🚀 Cache busting (`?v=<commit>`) ensures browsers fetch updated files
 - 🔔 Notification bell checks for updates and lets licensed users trigger upgrades with a PIN
+- ⏪ Rollback command restores the previous version if an update causes issues
 
 ---
 

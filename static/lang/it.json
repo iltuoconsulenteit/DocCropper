@@ -134,6 +134,7 @@
   "stopApp": "Ferma DocCropper",
   "updateMain": "Aggiorna da main",
   "updateBranch": "Aggiorna da branch",
+  "rollbackApp": "Ripristina versione precedente",
   "uninstallApp": "Disinstalla DocCropper",
   "quit": "Esci",
   "licenses": "Licenze",
@@ -209,6 +210,9 @@
   "enterUpdatePin": "Inserisci PIN aggiornamento",
   "startUpdate": "Avvia aggiornamento",
   "updateStarted": "Aggiornamento avviato",
-  "updateFailed": "Aggiornamento fallito"
+  "updateFailed": "Aggiornamento fallito",
+  "rollback": "Ripristina",
+  "rollbackStarted": "Ripristino avviato",
+  "rollbackFailed": "Ripristino fallito"
 }
 

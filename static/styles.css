@@ -529,6 +529,10 @@ button:hover {
     pointer-events: auto;
 }
 
+#updateBell.has-update {
+    color: #eab308;
+}
+
 #updateBox {
     position: fixed;
     top: 0;

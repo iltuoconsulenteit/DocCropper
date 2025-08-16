@@ -104,7 +104,7 @@
           <option value="en">EN</option>
           <option value="it" selected>IT</option>
         </select>
-        <button x-show="updateAvailable" @click="openUpdateModal" title="Update">🔔</button>
+        <button @click="openUpdateModal('update')" :class="{'text-yellow-400': updateAvailable}" title="Update">🔔</button>
       </header>
       <!-- Content -->
       <main class="flex-1 p-4 space-y-4 overflow-y-auto" x-cloak>
@@ -168,6 +168,10 @@
           <template x-for="(note, idx) in updates[lang]" :key="idx">
             <div class="border-b pb-2" x-text="note"></div>
           </template>
+          <div class="pt-2 flex gap-2">
+            <button class="px-2 py-1 border rounded text-xs" @click="openUpdateModal('update')" x-text="t('startUpdate')"></button>
+            <button class="px-2 py-1 border rounded text-xs" @click="openUpdateModal('rollback')" x-text="t('rollback')"></button>
+          </div>
         </div>
         <div x-show="tab==='sponsor'" class="p-4 space-y-4" x-data="{tiers:[], price(c){const t=this.tiers.find(x=>x.codice===c);return t&&t.prezzo_base?('€'+t.prezzo_base):'';}}" x-init="fetch('/index.php?option=com_fabrik&view=list&listid=XX&format=raw&format=json').then(r=>r.json()).then(d=>tiers=d)">
           <h2 class="text-2xl font-bold" x-text="t('sponsorTitle')"></h2>
@@ -430,7 +434,7 @@
         <input type="password" class="border w-full p-1" x-model="updatePin" />
         <div class="text-right space-x-2 pt-2">
           <button class="px-3 py-1 bg-gray-300 rounded" @click="cancelUpdate" x-text="t('cancel')"></button>
-          <button class="px-3 py-1 bg-blue-500 text-white rounded" @click="confirmUpdate" x-text="t('startUpdate')"></button>
+          <button class="px-3 py-1 bg-blue-500 text-white rounded" @click="confirmUpdate" x-text="updateAction==='rollback'?t('rollback'):t('startUpdate')"></button>
         </div>
       </div>
     </div>
@@ -567,7 +571,10 @@
             enterUpdatePin:'Enter update PIN',
             startUpdate:'Start update',
             updateStarted:'Update started',
-            updateFailed:'Update failed'
+            updateFailed:'Update failed',
+            rollback:'Rollback',
+            rollbackStarted:'Rollback started',
+            rollbackFailed:'Rollback failed'
           },
           it:{
             commands:'Comandi',
@@ -673,7 +680,10 @@
             enterUpdatePin:'Inserisci PIN aggiornamento',
             startUpdate:'Avvia aggiornamento',
             updateStarted:'Aggiornamento avviato',
-            updateFailed:'Aggiornamento fallito'
+            updateFailed:'Aggiornamento fallito',
+            rollback:'Ripristina',
+            rollbackStarted:'Ripristino avviato',
+            rollbackFailed:'Ripristino fallito'
           }
         };
         // Expose translations so external plugins (e.g., mobile sign) can reuse them
@@ -751,6 +761,7 @@
           updateAvailable:false,
           showUpdateModal:false,
           updatePin:'',
+          updateAction:'update',
           updateInterval:3600000,
           maxUpload:10,
           showClearConfirm:false,
@@ -779,18 +790,24 @@
               this.updateAvailable = !!d.available;
             }).catch(()=>{});
           },
-          openUpdateModal(){
+          openUpdateModal(action='update'){
             this.updatePin='';
+            this.updateAction = action;
             this.showUpdateModal=true;
           },
           confirmUpdate(){
             const pin = this.updatePin.trim();
             if(!pin) { this.showUpdateModal=false; return; }
-            fetch('/update/', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin})})
+            const url = this.updateAction==='rollback' ? '/rollback/' : '/update/';
+            fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin})})
               .then(r=>{
-                if(r.ok){ alert(this.t('updateStarted')); this.updateAvailable=false; }
-                else { alert(this.t('updateFailed')); }
-              }).catch(()=>{ alert(this.t('updateFailed')); })
+                if(r.ok){
+                  alert(this.t(this.updateAction==='rollback' ? 'rollbackStarted' : 'updateStarted'));
+                  if(this.updateAction!=='rollback') this.updateAvailable=false;
+                } else {
+                  alert(this.t(this.updateAction==='rollback' ? 'rollbackFailed' : 'updateFailed'));
+                }
+              }).catch(()=>{ alert(this.t(this.updateAction==='rollback' ? 'rollbackFailed' : 'updateFailed')); })
               .finally(()=>{ this.showUpdateModal=false; });
           },
           cancelUpdate(){ this.showUpdateModal=false; },

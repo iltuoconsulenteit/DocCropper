@@ -72,6 +72,11 @@ UNINSTALL_SCRIPTS = {
     'Darwin': 'uninstall_DocCropper.command',
 }.get(SYSTEM, 'uninstall_DocCropper.sh')
 
+ROLLBACK_SCRIPTS = {
+    'Windows': 'rollback_DocCropper.bat',
+    'Darwin': 'rollback_DocCropper.command',
+}.get(SYSTEM, 'rollback_DocCropper.sh')
+
 def is_developer():
     """Return True if a developer license is active."""
     settings_file = BASE_DIR / 'settings.json'
@@ -125,6 +130,9 @@ def update_branch():
 
 def uninstall_app():
     run_script(UNINSTALL_SCRIPTS)
+
+def rollback_app():
+    run_script(ROLLBACK_SCRIPTS, folder=SCRIPTS_DIR)
 
 def open_browser():
     port = get_port()
@@ -250,6 +258,9 @@ def main():
     def uninstall_action(icon, item):
         uninstall_app()
 
+    def rollback_action(icon, item):
+        rollback_app()
+
     def update_branch_action(icon, item):
         update_branch()
 
@@ -258,6 +269,7 @@ def main():
         MenuItem(tr('startApp'), start_action),
         MenuItem(tr('stopApp'), stop_action),
         MenuItem(tr('updateMain'), update_main_action),
+        MenuItem(tr('rollbackApp'), rollback_action),
         MenuItem(tr('uninstallApp'), uninstall_action)
     ]
     if developer:
