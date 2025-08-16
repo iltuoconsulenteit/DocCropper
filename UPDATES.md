@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-08-28
+- Homepage now shows an optional sponsor banner and client/sponsor logos link to URLs supplied by license settings.
+
 ## 2025-08-27
 - Login module only activates when license checking is enabled, preventing unprotected enterprise use.
 

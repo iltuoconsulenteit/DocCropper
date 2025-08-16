@@ -105,6 +105,9 @@
       <!-- Content -->
       <main class="flex-1 p-4 space-y-4 overflow-y-auto" x-cloak>
         <input type="file" id="imageUpload" class="hidden" multiple accept="image/*,application/pdf" @change="handleImport">
+        <div class="mb-4 flex justify-center" x-show="sponsorBanner && files.length===0 && tab==='files'">
+          <a :href="sponsorUrl || '#'" target="_blank"><img :src="sponsorBanner" alt="Sponsor" class="max-h-32 w-auto object-contain" /></a>
+        </div>
         <div class="mb-4 flex justify-center" x-show="showSlides && currentSlide && files.length===0 && tab==='files'">
           <img :src="currentSlide" alt="slogan" class="max-h-64 w-auto object-contain" />
         </div>
@@ -195,7 +198,9 @@
       </main>
       <footer class="mt-auto py-1 px-4">
         <div class="flex flex-col sm:flex-row items-center justify-between w-full space-y-2 sm:space-y-0">
-          <img x-show="sponsorLogo" :src="sponsorLogo" alt="Sponsor" :style="'height:'+displaySponsorHeight()+'px'" />
+          <a x-show="sponsorLogo" :href="sponsorUrl || '#'" target="_blank">
+            <img :src="sponsorLogo" alt="Sponsor" :style="'height:'+displaySponsorHeight()+'px'" />
+          </a>
           <div class="flex flex-col items-center">
             <a href="https://www.iltuoconsulenteit.it/site/index.php/applicazioni/doccropper" target="_blank" rel="noopener" class="flex flex-col items-center">
               <span class="text-xs mb-1">By IlTuoConsulenteIT</span>
@@ -203,7 +208,9 @@
             </a>
             <span class="text-xs text-gray-500" x-text="versionInfo()"></span>
           </div>
-          <img x-show="clientLogo" :src="clientLogo" alt="Client" :style="'height:'+displayClientHeight()+'px'" />
+          <a x-show="clientLogo" :href="clientUrl || '#'" target="_blank">
+            <img :src="clientLogo" alt="Client" :style="'height:'+displayClientHeight()+'px'" />
+          </a>
         </div>
       </footer>
     </div>
@@ -338,8 +345,16 @@
           <input type="text" class="border w-full p-1" x-model="settings.clientLogo" />
         </div>
         <div>
+          <label class="block text-sm" x-text="t('clientUrl')"></label>
+          <input type="text" class="border w-full p-1" x-model="settings.clientUrl" />
+        </div>
+        <div>
           <label class="block text-sm" x-text="t('sponsorLogo')"></label>
           <input type="text" class="border w-full p-1" x-model="settings.sponsorLogo" />
+        </div>
+        <div>
+          <label class="block text-sm" x-text="t('sponsorUrl')"></label>
+          <input type="text" class="border w-full p-1" x-model="settings.sponsorUrl" />
         </div>
         <div>
           <label class="block text-sm" x-text="t('clientLogoHeight')"></label>
@@ -408,6 +423,8 @@
             wrongPassword:'Wrong password',
             clientLogo:'Client logo',
             sponsorLogo:'Sponsor logo',
+            clientUrl:'Client link',
+            sponsorUrl:'Sponsor link',
             clientLogoHeight:'Client logo height',
             sponsorLogoHeight:'Sponsor logo height',
             noFiles:'No files available.',
@@ -497,6 +514,8 @@
             wrongPassword:'Password errata',
             clientLogo:'Logo cliente',
             sponsorLogo:'Logo sponsor',
+            clientUrl:'Link cliente',
+            sponsorUrl:'Link sponsor',
             clientLogoHeight:'Altezza logo cliente',
             sponsorLogoHeight:'Altezza logo sponsor',
             noFiles:'Nessun file disponibile.',
@@ -603,13 +622,16 @@
           activeSig:null,
           signatureAspect:1,
           pendingSigPos:null,
+          sponsorBanner:null,
           clientLogo:null,
           sponsorLogo:null,
           donateLink:null,
           settingsModal:false,
           passwordModal:false,
           passwordInput:'',
-          settings:{clientLogo:'', sponsorLogo:'', clientLogoHeight:125, sponsorLogoHeight:125},
+          settings:{clientLogo:'', sponsorLogo:'', clientLogoHeight:125, sponsorLogoHeight:125, clientUrl:'', sponsorUrl:''},
+          clientUrl:'',
+          sponsorUrl:'',
           clientLogoHeight:125,
           sponsorLogoHeight:125,
           version:'',
@@ -683,6 +705,11 @@
               this.settings.sponsorLogo = cfg.sponsor_logo || '';
               this.settings.clientLogoHeight = parseInt(cfg.client_logo_height || 125);
               this.settings.sponsorLogoHeight = parseInt(cfg.sponsor_logo_height || 125);
+              this.settings.clientUrl = cfg.client_url || '';
+              this.settings.sponsorUrl = cfg.sponsor_url || '';
+              this.clientUrl = this.settings.clientUrl;
+              this.sponsorUrl = this.settings.sponsorUrl;
+              this.sponsorBanner = cfg.sponsor_banner ? `/static/logos/${cfg.sponsor_banner}` : null;
               this.clientLogo = this.settings.clientLogo ? `/static/logos/${this.settings.clientLogo}` : null;
               this.sponsorLogo = this.settings.sponsorLogo ? `/static/logos/${this.settings.sponsorLogo}` : null;
               this.clientLogoHeight = this.settings.clientLogoHeight;
@@ -791,7 +818,9 @@
               client_logo:this.settings.clientLogo,
               sponsor_logo:this.settings.sponsorLogo,
               client_logo_height:this.settings.clientLogoHeight,
-              sponsor_logo_height:this.settings.sponsorLogoHeight
+              sponsor_logo_height:this.settings.sponsorLogoHeight,
+              client_url:this.settings.clientUrl,
+              sponsor_url:this.settings.sponsorUrl
             };
             fetch('/settings/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
               .then(()=>{
@@ -799,6 +828,8 @@
                 this.sponsorLogo = this.settings.sponsorLogo ? `/static/logos/${this.settings.sponsorLogo}` : null;
                 this.clientLogoHeight = this.settings.clientLogoHeight;
                 this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
+                this.clientUrl = this.settings.clientUrl;
+                this.sponsorUrl = this.settings.sponsorUrl;
                 this.settingsModal = false;
               });
           },

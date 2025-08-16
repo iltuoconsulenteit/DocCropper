@@ -83,10 +83,17 @@ const closeBanner = document.getElementById('closeBanner');
 const sloganImg = document.getElementById('sloganImg');
 const wikiFrame = document.getElementById('wikiFrame');
 const openWikiLink = document.getElementById('openWikiLink');
+const sponsorBanner = document.getElementById('sponsorBanner');
+const sponsorBannerImg = document.getElementById('sponsorBannerImg');
+const sponsorBannerLink = document.getElementById('sponsorBannerLink');
 const clientLogo = document.getElementById('clientLogo');
+const clientLogoLink = document.getElementById('clientLogoLink');
 const sponsorLogo = document.getElementById('sponsorLogo');
+const sponsorLogoLink = document.getElementById('sponsorLogoLink');
 const sponsorBadge = document.getElementById('sponsorBadge');
+const sponsorBadgeLink = document.getElementById('sponsorBadgeLink');
 const clientBadge = document.getElementById('clientBadge');
+const clientBadgeLink = document.getElementById('clientBadgeLink');
 const headerLogo = document.getElementById('headerLogo');
 const footerLogo = document.getElementById('footerLogo');
 const autoDetectHint = document.getElementById('autoDetectHint');
@@ -547,38 +554,51 @@ function applySettings(cfg) {
     if (brandBox) {
         brandBox.innerHTML = cfg.brand_html || '';
     }
-    if (clientLogo) {
+    if (clientLogo && clientLogoLink) {
         if (cfg.client_logo) {
             clientLogo.src = `/static/logos/${cfg.client_logo}`;
-            clientLogo.style.display = 'block';
+            clientLogoLink.href = cfg.client_url || '#';
+            clientLogoLink.style.display = 'block';
         } else {
-            clientLogo.style.display = 'none';
+            clientLogoLink.style.display = 'none';
         }
     }
-    if (sponsorLogo) {
+    if (sponsorLogo && sponsorLogoLink) {
         if (cfg.sponsor_logo) {
             sponsorLogo.src = `/static/logos/${cfg.sponsor_logo}`;
-            sponsorLogo.style.display = 'block';
+            sponsorLogoLink.href = cfg.sponsor_url || '#';
+            sponsorLogoLink.style.display = 'block';
         } else {
-            sponsorLogo.style.display = 'none';
+            sponsorLogoLink.style.display = 'none';
         }
     }
-    if (clientBadge) {
+    if (clientBadge && clientBadgeLink) {
         if (cfg.client_logo) {
             clientBadge.src = `/static/logos/${cfg.client_logo}`;
-            clientBadge.style.display = 'block';
+            clientBadgeLink.href = cfg.client_url || '#';
+            clientBadgeLink.style.display = 'block';
             clientBadge.style.maxHeight = (cfg.client_logo_height || 125) + 'px';
         } else {
-            clientBadge.style.display = 'none';
+            clientBadgeLink.style.display = 'none';
         }
     }
-    if (sponsorBadge) {
+    if (sponsorBadge && sponsorBadgeLink) {
         if (cfg.sponsor_logo) {
             sponsorBadge.src = `/static/logos/${cfg.sponsor_logo}`;
-            sponsorBadge.style.display = 'block';
+            sponsorBadgeLink.href = cfg.sponsor_url || '#';
+            sponsorBadgeLink.style.display = 'block';
             sponsorBadge.style.maxHeight = (cfg.sponsor_logo_height || 125) + 'px';
         } else {
-            sponsorBadge.style.display = 'none';
+            sponsorBadgeLink.style.display = 'none';
+        }
+    }
+    if (sponsorBanner && sponsorBannerImg && sponsorBannerLink) {
+        if (cfg.sponsor_banner) {
+            sponsorBannerImg.src = `/static/logos/${cfg.sponsor_banner}`;
+            sponsorBannerLink.href = cfg.sponsor_url || '#';
+            sponsorBanner.style.display = 'block';
+        } else {
+            sponsorBanner.style.display = 'none';
         }
     }
     if (Array.isArray(cfg.banner_images)) {
