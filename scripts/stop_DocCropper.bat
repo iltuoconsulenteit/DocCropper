@@ -10,7 +10,13 @@ if exist venv\Scripts\python.exe (
     set "PY=python"
 )
 
-%PY% main.py --stop
+set "PID_FILE=%TEMP%\doccropper.pid"
+if exist "%PID_FILE%" (
+    set /p PID=<"%PID_FILE%"
+    tasklist /FI "PID eq %PID%" | find "%PID%" >nul && taskkill /F /PID %PID% >nul 2>&1
+    del "%PID_FILE%" >nul 2>&1
+    echo Stopped DocCropper (PID %PID%)
+)
 
 set "TRAY_PID_FILE=%TEMP%\doccropper_tray.pid"
 if exist "%TRAY_PID_FILE%" (

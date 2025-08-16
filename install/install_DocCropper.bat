@@ -228,8 +228,8 @@ if exist requirements.txt (
     call :log "File requirements.txt non trovato!"
 )
 
-set /p RUN_APP=Launch DocCropper with tray icon now? [Y/n]
-if /I "!RUN_APP!" NEQ "n" if /I "!RUN_APP!" NEQ "N" (
+set /p RUN_APP=Launch DocCropper with tray icon now? [y/N]
+if /I "!RUN_APP!" EQU "y" (
     pushd "!APP_DIR!" >nul
     where pythonw >nul 2>&1 && (
         call :log "Launching tray icon"

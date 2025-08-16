@@ -1,5 +1,9 @@
 # Updates
 
+## 2024-09-04
+- Installer launches the tray helper only after an explicit yes, preventing auto-starts during setup.
+- Start and stop scripts terminate running instances via PID files to avoid plugin warnings during shutdown.
+
 ## 2024-09-03
 - Added a benefits table to the Sponsor page to preview perks for Bronze, Silver, and Gold tiers.
 

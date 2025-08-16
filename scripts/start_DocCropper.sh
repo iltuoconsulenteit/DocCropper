@@ -77,8 +77,19 @@ if [ ! -f "$HASH_FILE" ] || [ "$REQ_HASH" != "$(cat "$HASH_FILE" 2>/dev/null)" ]
   echo "$REQ_HASH" > "$HASH_FILE"
 fi
 
-# Stop any running instance
-python3 main.py --stop >/dev/null 2>&1 || true
+# Stop any running instance without importing plugins
+PID_FILE=$(python3 - <<'PY'
+import tempfile, os
+print(os.path.join(tempfile.gettempdir(), 'doccropper.pid'))
+PY
+)
+if [ -f "$PID_FILE" ]; then
+  PID=$(cat "$PID_FILE")
+  if ps -p "$PID" >/dev/null 2>&1; then
+    kill "$PID" 2>/dev/null || sudo -n kill "$PID" || true
+  fi
+  rm -f "$PID_FILE" 2>/dev/null || sudo -n rm -f "$PID_FILE" || true
+fi
 
 echo "Starting DocCropper on port $PORT..."
 python3 main.py --host 0.0.0.0 --port "$PORT" &

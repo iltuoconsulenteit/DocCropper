@@ -8,15 +8,30 @@ if [ -x "venv/bin/python" ]; then
   PY="venv/bin/python"
 fi
 
-"$PY" main.py --stop || sudo -n "$PY" main.py --stop || true
+PID_FILE="$($PY - <<'PY'
+import tempfile, os
+print(os.path.join(tempfile.gettempdir(), 'doccropper.pid'))
+PY
+)"
+if [ -f "$PID_FILE" ]; then
+  PID=$(cat "$PID_FILE")
+  if ps -p "$PID" >/dev/null 2>&1; then
+    kill "$PID" 2>/dev/null || sudo -n kill "$PID" || true
+    echo "Stopped DocCropper (PID $PID)"
+  fi
+  rm -f "$PID_FILE" 2>/dev/null || sudo -n rm -f "$PID_FILE" || true
+fi
 
 TRAY_PID_FILE="$($PY - <<'PY'
 import tempfile, os
 print(os.path.join(tempfile.gettempdir(), 'doccropper_tray.pid'))
 PY
 )"
-if [ -f "$TRAY_PID_FILE" ] && ps -p "$(cat "$TRAY_PID_FILE")" >/dev/null 2>&1; then
-  kill "$(cat "$TRAY_PID_FILE")" 2>/dev/null || sudo -n kill "$(cat "$TRAY_PID_FILE")"
+if [ -f "$TRAY_PID_FILE" ]; then
+  TPID=$(cat "$TRAY_PID_FILE")
+  if ps -p "$TPID" >/dev/null 2>&1; then
+    kill "$TPID" 2>/dev/null || sudo -n kill "$TPID"
+  fi
   rm -f "$TRAY_PID_FILE" 2>/dev/null || sudo -n rm -f "$TRAY_PID_FILE"
   echo "Stopped tray helper"
 fi
