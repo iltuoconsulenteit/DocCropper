@@ -1,5 +1,9 @@
 # Updates
 
+## 2025-08-22
+- Linux tray icon now responds on Linux with left and right clicks and tries `xdg-open` if the default browser fails.
+- Stop script attempts to use `sudo` so the tray's Stop command works when elevated privileges are required.
+
 ## 2025-08-21
 - Linux tray icon now triggers menu commands and left-click opens the app just like on Windows.
 

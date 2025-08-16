@@ -133,7 +133,14 @@ def open_browser():
     url = os.environ.get('DOCROPPER_OPEN_URL')
     if not url:
         url = f'http://127.0.0.1:{port}/'
-    webbrowser.open(url)
+    try:
+        if not webbrowser.open(url):
+            raise RuntimeError('webbrowser failed')
+    except Exception:
+        try:
+            subprocess.Popen(['xdg-open', url])
+        except Exception:
+            logging.exception('Unable to open browser')
 
 def get_port():
     try:
@@ -246,7 +253,13 @@ def main():
         menu_items.append(MenuItem(tr('updateBranch'), update_branch_action))
     menu_items.append(MenuItem(tr('quit'), quit_app))
 
-    icon = Icon('DocCropper', create_image(running), 'DocCropper', menu=Menu(*menu_items))
+    icon = Icon(
+        'DocCropper',
+        create_image(running),
+        'DocCropper',
+        menu=Menu(*menu_items),
+        on_activate=open_app
+    )
 
     def setup(icon):
         icon.visible = True
