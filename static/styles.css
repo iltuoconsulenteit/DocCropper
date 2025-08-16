@@ -851,3 +851,24 @@ button:hover {
         max-height: 60px;
     }
 }
+
+/* Colored action buttons */
+#addImportBtn {
+    background-color: #28a745;
+    color: #fff;
+    font-weight: bold;
+    font-size: 20px;
+}
+#removeBlankBtn,
+#restoreBlankBtn {
+    background-color: #f59e0b;
+    color: #fff;
+}
+#clearImagesBtn {
+    background-color: #ef4444;
+    color: #fff;
+}
+#layoutToggleBtn {
+    background-color: #3b82f6;
+    color: #fff;
+}

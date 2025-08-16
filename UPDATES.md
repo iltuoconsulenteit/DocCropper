@@ -240,3 +240,6 @@
 ## 2025-08-17
 - Embed sponsor frame as a gallery thumbnail and add settings for frame and preview dimensions
 
+## 2025-08-18
+- Keep the sponsor preview visible on startup in the Expressive template and restyle gallery controls with colored icons for import, blank-page removal, clearing images, and layout toggling
+
