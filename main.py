@@ -131,13 +131,20 @@ BASE_DIR = Path(__file__).resolve().parent
 def repo_has_updates() -> bool:
     """Check if remote Git repository has new commits."""
     try:
-        subprocess.run(["git", "fetch"], cwd=BASE_DIR,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                       check=True)
-        local = subprocess.check_output(["git", "rev-parse", "HEAD"],
-                                        cwd=BASE_DIR).strip()
-        remote = subprocess.check_output(["git", "rev-parse", "@{u}"],
-                                         cwd=BASE_DIR).strip()
+        subprocess.run(
+            ["git", "fetch"],
+            cwd=BASE_DIR,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True,
+            timeout=5,
+        )
+        local = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=BASE_DIR, timeout=5
+        ).strip()
+        remote = subprocess.check_output(
+            ["git", "rev-parse", "@{u}"], cwd=BASE_DIR, timeout=5
+        ).strip()
         return local != remote
     except Exception:
         return False

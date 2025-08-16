@@ -1,5 +1,10 @@
 # Updates
 
+## 2025-08-31
+- Debounced Linux tray clicks to stop repeated browser launches and ensure the tray icon appears.
+- Added network timeouts and a one-time retry for update checks so offline installs start quickly.
+- Moved the update bell to the far right of the UI for clearer visibility.
+
 ## 2025-08-30
 - Added update notification bell that checks for new versions on a schedule and lets licensed users trigger upgrades with a PIN.
 

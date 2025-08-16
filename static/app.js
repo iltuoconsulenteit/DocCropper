@@ -60,18 +60,26 @@ const langSelect = document.getElementById('langSelect');
 const layoutPreview = document.getElementById('layoutPreview');
 const updateBell = document.getElementById('updateBell');
 let updateInterval = 3600000;
+let updateTimer;
 
-async function checkForUpdate() {
-    if (!updateBell) return;
+async function checkForUpdate(first = false) {
+    if (!updateBell) return false;
     try {
-        const resp = await fetch('/update-check/');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const resp = await fetch('/update-check/', { signal: controller.signal });
+        clearTimeout(timeoutId);
         if (resp.ok) {
             const data = await resp.json();
             updateBell.style.display = data.available ? 'inline-block' : 'none';
+            return true;
         }
     } catch (e) {
         console.error('Update check failed', e);
     }
+    updateBell.style.display = 'none';
+    if (first && updateTimer) clearInterval(updateTimer);
+    return false;
 }
 
 if (updateBell) {
@@ -88,6 +96,9 @@ if (updateBell) {
         } catch (e) {
             alert(t('updateFailed'));
         }
+    });
+    checkForUpdate(true).then(ok => {
+        if (ok) updateTimer = setInterval(checkForUpdate, updateInterval);
     });
 }
 const licenseInfo = document.getElementById('licenseInfo');
