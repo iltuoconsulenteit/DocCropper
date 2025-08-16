@@ -1,6 +1,7 @@
 # Updates
 
 ## 2025-08-17
+- Move Add/Import button to the start of the controls, show a + icon with tooltip, and fix its import action on mobile and desktop
 - Default sponsor frame embeds latest Facebook post and sponsored licenses require internet connectivity
 
 ## 2025-08-16

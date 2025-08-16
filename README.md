@@ -51,7 +51,7 @@ All project changes are documented in [UPDATES.md](UPDATES.md). Run `python scri
 This project uses [Interact.JS](https://github.com/taye/interact.js) for managing draggable corner points.
 
 The frontend allows the user to:
- - Upload images with the file picker. On mobile devices the file picker opens the camera or gallery; after each capture the app returns to the gallery where you can tap **Add/Import** to add another photo. Desktop users may also drag and drop files. Up to `max_upload_files` images can be imported at once (10 by default)
+ - Upload images with the file picker. On mobile devices the file picker opens the camera or gallery; after each capture the app returns to the gallery where you can tap **+** (Add/Import) to add another photo. Desktop users may also drag and drop files. Up to `max_upload_files` images can be imported at once (10 by default)
  - Import PDF documents which are converted to images and added to the gallery without immediate cropping (Pro)
 - Add more images later without losing previously processed ones
 - Manually adjust the four corners of each image
