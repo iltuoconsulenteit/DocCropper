@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-08-30
+- Added update notification bell that checks for new versions on a schedule and lets licensed users trigger upgrades with a PIN.
+
 ## 2025-08-29
 - Added Sponsor menu and page listing Fabrik-based sponsorship tiers.
 

@@ -58,6 +58,38 @@ const modalImage = document.getElementById('modalImage');
 const closeModal = document.getElementById('closeModal');
 const langSelect = document.getElementById('langSelect');
 const layoutPreview = document.getElementById('layoutPreview');
+const updateBell = document.getElementById('updateBell');
+let updateInterval = 3600000;
+
+async function checkForUpdate() {
+    if (!updateBell) return;
+    try {
+        const resp = await fetch('/update-check/');
+        if (resp.ok) {
+            const data = await resp.json();
+            updateBell.style.display = data.available ? 'inline-block' : 'none';
+        }
+    } catch (e) {
+        console.error('Update check failed', e);
+    }
+}
+
+if (updateBell) {
+    updateBell.addEventListener('click', async () => {
+        const pin = prompt(t('enterUpdatePin'));
+        if (!pin) return;
+        try {
+            const resp = await fetch('/update/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pin })
+            });
+            alert(resp.ok ? t('updateStarted') : t('updateFailed'));
+        } catch (e) {
+            alert(t('updateFailed'));
+        }
+    });
+}
 const licenseInfo = document.getElementById('licenseInfo');
 const purchaseBox = document.getElementById('purchaseBox');
 const licenseBox = document.getElementById('licenseBox');
@@ -636,6 +668,9 @@ function applySettings(cfg) {
         initWatermarkPlugin(translations, watermarkEnabled);
     }
     compressEnabled = !!cfg.enable_compresspdf && currentLicenseLevel !== 'free';
+    if (cfg.update_interval !== undefined) {
+        updateInterval = parseInt(cfg.update_interval);
+    }
     if (digitalSignBtn) {
         digitalSignBtn.disabled = !docusealEnabled || currentLicenseLevel === 'free' || !remoteSignEnabled;
     }
@@ -3182,6 +3217,10 @@ loadSettings().then(async (cfg) => {
     updateLayoutPreview();
     setupDeviceMode();
     updateInputMode();
+    if (updateBell) {
+        checkForUpdate();
+        setInterval(checkForUpdate, updateInterval);
+    }
 });
 
 if (window.safari) {

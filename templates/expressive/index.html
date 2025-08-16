@@ -97,6 +97,7 @@
       <header class="bg-gray-100 p-2 flex items-center shadow space-x-2">
         <button class="mr-2" @click="pinned ? (pinned=false, drawer=false) : drawer=!drawer">☰</button>
         <img src="/static/logos/header_logo.png" alt="IlTuoConsulenteIT" class="h-8 cursor-pointer" @click="command('files')" />
+        <button x-show="updateAvailable" @click="triggerUpdate" title="Update">🔔</button>
         <div class="flex-1"></div>
         <span class="text-xs text-gray-600" x-text="licenseInfo()"></span>
         <button @click="licenseModal=true" class="text-xs underline" x-text="t('licenses')"></button>
@@ -492,7 +493,10 @@
             email:'Email',
             maxUploadLimit:'Maximum {n} files per upload',
             lastUpdate:'Last update',
-            tutorialsPlaceholder:'Tutorial videos coming soon.'
+            tutorialsPlaceholder:'Tutorial videos coming soon.',
+            enterUpdatePin:'Enter update PIN',
+            updateStarted:'Update started',
+            updateFailed:'Update failed'
           },
           it:{
             commands:'Comandi',
@@ -584,7 +588,10 @@
             email:'Email',
             maxUploadLimit:'Massimo {n} file per caricamento',
             lastUpdate:'Ultimo aggiornamento',
-            tutorialsPlaceholder:'Prossimamente video tutorial.'
+            tutorialsPlaceholder:'Prossimamente video tutorial.',
+            enterUpdatePin:'Inserisci PIN aggiornamento',
+            updateStarted:'Aggiornamento avviato',
+            updateFailed:'Aggiornamento fallito'
           }
         };
         // Expose translations so external plugins (e.g., mobile sign) can reuse them
@@ -659,6 +666,8 @@
             en:[],
             it:[]
           },
+          updateAvailable:false,
+          updateInterval:3600000,
           maxUpload:10,
           showClearConfirm:false,
           isMobile: /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 640,
@@ -680,6 +689,20 @@
             if(!this.version) return '';
             const base = `${this.t('version')} ${this.version}`;
             return this.versionDate ? `${base} - ${this.versionDate}` : base;
+          },
+          checkForUpdates(){
+            fetch('/update-check/').then(r=>r.json()).then(d=>{
+              this.updateAvailable = !!d.available;
+            }).catch(()=>{});
+          },
+          triggerUpdate(){
+            const pin = prompt(this.t('enterUpdatePin'));
+            if(!pin) return;
+            fetch('/update/', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin})})
+              .then(r=>{
+                if(r.ok){ alert(this.t('updateStarted')); this.updateAvailable=false; }
+                else { alert(this.t('updateFailed')); }
+              }).catch(()=>{ alert(this.t('updateFailed')); });
           },
           init(){
             if (window['pdfjsLib']) {
@@ -737,12 +760,15 @@
               this.licenseName = cfg.license_name || '';
               this.licenseNameInput = this.licenseName;
               this.licenseLevel = (cfg.license_level || 'free').toLowerCase();
+              this.updateInterval = parseInt(cfg.update_interval || 3600000);
               const mode = cfg.payment_mode && cfg.payment_mode.toLowerCase();
               if(mode==='donation'){
                 this.donateLink = cfg.paypal_link || DEFAULT_PAYPAL;
                 window.DC_DONATE_URL = this.donateLink;
               }
             }).catch(()=>{});
+            this.checkForUpdates();
+            setInterval(()=>this.checkForUpdates(), this.updateInterval);
             fetch('/updates/').then(r=>r.json()).then(data=>{
               this.updates = data;
             }).catch(()=>{});

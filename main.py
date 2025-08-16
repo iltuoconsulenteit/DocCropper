@@ -38,6 +38,7 @@ from dotenv import load_dotenv
 import urllib.request
 import urllib.parse
 import socket
+from pathlib import Path
 from plugins.sign import register as register_sign
 from app.licensing.check import verify_license
 from app.auth.routes import router as auth_router, fastapi_users
@@ -125,6 +126,28 @@ SESSION_KEYS: dict[str, bytes] = {}
 MAX_UPLOAD_MB = int(os.getenv("DOCROPPER_MAX_UPLOAD_MB", "20"))
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 
+BASE_DIR = Path(__file__).resolve().parent
+
+def repo_has_updates() -> bool:
+    """Check if remote Git repository has new commits."""
+    try:
+        subprocess.run(["git", "fetch"], cwd=BASE_DIR,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                       check=True)
+        local = subprocess.check_output(["git", "rev-parse", "HEAD"],
+                                        cwd=BASE_DIR).strip()
+        remote = subprocess.check_output(["git", "rev-parse", "@{u}"],
+                                         cwd=BASE_DIR).strip()
+        return local != remote
+    except Exception:
+        return False
+
+def run_update_script():
+    env = os.environ.copy()
+    env.setdefault("BRANCH", "main")
+    script = BASE_DIR / "install" / "install_DocCropper.sh"
+    subprocess.Popen(["bash", str(script)], cwd=BASE_DIR, env=env)
+
 DEFAULT_SETTINGS = {
     "language": "it",
     "layout": 1,
@@ -171,6 +194,8 @@ DEFAULT_SETTINGS = {
     "docuseal_api_key": "",
     "public_url": "",
     "template": "static",
+    "update_pin": "",
+    "update_interval": 3600000,
 }
 
 def verify_license_server(key: str) -> bool:
@@ -693,6 +718,21 @@ async def get_updates():
             elif line.startswith("- ") and current_date:
                 entries.append(f"{current_date}: {line[2:].strip()}")
     return {"en": entries, "it": entries}
+
+
+@app.get("/update-check/")
+async def update_check():
+    return {"available": repo_has_updates()}
+
+
+@app.post("/update/")
+async def update_app(data: dict = Body(...)):
+    pin = data.get("pin", "")
+    settings = load_settings()
+    if pin != settings.get("update_pin", ""):
+        raise HTTPException(status_code=403, detail="Invalid PIN")
+    run_update_script()
+    return {"status": "started"}
 
 
 @app.post("/stripe-checkout/")

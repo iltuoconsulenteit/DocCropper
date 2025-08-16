@@ -41,6 +41,7 @@ All project changes are documented in [UPDATES.md](UPDATES.md). The in-app **Upd
 - 📏 Uploads larger than 20&nbsp;MB are rejected (adjust with `DOCROPPER_MAX_UPLOAD_MB`)
 - 📁 Limit simultaneous uploads with the `max_upload_files` setting (10 by default)
 - 🚀 Cache busting (`?v=<commit>`) ensures browsers fetch updated files
+- 🔔 Notification bell checks for updates and lets licensed users trigger upgrades with a PIN
 
 ---
 

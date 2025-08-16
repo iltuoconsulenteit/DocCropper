@@ -53,5 +53,7 @@
     "DocCropper_slogan_compress_{{lang}}.png"
   ],
   "banner_interval": 5000,
+  "update_pin": "",
+  "update_interval": 3600000,
   "lan_user_limit": 0
 }
