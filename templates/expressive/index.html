@@ -121,15 +121,15 @@
             <p class="text-gray-600" x-text="t('noFiles')"></p>
           </template>
           <div x-show="status" id="statusMessage" class="mb-2 p-2 bg-blue-100 text-blue-800 text-sm rounded" x-text="status"></div>
-          <div x-show="files.length > 0" class="flex items-center flex-wrap gap-2 mb-2">
-            <button id="addImportBtn" class="px-2 py-1 rounded text-xs bg-green-500 text-white font-bold" @click="$refs.imageUpload.click()" :title="t('addImport')">+</button>
+          <div x-show="files.length > 0" class="flex items-center flex-wrap gap-4 mb-3">
+            <button id="addImportBtn" class="px-3 py-2 rounded text-xl bg-green-500 text-white font-bold" @click="$refs.imageUpload.click()" :title="t('addImport')">+</button>
+            <button id="removeBlankBtn" class="px-3 py-2 rounded text-base bg-yellow-500 text-white" @click="removeBlankPages" x-text="t('removeBlank')"></button>
+            <button class="px-3 py-2 rounded text-base bg-blue-500 text-white" @click="toggleLayout" :title="layoutHorizontal ? t('verticalView') : t('horizontalView')" x-text="layoutHorizontal ? '↕' : '↔'"></button>
+            <button id="clearImagesBtn" class="px-3 py-2 rounded text-base bg-red-500 text-white" @click="clearImages" :title="t('clearImages')">🧹</button>
             <div class="flex items-center gap-2">
               <label class="text-xs" for="blankThreshold" x-text="t('blankThreshold')"></label>
               <input id="blankThreshold" type="number" min="80" max="100" step="1" class="w-16 border rounded text-xs" x-model.number="blankThreshold">
-              <button class="px-2 py-1 rounded text-xs bg-yellow-500 text-white" @click="removeBlankPages" x-text="t('removeBlank')"></button>
             </div>
-            <button id="clearImagesBtn" class="px-2 py-1 rounded text-xs bg-red-500 text-white" @click="clearImages" :title="t('clearImages')">🧹</button>
-            <button class="px-2 py-1 rounded text-xs bg-blue-500 text-white" @click="toggleLayout" :title="layoutHorizontal ? t('verticalView') : t('horizontalView')" x-text="layoutHorizontal ? '↕' : '↔'"></button>
           </div>
           <div x-show="tab==='files'" x-ref="fileGrid" :class="layoutHorizontal ? 'flex overflow-x-auto space-x-4' : 'grid grid-cols-1 lg:grid-cols-2 gap-4'">
             <template x-for="(file, idx) in files" :key="file.id">

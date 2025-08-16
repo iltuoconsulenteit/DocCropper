@@ -374,7 +374,12 @@ button:hover {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
+}
+
+#blankControls button {
+    padding: 10px 16px;
+    font-size: 18px;
 }
 
 #signatureControls {
