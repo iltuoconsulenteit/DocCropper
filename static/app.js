@@ -582,7 +582,6 @@ function saveSettings(data) {
 
 function initSponsorPreview(cfg) {
     if (!processedGallery) return;
-    if (!cfg.sponsor_banner && !cfg.sponsor_frame) return;
     if (sponsorPreview) sponsorPreview.remove();
     sponsorPreview = document.createElement('div');
     sponsorPreview.id = 'sponsorPreview';
@@ -608,11 +607,15 @@ function initSponsorPreview(cfg) {
         const scale = Math.min(thumbW / frameW, thumbH / frameH);
         content.style.transform = `scale(${scale})`;
         content.style.transformOrigin = '0 0';
-    } else {
+    } else if (cfg.sponsor_banner) {
         content = document.createElement('img');
         content.src = `/static/logos/${cfg.sponsor_banner}`;
         content.style.maxWidth = '100%';
         content.style.maxHeight = '100%';
+    } else {
+        content = document.createElement('div');
+        content.style.width = '100%';
+        content.style.height = '100%';
     }
     if (cfg.sponsor_url) {
         const link = document.createElement('a');

@@ -355,6 +355,7 @@ button:hover {
     width: 150px;
     height: 150px;
     overflow: hidden;
+    border: 2px dashed #999;
 }
 
 #sponsorPreview iframe {
@@ -380,6 +381,18 @@ button:hover {
 #blankControls button {
     padding: 10px 16px;
     font-size: 18px;
+}
+
+#removeBlankGroup {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 auto;
+}
+
+#clearImagesBtn,
+#layoutToggleBtn {
+    font-size: 24px;
 }
 
 #signatureControls {

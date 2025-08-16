@@ -211,11 +211,13 @@
     <p id="reorderHint" data-i18n="reorderHint" style="display:none;"></p>
     <div id="blankControls" style="margin-bottom:8px; display:none;">
         <button id="addImportBtn" data-i18n-title="addImport" title="Add/Import">+</button>
-        <button id="removeBlankBtn" data-i18n="removeBlank">Remove blank pages</button>
-        <button id="layoutToggleBtn" data-i18n-title="layoutToggle" title="Toggle layout">↔</button>
+        <div id="removeBlankGroup">
+            <button id="removeBlankBtn" data-i18n="removeBlank">Remove blank pages</button>
+            <label for="blankThreshold" data-i18n="blankThreshold">Blank page threshold (%):</label>
+            <input type="number" id="blankThreshold" value="95" min="80" max="100" step="1" style="width:60px;">
+        </div>
         <button id="clearImagesBtn" data-i18n-title="clearImages" title="Clear images">🧹</button>
-        <label for="blankThreshold" data-i18n="blankThreshold">Blank page threshold (%):</label>
-        <input type="number" id="blankThreshold" value="95" min="80" max="100" step="1" style="width:60px;">
+        <button id="layoutToggleBtn" data-i18n-title="layoutToggle" title="Toggle layout">↔</button>
         <label><input type="checkbox" id="skipBlank" checked> <span data-i18n="skipBlank"></span></label>
         <button id="restoreBlankBtn" data-i18n="restoreBlank" style="display:none;">Restore pages</button>
     </div>
