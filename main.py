@@ -420,7 +420,9 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
-app.include_router(auth_router)
+# Only enable authentication routes when license checking is active
+if load_settings().get("license_check", False):
+    app.include_router(auth_router)
 
 # Enable cross-origin requests if needed
 origins = os.getenv("DOCROPPER_CORS_ORIGINS", "*")

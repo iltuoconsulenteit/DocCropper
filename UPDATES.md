@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-08-27
+- Login module only activates when license checking is enabled, preventing unprotected enterprise use.
+
 ## 2025-08-26
 - Linux tray icon now shows its command menu by handling icon clicks through the run loop.
 

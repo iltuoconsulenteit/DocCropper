@@ -3078,11 +3078,12 @@ function renderSettingsBox() {
 }
 
 function renderLogin(cfg) {
-    if (demoFullMode) {
+    if (!loginArea) return;
+    if (demoFullMode || !cfg || !cfg.license_check) {
         loginArea.style.display = 'none';
         return;
     }
-    if (!cfg || !cfg.google_client_id) {
+    if (!cfg.google_client_id) {
         loginArea.style.display = 'block';
         loginArea.textContent = t('loginDisabled');
         return;

@@ -227,11 +227,11 @@ the ability to create or remove them. It relies on the REST endpoints under
 
 To enable optional Google authentication, set `google_client_id` in
 `settings.json` or provide it via the environment variable
-`DOCROPPER_GOOGLE_CLIENT_ID`. When configured, a sign-in button will appear in
-the web interface and tokens will be verified by the backend. Google login is
-only used to identify users and is not tied to licensing.
-When the hidden Demo Full license is active the login button is hidden even if
-`google_client_id` is set.
+`DOCROPPER_GOOGLE_CLIENT_ID`. The login module is active only when
+`license_check` is enabled; otherwise the sign-in button remains hidden even if
+a client ID is provided. When configured, the web interface displays the
+button and tokens are verified by the backend. When the hidden Demo Full license
+is active the login button is hidden even if `google_client_id` is set.
 
 ---
 
