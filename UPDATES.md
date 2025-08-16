@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-09-01
+- Integrated the Sponsor page into the main templates with in-app cards for Bronze, Silver, and Gold tiers.
+
 ## 2025-08-31
 - Debounced Linux tray clicks to stop repeated browser launches and ensure the tray icon appears.
 - Added network timeouts and a one-time retry for update checks so offline installs start quickly.

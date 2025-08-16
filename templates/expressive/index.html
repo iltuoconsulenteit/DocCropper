@@ -169,6 +169,21 @@
             <div class="border-b pb-2" x-text="note"></div>
           </template>
         </div>
+        <div x-show="tab==='sponsor'" class="p-4 space-y-4" x-data="{tiers:[]}" x-init="fetch('/index.php?option=com_fabrik&view=list&listid=XX&format=raw&format=json').then(r=>r.json()).then(d=>tiers=d)">
+          <h2 class="text-2xl font-bold" x-text="t('sponsorTitle')"></h2>
+          <p x-text="t('sponsorIntro')"></p>
+          <ul id="sponsorList" class="grid md:grid-cols-3 gap-4">
+            <template x-for="tier in tiers" :key="tier.codice">
+              <li class="border rounded p-4 text-center">
+                <h3 class="text-xl font-semibold" x-text="tier.titolo"></h3>
+                <p class="text-sm" x-text="tier.descrizione"></p>
+                <p class="font-bold" x-text="`€${tier.prezzo_base}`"></p>
+              </li>
+            </template>
+          </ul>
+          <p class="text-xs text-gray-600" x-text="t('sponsorNote')"></p>
+          <a href="mailto:info@iltuoconsulente.it" class="bg-blue-500 text-white px-4 py-2 rounded" x-text="t('contactSponsor')"></a>
+        </div>
         <div x-show="tab==='tutorials'" class="w-full h-full">
           <div id="tutorialsArea" class="w-full h-[80vh] flex items-center justify-center text-gray-500" x-text="t('tutorialsPlaceholder')"></div>
         </div>
@@ -430,6 +445,10 @@
             sponsorLogo:'Sponsor logo',
             clientUrl:'Client link',
             sponsorUrl:'Sponsor link',
+            sponsorTitle:'Become a Sponsor of the Project',
+            sponsorIntro:'Supporting DocCropper helps an innovative open source project grow.',
+            sponsorNote:'Sponsorship levels and pricing may change over time and can be tailored to each sponsor.',
+            contactSponsor:'Contact us to sponsor',
             clientLogoHeight:'Client logo height',
             sponsorLogoHeight:'Sponsor logo height',
             noFiles:'No files available.',
@@ -525,6 +544,10 @@
             sponsorLogo:'Logo sponsor',
             clientUrl:'Link cliente',
             sponsorUrl:'Link sponsor',
+            sponsorTitle:'Diventa Sponsor del Progetto',
+            sponsorIntro:'Sostenere DocCropper significa contribuire allo sviluppo di un progetto open source innovativo.',
+            sponsorNote:'I livelli di sponsorizzazione e le relative condizioni economiche possono variare nel tempo e sono personalizzabili in base alle esigenze dello sponsor.',
+            contactSponsor:'Contattaci per sponsorizzare',
             clientLogoHeight:'Altezza logo cliente',
             sponsorLogoHeight:'Altezza logo sponsor',
             noFiles:'Nessun file disponibile.',
@@ -824,7 +847,8 @@
                 this.showSlides=false;
                 break;
               case 'sponsor':
-                window.location.href = '/sponsor';
+                this.tab='sponsor';
+                this.showSlides=false;
                 break;
               case 'settings':
                 this.openSettings();

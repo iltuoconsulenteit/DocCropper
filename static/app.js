@@ -104,6 +104,7 @@ if (updateBell) {
 const licenseInfo = document.getElementById('licenseInfo');
 const purchaseBox = document.getElementById('purchaseBox');
 const licenseBox = document.getElementById('licenseBox');
+const sponsorBox = document.getElementById('sponsorBox');
 const settingsBox = document.getElementById('settingsBox');
 const loginArea = document.getElementById('loginArea');
 const layoutToggleBtn = document.getElementById('layoutToggleBtn');
@@ -2245,7 +2246,13 @@ purchaseBtn.addEventListener('click', () => {
     }
 });
 sponsorBtn.addEventListener("click", () => {
-    window.location.href = "/sponsor";
+    const rect = sponsorBtn.getBoundingClientRect();
+    sponsorBox.style.top = (rect.bottom + window.scrollY) + 'px';
+    sponsorBox.classList.toggle('visible');
+    if (!sponsorBox.dataset.loaded) {
+        loadSponsorLevels();
+        sponsorBox.dataset.loaded = '1';
+    }
 });
 licenseBtn.addEventListener('click', () => {
     const rect = licenseBtn.getBoundingClientRect();
@@ -3046,6 +3053,23 @@ function renderPaymentBox(cfg) {
             }
         });
     }
+}
+
+async function loadSponsorLevels() {
+    sponsorBox.style.display = 'block';
+    sponsorBox.innerHTML = `<h3 data-i18n="sponsorTitle">${t('sponsorTitle')}</h3><p data-i18n="sponsorIntro">${t('sponsorIntro')}</p><ul id="sponsorList"></ul><p data-i18n="sponsorNote">${t('sponsorNote')}</p><a href="mailto:info@iltuoconsulente.it" class="btn btn-primary" data-i18n="contactSponsor">${t('contactSponsor')}</a>`;
+    try {
+        const resp = await fetch('/index.php?option=com_fabrik&view=list&listid=XX&format=raw&format=json');
+        const data = await resp.json();
+        const list = sponsorBox.querySelector('#sponsorList');
+        data.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'sponsor-tier';
+            li.innerHTML = `<strong>${item.titolo} (€${item.prezzo_base}):</strong> ${item.descrizione}`;
+            list.appendChild(li);
+        });
+    } catch (e) {}
+    applyTranslations();
 }
 
 function renderLicenseBox() {

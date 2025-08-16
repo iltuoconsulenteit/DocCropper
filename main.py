@@ -678,18 +678,6 @@ async def admin_page(user: User = Depends(require_superuser)):
 
 
 
-@app.get('/sponsor', response_class=HTMLResponse)
-async def sponsor_page():
-    try:
-        path = os.path.join(os.path.dirname(__file__), 'static', 'sponsor.html')
-        with open(path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        if CACHE_BUST:
-            content = content.replace('styles.css', f'styles.css{CACHE_BUST}')
-    except FileNotFoundError:
-        return HTMLResponse(content='Sponsor page not found', status_code=404)
-    return HTMLResponse(content=content, status_code=200)
-
 @app.get("/settings/")
 async def get_settings():
     data = load_settings()
