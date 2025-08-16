@@ -38,7 +38,7 @@ All project changes are documented in [UPDATES.md](UPDATES.md). Run `python scri
 - 🌐 Works offline or over LAN (internet required only for license activation/renewal and to display sponsored frames)
 - 👤 Multi-user environment support (optional)
 - 🔒 Uploaded files are encrypted and wiped after your session
-- 📏 Uploads larger than 20&nbsp;MB are rejected (adjust with `DOCROPPER_MAX_UPLOAD_MB`)
+- 📏 Uploads larger than 5&nbsp;MB are rejected (adjust with `max_upload_mb` or `DOCROPPER_MAX_UPLOAD_MB`)
 - 📁 Limit simultaneous uploads with the `max_upload_files` setting (10 by default)
 - 🚀 Cache busting (`?v=<commit>`) ensures browsers fetch updated files
 - 🔔 Notification bell checks for updates and lets licensed users trigger upgrades with a PIN
@@ -395,7 +395,7 @@ active the default domain is `https://doccropper.iltuoconsulenteit.it`.
 The server also accepts cross-origin requests when you set
 `DOCROPPER_CORS_ORIGINS` to a comma-separated list of allowed origins or `*` to
 permit any origin.
-Uploads larger than the configured `DOCROPPER_MAX_UPLOAD_MB` (20&nbsp;MB by default) will be rejected to avoid excessive disk usage.
+Uploads larger than the configured `max_upload_mb` (5&nbsp;MB by default) will be rejected to avoid excessive disk usage.
 
 ### Pro OCR (coming soon)
 

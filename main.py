@@ -144,7 +144,8 @@ SIGNATURES_DIR = "signatures"
 PID_FILE = os.path.join(tempfile.gettempdir(), "doccropper.pid")
 ENC_SUFFIX = ".enc"
 SESSION_KEYS: dict[str, bytes] = {}
-MAX_UPLOAD_MB = int(os.getenv("DOCROPPER_MAX_UPLOAD_MB", "20"))
+DEFAULT_MAX_UPLOAD_MB = 5
+MAX_UPLOAD_MB = int(os.getenv("DOCROPPER_MAX_UPLOAD_MB", str(DEFAULT_MAX_UPLOAD_MB)))
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -230,6 +231,7 @@ DEFAULT_SETTINGS = {
     "blank_threshold": 95,
     "skip_blank": True,
     "max_upload_files": 10,
+    "max_upload_mb": 5,
     "enable_sponsor_video": False,
     "banner_images": ["DocCropper_slogan_main_{{lang}}.png"],
     "developer_watermark": False,
@@ -316,6 +318,9 @@ def load_settings():
             base = json.load(fh)
         merged = DEFAULT_SETTINGS.copy()
         merged.update(base)
+        max_mb_env = os.getenv("DOCROPPER_MAX_UPLOAD_MB")
+        if max_mb_env:
+            merged["max_upload_mb"] = int(max_mb_env)
         env_key = os.getenv("DOCROPPER_LICENSE_KEY")
         env_name = os.getenv("DOCROPPER_LICENSE_NAME")
         google_id = os.getenv("DOCROPPER_GOOGLE_CLIENT_ID")
@@ -332,6 +337,9 @@ def load_settings():
         stripe_cancel = os.getenv("STRIPE_CANCEL_URL")
         public_url_env = os.getenv("DOCROPPER_PUBLIC_URL")
         lan_limit_env = os.getenv("DOCROPPER_LAN_USER_LIMIT")
+        global MAX_UPLOAD_MB, MAX_UPLOAD_BYTES
+        MAX_UPLOAD_MB = int(merged.get("max_upload_mb", DEFAULT_MAX_UPLOAD_MB))
+        MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
         if env_key:
             merged["license_key"] = env_key
         if env_name:
@@ -394,6 +402,9 @@ def load_settings():
         return merged
     except Exception:
         return DEFAULT_SETTINGS.copy()
+
+# Initialize global upload limits from settings
+load_settings()
 
 def save_settings(update: dict):
     data = load_settings()
@@ -733,6 +744,17 @@ async def update_user_settings_endpoint(request: Request, settings: dict = Body(
     data["version"] = VERSION
     data["version_date"] = VERSION_DATE
     return data
+
+
+@app.post("/clear-session/")
+async def clear_session(request: Request):
+    session_id = request.cookies.get("session_id")
+    if session_id:
+        session_dir = os.path.join(SESSIONS_ROOT, session_id)
+        if os.path.isdir(session_dir):
+            shutil.rmtree(session_dir, ignore_errors=True)
+        SESSION_KEYS.pop(session_id, None)
+    return {"status": "ok"}
 
 
 @app.get("/updates/")

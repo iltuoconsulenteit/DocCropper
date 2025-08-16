@@ -243,3 +243,8 @@
 ## 2025-08-18
 - Keep the sponsor preview visible on startup in the Expressive template and restyle gallery controls with colored icons for import, blank-page removal, clearing images, and layout toggling
 
+## 2025-08-19
+- Delete session folders immediately after clearing the gallery to remove residual data
+- Reduce default upload limit to 5&nbsp;MB per file and make it configurable via `max_upload_mb`
+- Remove debug console logs to avoid leaking sensitive information
+

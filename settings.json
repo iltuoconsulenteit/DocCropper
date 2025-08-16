@@ -40,6 +40,7 @@
   "blank_threshold": 95,
   "skip_blank": true,
   "max_upload_files": 10,
+  "max_upload_mb": 5,
   "license_check": false,
   "license_level": "free",
   "enable_sign": true,

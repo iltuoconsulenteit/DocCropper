@@ -268,8 +268,8 @@ let userInfo = null;
 let currentLicenseLevel = 'free';
 let demoFullMode = false;
 const MAX_IMAGES_FREE = 5;
-const MAX_FILE_MB = 20;
-const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
+let MAX_FILE_MB = 5;
+let MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 let MAX_UPLOAD_FILES = 10;
 
 let files = [];
@@ -669,6 +669,10 @@ function applySettings(cfg) {
     }
     if (cfg.max_upload_files !== undefined) {
         MAX_UPLOAD_FILES = parseInt(cfg.max_upload_files);
+    }
+    if (cfg.max_upload_mb !== undefined) {
+        MAX_FILE_MB = parseInt(cfg.max_upload_mb);
+        MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
     }
     if (cfg.license_level) {
         currentLicenseLevel = cfg.license_level.toLowerCase();
@@ -1204,6 +1208,7 @@ function deleteImage(index) {
         signaturePreview.style.display = 'none';
         signatureHint.style.display = 'none';
         if (legalDisclaimerEl) legalDisclaimerEl.style.display = 'none';
+        fetch('/clear-session/', {method:'POST'}).catch(()=>{});
     }
 }
 
@@ -1684,43 +1689,24 @@ const draggableElements = {
 function updatePolygonAndPoints() {
     const displayedPoints = [];
     // Order: p1 (TL), p2 (TR), p3 (BR), p4 (BL)
-    console.log("--- Updating Polygon ---"); // General log to see if function is called
 
-    ['p1', 'p2', 'p3', 'p4'].forEach((id, index) => {
+    ['p1', 'p2', 'p3', 'p4'].forEach((id) => {
         const dragEl = draggableElements[id];
 
-        // Detailed logging for the first point (p1) for clarity during debugging
-        if (index === 0) { // Only log verbosely for p1 to avoid console spam
-            console.log(`--- Debug Point ${id} ---`);
-            console.log(`Element style.left: '${dragEl.style.left}', style.top: '${dragEl.style.top}'`);
-        }
+        const initialLeft = parseFloat(dragEl.style.left || "0");
+        const initialTop = parseFloat(dragEl.style.top || "0");
 
-        const initialLeft = parseFloat(dragEl.style.left || "0"); // Ensure string "0" if style is empty
-        const initialTop = parseFloat(dragEl.style.top || "0");  // Ensure string "0" if style is empty
-        
         const dataX = dragEl.getAttribute('data-x');
         const dataY = dragEl.getAttribute('data-y');
         const translateX = parseFloat(dataX || "0");
         const translateY = parseFloat(dataY || "0");
 
-        if (index === 0) {
-            console.log(`InitialLeft: ${initialLeft}, InitialTop: ${initialTop}`);
-            console.log(`Attribute data-x: '${dataX}', data-y: '${dataY}'`);
-            console.log(`TranslateX: ${translateX}, TranslateY: ${translateY}`);
-            console.log(`OffsetWidth: ${dragEl.offsetWidth}, OffsetHeight: ${dragEl.offsetHeight}`);
-        }
-
         const x = initialLeft + translateX + (dragEl.offsetWidth / 2);
         const y = initialTop + translateY + (dragEl.offsetHeight / 2);
-        
-        if (index === 0) {
-            console.log(`Calculated center x: ${x}, y: ${y}`);
-        }
-        
+
         displayedPoints.push(x, y);
     });
     currentPointsOnDisplayedImage = displayedPoints;
-    // console.log("Displayed Points for SVG:", JSON.stringify(currentPointsOnDisplayedImage));
 
 
     const imgWidth = imageElement.offsetWidth;

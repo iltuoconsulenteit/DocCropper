@@ -17,7 +17,7 @@ def register(app, utils: dict[str, Any]):
     get_session_dir = utils["get_session_dir"]
     encrypt_bytes = utils["encrypt_bytes"]
     ENC_SUFFIX = utils["ENC_SUFFIX"]
-    MAX_UPLOAD_BYTES = utils.get("MAX_UPLOAD_BYTES", 20 * 1024 * 1024)
+    MAX_UPLOAD_BYTES = utils.get("MAX_UPLOAD_BYTES", 5 * 1024 * 1024)
 
     import importlib
     cv2_mod = None
