@@ -248,3 +248,6 @@
 - Reduce default upload limit to 5&nbsp;MB per file and make it configurable via `max_upload_mb`
 - Remove debug console logs to avoid leaking sensitive information
 
+## 2025-08-20
+- Add plugin-based sponsor slot that adapts to license settings (Facebook, Instagram, landing page, banner, slide or image) and can be disabled when no advertising is desired
+

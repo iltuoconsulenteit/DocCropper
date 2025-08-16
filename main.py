@@ -225,6 +225,10 @@ DEFAULT_SETTINGS = {
     "sponsor_url": "",
     "sponsor_banner": "",
     "sponsor_frame": "",
+    "sponsor_plugin": "",
+    "sponsor_facebook_page": "iltuoconsulenteit",
+    "sponsor_instagram_profile": "",
+    "sponsor_slides": [],
     "sponsor_frame_width": 340,
     "sponsor_frame_height": 500,
     "sponsor_thumb_width": 150,
@@ -380,6 +384,18 @@ def load_settings():
                 merged["lan_user_limit"] = int(lan_limit_env)
             except ValueError:
                 pass
+        sponsor_plugin_env = os.getenv("SPONSOR_PLUGIN")
+        if sponsor_plugin_env is not None:
+            merged["sponsor_plugin"] = sponsor_plugin_env
+        fb_page_env = os.getenv("SPONSOR_FACEBOOK_PAGE")
+        if fb_page_env:
+            merged["sponsor_facebook_page"] = fb_page_env
+        insta_env = os.getenv("SPONSOR_INSTAGRAM_PROFILE")
+        if insta_env:
+            merged["sponsor_instagram_profile"] = insta_env
+        slides_env = os.getenv("SPONSOR_SLIDES")
+        if slides_env:
+            merged["sponsor_slides"] = [s.strip() for s in slides_env.split(",") if s.strip()]
 
         # Apply values enforced by a previous license check
         overrides = load_license_overrides()
@@ -407,6 +423,11 @@ def load_settings():
             merged["enable_mobilesign"] = True
         if (is_demo or is_dev) and not merged.get("sponsor_frame"):
             merged["sponsor_frame"] = DEFAULT_SPONSOR_FRAME
+        try:
+            from plugins import sponsorframe
+            merged.update(sponsorframe.get_config(merged))
+        except Exception:
+            logger.exception("sponsor plugin failed")
 
         return merged
     except Exception:

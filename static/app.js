@@ -613,6 +613,18 @@ function initSponsorPreview(cfg) {
         const scale = Math.min(thumbW / frameW, thumbH / frameH);
         content.style.transform = `scale(${scale})`;
         content.style.transformOrigin = '0 0';
+    } else if (cfg.sponsor_slides && cfg.sponsor_slides.length) {
+        content = document.createElement('img');
+        content.style.maxWidth = '100%';
+        content.style.maxHeight = '100%';
+        let idx = 0;
+        const show = () => {
+            content.src = `/static/logos/${cfg.sponsor_slides[idx]}`;
+            idx = (idx + 1) % cfg.sponsor_slides.length;
+        };
+        show();
+        const interval = parseInt(cfg.banner_interval || 5000);
+        setInterval(show, interval);
     } else if (cfg.sponsor_banner) {
         content = document.createElement('img');
         content.src = `/static/logos/${cfg.sponsor_banner}`;
