@@ -236,3 +236,6 @@
 - Scale sponsor frame and show it on startup without importing files
 - Restore loading overlay for the Expressive template so imports show progress
 
+## 2025-08-17
+- Embed sponsor frame as a gallery thumbnail and add settings for frame and preview dimensions
+

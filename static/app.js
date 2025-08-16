@@ -581,32 +581,38 @@ function saveSettings(data) {
 }
 
 function initSponsorPreview(cfg) {
-    if (!galleryWrapper) return;
+    if (!processedGallery) return;
     if (!cfg.sponsor_banner && !cfg.sponsor_frame) return;
     if (sponsorPreview) sponsorPreview.remove();
     sponsorPreview = document.createElement('div');
     sponsorPreview.id = 'sponsorPreview';
     sponsorPreview.className = 'thumbContainer';
     sponsorPreview.dataset.sponsor = '1';
+    const thumbW = parseInt(cfg.sponsor_thumb_width || 150);
+    const thumbH = parseInt(cfg.sponsor_thumb_height || 150);
     sponsorPreview.style.display = 'inline-flex';
-    sponsorPreview.style.width = '150px';
-    sponsorPreview.style.height = '150px';
+    sponsorPreview.style.width = thumbW + 'px';
+    sponsorPreview.style.height = thumbH + 'px';
     sponsorPreview.style.overflow = 'hidden';
-    galleryWrapper.style.minHeight = '160px';
+    galleryWrapper.style.minHeight = Math.max(thumbH + 10, 160) + 'px';
     let content;
     if (cfg.sponsor_frame) {
         content = document.createElement('iframe');
         content.src = cfg.sponsor_frame;
-        content.width = '340';
-        content.height = '500';
+        const frameW = parseInt(cfg.sponsor_frame_width || 340);
+        const frameH = parseInt(cfg.sponsor_frame_height || 500);
+        content.width = frameW;
+        content.height = frameH;
         content.loading = 'lazy';
         content.style.border = 'none';
-        content.style.transform = 'scale(0.44)';
+        const scale = Math.min(thumbW / frameW, thumbH / frameH);
+        content.style.transform = `scale(${scale})`;
         content.style.transformOrigin = '0 0';
     } else {
         content = document.createElement('img');
         content.src = `/static/logos/${cfg.sponsor_banner}`;
-        content.style.maxHeight = '150px';
+        content.style.maxWidth = '100%';
+        content.style.maxHeight = '100%';
     }
     if (cfg.sponsor_url) {
         const link = document.createElement('a');
@@ -617,12 +623,12 @@ function initSponsorPreview(cfg) {
     } else {
         sponsorPreview.appendChild(content);
     }
-    galleryWrapper.prepend(sponsorPreview);
+    processedGallery.appendChild(sponsorPreview);
 }
 
 function ensureSponsorPreviewLast() {
-    if (sponsorPreview && galleryWrapper) {
-        galleryWrapper.appendChild(sponsorPreview);
+    if (sponsorPreview && processedGallery) {
+        processedGallery.appendChild(sponsorPreview);
     }
 }
 
@@ -1070,7 +1076,7 @@ function rotateImage(index) {
         const rotatedData = canvas.toDataURL('image/png');
         processedImages[index] = rotatedData;
         if (originalImages[index]) originalImages[index] = rotatedData;
-        const container = processedGallery.children[index];
+        const container = processedGallery.querySelectorAll('.thumbContainer:not([data-sponsor])')[index];
         container.querySelector('img').src = rotatedData;
         if (imageModal.style.display === 'block') {
             openModal(rotatedData);
@@ -1092,7 +1098,7 @@ function flipImage(index) {
         const flippedData = canvas.toDataURL('image/png');
         processedImages[index] = flippedData;
         if (originalImages[index]) originalImages[index] = flippedData;
-        const container = processedGallery.children[index];
+        const container = processedGallery.querySelectorAll('.thumbContainer:not([data-sponsor])')[index];
         container.querySelector('img').src = flippedData;
         window.dispatchEvent(new CustomEvent('imageUpdated', { detail: { index, src: flippedData } }));
     };
@@ -1112,7 +1118,7 @@ function invertImage(index) {
         const invertedData = canvas.toDataURL('image/png');
         processedImages[index] = invertedData;
         if (originalImages[index]) originalImages[index] = invertedData;
-        const container = processedGallery.children[index];
+        const container = processedGallery.querySelectorAll('.thumbContainer:not([data-sponsor])')[index];
         container.querySelector('img').src = invertedData;
         window.dispatchEvent(new CustomEvent('imageUpdated', { detail: { index, src: invertedData } }));
     };
@@ -1123,7 +1129,7 @@ function convertColor(index, mode) {
     if (mode === 'color') {
         if (originalImages[index]) {
             processedImages[index] = originalImages[index];
-            const container = processedGallery.children[index];
+            const container = processedGallery.querySelectorAll('.thumbContainer:not([data-sponsor])')[index];
             container.querySelector('img').src = processedImages[index];
             if (imageModal.style.display === 'block') {
                 openModal(processedImages[index]);
@@ -1158,8 +1164,8 @@ function convertColor(index, mode) {
         const out = canvas.toDataURL('image/png');
         if (!originalImages[index]) originalImages[index] = processedImages[index];
         processedImages[index] = out;
-        const container = processedGallery.children[index];
-        container.querySelector('img').src = out;
+        const container = processedGallery.querySelectorAll('.thumbContainer:not([data-sponsor])')[index];
+        if (container) container.querySelector('img').src = out;
         if (imageModal.style.display === 'block') {
             openModal(out);
         }
@@ -1172,8 +1178,12 @@ function deleteImage(index) {
     originalImages.splice(index, 1);
     bgOriginals.splice(index, 1);
     processedFiles.splice(index, 1);
-    processedGallery.removeChild(processedGallery.children[index]);
+    const thumbs = processedGallery.querySelectorAll('.thumbContainer:not([data-sponsor])');
+    if (thumbs[index]) {
+        processedGallery.removeChild(thumbs[index]);
+    }
     refreshThumbnailIndexes();
+    ensureSponsorPreviewLast();
     if (processedImages.length === 0) {
         exportPdfBtn.style.display = 'none';
         if (signBtn) signBtn.style.display = 'none';
@@ -1288,7 +1298,7 @@ function addThumbnail(src, index) {
     const imgEl = document.createElement('img');
     imgEl.src = src;
     imgEl.addEventListener('click', () => {
-        const idx = Array.from(processedGallery.children).indexOf(container);
+        const idx = parseInt(container.dataset.index);
         openModal(processedImages[idx]);
     });
     container.appendChild(imgEl);
@@ -1476,7 +1486,7 @@ function addThumbnail(src, index) {
 
     menu.addEventListener('change', (e) => {
         const val = menu.value;
-        const idx = Array.from(processedGallery.children).indexOf(container);
+        const idx = parseInt(container.dataset.index);
         switch (val) {
             case 'rotate':
                 rotateImage(idx);
@@ -1517,8 +1527,11 @@ function addThumbnail(src, index) {
 }
 
 function refreshThumbnailIndexes() {
-    Array.from(processedGallery.children).forEach((c, i) => {
-        c.dataset.index = i;
+    let i = 0;
+    Array.from(processedGallery.children).forEach(c => {
+        if (!c.dataset.sponsor) {
+            c.dataset.index = i++;
+        }
     });
 }
 
@@ -1528,6 +1541,7 @@ function updateProcessedArrays() {
     const newOriginals = [];
     const newBg = [];
     Array.from(processedGallery.children).forEach(c => {
+        if (c.dataset.sponsor) return;
         const idx = parseInt(c.dataset.index);
         newImages.push(processedImages[idx]);
         newFiles.push(processedFiles[idx]);
@@ -1541,6 +1555,7 @@ function updateProcessedArrays() {
     bgOriginals = newBg;
     window.bgOriginals = bgOriginals;
     refreshThumbnailIndexes();
+    ensureSponsorPreviewLast();
 }
 
 function rebuildGallery() {
@@ -1560,6 +1575,7 @@ function rebuildGallery() {
         });
     }
     refreshThumbnailIndexes();
+    ensureSponsorPreviewLast();
 }
 
 async function isBlankImage(src, thr) {
@@ -2076,7 +2092,7 @@ submitBtn.addEventListener('click', () => {
             if (editingIndex !== null) {
                 processedImages[editingIndex] = data.processed_image;
                 originalImages[editingIndex] = data.processed_image;
-                const container = processedGallery.children[editingIndex];
+                const container = processedGallery.querySelectorAll('.thumbContainer:not([data-sponsor])')[editingIndex];
                 container.querySelector('img').src = data.processed_image;
                 editingIndex = null;
                 statusMessageElement.textContent = 'Image reprocessed.';
@@ -2102,7 +2118,7 @@ submitBtn.addEventListener('click', () => {
                 processedImages[currentFileIndex] = data.processed_image;
                 originalImages[currentFileIndex] = data.processed_image;
                 processedFiles[currentFileIndex] = currentFile;
-                const container = processedGallery.children[currentFileIndex];
+                const container = processedGallery.querySelectorAll('.thumbContainer:not([data-sponsor])')[currentFileIndex];
                 if (container) container.querySelector('img').src = data.processed_image;
                 exportPdfBtn.style.display = 'inline-block';
                 if (signBtn && signEnabled) signBtn.style.display = 'inline-block';
@@ -2743,7 +2759,7 @@ if (discardSignatureBtn) {
             const url = canvas.toDataURL('image/png');
             processedImages[pageIdx] = url;
             if (originalImages[pageIdx]) originalImages[pageIdx] = url;
-            const container = processedGallery.children[pageIdx];
+            const container = processedGallery.querySelectorAll('.thumbContainer:not([data-sponsor])')[pageIdx];
             if (container) container.querySelector('img').src = url;
             try {
                 const blob = await (await fetch(url)).blob();
@@ -2787,7 +2803,7 @@ async function mergeAllSignatures() {
         const url = canvas.toDataURL('image/png');
         processedImages[page] = url;
         if (originalImages[page]) originalImages[page] = url;
-        const container = processedGallery.children[page];
+        const container = processedGallery.querySelectorAll('.thumbContainer:not([data-sponsor])')[page];
         if (container) container.querySelector('img').src = url;
         try {
             const blob = await (await fetch(url)).blob();
@@ -2824,7 +2840,7 @@ async function applyRemoteSignature(data) {
     const url = canvas.toDataURL('image/png');
     processedImages[pageIdx] = url;
     if (originalImages[pageIdx]) originalImages[pageIdx] = url;
-    const cont = processedGallery.children[pageIdx];
+    const cont = processedGallery.querySelectorAll('.thumbContainer:not([data-sponsor])')[pageIdx];
     if (cont) cont.querySelector('img').src = url;
     try {
         const blob = await (await fetch(url)).blob();
