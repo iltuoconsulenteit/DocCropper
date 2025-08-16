@@ -72,6 +72,9 @@
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('updates')" x-text="t('updates')"></button>
           </li>
           <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('sponsor')" x-text="t('sponsor')"></button>
+          </li>
+          <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('tutorials')" x-text="t('tutorials')"></button>
           </li>
           <li>
@@ -413,6 +416,7 @@
             updates:'Updates',
             tutorials:'Tutorials',
             purchase:'Purchase',
+            sponsor:'Sponsor',
             subscriptions:'Subscriptions',
             purchaseInfo:'Purchase or subscription options will appear here.',
             subscriptionsInfo:'Subscription plans will appear here.',
@@ -504,6 +508,7 @@
             updates:'Aggiornamenti',
             tutorials:'Tutorial',
             purchase:'Acquisto',
+            sponsor:'Sponsor',
             subscriptions:'Abbonamenti',
             purchaseInfo:'Opzioni di acquisto o abbonamento saranno mostrate qui.',
             subscriptionsInfo:'I piani di abbonamento saranno mostrati qui.',
@@ -791,6 +796,9 @@
               case 'purchase':
                 this.tab='purchase';
                 this.showSlides=false;
+                break;
+              case 'sponsor':
+                window.location.href = '/sponsor';
                 break;
               case 'settings':
                 this.openSettings();

@@ -30,6 +30,7 @@ All project changes are documented in [UPDATES.md](UPDATES.md). The in-app **Upd
 - 📤 Share PDFs via WhatsApp Web or Email, attaching files via the Web Share API when possible (Pro)
 - 🗂️ Drag thumbnails to reorder images before exporting (Pro)
 - 🖼️ Closable banner can rotate multiple promotional images
+- 🤝 Sponsor page lists sponsorship tiers loaded from a Fabrik table
 - 📝 Extract text via OCR (future Pro feature)
 - 🗂️ Persistent user settings
 - 🧭 Touchscreen-friendly interface

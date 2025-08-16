@@ -75,6 +75,7 @@ const demoNotice = document.getElementById('demoNotice');
 const instructionsBox = document.getElementById('instructionsBox');
 const helpBtn = document.getElementById('helpBtn');
 const purchaseBtn = document.getElementById('purchaseBtn');
+const sponsorBtn = document.getElementById("sponsorBtn");
 const licenseBtn = document.getElementById('licenseBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 const DEFAULT_PAYPAL = 'https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY';
@@ -2196,6 +2197,9 @@ purchaseBtn.addEventListener('click', () => {
         purchaseBox.style.top = (rect.bottom + window.scrollY) + 'px';
         purchaseBox.classList.toggle('visible');
     }
+});
+sponsorBtn.addEventListener("click", () => {
+    window.location.href = "/sponsor";
 });
 licenseBtn.addEventListener('click', () => {
     const rect = licenseBtn.getBoundingClientRect();

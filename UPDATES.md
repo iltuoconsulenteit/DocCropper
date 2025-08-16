@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-08-29
+- Added Sponsor menu and page listing Fabrik-based sponsorship tiers.
+
 ## 2025-08-28
 - Homepage now shows an optional sponsor banner and client/sponsor logos link to URLs supplied by license settings.
 
