@@ -4,7 +4,7 @@
 
 This project is **inspired by [image-perspective-crop](https://github.com/varna9000/image-perspective-crop)**, but has been **significantly rewritten and extended**, with major architectural changes, a redesigned user interface, batch features, user preferences, and many additional capabilities.
 
-All project changes are documented in [UPDATES.md](UPDATES.md). The in-app **Updates** menu loads this file so users can review past changes, and the most recent entry appears on the home screen when no documents are loaded.
+All project changes are documented in [UPDATES.md](UPDATES.md). Run `python scripts/generate_updates.py` to rebuild this file from the Git commit history so dates stay in sync with actual commits. The in-app **Updates** menu loads this file so users can review past changes, and the most recent entry appears on the home screen when no documents are loaded.
 
 ---
 
