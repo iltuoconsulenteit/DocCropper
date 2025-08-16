@@ -549,45 +549,6 @@ button:hover {
     pointer-events: auto;
 }
 
-#sponsorList {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-#sponsorList .sponsor-tier {
-    flex: 1 1 30%;
-    border: 2px solid #ccc;
-    padding: 16px;
-    border-radius: 8px;
-    text-align: center;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-#sponsorList .sponsor-tier img {
-    height: 64px;
-    margin-bottom: 8px;
-}
-
-#sponsorList .sponsor-tier .price {
-    font-weight: bold;
-}
-
-#sponsorList .sponsor-tier.bronze {
-    border-color: #cd7f32;
-    background: #fff8e6;
-}
-
-#sponsorList .sponsor-tier.silver {
-    border-color: #c0c0c0;
-    background: #f5f5f5;
-}
-
-#sponsorList .sponsor-tier.gold {
-    border-color: #ffd700;
-    background: #fffde7;
-}
-
 #sponsorTable {
     width: 100%;
     border-collapse: collapse;
@@ -607,9 +568,13 @@ button:hover {
 #sponsorTable .check {
     text-align: center;
 }
+#sponsorBox .sponsor-contact {
+    margin-top: 20px;
+    text-align: center;
+}
+
 #sponsorBox .sponsor-contact .btn {
     display: inline-block;
-    margin-top: 10px;
 }
 
 #settingsBox {

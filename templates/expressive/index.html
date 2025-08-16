@@ -172,15 +172,6 @@
         <div x-show="tab==='sponsor'" class="p-4 space-y-4" x-data="{tiers:[], price(c){const t=this.tiers.find(x=>x.codice===c);return t&&t.prezzo_base?('€'+t.prezzo_base):'';}}" x-init="fetch('/index.php?option=com_fabrik&view=list&listid=XX&format=raw&format=json').then(r=>r.json()).then(d=>tiers=d)">
           <h2 class="text-2xl font-bold" x-text="t('sponsorTitle')"></h2>
           <p x-text="t('sponsorIntro')"></p>
-          <ul id="sponsorList" class="grid md:grid-cols-3 gap-4">
-            <template x-for="tier in tiers" :key="tier.codice">
-              <li class="border-2 rounded p-4 text-center shadow" :class="tier.codice==='gold'?'border-yellow-400':tier.codice==='silver'?'border-gray-400':'border-amber-700'">
-                <img :src="`/static/logos/${tier.codice}.svg`" :alt="tier.titolo" class="h-16 mx-auto mb-2" />
-                <h3 class="text-xl font-semibold" x-text="tier.titolo"></h3>
-                <p class="text-sm" x-text="tier.descrizione"></p>
-              </li>
-            </template>
-          </ul>
           <table class="w-full text-sm text-left border-collapse">
             <thead>
               <tr>
@@ -193,9 +184,9 @@
             <tbody>
               <tr>
                 <td class="border p-2" x-text="t('sponsorPrice')"></td>
-                <td class="border p-2 text-center" x-text="price('bronze')"></td>
-                <td class="border p-2 text-center" x-text="price('silver')"></td>
-                <td class="border p-2 text-center" x-text="price('gold')"></td>
+                <td class="border p-2 text-center" x-text="price('bronze') || '€ xxx'"></td>
+                <td class="border p-2 text-center" x-text="price('silver') || '€ xxx'"></td>
+                <td class="border p-2 text-center" x-text="price('gold') || '€ xxx'"></td>
               </tr>
               <tr>
                 <td class="border p-2" x-text="t('sponsorBenefitVisibility')"></td>
@@ -223,7 +214,7 @@
               </tr>
             </tbody>
           </table>
-          <a href="mailto:info@iltuoconsulente.it" class="bg-blue-500 text-white px-4 py-2 rounded" x-text="t('contactSponsor')"></a>
+          <a href="mailto:info@iltuoconsulente.it" class="bg-blue-500 text-white px-4 py-2 rounded block mt-4" x-text="t('contactSponsor')"></a>
           <p class="text-xs text-gray-600 mt-2" x-text="t('sponsorNote')"></p>
         </div>
         <div x-show="tab==='tutorials'" class="w-full h-full">
