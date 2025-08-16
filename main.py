@@ -7,6 +7,7 @@ import os
 import shutil
 import time
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 import cv2
@@ -391,11 +392,8 @@ def save_user_settings(email: str, update: dict):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
-app.include_router(auth_router)
-
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     from app.auth.database import engine, Base, async_session_maker
     from fastapi_users.db import SQLAlchemyUserDatabase
     from passlib.hash import bcrypt
@@ -419,6 +417,10 @@ async def startup_event():
             )
             session.add(admin)
             await session.commit()
+    yield
+
+app = FastAPI(lifespan=lifespan)
+app.include_router(auth_router)
 
 # Enable cross-origin requests if needed
 origins = os.getenv("DOCROPPER_CORS_ORIGINS", "*")

@@ -1,5 +1,9 @@
 # Updates
 
+## 2025-08-23
+- Replaced deprecated startup event with FastAPI lifespan manager to eliminate console warnings.
+- Stop script now uses non-interactive `sudo -n` so tray-driven shutdowns don't hang on password prompts.
+
 ## 2025-08-22
 - Linux tray icon now responds on Linux with left and right clicks and tries `xdg-open` if the default browser fails.
 - Stop script attempts to use `sudo` so the tray's Stop command works when elevated privileges are required.

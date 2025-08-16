@@ -8,7 +8,7 @@ if [ -x "venv/bin/python" ]; then
   PY="venv/bin/python"
 fi
 
-"$PY" main.py --stop || sudo "$PY" main.py --stop || true
+"$PY" main.py --stop || sudo -n "$PY" main.py --stop || true
 
 TRAY_PID_FILE="$($PY - <<'PY'
 import tempfile, os
@@ -16,7 +16,7 @@ print(os.path.join(tempfile.gettempdir(), 'doccropper_tray.pid'))
 PY
 )"
 if [ -f "$TRAY_PID_FILE" ] && ps -p "$(cat "$TRAY_PID_FILE")" >/dev/null 2>&1; then
-  kill "$(cat "$TRAY_PID_FILE")" 2>/dev/null || sudo kill "$(cat "$TRAY_PID_FILE")"
-  rm -f "$TRAY_PID_FILE" 2>/dev/null || sudo rm -f "$TRAY_PID_FILE"
+  kill "$(cat "$TRAY_PID_FILE")" 2>/dev/null || sudo -n kill "$(cat "$TRAY_PID_FILE")"
+  rm -f "$TRAY_PID_FILE" 2>/dev/null || sudo -n rm -f "$TRAY_PID_FILE"
   echo "Stopped tray helper"
 fi
