@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-08-26
+- Linux tray icon now shows its command menu by handling icon clicks through the run loop.
+
 ## 2025-08-25
 - Export sidebar now leaves room for the footer so client logos remain visible.
 

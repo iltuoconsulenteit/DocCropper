@@ -257,8 +257,7 @@ def main():
         'DocCropper',
         create_image(running),
         'DocCropper',
-        menu=Menu(*menu_items),
-        on_activate=open_app
+        menu=Menu(*menu_items)
     )
 
     def setup(icon):
@@ -274,7 +273,7 @@ def main():
     thread.start()
 
     try:
-        icon.run(setup=setup)
+        icon.run(setup=setup, on_clicked=open_app)
     except Exception as e:
         logging.exception("Tray icon error: %s", e)
         logging.info("Falling back to running without tray")
