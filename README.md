@@ -35,7 +35,7 @@ All project changes are documented in [UPDATES.md](UPDATES.md). The in-app **Upd
 - 🗂️ Persistent user settings
 - 🧭 Touchscreen-friendly interface
 - 🎨 Material design look with Roboto fonts and raised buttons
-- 🌐 Works offline or over LAN (no internet required)
+- 🌐 Works offline or over LAN (internet required only for license activation and renewal)
 - 👤 Multi-user environment support (optional)
 - 🔒 Uploaded files are encrypted and wiped after your session
 - 📏 Uploads larger than 20&nbsp;MB are rejected (adjust with `DOCROPPER_MAX_UPLOAD_MB`)
@@ -255,7 +255,7 @@ When the LAN plugin is active the `lan_user_limit` setting controls how many
 accounts may use DocCropper over the network. Licenses are typically sold in
 blocks of five users (5, 10, 15 and so on).
 
-Both Pro and Full can run completely offline on Windows, macOS or Linux.
+Both Pro and Full can run offline on Windows, macOS or Linux after activation. An internet connection is only needed to activate and renew the license.
 
 DocCropper itself is released under the [MIT](LICENSE.txt) license. See [Terms of Use](TERMS_OF_USE.md) for additional conditions.
 

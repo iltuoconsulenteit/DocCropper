@@ -66,13 +66,13 @@
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('files')" x-text="t('files')"></button>
           </li>
           <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700 text-yellow-400 font-semibold" @click="command('sponsor')" x-text="t('sponsor')"></button>
+          </li>
+          <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('guide')" x-text="t('guide')"></button>
           </li>
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('updates')" x-text="t('updates')"></button>
-          </li>
-          <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('sponsor')" x-text="t('sponsor')"></button>
           </li>
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('tutorials')" x-text="t('tutorials')"></button>
@@ -169,7 +169,7 @@
             <div class="border-b pb-2" x-text="note"></div>
           </template>
         </div>
-        <div x-show="tab==='sponsor'" class="p-4 space-y-4" x-data="{tiers:[]}" x-init="fetch('/index.php?option=com_fabrik&view=list&listid=XX&format=raw&format=json').then(r=>r.json()).then(d=>tiers=d)">
+        <div x-show="tab==='sponsor'" class="p-4 space-y-4" x-data="{tiers:[], price(c){const t=this.tiers.find(x=>x.codice===c);return t&&t.prezzo_base?('€'+t.prezzo_base):'';}}" x-init="fetch('/index.php?option=com_fabrik&view=list&listid=XX&format=raw&format=json').then(r=>r.json()).then(d=>tiers=d)">
           <h2 class="text-2xl font-bold" x-text="t('sponsorTitle')"></h2>
           <p x-text="t('sponsorIntro')"></p>
           <ul id="sponsorList" class="grid md:grid-cols-3 gap-4">
@@ -178,7 +178,6 @@
                 <img :src="`/static/logos/${tier.codice}.svg`" :alt="tier.titolo" class="h-16 mx-auto mb-2" />
                 <h3 class="text-xl font-semibold" x-text="tier.titolo"></h3>
                 <p class="text-sm" x-text="tier.descrizione"></p>
-                <p class="font-bold" x-text="`€${tier.prezzo_base}`"></p>
               </li>
             </template>
           </ul>
@@ -192,6 +191,12 @@
               </tr>
             </thead>
             <tbody>
+              <tr>
+                <td class="border p-2" x-text="t('sponsorPrice')"></td>
+                <td class="border p-2 text-center" x-text="price('bronze')"></td>
+                <td class="border p-2 text-center" x-text="price('silver')"></td>
+                <td class="border p-2 text-center" x-text="price('gold')"></td>
+              </tr>
               <tr>
                 <td class="border p-2" x-text="t('sponsorBenefitVisibility')"></td>
                 <td class="border p-2 text-center">✔</td>
@@ -250,7 +255,7 @@
             <button @click="donate()" class="bg-yellow-400 text-black px-4 py-2 rounded text-sm" x-text="t('donate')"></button>
           </div>
         </div>
-        <div x-show="tab!=='files' && tab!=='guide' && tab!=='updates' && tab!=='tutorials' && tab!=='purchase'" class="text-gray-600" x-text="t('selectCommand')"></div>
+        <div x-show="tab!=='files' && tab!=='guide' && tab!=='updates' && tab!=='tutorials' && tab!=='purchase' && tab!=='sponsor'" class="text-gray-600" x-text="t('selectCommand')"></div>
       </main>
       <footer class="mt-auto py-1 px-4">
         <div class="flex flex-col sm:flex-row items-center justify-between w-full space-y-2 sm:space-y-0">
@@ -495,10 +500,11 @@
             clientUrl:'Client link',
             sponsorUrl:'Sponsor link',
             sponsorTitle:'Become a Sponsor of the Project',
-            sponsorIntro:'Supporting DocCropper helps an innovative open source project grow.',
+            sponsorIntro:'Supporting DocCropper sustains an open source tool with perspective cropping, mobile signing, and local installation; internet is needed only to activate and renew the license.',
             sponsorNote:'Sponsorship levels and pricing may change over time and can be tailored to each sponsor.',
             contactSponsor:'Contact us to sponsor',
             sponsorBenefit:'Benefit',
+            sponsorPrice:'Price',
             sponsorBenefitVisibility:'Logo on project site',
             sponsorBenefitBanner:'Homepage banner',
             sponsorBenefitMarketing:'Marketing integration',
@@ -600,10 +606,11 @@
             clientUrl:'Link cliente',
             sponsorUrl:'Link sponsor',
             sponsorTitle:'Diventa Sponsor del Progetto',
-            sponsorIntro:'Sostenere DocCropper significa contribuire allo sviluppo di un progetto open source innovativo.',
+            sponsorIntro:'Sostenere DocCropper significa supportare un progetto open source con ritaglio prospettico, firma mobile e installazione locale; è richiesto internet solo per attivare e rinnovare la licenza.',
             sponsorNote:'I livelli di sponsorizzazione e le relative condizioni economiche possono variare nel tempo e sono personalizzabili in base alle esigenze dello sponsor.',
             contactSponsor:'Contattaci per sponsorizzare',
             sponsorBenefit:'Vantaggio',
+            sponsorPrice:'Prezzo',
             sponsorBenefitVisibility:'Logo sul sito del progetto',
             sponsorBenefitBanner:'Banner in homepage',
             sponsorBenefitMarketing:'Integrazione marketing',

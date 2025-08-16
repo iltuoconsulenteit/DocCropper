@@ -1,5 +1,9 @@
 # Updates
 
+## 2024-09-05
+- Polished the Sponsor page with medal icons, a pricing row, and a highlighted menu link, removing placeholder text and ensuring the contact button sits below the table.
+- Clarified documentation that internet access is needed only to activate and renew the license.
+
 ## 2024-09-04
 - Installer launches the tray helper only after an explicit yes, preventing auto-starts during setup.
 - Start and stop scripts terminate running instances via PID files to avoid plugin warnings during shutdown.

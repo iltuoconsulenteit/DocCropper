@@ -95,6 +95,11 @@ h1, h2 {
     flex: 1 0 auto;
     margin: 5px;
 }
+#actionButtons button.highlight {
+    background: #ffd700;
+    color: #000;
+    font-weight: bold;
+}
 
 #pageFooter {
     display: flex;
@@ -601,6 +606,10 @@ button:hover {
 
 #sponsorTable .check {
     text-align: center;
+}
+#sponsorBox .sponsor-contact .btn {
+    display: inline-block;
+    margin-top: 10px;
 }
 
 #settingsBox {
