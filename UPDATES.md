@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-08-21
+- Linux tray icon now triggers menu commands and left-click opens the app just like on Windows.
+
 ## 2025-08-20
 - Captured photos now drop directly into the gallery and the interface switches back to the classic upload view.
 - Added an **Add/Import** button alongside page cleanup tools to quickly bring in more images.

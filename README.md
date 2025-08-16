@@ -161,7 +161,9 @@ The tray helper works on Windows and most Linux desktops. macOS support is
 experimental and not yet thoroughly tested. It loads the
 application logo and shows a green or red dot indicating whether the server is
 running. Use the menu to start, stop or update DocCropper, or open the site in
-your browser. On Linux you may need the `python3-gi` and `libappindicator3`
+your browser. On Linux the icon now responds to left clicks by launching the
+default **Open App** action so you can access commands just like on Windows.
+You may need the `python3-gi` and `libappindicator3`
 packages so the tray menu can display correctly. If no graphical environment is
 available, run it with the `--no-tray` option to start the server without
 showing an icon:

@@ -215,15 +215,35 @@ def main():
     def update(state):
         icon.icon = create_image(state)
 
+    def open_app(icon, item):
+        open_browser()
+
+    def start_action(icon, item):
+        start_app()
+        update(True)
+
+    def stop_action(icon, item):
+        stop_app()
+        update(False)
+
+    def update_main_action(icon, item):
+        update_main()
+
+    def uninstall_action(icon, item):
+        uninstall_app()
+
+    def update_branch_action(icon, item):
+        update_branch()
+
     menu_items = [
-        MenuItem(tr('openApp'), lambda icon, item: open_browser()),
-        MenuItem(tr('startApp'), lambda icon, item: [start_app(), update(True)]),
-        MenuItem(tr('stopApp'), lambda icon, item: [stop_app(), update(False)]),
-        MenuItem(tr('updateMain'), lambda icon, item: update_main()),
-        MenuItem(tr('uninstallApp'), lambda icon, item: uninstall_app())
+        MenuItem(tr('openApp'), open_app, default=True),
+        MenuItem(tr('startApp'), start_action),
+        MenuItem(tr('stopApp'), stop_action),
+        MenuItem(tr('updateMain'), update_main_action),
+        MenuItem(tr('uninstallApp'), uninstall_action)
     ]
     if developer:
-        menu_items.append(MenuItem(tr('updateBranch'), lambda icon, item: update_branch()))
+        menu_items.append(MenuItem(tr('updateBranch'), update_branch_action))
     menu_items.append(MenuItem(tr('quit'), quit_app))
 
     icon = Icon('DocCropper', create_image(running), 'DocCropper', menu=Menu(*menu_items))
