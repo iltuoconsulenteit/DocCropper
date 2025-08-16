@@ -112,9 +112,6 @@
         <div class="mb-4 flex justify-center" x-show="sponsorBanner && files.length===0 && tab==='files'">
           <a :href="sponsorUrl || '#'" target="_blank"><img :src="sponsorBanner" alt="Sponsor" class="max-h-32 w-auto object-contain" /></a>
         </div>
-        <div class="mb-4 flex justify-center" x-show="sponsorFrame && files.length===0 && tab==='files'">
-          <iframe :src="sponsorFrame" class="w-full max-w-md h-64 border-none"></iframe>
-        </div>
         <div class="mb-4 flex justify-center" x-show="showSlides && currentSlide && files.length===0 && tab==='files'">
           <img :src="currentSlide" alt="slogan" class="max-h-64 w-auto object-contain" />
         </div>
@@ -162,6 +159,14 @@
                 </div>
               </div>
             </template>
+            <div x-show="(sponsorFrame || sponsorBanner) && tab==='files'" id="sponsorPreview" class="mb-4 thumbContainer inline-flex items-center justify-center">
+              <template x-if="sponsorFrame">
+                <iframe :src="sponsorFrame" class="w-full h-56 lg:h-72 border-none"></iframe>
+              </template>
+              <template x-if="!sponsorFrame && sponsorBanner">
+                <a :href="sponsorUrl || '#'" target="_blank"><img :src="sponsorBanner" class="w-full h-56 lg:h-72 object-contain" /></a>
+              </template>
+            </div>
           </div>
         </div>
         <div x-show="tab==='guide'" class="w-full h-full">

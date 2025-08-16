@@ -66,6 +66,7 @@ const updatePinInput = document.getElementById('updatePinInput');
 const updatePinSubmit = document.getElementById('updatePinSubmit');
 const rollbackPinSubmit = document.getElementById('rollbackPinSubmit');
 const updatePinCancel = document.getElementById('updatePinCancel');
+let sponsorPreview;
 
 async function checkForUpdate(first = false) {
     if (!updateBell) return false;
@@ -168,8 +169,7 @@ const openWikiLink = document.getElementById('openWikiLink');
 const sponsorBanner = document.getElementById('sponsorBanner');
 const sponsorBannerImg = document.getElementById('sponsorBannerImg');
 const sponsorBannerLink = document.getElementById('sponsorBannerLink');
-const sponsorFrame = document.getElementById('sponsorFrame');
-const sponsorFrameIframe = document.getElementById('sponsorFrameIframe');
+let sponsorPreview;
 const clientLogo = document.getElementById('clientLogo');
 const clientLogoLink = document.getElementById('clientLogoLink');
 const sponsorLogo = document.getElementById('sponsorLogo');
@@ -580,6 +580,45 @@ function saveSettings(data) {
     }).catch(e => console.error('Save settings error', e));
 }
 
+function initSponsorPreview(cfg) {
+    if (!galleryWrapper) return;
+    if (!cfg.sponsor_banner && !cfg.sponsor_frame) return;
+    if (sponsorPreview) sponsorPreview.remove();
+    sponsorPreview = document.createElement('div');
+    sponsorPreview.id = 'sponsorPreview';
+    sponsorPreview.className = 'thumbContainer';
+    sponsorPreview.dataset.sponsor = '1';
+    sponsorPreview.style.display = 'inline-flex';
+    let content;
+    if (cfg.sponsor_frame) {
+        content = document.createElement('iframe');
+        content.src = cfg.sponsor_frame;
+        content.style.border = 'none';
+        content.style.width = '200px';
+        content.style.height = '150px';
+    } else {
+        content = document.createElement('img');
+        content.src = `/static/logos/${cfg.sponsor_banner}`;
+        content.style.maxHeight = '150px';
+    }
+    if (cfg.sponsor_url) {
+        const link = document.createElement('a');
+        link.href = cfg.sponsor_url;
+        link.target = '_blank';
+        link.appendChild(content);
+        sponsorPreview.appendChild(link);
+    } else {
+        sponsorPreview.appendChild(content);
+    }
+    galleryWrapper.appendChild(sponsorPreview);
+}
+
+function ensureSponsorPreviewLast() {
+    if (sponsorPreview && galleryWrapper) {
+        galleryWrapper.appendChild(sponsorPreview);
+    }
+}
+
 function applySettings(cfg) {
     currentSettings = cfg;
     currentSettings.enable_sponsor_video = !!cfg.enable_sponsor_video;
@@ -685,14 +724,7 @@ function applySettings(cfg) {
             sponsorBanner.style.display = 'none';
         }
     }
-    if (sponsorFrame && sponsorFrameIframe) {
-        if (cfg.sponsor_frame) {
-            sponsorFrameIframe.src = cfg.sponsor_frame;
-            sponsorFrame.style.display = 'block';
-        } else {
-            sponsorFrame.style.display = 'none';
-        }
-    }
+    initSponsorPreview(cfg);
     if (Array.isArray(cfg.banner_images)) {
         bannerImages = cfg.banner_images;
     } else {
@@ -1895,6 +1927,7 @@ async function addFiles(newFiles) {
         }
         updateLayoutPreview();
     }
+    ensureSponsorPreviewLast();
     hideLoading();
     if (imageUploadElement) imageUploadElement.value = '';
 }

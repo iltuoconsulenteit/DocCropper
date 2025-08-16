@@ -581,10 +581,17 @@ button:hover {
     display: inline-block;
 }
 
-#sponsorFrame iframe {
+#sponsorPreview {
+    margin: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+#sponsorPreview iframe,
+#sponsorPreview img {
     width: 100%;
-    max-width: 600px;
-    height: 300px;
+    max-width: 200px;
+    height: auto;
     border: none;
 }
 

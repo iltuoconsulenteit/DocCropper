@@ -1,6 +1,7 @@
 # Updates
 
 ## 2025-08-16
+- Show sponsor frame as persistent gallery preview that trails user images and is skipped during export
 - Add script to generate updates log from git history
 - Serve UPDATES.md, gate login behind license check, add update bell, optimize startup, restore Linux tray icon, polish Sponsor page, and add rollback option
 
