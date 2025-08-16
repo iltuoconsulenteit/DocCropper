@@ -75,6 +75,10 @@
 - Made sponsor video optional.
 - Allowed PDF export without license check.
 
+## 2025-08-08
+- Deferred heavy libraries like OpenCV and PyMuPDF until needed, trimming memory use and speeding startup.
+- Skipped redundant `pip install` runs and launched the tray after dependencies load, restoring the Linux tray icon.
+
 ## 2025-07-31
 - Added LAN user limit plugin and created a default admin via FastAPI Users.
 - Improved Docker setup and environment examples.

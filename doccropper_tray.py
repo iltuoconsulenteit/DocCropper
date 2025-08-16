@@ -4,10 +4,8 @@ import subprocess
 import logging
 from pathlib import Path
 import tempfile
-from pystray import Icon, Menu, MenuItem
 import threading
 import atexit
-from PIL import Image, ImageDraw
 import webbrowser
 from urllib.request import urlopen
 import json
@@ -158,31 +156,8 @@ def is_running():
     except Exception:
         return False
 
-BASE_IMAGE = None
-
-def load_base_image():
-    global BASE_IMAGE
-    for name in ('app_logo.png', 'header_logo.png'):
-        path = BASE_DIR / 'static' / 'logos' / name
-        if path.exists():
-            BASE_IMAGE = Image.open(path).convert('RGBA').resize((64, 64))
-            break
-    else:
-        BASE_IMAGE = Image.new('RGBA', (64, 64), 'white')
-
-def status_image(running):
-    img = BASE_IMAGE.copy()
-    draw = ImageDraw.Draw(img)
-    color = 'green' if running else 'red'
-    draw.ellipse((48, 48, 60, 60), fill=color)
-    return img
-
 def quit_app(icon, item):
     icon.stop()
-
-
-def create_image(running):
-    return status_image(running)
 
 
 def main():
@@ -203,7 +178,6 @@ def main():
         pass
     atexit.register(lambda: TRAY_PID_FILE.unlink(missing_ok=True))
 
-    load_base_image()
     running = is_running()
 
     if args.auto_start and not running:
@@ -218,6 +192,45 @@ def main():
         if not running:
             start_app()
         return
+
+    if SYSTEM == 'Linux' and not os.environ.get('DISPLAY'):
+        logging.info("No DISPLAY detected; running without tray")
+        if not running:
+            start_app()
+        return
+
+    try:
+        from pystray import Icon, Menu, MenuItem
+        from PIL import Image, ImageDraw
+    except Exception as e:
+        logging.exception("Tray modules unavailable: %s", e)
+        if not running:
+            start_app()
+        return
+
+    BASE_IMAGE = None
+
+    def load_base_image():
+        nonlocal BASE_IMAGE
+        for name in ('app_logo.png', 'header_logo.png'):
+            path = BASE_DIR / 'static' / 'logos' / name
+            if path.exists():
+                BASE_IMAGE = Image.open(path).convert('RGBA').resize((64, 64))
+                break
+        else:
+            BASE_IMAGE = Image.new('RGBA', (64, 64), 'white')
+
+    def status_image(running):
+        img = BASE_IMAGE.copy()
+        draw = ImageDraw.Draw(img)
+        color = 'green' if running else 'red'
+        draw.ellipse((48, 48, 60, 60), fill=color)
+        return img
+
+    def create_image(running):
+        return status_image(running)
+
+    load_base_image()
 
     tray_ready = False
     last_click = 0

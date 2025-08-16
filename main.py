@@ -10,9 +10,6 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 
-import cv2
-import numpy as np
-import fitz
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, Body, Request, Depends, HTTPException
 from PIL import Image, ImageDraw, ImageFont
@@ -39,6 +36,29 @@ import urllib.request
 import urllib.parse
 import socket
 from pathlib import Path
+import importlib
+
+_cv2 = None
+_np = None
+_fitz = None
+
+def get_cv2():
+    global _cv2
+    if _cv2 is None:
+        _cv2 = importlib.import_module("cv2")
+    return _cv2
+
+def get_np():
+    global _np
+    if _np is None:
+        _np = importlib.import_module("numpy")
+    return _np
+
+def get_fitz():
+    global _fitz
+    if _fitz is None:
+        _fitz = importlib.import_module("fitz")
+    return _fitz
 from plugins.sign import register as register_sign
 from app.licensing.check import verify_license
 from app.auth.routes import router as auth_router, fastapi_users
@@ -816,6 +836,8 @@ async def pdf_to_images(
             except Exception:
                 logger.exception("Failed to save uploaded PDF")
 
+        fitz = get_fitz()
+        np = get_np()
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         thr = max(0, min(100, int(threshold))) / 100.0
         images_b64: list[str] = []
@@ -900,6 +922,7 @@ async def create_pdf(
                 sig_bytes = base64.b64decode(sig_b64)
                 sig_img = Image.open(io.BytesIO(sig_bytes)).convert('RGBA')
                 if remove_signature_bg:
+                    np = get_np()
                     arr = np.array(sig_img)
                     white = (arr[:, :, :3] > 240).all(axis=2)
                     arr[white, 3] = 0
@@ -1104,6 +1127,7 @@ async def create_pdf(
             pdf_bytes = compressor(pdf_bytes, compression, jpeg_quality)
         if pdfa_version is not None:
             try:
+                fitz = get_fitz()
                 doc = fitz.open(stream=pdf_bytes, filetype="pdf")
                 pdf_bytes = doc.tobytes(deflate=True, clean=True, garbage=4, pdfa=int(pdfa_version) - 1)
             except Exception:
@@ -1138,6 +1162,8 @@ async def extract_text(request: Request, images: list[str] = Body(...)):
             if img_b64.startswith('data:'):
                 img_b64 = img_b64.split(',', 1)[1]
             img_bytes = base64.b64decode(img_b64)
+            np = get_np()
+            cv2 = get_cv2()
             nparr = np.frombuffer(img_bytes, np.uint8)
             img_cv = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
             if img_cv is None:

@@ -2,8 +2,6 @@ import io
 import logging
 from typing import Any
 
-import fitz  # PyMuPDF
-
 __all__ = ["register"]
 
 logger = logging.getLogger(__name__)
@@ -11,6 +9,7 @@ logger = logging.getLogger(__name__)
 def register(app, utils: dict[str, Any]):
     def compress_pdf(pdf_bytes: bytes, level: str = "medium", jpeg_quality: int = 75) -> bytes:
         try:
+            import fitz
             doc = fitz.open(stream=pdf_bytes, filetype="pdf")
             save_args = {
                 "deflate": True,
