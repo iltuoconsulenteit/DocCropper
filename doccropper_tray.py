@@ -230,9 +230,6 @@ def main():
 
     load_base_image()
 
-    tray_ready = False
-    last_click = 0
-
     def update(state):
         icon.icon = create_image(state)
 
@@ -275,18 +272,7 @@ def main():
     )
 
     def setup(icon):
-        nonlocal tray_ready
         icon.visible = True
-        tray_ready = True
-
-    def click_handler(icon, item):
-        nonlocal last_click, tray_ready
-        if not tray_ready:
-            return
-        now = time.time()
-        if now - last_click > 1:
-            open_browser()
-            last_click = now
 
     def poll():
         while True:
@@ -298,7 +284,7 @@ def main():
     thread.start()
 
     try:
-        icon.run(setup=setup, on_clicked=click_handler)
+        icon.run(setup=setup)
     except Exception as e:
         logging.exception("Tray icon error: %s", e)
         logging.info("Falling back to running without tray")
