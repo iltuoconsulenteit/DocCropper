@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-08-17
+- Default sponsor frame embeds latest Facebook post and sponsored licenses require internet connectivity
+
 ## 2025-08-16
 - Show sponsor frame as persistent gallery preview that trails user images and is skipped during export
 - Add script to generate updates log from git history
