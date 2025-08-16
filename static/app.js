@@ -150,6 +150,7 @@ const captureBtn = document.getElementById('captureBtn');
 const cameraOverlay = document.getElementById('cameraOverlay');
 const cameraMargin = document.getElementById('cameraMargin');
 const addPhotoBtn = document.getElementById('addPhotoBtn');
+const addImportBtn = document.getElementById('addImportBtn');
 const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 const cameraFileInput = document.getElementById('cameraFileInput');
 const CAPTURE_MAX_DIM = 1600;
@@ -337,6 +338,8 @@ async function capturePhoto() {
     const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
     await addFiles([file]);
     stopCamera();
+    inputMode.value = 'upload';
+    updateInputMode();
     if (statusMessageElement) {
         statusMessageElement.textContent = t('photoAdded');
     }
@@ -2135,6 +2138,11 @@ if (addPhotoBtn) {
         updateInputMode();
     });
 }
+if (addImportBtn) {
+    addImportBtn.addEventListener('click', () => {
+        imageUploadElement.click();
+    });
+}
 cameraSelect.addEventListener('change', () => {
     if (inputMode.value === 'camera') {
         startCamera();
@@ -2235,6 +2243,8 @@ cameraFileInput.addEventListener('change', (e) => {
         statusMessageElement.textContent = t('maxUploadLimit').replace('{n}', MAX_UPLOAD_FILES);
     }
     addFiles(list);
+    inputMode.value = 'upload';
+    updateInputMode();
 });
 
 if (signatureUpload) {

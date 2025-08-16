@@ -1,5 +1,9 @@
 # Updates
 
+## 2025-08-20
+- Captured photos now drop directly into the gallery and the interface switches back to the classic upload view.
+- Added an **Add/Import** button alongside page cleanup tools to quickly bring in more images.
+
 ## 2025-08-19
 - Reverted the "Apply & Add" camera workflow; mobile devices now use the standard Import button to add additional photos.
 

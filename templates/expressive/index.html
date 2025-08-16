@@ -120,6 +120,7 @@
               <input id="blankThreshold" type="number" min="80" max="100" step="1" class="w-16 border rounded text-xs" x-model.number="blankThreshold">
               <button class="px-2 py-1 border rounded text-xs" @click="removeBlankPages" x-text="t('removeBlank')"></button>
             </div>
+            <button id="addImportBtn" class="px-2 py-1 border rounded text-xs" @click="$refs.imageUpload.click()" x-text="t('addImport')"></button>
             <button id="clearImagesBtn" class="px-2 py-1 border rounded text-xs" @click="clearImages" x-text="t('clearImages')"></button>
             <button class="px-2 py-1 border rounded text-xs" @click="toggleLayout" x-text="layoutHorizontal ? t('horizontalView') : t('verticalView')"></button>
           </div>
@@ -446,6 +447,7 @@
             verticalView:'Horizontal bar',
             blankThreshold:'Blank page threshold (%)',
             removeBlank:'Remove blank pages',
+            addImport:'Add/Import',
             clearImages:'Clear images',
             confirmClearImages:'Remove all images?',
             pagesRemoved:'{n} blank pages removed',
@@ -534,6 +536,7 @@
             verticalView:'Barra orizzontale',
             blankThreshold:'Soglia pagina bianca (%)',
             removeBlank:'Rimuovi pagine bianche',
+            addImport:'Aggiungi/Importa',
             clearImages:'Azzera immagini',
             confirmClearImages:'Rimuovere tutte le immagini?',
             pagesRemoved:'Rimosse {n} pagine bianche',

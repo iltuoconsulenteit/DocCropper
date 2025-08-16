@@ -114,6 +114,7 @@
   "capturePhoto": "Capture",
   "photoAdded": "Photo added",
   "addPhoto": "Add photo",
+  "addImport": "Add/Import",
   "cameraSelectLabel": "Camera:",
   "cameraMargin": "Margin",
   "noImage": "Please add an image first",
