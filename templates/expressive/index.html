@@ -629,8 +629,8 @@
           showSlides:true,
           currentSlide:'',
           updates:{
-            en:['Improved signing workflow and export options.'],
-            it:['Migliorato il flusso di firma e opzioni di esportazione.']
+            en:[],
+            it:[]
           },
           maxUpload:10,
           showClearConfirm:false,
@@ -710,6 +710,9 @@
                 this.donateLink = cfg.paypal_link || DEFAULT_PAYPAL;
                 window.DC_DONATE_URL = this.donateLink;
               }
+            }).catch(()=>{});
+            fetch('/updates/').then(r=>r.json()).then(data=>{
+              this.updates = data;
             }).catch(()=>{});
             window.signatures = this.signatures;
             window.openSignatureForPage = (idx = 0) => {

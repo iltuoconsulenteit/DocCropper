@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-08-18
+- Exposed project updates in-app via a `/updates` endpoint and showed the latest entry on the home screen.
+
 ## 2025-08-17
 - Added an "Apply & Add" option after cropping in camera mode to quickly capture another photo.
 

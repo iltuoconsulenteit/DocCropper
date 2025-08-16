@@ -658,6 +658,23 @@ async def update_user_settings_endpoint(request: Request, settings: dict = Body(
     return data
 
 
+@app.get("/updates/")
+async def get_updates():
+    path = os.path.join(os.path.dirname(__file__), "UPDATES.md")
+    if not os.path.exists(path):
+        return {"en": [], "it": []}
+    entries = []
+    with open(path, "r", encoding="utf-8") as fh:
+        current_date = ""
+        for line in fh:
+            line = line.strip()
+            if line.startswith("##"):
+                current_date = line.lstrip("# ").strip()
+            elif line.startswith("- ") and current_date:
+                entries.append(f"{current_date}: {line[2:].strip()}")
+    return {"en": entries, "it": entries}
+
+
 @app.post("/stripe-checkout/")
 async def stripe_checkout(level: str = Body(...)):
     settings = load_settings()

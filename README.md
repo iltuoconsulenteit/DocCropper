@@ -4,6 +4,8 @@
 
 This project is **inspired by [image-perspective-crop](https://github.com/varna9000/image-perspective-crop)**, but has been **significantly rewritten and extended**, with major architectural changes, a redesigned user interface, batch features, user preferences, and many additional capabilities.
 
+All project changes are documented in [UPDATES.md](UPDATES.md). The in-app **Updates** menu loads this file so users can review past changes, and the most recent entry appears on the home screen when no documents are loaded.
+
 ---
 
 ## ✨ Key Features
