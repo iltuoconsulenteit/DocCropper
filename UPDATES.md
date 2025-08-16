@@ -35,6 +35,7 @@
 
 ## 2025-08-16
 - Removed the `multiple` attribute from the hidden camera input so cropped photos from mobile devices import correctly.
+- Added full Docker compose with Node OAuth service for enterprise deployments.
 
 ## 2025-08-15
 - Expressive template loads banner slide names from the `banner_images` list in `settings.json`.

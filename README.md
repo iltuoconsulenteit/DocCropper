@@ -194,6 +194,17 @@ from `env/` and adjust them before running the container.
 Additional packages can be added by extending `docker/Dockerfile` if your
 deployment requires them.
 
+For the full enterprise build that includes the optional Google OAuth helper,
+use the provided multi-service compose file:
+
+```bash
+docker compose -f docker/docker-compose.full.yml up --build
+```
+
+Set `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` in your environment before
+launching. The auth service listens on port `8766` by default and proxies login
+requests for the main app.
+
 
 ### Built-in Wiki
 
