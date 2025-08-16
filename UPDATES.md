@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-09-03
+- Added a benefits table to the Sponsor page to preview perks for Bronze, Silver, and Gold tiers.
+
 ## 2025-09-01
 - Integrated the Sponsor page into the main templates with in-app cards for Bronze, Silver, and Gold tiers.
 

@@ -551,6 +551,26 @@ button:hover {
     border-radius: 4px;
 }
 
+#sponsorTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+#sponsorTable th,
+#sponsorTable td {
+    border: 1px solid #ccc;
+    padding: 6px;
+}
+
+#sponsorTable th {
+    background: #f8f8f8;
+}
+
+#sponsorTable .check {
+    text-align: center;
+}
+
 #settingsBox {
     position: fixed;
     top: 0;

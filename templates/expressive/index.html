@@ -181,6 +181,36 @@
               </li>
             </template>
           </ul>
+          <table class="w-full text-sm text-left border-collapse">
+            <thead>
+              <tr>
+                <th class="border p-2" x-text="t('sponsorBenefit')"></th>
+                <th class="border p-2">Bronze</th>
+                <th class="border p-2">Silver</th>
+                <th class="border p-2">Gold</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="border p-2" x-text="t('sponsorBenefitVisibility')"></td>
+                <td class="border p-2 text-center">✔</td>
+                <td class="border p-2 text-center">✔</td>
+                <td class="border p-2 text-center">✔</td>
+              </tr>
+              <tr>
+                <td class="border p-2" x-text="t('sponsorBenefitBanner')"></td>
+                <td class="border p-2 text-center">–</td>
+                <td class="border p-2 text-center">✔</td>
+                <td class="border p-2 text-center">✔</td>
+              </tr>
+              <tr>
+                <td class="border p-2" x-text="t('sponsorBenefitSupport')"></td>
+                <td class="border p-2 text-center">–</td>
+                <td class="border p-2 text-center">–</td>
+                <td class="border p-2 text-center">✔</td>
+              </tr>
+            </tbody>
+          </table>
           <p class="text-xs text-gray-600" x-text="t('sponsorNote')"></p>
           <a href="mailto:info@iltuoconsulente.it" class="bg-blue-500 text-white px-4 py-2 rounded" x-text="t('contactSponsor')"></a>
         </div>
@@ -461,6 +491,10 @@
             sponsorIntro:'Supporting DocCropper helps an innovative open source project grow.',
             sponsorNote:'Sponsorship levels and pricing may change over time and can be tailored to each sponsor.',
             contactSponsor:'Contact us to sponsor',
+            sponsorBenefit:'Benefit',
+            sponsorBenefitVisibility:'Logo on project site',
+            sponsorBenefitBanner:'Homepage banner',
+            sponsorBenefitSupport:'Priority support',
             clientLogoHeight:'Client logo height',
             sponsorLogoHeight:'Sponsor logo height',
             noFiles:'No files available.',
@@ -561,6 +595,10 @@
             sponsorIntro:'Sostenere DocCropper significa contribuire allo sviluppo di un progetto open source innovativo.',
             sponsorNote:'I livelli di sponsorizzazione e le relative condizioni economiche possono variare nel tempo e sono personalizzabili in base alle esigenze dello sponsor.',
             contactSponsor:'Contattaci per sponsorizzare',
+            sponsorBenefit:'Vantaggio',
+            sponsorBenefitVisibility:'Logo sul sito del progetto',
+            sponsorBenefitBanner:'Banner in homepage',
+            sponsorBenefitSupport:'Supporto prioritario',
             clientLogoHeight:'Altezza logo cliente',
             sponsorLogoHeight:'Altezza logo sponsor',
             noFiles:'Nessun file disponibile.',
