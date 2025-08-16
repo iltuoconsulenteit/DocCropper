@@ -351,21 +351,6 @@ button:hover {
     cursor: pointer;
 }
 
-#sponsorPreview {
-    width: 150px;
-    height: 150px;
-    overflow: hidden;
-    border: 2px dashed #999;
-}
-
-#sponsorPreview iframe {
-    width: 340px;
-    height: 500px;
-    transform: scale(0.44);
-    transform-origin: 0 0;
-    border: none;
-}
-
 #layoutControls {
     margin-bottom: 10px;
 }
@@ -392,7 +377,7 @@ button:hover {
 
 #clearImagesBtn,
 #layoutToggleBtn {
-    font-size: 24px;
+    font-size: 36px;
 }
 
 #signatureControls {
@@ -618,12 +603,13 @@ button:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
+    border: 2px dashed #999;
 }
 #sponsorPreview iframe,
 #sponsorPreview img {
     width: 100%;
-    max-width: 200px;
-    height: auto;
+    height: 100%;
     border: none;
 }
 

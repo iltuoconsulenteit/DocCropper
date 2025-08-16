@@ -128,8 +128,8 @@
               <label class="text-xs" for="blankThreshold" x-text="t('blankThreshold')"></label>
               <input id="blankThreshold" type="number" min="80" max="100" step="1" class="w-16 border rounded text-xs" x-model.number="blankThreshold">
             </div>
-            <button id="clearImagesBtn" class="px-3 py-2 rounded text-base bg-red-500 text-white text-2xl" @click="clearImages" :title="t('clearImages')">🧹</button>
-            <button class="px-3 py-2 rounded text-base bg-blue-500 text-white text-2xl" @click="toggleLayout" :title="layoutHorizontal ? t('verticalView') : t('horizontalView')" x-text="layoutHorizontal ? '↕' : '↔'"></button>
+            <button id="clearImagesBtn" class="px-3 py-2 rounded bg-red-500 text-white text-4xl" @click="clearImages" :title="t('clearImages')">🧹</button>
+            <button class="px-3 py-2 rounded bg-blue-500 text-white text-4xl" @click="toggleLayout" :title="layoutHorizontal ? t('verticalView') : t('horizontalView')" x-text="layoutHorizontal ? '↕' : '↔'"></button>
           </div>
           <div x-show="tab==='files'" x-ref="fileGrid" :class="layoutHorizontal ? 'flex overflow-x-auto space-x-4' : 'grid grid-cols-1 lg:grid-cols-2 gap-4'">
             <template x-for="(file, idx) in files" :key="file.id">
@@ -159,12 +159,12 @@
                 </div>
               </div>
             </template>
-          <div x-show="sponsorFrame || sponsorBanner" id="sponsorPreview" class="mb-4 thumbContainer inline-flex items-center justify-center w-[150px] h-[150px] overflow-hidden border-2 border-dashed border-gray-400">
+          <div x-show="sponsorFrame || sponsorBanner" id="sponsorPreview" class="mb-4 thumbContainer inline-flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-400" :style="`width:${sponsorThumbWidth}px;height:${sponsorThumbHeight}px`">
               <template x-if="sponsorFrame">
-                <iframe :src="sponsorFrame" class="border-none w-[340px] h-[500px]" style="transform:scale(0.44);transform-origin:0 0;"></iframe>
+                <iframe :src="sponsorFrame" :style="`border:none;width:${sponsorFrameWidth}px;height:${sponsorFrameHeight}px;transform:scale(${Math.min(sponsorThumbWidth/sponsorFrameWidth, sponsorThumbHeight/sponsorFrameHeight)});transform-origin:0 0;`"></iframe>
               </template>
               <template x-if="!sponsorFrame && sponsorBanner">
-                <a :href="sponsorUrl || '#'" target="_blank"><img :src="sponsorBanner" class="w-full h-full object-contain" /></a>
+                <a :href="sponsorUrl || '#'" target="_blank"><img :src="sponsorBanner" :style="`width:100%;height:100%;object-fit:contain;`" /></a>
               </template>
             </div>
           </div>
@@ -749,6 +749,10 @@
           passwordModal:false,
           passwordInput:'',
           settings:{clientLogo:'', sponsorLogo:'', clientLogoHeight:125, sponsorLogoHeight:125, clientUrl:'', sponsorUrl:'', sponsorFrame:''},
+          sponsorFrameWidth:340,
+          sponsorFrameHeight:500,
+          sponsorThumbWidth:150,
+          sponsorThumbHeight:150,
           clientUrl:'',
           sponsorUrl:'',
           clientLogoHeight:125,
@@ -790,6 +794,7 @@
             this.status = this.t('imagesCleared');
             setTimeout(()=>{ this.status=''; },3000);
             this.showClearConfirm = false;
+            this.adjustSponsor();
           },
           refreshSlides(){
             this.slideIndex = 0;
@@ -826,6 +831,19 @@
               .finally(()=>{ this.showUpdateModal=false; });
           },
           cancelUpdate(){ this.showUpdateModal=false; },
+          adjustSponsor(){
+            this.$nextTick(()=>{
+              const grid = this.$refs.fileGrid;
+              if(grid){
+                const first = grid.querySelector('.thumbContainer:not(#sponsorPreview)');
+                if(first){
+                  const rect = first.getBoundingClientRect();
+                  this.sponsorThumbWidth = rect.width;
+                  this.sponsorThumbHeight = rect.height;
+                }
+              }
+            });
+          },
           init(){
             if (window['pdfjsLib']) {
               pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js';
@@ -862,6 +880,10 @@
               this.sponsorUrl = this.settings.sponsorUrl;
               this.sponsorBanner = cfg.sponsor_banner ? `/static/logos/${cfg.sponsor_banner}` : null;
               this.sponsorFrame = cfg.sponsor_frame || null;
+              this.sponsorFrameWidth = parseInt(cfg.sponsor_frame_width || 340);
+              this.sponsorFrameHeight = parseInt(cfg.sponsor_frame_height || 500);
+              this.sponsorThumbWidth = parseInt(cfg.sponsor_thumb_width || 150);
+              this.sponsorThumbHeight = parseInt(cfg.sponsor_thumb_height || 150);
               this.clientLogo = this.settings.clientLogo ? `/static/logos/${this.settings.clientLogo}` : null;
               this.sponsorLogo = this.settings.sponsorLogo ? `/static/logos/${this.settings.sponsorLogo}` : null;
               this.clientLogoHeight = this.settings.clientLogoHeight;
@@ -912,6 +934,7 @@
               }
             };
             this.updateRemoveBgThreshold();
+            this.adjustSponsor();
           },
           async command(action){
             switch(action){
@@ -1047,7 +1070,7 @@
             this.files.push(...loaded);
             this.showSlides = false;
             this.tab = 'files';
-            this.$nextTick(()=>this.initSortable());
+            this.$nextTick(()=>{ this.initSortable(); this.adjustSponsor(); });
             e.target.value = '';
           },
           rotate(idx){
@@ -1399,7 +1422,7 @@
             this.signIndex=null;
           },
           view(url){ this.viewUrl=url; this.viewModal=true; },
-          remove(idx){ this.files.splice(idx,1); this.$nextTick(()=>this.initSortable()); },
+          remove(idx){ this.files.splice(idx,1); this.$nextTick(()=>{ this.initSortable(); this.adjustSponsor(); }); },
           crop(idx){
             this.cropIndex = idx;
             this.cropBrightness = 100;

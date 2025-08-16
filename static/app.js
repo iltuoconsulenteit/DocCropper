@@ -587,8 +587,14 @@ function initSponsorPreview(cfg) {
     sponsorPreview.id = 'sponsorPreview';
     sponsorPreview.className = 'thumbContainer';
     sponsorPreview.dataset.sponsor = '1';
-    const thumbW = parseInt(cfg.sponsor_thumb_width || 150);
-    const thumbH = parseInt(cfg.sponsor_thumb_height || 150);
+    let thumbW = parseInt(cfg.sponsor_thumb_width || 150);
+    let thumbH = parseInt(cfg.sponsor_thumb_height || 150);
+    const first = processedGallery.querySelector('.thumbContainer:not([data-sponsor])');
+    if (first) {
+        const rect = first.getBoundingClientRect();
+        thumbW = rect.width;
+        thumbH = rect.height;
+    }
     sponsorPreview.style.display = 'inline-flex';
     sponsorPreview.style.width = thumbW + 'px';
     sponsorPreview.style.height = thumbH + 'px';

@@ -121,6 +121,11 @@ def save_license_overrides(update: dict) -> dict:
 DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "")
 DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
 DEMO_FULL_LICENSE_KEY = "DEMO-FULL-DC"
+DEFAULT_SPONSOR_FRAME = (
+    "https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2F"
+    "iltuoconsulenteit%3Flocale%3Dit_IT&tabs=timeline&width=340&height=500&small_header=true&"
+    "adapt_container_width=true&hide_cover=true&show_facepile=false"
+)
 
 try:
     VERSION = subprocess.check_output(
@@ -219,7 +224,7 @@ DEFAULT_SETTINGS = {
     "client_url": "",
     "sponsor_url": "",
     "sponsor_banner": "",
-    "sponsor_frame": "https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2Filtuoconsulenteit&tabs=timeline&width=340&height=500&small_header=true&adapt_container_width=true&hide_cover=false&show_facepile=false",
+    "sponsor_frame": "",
     "sponsor_frame_width": 340,
     "sponsor_frame_height": 500,
     "sponsor_thumb_width": 150,
@@ -383,7 +388,9 @@ def load_settings():
 
         dev_env = DEV_LICENSE_KEY_UPPER
         key_upper = merged.get("license_key", "").strip().upper()
-        if key_upper == DEMO_FULL_LICENSE_KEY:
+        is_demo = key_upper == DEMO_FULL_LICENSE_KEY
+        is_dev = (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV")
+        if is_demo:
             merged["license_level"] = "full"
             merged["demo_full_mode"] = True
             if not merged.get("license_name"):
@@ -393,11 +400,13 @@ def load_settings():
                 merged["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
             if not merged.get("public_url"):
                 merged["public_url"] = "https://doccropper.iltuoconsulenteit.it"
-        elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
+        elif is_dev:
             merged["license_level"] = "full"
             if not merged.get("license_name"):
                 merged["license_name"] = "Developer"
             merged["enable_mobilesign"] = True
+        if (is_demo or is_dev) and not merged.get("sponsor_frame"):
+            merged["sponsor_frame"] = DEFAULT_SPONSOR_FRAME
 
         return merged
     except Exception:
