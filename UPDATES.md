@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-08-19
+- Reverted the "Apply & Add" camera workflow; mobile devices now use the standard Import button to add additional photos.
+
 ## 2025-08-18
 - Exposed project updates in-app via a `/updates` endpoint and showed the latest entry on the home screen.
 
