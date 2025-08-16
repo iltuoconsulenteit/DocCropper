@@ -3,8 +3,6 @@ import io
 import logging
 from typing import Any
 
-import numpy as np
-import cv2
 from fastapi import UploadFile, File, Query
 from fastapi.responses import JSONResponse
 from PIL import Image
@@ -26,6 +24,9 @@ def _fallback_remove(img: Image.Image, threshold: int) -> Image.Image:
     alpha mask.  This is obviously much simpler than rembg but avoids 404 errors
     when the optional dependency is missing.
     """
+
+    import numpy as np  # lazy import
+    import cv2
 
     rgba = img.convert("RGBA")
     np_img = np.array(rgba)

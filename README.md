@@ -4,6 +4,8 @@
 
 This project is **inspired by [image-perspective-crop](https://github.com/varna9000/image-perspective-crop)**, but has been **significantly rewritten and extended**, with major architectural changes, a redesigned user interface, batch features, user preferences, and many additional capabilities.
 
+All project changes are documented in [UPDATES.md](UPDATES.md). Run `python scripts/generate_updates.py` to rebuild this file from the Git commit history so dates stay in sync with actual commits. The in-app **Updates** menu loads this file so users can review past changes, and the most recent entry appears on the home screen when no documents are loaded.
+
 ---
 
 ## ✨ Key Features
@@ -28,16 +30,19 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 - 📤 Share PDFs via WhatsApp Web or Email, attaching files via the Web Share API when possible (Pro)
 - 🗂️ Drag thumbnails to reorder images before exporting (Pro)
 - 🖼️ Closable banner can rotate multiple promotional images
+- 🤝 Sponsor page shows Bronze, Silver, and Gold cards with medal icons and a benefits table covering marketing exposure and included licenses
 - 📝 Extract text via OCR (future Pro feature)
 - 🗂️ Persistent user settings
 - 🧭 Touchscreen-friendly interface
 - 🎨 Material design look with Roboto fonts and raised buttons
-- 🌐 Works offline or over LAN (no internet required)
+- 🌐 Works offline or over LAN (internet required only for license activation/renewal and to display sponsored frames)
 - 👤 Multi-user environment support (optional)
 - 🔒 Uploaded files are encrypted and wiped after your session
-- 📏 Uploads larger than 20&nbsp;MB are rejected (adjust with `DOCROPPER_MAX_UPLOAD_MB`)
+- 📏 Uploads larger than 5&nbsp;MB are rejected (adjust with `max_upload_mb` or `DOCROPPER_MAX_UPLOAD_MB`)
 - 📁 Limit simultaneous uploads with the `max_upload_files` setting (10 by default)
 - 🚀 Cache busting (`?v=<commit>`) ensures browsers fetch updated files
+- 🔔 Notification bell checks for updates and lets licensed users trigger upgrades with a PIN
+- ⏪ Rollback command restores the previous version if an update causes issues
 
 ---
 
@@ -46,7 +51,7 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 This project uses [Interact.JS](https://github.com/taye/interact.js) for managing draggable corner points.
 
 The frontend allows the user to:
-- Upload images with the file picker. On mobile devices the file picker is shown by default but you can switch to the camera mode and choose which camera to use. Desktop users may also drag and drop files. Up to `max_upload_files` images can be imported at once (10 by default)
+ - Upload images with the file picker. On mobile devices the file picker opens the camera or gallery; after each capture the app returns to the gallery where you can tap **+** (Add/Import) to add another photo. Desktop users may also drag and drop files. Up to `max_upload_files` images can be imported at once (10 by default)
  - Import PDF documents which are converted to images and added to the gallery without immediate cropping (Pro)
 - Add more images later without losing previously processed ones
 - Manually adjust the four corners of each image
@@ -76,7 +81,8 @@ JavaScript logic is contained in `static/app.js`.
 
 Images are processed and displayed as thumbnails with **Rotate**, **Edit**, and **Delete** buttons. Preview and layout configuration options are also provided before export.
 
-Logos and branding can be customized via `static/logos/`, `static/slide/`, `settings.json`, and `brand_html`. A dedicated area in the header can show a client logo (`client_logo`), a rotating slogan banner and an optional sponsor logo (`sponsor_logo`). Logo height and spacing can be tuned with `brand_height` and `brand_gap`. The `sponsor_scale` and `sponsor_bottom` settings control the video banner size and position. The header also shows a language-specific slogan image stored in `static/slide/` following the naming pattern `DocCropper_slogan_[plugin]_[lang].png` (e.g. `static/slide/DocCropper_slogan_main_en.png`), and the footer displays the current Git commit hash. Licensed users can also convert images to grayscale or black & white using buttons below each thumbnail, and a global color mode option applies to all images before PDF export.
+Logos and branding can be customized via `static/logos/`, `static/slide/`, `settings.json`, and `brand_html`. A dedicated area in the header can show a client logo (`client_logo`), a rotating slogan banner and an optional sponsor logo (`sponsor_logo`). Logo height and spacing can be tuned with `brand_height` and `brand_gap`. The `sponsor_scale` and `sponsor_bottom` settings control the video banner size and position. Client and sponsor logos can link to external sites through `client_url` and `sponsor_url`, and a `sponsor_banner` image or `sponsor_frame` URL may appear on the home screen. When a `sponsor_frame` is configured it renders as a thumbnail-like preview that shifts to the end of the gallery as files are added and is skipped during export. Frame dimensions and preview size can be customized with `sponsor_frame_width`, `sponsor_frame_height`, `sponsor_thumb_width`, and `sponsor_thumb_height`. By default this frame shows the latest post from <a href="https://www.facebook.com/iltuoconsulenteit">iltuoconsulenteit</a>, so sponsored licenses must stay online to load it. The header also shows a language-specific slogan image stored in `static/slide/` following the naming pattern `DocCropper_slogan_[plugin]_[lang].png` (e.g. `static/slide/DocCropper_slogan_main_en.png`), and the footer displays the current Git commit hash. Licensed users can also convert images to grayscale or black & white using buttons below each thumbnail, and a global color mode option applies to all images before PDF export.
+The images used for the rotating banner are defined in the `banner_images` setting. Each entry may include the `{{lang}}` placeholder to load the appropriate language version. Multiple images cycle automatically every `banner_interval` milliseconds.
 Blank pages can be skipped during PDF import. Enable **Skip blank pages** in the layout controls and adjust the `blank_threshold` percentage (95% by default).
 Pages over this threshold are discarded in the Pro edition.
 
@@ -158,7 +164,9 @@ The tray helper works on Windows and most Linux desktops. macOS support is
 experimental and not yet thoroughly tested. It loads the
 application logo and shows a green or red dot indicating whether the server is
 running. Use the menu to start, stop or update DocCropper, or open the site in
-your browser. On Linux you may need the `python3-gi` and `libappindicator3`
+your browser. On Linux the icon now responds to left clicks by launching the
+default **Open App** action so you can access commands just like on Windows.
+You may need the `python3-gi` and `libappindicator3`
 packages so the tray menu can display correctly. If no graphical environment is
 available, run it with the `--no-tray` option to start the server without
 showing an icon:
@@ -189,6 +197,17 @@ from `env/` and adjust them before running the container.
 Additional packages can be added by extending `docker/Dockerfile` if your
 deployment requires them.
 
+For the full enterprise build that includes the optional Google OAuth helper,
+use the provided multi-service compose file:
+
+```bash
+docker compose -f docker/docker-compose.full.yml up --build
+```
+
+Set `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` in your environment before
+launching. The auth service listens on port `8766` by default and proxies login
+requests for the main app.
+
 
 ### Built-in Wiki
 
@@ -211,11 +230,11 @@ the ability to create or remove them. It relies on the REST endpoints under
 
 To enable optional Google authentication, set `google_client_id` in
 `settings.json` or provide it via the environment variable
-`DOCROPPER_GOOGLE_CLIENT_ID`. When configured, a sign-in button will appear in
-the web interface and tokens will be verified by the backend. Google login is
-only used to identify users and is not tied to licensing.
-When the hidden Demo Full license is active the login button is hidden even if
-`google_client_id` is set.
+`DOCROPPER_GOOGLE_CLIENT_ID`. The login module is active only when
+`license_check` is enabled; otherwise the sign-in button remains hidden even if
+a client ID is provided. When configured, the web interface displays the
+button and tokens are verified by the backend. When the hidden Demo Full license
+is active the login button is hidden even if `google_client_id` is set.
 
 ---
 
@@ -237,7 +256,7 @@ When the LAN plugin is active the `lan_user_limit` setting controls how many
 accounts may use DocCropper over the network. Licenses are typically sold in
 blocks of five users (5, 10, 15 and so on).
 
-Both Pro and Full can run completely offline on Windows, macOS or Linux.
+Both Pro and Full can run offline on Windows, macOS or Linux after activation. An internet connection is only needed to activate and renew the license; sponsored licenses also require connectivity to fetch the default Facebook post.
 
 DocCropper itself is released under the [MIT](LICENSE.txt) license. See [Terms of Use](TERMS_OF_USE.md) for additional conditions.
 
@@ -376,7 +395,7 @@ active the default domain is `https://doccropper.iltuoconsulenteit.it`.
 The server also accepts cross-origin requests when you set
 `DOCROPPER_CORS_ORIGINS` to a comma-separated list of allowed origins or `*` to
 permit any origin.
-Uploads larger than the configured `DOCROPPER_MAX_UPLOAD_MB` (20&nbsp;MB by default) will be rejected to avoid excessive disk usage.
+Uploads larger than the configured `max_upload_mb` (5&nbsp;MB by default) will be rejected to avoid excessive disk usage.
 
 ### Pro OCR (coming soon)
 
