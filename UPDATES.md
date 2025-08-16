@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-08-25
+- Export sidebar now leaves room for the footer so client logos remain visible.
+
 ## 2025-08-24
 - Fixed mobile crop Apply button throwing a MutationObserver error after removing camera input's `multiple` attribute.
 

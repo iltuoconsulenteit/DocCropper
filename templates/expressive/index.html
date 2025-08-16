@@ -18,7 +18,7 @@
         position: fixed;
         top: 48px;
         right: 0;
-        bottom: 0;
+        bottom: 0; /* adjusted via script to stay above footer */
         width: 260px;
         background: #fff;
         border-left: 1px solid #ccc;
@@ -1581,6 +1581,16 @@
         if (box) box.style.display = 'none';
       });
 
+      const exportPanel = document.getElementById('exportOptions');
+      const footerEl = document.querySelector('footer');
+      const adjustExportBottom = () => {
+        if (exportPanel && footerEl) {
+          exportPanel.style.bottom = footerEl.offsetHeight + 'px';
+        }
+      };
+      window.addEventListener('load', adjustExportBottom);
+      window.addEventListener('resize', adjustExportBottom);
+
       window.addEventListener('signedPdfAvailable', (e) => {
         const url = e.detail.url;
         const exportBox = document.getElementById('exportOptions');
@@ -1589,7 +1599,7 @@
         const waBtn = document.getElementById('waShareBtn');
         const emailBtn = document.getElementById('emailShareBtn');
         const controls = document.getElementById('layoutControls');
-        if (exportBox) exportBox.style.display = 'block';
+        if (exportBox) { exportBox.style.display = 'block'; adjustExportBottom(); }
         if (controls) controls.style.display = 'block';
         updateLayoutPreview();
         if (frame) {
