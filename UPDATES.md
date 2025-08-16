@@ -89,6 +89,10 @@
 - Deferred heavy libraries like OpenCV and PyMuPDF until needed, trimming memory use and speeding startup.
 - Skipped redundant `pip install` runs and launched the tray after dependencies load, restoring the Linux tray icon.
 
+## 2024-08-09
+- Added medal icons and color‑coded cards to the Sponsor page and replaced the old support row with marketing and license benefits.
+- Moved the sponsorship disclaimer below the contact button so it no longer hides behind the link.
+
 ## 2024-07-31
 - Added LAN user limit plugin and created a default admin via FastAPI Users.
 - Improved Docker setup and environment examples.

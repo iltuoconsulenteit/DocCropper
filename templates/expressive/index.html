@@ -174,7 +174,8 @@
           <p x-text="t('sponsorIntro')"></p>
           <ul id="sponsorList" class="grid md:grid-cols-3 gap-4">
             <template x-for="tier in tiers" :key="tier.codice">
-              <li class="border rounded p-4 text-center">
+              <li class="border-2 rounded p-4 text-center shadow" :class="tier.codice==='gold'?'border-yellow-400':tier.codice==='silver'?'border-gray-400':'border-amber-700'">
+                <img :src="`/static/logos/${tier.codice}.svg`" :alt="tier.titolo" class="h-16 mx-auto mb-2" />
                 <h3 class="text-xl font-semibold" x-text="tier.titolo"></h3>
                 <p class="text-sm" x-text="tier.descrizione"></p>
                 <p class="font-bold" x-text="`€${tier.prezzo_base}`"></p>
@@ -204,15 +205,21 @@
                 <td class="border p-2 text-center">✔</td>
               </tr>
               <tr>
-                <td class="border p-2" x-text="t('sponsorBenefitSupport')"></td>
-                <td class="border p-2 text-center">–</td>
+                <td class="border p-2" x-text="t('sponsorBenefitMarketing')"></td>
                 <td class="border p-2 text-center">–</td>
                 <td class="border p-2 text-center">✔</td>
+                <td class="border p-2 text-center">✔</td>
+              </tr>
+              <tr>
+                <td class="border p-2" x-text="t('sponsorBenefitLicense')"></td>
+                <td class="border p-2 text-center">Base</td>
+                <td class="border p-2 text-center">Pro LAN</td>
+                <td class="border p-2 text-center">Full</td>
               </tr>
             </tbody>
           </table>
-          <p class="text-xs text-gray-600" x-text="t('sponsorNote')"></p>
           <a href="mailto:info@iltuoconsulente.it" class="bg-blue-500 text-white px-4 py-2 rounded" x-text="t('contactSponsor')"></a>
+          <p class="text-xs text-gray-600 mt-2" x-text="t('sponsorNote')"></p>
         </div>
         <div x-show="tab==='tutorials'" class="w-full h-full">
           <div id="tutorialsArea" class="w-full h-[80vh] flex items-center justify-center text-gray-500" x-text="t('tutorialsPlaceholder')"></div>
@@ -494,7 +501,8 @@
             sponsorBenefit:'Benefit',
             sponsorBenefitVisibility:'Logo on project site',
             sponsorBenefitBanner:'Homepage banner',
-            sponsorBenefitSupport:'Priority support',
+            sponsorBenefitMarketing:'Marketing integration',
+            sponsorBenefitLicense:'Included license',
             clientLogoHeight:'Client logo height',
             sponsorLogoHeight:'Sponsor logo height',
             noFiles:'No files available.',
@@ -598,7 +606,8 @@
             sponsorBenefit:'Vantaggio',
             sponsorBenefitVisibility:'Logo sul sito del progetto',
             sponsorBenefitBanner:'Banner in homepage',
-            sponsorBenefitSupport:'Supporto prioritario',
+            sponsorBenefitMarketing:'Integrazione marketing',
+            sponsorBenefitLicense:'Licenza inclusa',
             clientLogoHeight:'Altezza logo cliente',
             sponsorLogoHeight:'Altezza logo sponsor',
             noFiles:'Nessun file disponibile.',
