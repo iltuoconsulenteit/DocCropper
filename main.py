@@ -218,6 +218,7 @@ DEFAULT_SETTINGS = {
     "client_url": "",
     "sponsor_url": "",
     "sponsor_banner": "",
+    "sponsor_frame": "",
     "sponsor_scale": 100,
     "sponsor_bottom": 80,
     "brand_height": 80,

@@ -112,6 +112,9 @@
         <div class="mb-4 flex justify-center" x-show="sponsorBanner && files.length===0 && tab==='files'">
           <a :href="sponsorUrl || '#'" target="_blank"><img :src="sponsorBanner" alt="Sponsor" class="max-h-32 w-auto object-contain" /></a>
         </div>
+        <div class="mb-4 flex justify-center" x-show="sponsorFrame && files.length===0 && tab==='files'">
+          <iframe :src="sponsorFrame" class="w-full max-w-md h-64 border-none"></iframe>
+        </div>
         <div class="mb-4 flex justify-center" x-show="showSlides && currentSlide && files.length===0 && tab==='files'">
           <img :src="currentSlide" alt="slogan" class="max-h-64 w-auto object-contain" />
         </div>
@@ -413,6 +416,10 @@
           <input type="text" class="border w-full p-1" x-model="settings.sponsorUrl" />
         </div>
         <div>
+          <label class="block text-sm" x-text="t('sponsorFrame')"></label>
+          <input type="text" class="border w-full p-1" x-model="settings.sponsorFrame" />
+        </div>
+        <div>
           <label class="block text-sm" x-text="t('clientLogoHeight')"></label>
           <input type="number" class="border w-full p-1" x-model.number="settings.clientLogoHeight" />
         </div>
@@ -494,6 +501,7 @@
             sponsorLogo:'Sponsor logo',
             clientUrl:'Client link',
             sponsorUrl:'Sponsor link',
+            sponsorFrame:'Sponsor frame URL',
             sponsorTitle:'Become a Sponsor of the Project',
             sponsorIntro:'Supporting DocCropper sustains an open source tool with perspective cropping, mobile signing, and local installation; internet is needed only to activate and renew the license.',
             sponsorNote:'Sponsorship levels and pricing may change over time and can be tailored to each sponsor.',
@@ -603,6 +611,7 @@
             sponsorLogo:'Logo sponsor',
             clientUrl:'Link cliente',
             sponsorUrl:'Link sponsor',
+            sponsorFrame:'URL frame sponsor',
             sponsorTitle:'Diventa Sponsor del Progetto',
             sponsorIntro:'Sostenere DocCropper significa supportare un progetto open source con ritaglio prospettico, firma mobile e installazione locale; è richiesto internet solo per attivare e rinnovare la licenza.',
             sponsorNote:'I livelli di sponsorizzazione e le relative condizioni economiche possono variare nel tempo e sono personalizzabili in base alle esigenze dello sponsor.',
@@ -727,13 +736,14 @@
           signatureAspect:1,
           pendingSigPos:null,
           sponsorBanner:null,
+          sponsorFrame:null,
           clientLogo:null,
           sponsorLogo:null,
           donateLink:null,
           settingsModal:false,
           passwordModal:false,
           passwordInput:'',
-          settings:{clientLogo:'', sponsorLogo:'', clientLogoHeight:125, sponsorLogoHeight:125, clientUrl:'', sponsorUrl:''},
+          settings:{clientLogo:'', sponsorLogo:'', clientLogoHeight:125, sponsorLogoHeight:125, clientUrl:'', sponsorUrl:'', sponsorFrame:''},
           clientUrl:'',
           sponsorUrl:'',
           clientLogoHeight:125,
@@ -842,9 +852,11 @@
               this.settings.sponsorLogoHeight = parseInt(cfg.sponsor_logo_height || 125);
               this.settings.clientUrl = cfg.client_url || '';
               this.settings.sponsorUrl = cfg.sponsor_url || '';
+              this.settings.sponsorFrame = cfg.sponsor_frame || '';
               this.clientUrl = this.settings.clientUrl;
               this.sponsorUrl = this.settings.sponsorUrl;
               this.sponsorBanner = cfg.sponsor_banner ? `/static/logos/${cfg.sponsor_banner}` : null;
+              this.sponsorFrame = cfg.sponsor_frame || null;
               this.clientLogo = this.settings.clientLogo ? `/static/logos/${this.settings.clientLogo}` : null;
               this.sponsorLogo = this.settings.sponsorLogo ? `/static/logos/${this.settings.sponsorLogo}` : null;
               this.clientLogoHeight = this.settings.clientLogoHeight;
@@ -962,7 +974,8 @@
               client_logo_height:this.settings.clientLogoHeight,
               sponsor_logo_height:this.settings.sponsorLogoHeight,
               client_url:this.settings.clientUrl,
-              sponsor_url:this.settings.sponsorUrl
+              sponsor_url:this.settings.sponsorUrl,
+              sponsor_frame:this.settings.sponsorFrame
             };
             fetch('/settings/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
               .then(()=>{
@@ -972,6 +985,7 @@
                 this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
                 this.clientUrl = this.settings.clientUrl;
                 this.sponsorUrl = this.settings.sponsorUrl;
+                this.sponsorFrame = this.settings.sponsorFrame || null;
                 this.settingsModal = false;
               });
           },

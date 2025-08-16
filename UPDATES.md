@@ -1,5 +1,8 @@
 # Updates
 
+## 2024-09-08
+- Added optional sponsor frame on the home screen via `sponsor_frame` setting to embed promotional content without obstructing workflow.
+
 ## 2024-09-07
 - Added rollback command accessible from the update menu, tray, and API to restore the previously installed version when an update causes issues.
 

@@ -168,6 +168,8 @@ const openWikiLink = document.getElementById('openWikiLink');
 const sponsorBanner = document.getElementById('sponsorBanner');
 const sponsorBannerImg = document.getElementById('sponsorBannerImg');
 const sponsorBannerLink = document.getElementById('sponsorBannerLink');
+const sponsorFrame = document.getElementById('sponsorFrame');
+const sponsorFrameIframe = document.getElementById('sponsorFrameIframe');
 const clientLogo = document.getElementById('clientLogo');
 const clientLogoLink = document.getElementById('clientLogoLink');
 const sponsorLogo = document.getElementById('sponsorLogo');
@@ -681,6 +683,14 @@ function applySettings(cfg) {
             sponsorBanner.style.display = 'block';
         } else {
             sponsorBanner.style.display = 'none';
+        }
+    }
+    if (sponsorFrame && sponsorFrameIframe) {
+        if (cfg.sponsor_frame) {
+            sponsorFrameIframe.src = cfg.sponsor_frame;
+            sponsorFrame.style.display = 'block';
+        } else {
+            sponsorFrame.style.display = 'none';
         }
     }
     if (Array.isArray(cfg.banner_images)) {
