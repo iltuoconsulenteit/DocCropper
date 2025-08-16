@@ -201,6 +201,7 @@
   "demoLicenseDisabled": "La modifica della licenza è disabilitata nella versione demo",
   "sponsorMessage": "Video sponsorizzato - chiudi per continuare",
   "enterUpdatePin": "Inserisci PIN aggiornamento",
+  "startUpdate": "Avvia aggiornamento",
   "updateStarted": "Aggiornamento avviato",
   "updateFailed": "Aggiornamento fallito"
 }

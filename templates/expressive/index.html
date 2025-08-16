@@ -104,7 +104,7 @@
           <option value="en">EN</option>
           <option value="it" selected>IT</option>
         </select>
-        <button x-show="updateAvailable" @click="triggerUpdate" title="Update">🔔</button>
+        <button x-show="updateAvailable" @click="openUpdateModal" title="Update">🔔</button>
       </header>
       <!-- Content -->
       <main class="flex-1 p-4 space-y-4 overflow-y-auto" x-cloak>
@@ -390,6 +390,18 @@
       </div>
     </div>
 
+    <!-- Update PIN Modal -->
+    <div x-show="showUpdateModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded w-64 space-y-2">
+        <h2 class="text-lg" x-text="t('enterUpdatePin')"></h2>
+        <input type="password" class="border w-full p-1" x-model="updatePin" />
+        <div class="text-right space-x-2 pt-2">
+          <button class="px-3 py-1 bg-gray-300 rounded" @click="cancelUpdate" x-text="t('cancel')"></button>
+          <button class="px-3 py-1 bg-blue-500 text-white rounded" @click="confirmUpdate" x-text="t('startUpdate')"></button>
+        </div>
+      </div>
+    </div>
+
     <!-- Mobile Sign Overlay and Details Modal -->
     <div id="signQR" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); padding:1rem; text-align:center; align-items:center; justify-content:center; flex-direction:column;">
       <img id="signQrImg" alt="QR" style="max-width:20rem; margin-bottom:0.5rem;" />
@@ -514,6 +526,7 @@
             lastUpdate:'Last update',
             tutorialsPlaceholder:'Tutorial videos coming soon.',
             enterUpdatePin:'Enter update PIN',
+            startUpdate:'Start update',
             updateStarted:'Update started',
             updateFailed:'Update failed'
           },
@@ -613,6 +626,7 @@
             lastUpdate:'Ultimo aggiornamento',
             tutorialsPlaceholder:'Prossimamente video tutorial.',
             enterUpdatePin:'Inserisci PIN aggiornamento',
+            startUpdate:'Avvia aggiornamento',
             updateStarted:'Aggiornamento avviato',
             updateFailed:'Aggiornamento fallito'
           }
@@ -690,6 +704,8 @@
             it:[]
           },
           updateAvailable:false,
+          showUpdateModal:false,
+          updatePin:'',
           updateInterval:3600000,
           maxUpload:10,
           showClearConfirm:false,
@@ -718,15 +734,21 @@
               this.updateAvailable = !!d.available;
             }).catch(()=>{});
           },
-          triggerUpdate(){
-            const pin = prompt(this.t('enterUpdatePin'));
-            if(!pin) return;
+          openUpdateModal(){
+            this.updatePin='';
+            this.showUpdateModal=true;
+          },
+          confirmUpdate(){
+            const pin = this.updatePin.trim();
+            if(!pin) { this.showUpdateModal=false; return; }
             fetch('/update/', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin})})
               .then(r=>{
                 if(r.ok){ alert(this.t('updateStarted')); this.updateAvailable=false; }
                 else { alert(this.t('updateFailed')); }
-              }).catch(()=>{ alert(this.t('updateFailed')); });
+              }).catch(()=>{ alert(this.t('updateFailed')); })
+              .finally(()=>{ this.showUpdateModal=false; });
           },
+          cancelUpdate(){ this.showUpdateModal=false; },
           init(){
             if (window['pdfjsLib']) {
               pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js';

@@ -194,10 +194,8 @@ def main():
         return
 
     if SYSTEM == 'Linux' and not os.environ.get('DISPLAY'):
-        logging.info("No DISPLAY detected; running without tray")
-        if not running:
-            start_app()
-        return
+        os.environ['DISPLAY'] = ':0'
+        logging.info("DISPLAY not set; defaulting to :0")
 
     try:
         from pystray import Icon, Menu, MenuItem

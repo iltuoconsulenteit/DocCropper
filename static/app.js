@@ -61,6 +61,10 @@ const layoutPreview = document.getElementById('layoutPreview');
 const updateBell = document.getElementById('updateBell');
 let updateInterval = 3600000;
 let updateTimer;
+const updateBox = document.getElementById('updateBox');
+const updatePinInput = document.getElementById('updatePinInput');
+const updatePinSubmit = document.getElementById('updatePinSubmit');
+const updatePinCancel = document.getElementById('updatePinCancel');
 
 async function checkForUpdate(first = false) {
     if (!updateBell) return false;
@@ -83,8 +87,18 @@ async function checkForUpdate(first = false) {
 }
 
 if (updateBell) {
-    updateBell.addEventListener('click', async () => {
-        const pin = prompt(t('enterUpdatePin'));
+    updateBell.addEventListener('click', () => {
+        const rect = updateBell.getBoundingClientRect();
+        updateBox.style.display = 'block';
+        updateBox.style.top = (rect.bottom + window.scrollY) + 'px';
+        updateBox.classList.toggle('visible');
+        if (updateBox.classList.contains('visible')) {
+            updatePinInput.value = '';
+            updatePinInput.focus();
+        }
+    });
+    updatePinSubmit.addEventListener('click', async () => {
+        const pin = updatePinInput.value.trim();
         if (!pin) return;
         try {
             const resp = await fetch('/update/', {
@@ -93,9 +107,14 @@ if (updateBell) {
                 body: JSON.stringify({ pin })
             });
             alert(resp.ok ? t('updateStarted') : t('updateFailed'));
+            updateBox.classList.remove('visible');
         } catch (e) {
             alert(t('updateFailed'));
+            updateBox.classList.remove('visible');
         }
+    });
+    updatePinCancel.addEventListener('click', () => {
+        updateBox.classList.remove('visible');
     });
     checkForUpdate(true).then(ok => {
         if (ok) updateTimer = setInterval(checkForUpdate, updateInterval);

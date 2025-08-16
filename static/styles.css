@@ -524,6 +524,26 @@ button:hover {
     pointer-events: auto;
 }
 
+#updateBox {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 250px;
+    background: #fff;
+    border: 1px solid #888;
+    padding: 8px;
+    z-index: 1000;
+    font-size: 0.9em;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    pointer-events: none;
+}
+
+#updateBox.visible {
+    transform: translateX(0);
+    pointer-events: auto;
+}
+
 #sponsorList .sponsor-tier {
     border: 1px solid #ccc;
     padding: 8px;
