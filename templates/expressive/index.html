@@ -1282,7 +1282,9 @@
             path.setAttribute('d',d);
           },
           closeCrop(){
-            ['cp1','cp2','cp3','cp4'].forEach(id=>{ try{interact('#'+id).unset();}catch(e){} });
+            Object.values(this.draggables || {}).forEach(el=>{
+              try{ interact(el).unset(); }catch(e){}
+            });
             this.cropModal=false;
           },
           cropTap(){

@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-08-24
+- Fixed mobile crop Apply button throwing a MutationObserver error after removing camera input's `multiple` attribute.
+
 ## 2025-08-23
 - Replaced deprecated startup event with FastAPI lifespan manager to eliminate console warnings.
 - Stop script now uses non-interactive `sudo -n` so tray-driven shutdowns don't hang on password prompts.
