@@ -5,8 +5,6 @@ import os
 import uuid
 from typing import Any
 
-import cv2
-import numpy as np
 from fastapi import Body, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse
 
@@ -19,9 +17,26 @@ def register(app, utils: dict[str, Any]):
     get_session_dir = utils["get_session_dir"]
     encrypt_bytes = utils["encrypt_bytes"]
     ENC_SUFFIX = utils["ENC_SUFFIX"]
-    MAX_UPLOAD_BYTES = utils.get("MAX_UPLOAD_BYTES", 20 * 1024 * 1024)
+    MAX_UPLOAD_BYTES = utils.get("MAX_UPLOAD_BYTES", 5 * 1024 * 1024)
 
-    def order_points(pts: np.ndarray) -> np.ndarray:
+    import importlib
+    cv2_mod = None
+    np_mod = None
+
+    def get_cv2():
+        nonlocal cv2_mod
+        if cv2_mod is None:
+            cv2_mod = importlib.import_module("cv2")
+        return cv2_mod
+
+    def get_np():
+        nonlocal np_mod
+        if np_mod is None:
+            np_mod = importlib.import_module("numpy")
+        return np_mod
+
+    def order_points(pts):
+        np = get_np()
         rect = np.zeros((4, 2), dtype="float32")
         s = pts.sum(axis=1)
         rect[0] = pts[np.argmin(s)]
@@ -31,15 +46,15 @@ def register(app, utils: dict[str, Any]):
         rect[3] = pts[np.argmax(diff)]
         return rect
 
-    def detect_document_corners(img: np.ndarray) -> np.ndarray | None:
+    def detect_document_corners(img):
+        cv2 = get_cv2()
+        np = get_np()
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (5, 5), 0)
-        # Auto-tune Canny thresholds based on image median to improve detection
         v = np.median(gray)
         lower = int(max(0, 0.66 * v))
         upper = int(min(255, 1.33 * v))
         edged = cv2.Canny(gray, lower, upper)
-        # Clean up edges to reduce noise
         edged = cv2.dilate(edged, None, iterations=1)
         edged = cv2.erode(edged, None, iterations=1)
         cnts, _ = cv2.findContours(edged, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
@@ -72,6 +87,8 @@ def register(app, utils: dict[str, Any]):
                 except Exception:
                     logger.exception("Failed to save uploaded image")
 
+            np = get_np()
+            cv2 = get_cv2()
             nparr = np.frombuffer(contents, np.uint8)
             img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             if img_cv is None:
@@ -121,6 +138,8 @@ def register(app, utils: dict[str, Any]):
                 except Exception:
                     logger.exception("Failed to save uploaded image")
 
+            np = get_np()
+            cv2 = get_cv2()
             nparr = np.frombuffer(contents, np.uint8)
             img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             if img_cv is None:
@@ -171,6 +190,7 @@ def register(app, utils: dict[str, Any]):
                 dtype=np.float32,
             )
 
+            cv2 = get_cv2()
             matrix = cv2.getPerspectiveTransform(src_pts, dst_pts)
             if matrix is None:
                 logger.error("Failed to compute perspective transform matrix. Points might be collinear or invalid.")
@@ -188,6 +208,7 @@ def register(app, utils: dict[str, Any]):
             )
             b_factor = max(0, brightness) / 100.0
             c_factor = max(0, contrast) / 100.0
+            cv2 = get_cv2()
             adjusted = cv2.convertScaleAbs(
                 warped_image, alpha=c_factor, beta=int((b_factor - 1) * 255)
             )

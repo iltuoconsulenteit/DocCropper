@@ -1,0 +1,22 @@
+version: '3.9'
+services:
+  doccropper:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8765:8765"
+    volumes:
+      - ../env:/opt/doccropper/env
+      - ../users:/opt/doccropper/users
+  auth:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.auth
+    environment:
+      CLIENT_ID: ${CLIENT_ID}
+      CLIENT_SECRET: ${CLIENT_SECRET}
+      REDIRECT_URI: ${REDIRECT_URI:-http://localhost:8766/auth/google/callback}
+      PORT: 8765
+    ports:
+      - "8766:8765"

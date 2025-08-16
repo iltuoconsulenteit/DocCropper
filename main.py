@@ -7,11 +7,9 @@ import os
 import shutil
 import time
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime
 
-import cv2
-import numpy as np
-import fitz
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, Body, Request, Depends, HTTPException
 from PIL import Image, ImageDraw, ImageFont
@@ -32,11 +30,36 @@ from fastapi.middleware.cors import CORSMiddleware
 from cryptography.fernet import Fernet
 import subprocess
 import sys
+import platform
 import tempfile
 from dotenv import load_dotenv
 import urllib.request
 import urllib.parse
 import socket
+from pathlib import Path
+import importlib
+
+_cv2 = None
+_np = None
+_fitz = None
+
+def get_cv2():
+    global _cv2
+    if _cv2 is None:
+        _cv2 = importlib.import_module("cv2")
+    return _cv2
+
+def get_np():
+    global _np
+    if _np is None:
+        _np = importlib.import_module("numpy")
+    return _np
+
+def get_fitz():
+    global _fitz
+    if _fitz is None:
+        _fitz = importlib.import_module("fitz")
+    return _fitz
 from plugins.sign import register as register_sign
 from app.licensing.check import verify_license
 from app.auth.routes import router as auth_router, fastapi_users
@@ -121,8 +144,49 @@ SIGNATURES_DIR = "signatures"
 PID_FILE = os.path.join(tempfile.gettempdir(), "doccropper.pid")
 ENC_SUFFIX = ".enc"
 SESSION_KEYS: dict[str, bytes] = {}
-MAX_UPLOAD_MB = int(os.getenv("DOCROPPER_MAX_UPLOAD_MB", "20"))
+DEFAULT_MAX_UPLOAD_MB = 5
+MAX_UPLOAD_MB = int(os.getenv("DOCROPPER_MAX_UPLOAD_MB", str(DEFAULT_MAX_UPLOAD_MB)))
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
+
+BASE_DIR = Path(__file__).resolve().parent
+
+def repo_has_updates() -> bool:
+    """Check if remote Git repository has new commits."""
+    try:
+        subprocess.run(
+            ["git", "fetch"],
+            cwd=BASE_DIR,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True,
+            timeout=5,
+        )
+        local = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=BASE_DIR, timeout=5
+        ).strip()
+        remote = subprocess.check_output(
+            ["git", "rev-parse", "@{u}"], cwd=BASE_DIR, timeout=5
+        ).strip()
+        return local != remote
+    except Exception:
+        return False
+
+def run_update_script():
+    env = os.environ.copy()
+    env.setdefault("BRANCH", "main")
+    script = BASE_DIR / "install" / "install_DocCropper.sh"
+    subprocess.Popen(["bash", str(script)], cwd=BASE_DIR, env=env)
+
+def run_rollback_script():
+    system = platform.system()
+    script = {
+        "Windows": BASE_DIR / "scripts" / "rollback_DocCropper.bat",
+        "Darwin": BASE_DIR / "scripts" / "rollback_DocCropper.command",
+    }.get(system, BASE_DIR / "scripts" / "rollback_DocCropper.sh")
+    if system == "Windows":
+        subprocess.Popen(["cmd", "/c", str(script)], cwd=BASE_DIR)
+    else:
+        subprocess.Popen(["bash", str(script)], cwd=BASE_DIR)
 
 DEFAULT_SETTINGS = {
     "language": "it",
@@ -152,6 +216,14 @@ DEFAULT_SETTINGS = {
     "brand_html": "",
     "client_logo": "client_logo.png",
     "sponsor_logo": "sponsor_logo.png",
+    "client_url": "",
+    "sponsor_url": "",
+    "sponsor_banner": "",
+    "sponsor_frame": "https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2Filtuoconsulenteit&tabs=timeline&width=340&height=500&small_header=true&adapt_container_width=true&hide_cover=false&show_facepile=false",
+    "sponsor_frame_width": 340,
+    "sponsor_frame_height": 500,
+    "sponsor_thumb_width": 150,
+    "sponsor_thumb_height": 150,
     "sponsor_scale": 100,
     "sponsor_bottom": 80,
     "brand_height": 80,
@@ -159,6 +231,7 @@ DEFAULT_SETTINGS = {
     "blank_threshold": 95,
     "skip_blank": True,
     "max_upload_files": 10,
+    "max_upload_mb": 5,
     "enable_sponsor_video": False,
     "banner_images": ["DocCropper_slogan_main_{{lang}}.png"],
     "developer_watermark": False,
@@ -167,6 +240,8 @@ DEFAULT_SETTINGS = {
     "docuseal_api_key": "",
     "public_url": "",
     "template": "static",
+    "update_pin": "",
+    "update_interval": 3600000,
 }
 
 def verify_license_server(key: str) -> bool:
@@ -243,6 +318,9 @@ def load_settings():
             base = json.load(fh)
         merged = DEFAULT_SETTINGS.copy()
         merged.update(base)
+        max_mb_env = os.getenv("DOCROPPER_MAX_UPLOAD_MB")
+        if max_mb_env:
+            merged["max_upload_mb"] = int(max_mb_env)
         env_key = os.getenv("DOCROPPER_LICENSE_KEY")
         env_name = os.getenv("DOCROPPER_LICENSE_NAME")
         google_id = os.getenv("DOCROPPER_GOOGLE_CLIENT_ID")
@@ -259,6 +337,9 @@ def load_settings():
         stripe_cancel = os.getenv("STRIPE_CANCEL_URL")
         public_url_env = os.getenv("DOCROPPER_PUBLIC_URL")
         lan_limit_env = os.getenv("DOCROPPER_LAN_USER_LIMIT")
+        global MAX_UPLOAD_MB, MAX_UPLOAD_BYTES
+        MAX_UPLOAD_MB = int(merged.get("max_upload_mb", DEFAULT_MAX_UPLOAD_MB))
+        MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
         if env_key:
             merged["license_key"] = env_key
         if env_name:
@@ -321,6 +402,9 @@ def load_settings():
         return merged
     except Exception:
         return DEFAULT_SETTINGS.copy()
+
+# Initialize global upload limits from settings
+load_settings()
 
 def save_settings(update: dict):
     data = load_settings()
@@ -391,11 +475,8 @@ def save_user_settings(email: str, update: dict):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
-app.include_router(auth_router)
-
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     from app.auth.database import engine, Base, async_session_maker
     from fastapi_users.db import SQLAlchemyUserDatabase
     from passlib.hash import bcrypt
@@ -419,6 +500,12 @@ async def startup_event():
             )
             session.add(admin)
             await session.commit()
+    yield
+
+app = FastAPI(lifespan=lifespan)
+# Only enable authentication routes when license checking is active
+if load_settings().get("license_check", False):
+    app.include_router(auth_router)
 
 # Enable cross-origin requests if needed
 origins = os.getenv("DOCROPPER_CORS_ORIGINS", "*")
@@ -618,6 +705,7 @@ async def admin_page(user: User = Depends(require_superuser)):
     return HTMLResponse(content=content, status_code=200)
 
 
+
 @app.get("/settings/")
 async def get_settings():
     data = load_settings()
@@ -656,6 +744,59 @@ async def update_user_settings_endpoint(request: Request, settings: dict = Body(
     data["version"] = VERSION
     data["version_date"] = VERSION_DATE
     return data
+
+
+@app.post("/clear-session/")
+async def clear_session(request: Request):
+    session_id = request.cookies.get("session_id")
+    if session_id:
+        session_dir = os.path.join(SESSIONS_ROOT, session_id)
+        if os.path.isdir(session_dir):
+            shutil.rmtree(session_dir, ignore_errors=True)
+        SESSION_KEYS.pop(session_id, None)
+    return {"status": "ok"}
+
+
+@app.get("/updates/")
+async def get_updates():
+    path = os.path.join(os.path.dirname(__file__), "UPDATES.md")
+    if not os.path.exists(path):
+        return {"en": [], "it": []}
+    entries = []
+    with open(path, "r", encoding="utf-8") as fh:
+        current_date = ""
+        for line in fh:
+            line = line.strip()
+            if line.startswith("##"):
+                current_date = line.lstrip("# ").strip()
+            elif line.startswith("- ") and current_date:
+                entries.append(f"{current_date}: {line[2:].strip()}")
+    return {"en": entries, "it": entries}
+
+
+@app.get("/update-check/")
+async def update_check():
+    return {"available": repo_has_updates()}
+
+
+@app.post("/update/")
+async def update_app(data: dict = Body(...)):
+    pin = data.get("pin", "")
+    settings = load_settings()
+    if pin != settings.get("update_pin", ""):
+        raise HTTPException(status_code=403, detail="Invalid PIN")
+    run_update_script()
+    return {"status": "started"}
+
+
+@app.post("/rollback/")
+async def rollback_app(data: dict = Body(...)):
+    pin = data.get("pin", "")
+    settings = load_settings()
+    if pin != settings.get("update_pin", ""):
+        raise HTTPException(status_code=403, detail="Invalid PIN")
+    run_rollback_script()
+    return {"status": "started"}
 
 
 @app.post("/stripe-checkout/")
@@ -732,6 +873,8 @@ async def pdf_to_images(
             except Exception:
                 logger.exception("Failed to save uploaded PDF")
 
+        fitz = get_fitz()
+        np = get_np()
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         thr = max(0, min(100, int(threshold))) / 100.0
         images_b64: list[str] = []
@@ -816,6 +959,7 @@ async def create_pdf(
                 sig_bytes = base64.b64decode(sig_b64)
                 sig_img = Image.open(io.BytesIO(sig_bytes)).convert('RGBA')
                 if remove_signature_bg:
+                    np = get_np()
                     arr = np.array(sig_img)
                     white = (arr[:, :, :3] > 240).all(axis=2)
                     arr[white, 3] = 0
@@ -1020,6 +1164,7 @@ async def create_pdf(
             pdf_bytes = compressor(pdf_bytes, compression, jpeg_quality)
         if pdfa_version is not None:
             try:
+                fitz = get_fitz()
                 doc = fitz.open(stream=pdf_bytes, filetype="pdf")
                 pdf_bytes = doc.tobytes(deflate=True, clean=True, garbage=4, pdfa=int(pdfa_version) - 1)
             except Exception:
@@ -1054,6 +1199,8 @@ async def extract_text(request: Request, images: list[str] = Body(...)):
             if img_b64.startswith('data:'):
                 img_b64 = img_b64.split(',', 1)[1]
             img_bytes = base64.b64decode(img_b64)
+            np = get_np()
+            cv2 = get_cv2()
             nparr = np.frombuffer(img_bytes, np.uint8)
             img_cv = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
             if img_cv is None:
