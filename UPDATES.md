@@ -232,3 +232,7 @@
 - Add OCR feature with language support
 - Add optional PDF signing
 
+## 2025-08-16
+- Scale sponsor frame and show it on startup without importing files
+- Restore loading overlay for the Expressive template so imports show progress
+

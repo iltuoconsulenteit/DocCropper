@@ -351,6 +351,20 @@ button:hover {
     cursor: pointer;
 }
 
+#sponsorPreview {
+    width: 150px;
+    height: 150px;
+    overflow: hidden;
+}
+
+#sponsorPreview iframe {
+    width: 340px;
+    height: 500px;
+    transform: scale(0.44);
+    transform-origin: 0 0;
+    border: none;
+}
+
 #layoutControls {
     margin-bottom: 10px;
 }

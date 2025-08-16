@@ -589,13 +589,20 @@ function initSponsorPreview(cfg) {
     sponsorPreview.className = 'thumbContainer';
     sponsorPreview.dataset.sponsor = '1';
     sponsorPreview.style.display = 'inline-flex';
+    sponsorPreview.style.width = '150px';
+    sponsorPreview.style.height = '150px';
+    sponsorPreview.style.overflow = 'hidden';
+    galleryWrapper.style.minHeight = '160px';
     let content;
     if (cfg.sponsor_frame) {
         content = document.createElement('iframe');
         content.src = cfg.sponsor_frame;
+        content.width = '340';
+        content.height = '500';
+        content.loading = 'lazy';
         content.style.border = 'none';
-        content.style.width = '200px';
-        content.style.height = '150px';
+        content.style.transform = 'scale(0.44)';
+        content.style.transformOrigin = '0 0';
     } else {
         content = document.createElement('img');
         content.src = `/static/logos/${cfg.sponsor_banner}`;
@@ -610,7 +617,7 @@ function initSponsorPreview(cfg) {
     } else {
         sponsorPreview.appendChild(content);
     }
-    galleryWrapper.appendChild(sponsorPreview);
+    galleryWrapper.prepend(sponsorPreview);
 }
 
 function ensureSponsorPreviewLast() {

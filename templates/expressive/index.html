@@ -159,12 +159,12 @@
                 </div>
               </div>
             </template>
-            <div x-show="(sponsorFrame || sponsorBanner) && tab==='files'" id="sponsorPreview" class="mb-4 thumbContainer inline-flex items-center justify-center">
+            <div x-show="(sponsorFrame || sponsorBanner) && tab==='files'" id="sponsorPreview" class="mb-4 thumbContainer inline-flex items-center justify-center w-[150px] h-[150px] overflow-hidden">
               <template x-if="sponsorFrame">
-                <iframe :src="sponsorFrame" class="w-full h-56 lg:h-72 border-none"></iframe>
+                <iframe :src="sponsorFrame" class="border-none w-[340px] h-[500px]" style="transform:scale(0.44);transform-origin:0 0;"></iframe>
               </template>
               <template x-if="!sponsorFrame && sponsorBanner">
-                <a :href="sponsorUrl || '#'" target="_blank"><img :src="sponsorBanner" class="w-full h-56 lg:h-72 object-contain" /></a>
+                <a :href="sponsorUrl || '#'" target="_blank"><img :src="sponsorBanner" class="w-full h-full object-contain" /></a>
               </template>
             </div>
           </div>
@@ -1828,5 +1828,9 @@
         }
       });
     </script>
+  <div id="loadingOverlay" style="display:none;">
+    <div class="loader"></div>
+    <span data-i18n="loading">Loading...</span>
+  </div>
   </body>
 </html>
