@@ -6,6 +6,8 @@ This project is **inspired by [image-perspective-crop](https://github.com/varna9
 
 All project changes are documented in [UPDATES.md](UPDATES.md). Run `python scripts/generate_updates.py` to rebuild this file from the Git commit history so dates stay in sync with actual commits. The in-app **Updates** menu loads this file so users can review past changes, and the most recent entry appears on the home screen when no documents are loaded.
 
+Configuration variables, environment files, and the `settings.json` options are detailed in [CONFIGURATION.md](CONFIGURATION.md).
+
 ---
 
 ## ✨ Key Features
