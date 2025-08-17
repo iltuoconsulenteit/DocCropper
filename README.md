@@ -349,7 +349,11 @@ Simple image or drawn signatures are available in all editions, but the Free edi
 
 Signature functionality is split into three plugins under `plugins/` and each
 may be enabled individually using the `DOCROPPER_ENABLE_*` variables or the
-matching keys in `settings.json`:
+matching keys in `settings.json`. Every plugin also supports a
+`DOCROPPER_<NAME>_DEV_ONLY` flag (or `<name>_dev_only` setting) so unfinished
+features remain visible only to developer licenses until promoted.
+
+Plugins include:
 `sign` for local page stamping, `mobilesign` for signing from a smartphone and
 `remotesign` for Docuseal or other external services. The Free edition only
 allows stamping one page with the `sign` plugin, while Pro removes this limit.

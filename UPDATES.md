@@ -251,3 +251,6 @@
 ## 2025-08-20
 - Add plugin-based sponsor slot that adapts to license settings (Facebook, Instagram, landing page, banner, slide or image) and can be disabled when no advertising is desired
 
+## 2025-08-21
+- Introduce developer-only flags for plugins so new modules stay hidden unless a developer license is used
+

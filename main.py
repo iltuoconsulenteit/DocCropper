@@ -425,7 +425,9 @@ def load_settings():
             merged["sponsor_frame"] = DEFAULT_SPONSOR_FRAME
         try:
             from plugins import sponsorframe
-            merged.update(sponsorframe.get_config(merged))
+            sponsor_dev = str(os.getenv("DOCROPPER_SPONSORFRAME_DEV_ONLY", merged.get("sponsorframe_dev_only", False))).lower() == "true"
+            if not sponsor_dev or is_dev:
+                merged.update(sponsorframe.get_config(merged))
         except Exception:
             logger.exception("sponsor plugin failed")
 
@@ -625,27 +627,39 @@ plugin_utils = {
     'MAX_UPLOAD_BYTES': MAX_UPLOAD_BYTES,
 }
 
-register_crop(app, plugin_utils)
-
 settings = load_settings()
-enable_sign = str(os.getenv('DOCROPPER_ENABLE_SIGN', settings.get('enable_sign', True))).lower() != 'false'
-enable_mobilesign = str(os.getenv('DOCROPPER_ENABLE_MOBILESIGN', settings.get('enable_mobilesign', False))).lower() == 'true'
-enable_remotesign = str(os.getenv('DOCROPPER_ENABLE_REMOTESIGN', settings.get('enable_remotesign', False))).lower() == 'true'
-enable_removebg = str(os.getenv('DOCROPPER_ENABLE_REMOVEBG', settings.get('enable_removebg', False))).lower() == 'true'
-enable_compresspdf = str(os.getenv('DOCROPPER_ENABLE_COMPRESSPDF', settings.get('enable_compresspdf', False))).lower() == 'true'
-enable_watermark = str(os.getenv('DOCROPPER_ENABLE_WATERMARK', settings.get('enable_watermark', False))).lower() == 'true'
+key_upper = settings.get('license_key', '').strip().upper()
+dev_env = DEV_LICENSE_KEY_UPPER
+is_dev_license = (dev_env and key_upper == dev_env) or key_upper.endswith('-DEV')
 
-if enable_sign:
+crop_dev = str(os.getenv('DOCROPPER_CROP_DEV_ONLY', settings.get('crop_dev_only', False))).lower() == 'true'
+if not crop_dev or is_dev_license:
+    register_crop(app, plugin_utils)
+
+enable_sign = str(os.getenv('DOCROPPER_ENABLE_SIGN', settings.get('enable_sign', True))).lower() != 'false'
+sign_dev = str(os.getenv('DOCROPPER_SIGN_DEV_ONLY', settings.get('sign_dev_only', False))).lower() == 'true'
+enable_mobilesign = str(os.getenv('DOCROPPER_ENABLE_MOBILESIGN', settings.get('enable_mobilesign', False))).lower() == 'true'
+mobilesign_dev = str(os.getenv('DOCROPPER_MOBILESIGN_DEV_ONLY', settings.get('mobilesign_dev_only', False))).lower() == 'true'
+enable_remotesign = str(os.getenv('DOCROPPER_ENABLE_REMOTESIGN', settings.get('enable_remotesign', False))).lower() == 'true'
+remotesign_dev = str(os.getenv('DOCROPPER_REMOTESIGN_DEV_ONLY', settings.get('remotesign_dev_only', False))).lower() == 'true'
+enable_removebg = str(os.getenv('DOCROPPER_ENABLE_REMOVEBG', settings.get('enable_removebg', False))).lower() == 'true'
+removebg_dev = str(os.getenv('DOCROPPER_REMOVEBG_DEV_ONLY', settings.get('removebg_dev_only', False))).lower() == 'true'
+enable_compresspdf = str(os.getenv('DOCROPPER_ENABLE_COMPRESSPDF', settings.get('enable_compresspdf', False))).lower() == 'true'
+compresspdf_dev = str(os.getenv('DOCROPPER_COMPRESSPDF_DEV_ONLY', settings.get('compresspdf_dev_only', False))).lower() == 'true'
+enable_watermark = str(os.getenv('DOCROPPER_ENABLE_WATERMARK', settings.get('enable_watermark', False))).lower() == 'true'
+watermark_dev = str(os.getenv('DOCROPPER_WATERMARK_DEV_ONLY', settings.get('watermark_dev_only', False))).lower() == 'true'
+
+if enable_sign and (not sign_dev or is_dev_license):
     register_sign(app, plugin_utils)
-if enable_mobilesign:
+if enable_mobilesign and (not mobilesign_dev or is_dev_license):
     register_mobilesign(app, plugin_utils)
-if enable_remotesign:
+if enable_remotesign and (not remotesign_dev or is_dev_license):
     register_remotesign(app, plugin_utils)
-if enable_removebg:
+if enable_removebg and (not removebg_dev or is_dev_license):
     register_removebg(app, plugin_utils)
-if enable_compresspdf and settings.get('license_level', 'free').lower() != 'free':
+if enable_compresspdf and (not compresspdf_dev or is_dev_license) and settings.get('license_level', 'free').lower() != 'free':
     register_compresspdf(app, plugin_utils)
-if enable_watermark:
+if enable_watermark and (not watermark_dev or is_dev_license):
     register_watermark(app, plugin_utils)
 
 @app.get("/me", tags=["auth"])
