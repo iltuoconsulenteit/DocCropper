@@ -56,6 +56,7 @@ app.get('/logout', (req, res, next) => {
 
 app.use(express.static(path.join(__dirname, 'static')));
 
-app.listen(8765, () => {
-  console.log('Auth server running on http://localhost:8765');
+const PORT = process.env.PORT || 8765;
+app.listen(PORT, () => {
+  console.log(`Auth server running on http://localhost:${PORT}`);
 });
