@@ -75,6 +75,7 @@ from plugins.watermark import register as register_watermark
 from plugins.login import register as register_login
 from plugins.downloadpng import register as register_downloadpng
 from plugins.pageselect import register as register_pageselect
+from plugins.colormode import register as register_colormode
 
 try:
     import stripe
@@ -404,6 +405,12 @@ def load_settings():
         pageselect_dev_env = os.getenv("DOCROPPER_PAGESELECT_DEV_ONLY")
         if pageselect_dev_env is not None:
             merged["pageselect_dev_only"] = pageselect_dev_env.lower() == "true"
+        enable_colormode_env = os.getenv("DOCROPPER_ENABLE_COLORMODE")
+        if enable_colormode_env is not None:
+            merged["enable_colormode"] = enable_colormode_env.lower() == "true"
+        colormode_dev_env = os.getenv("DOCROPPER_COLORMODE_DEV_ONLY")
+        if colormode_dev_env is not None:
+            merged["colormode_dev_only"] = colormode_dev_env.lower() == "true"
         if stripe_secret:
             merged["stripe_secret_key"] = stripe_secret
         if stripe_publish:
@@ -488,7 +495,8 @@ def save_settings(update: dict):
         'docuseal': ['enable_docuseal', 'docuseal_dev_only', 'docuseal_api_url', 'docuseal_api_key'],
         'remotesign': ['enable_remotesign', 'remotesign_dev_only'],
         'downloadpng': ['enable_downloadpng', 'downloadpng_dev_only'],
-        'pageselect': ['enable_pageselect', 'pageselect_dev_only']
+        'pageselect': ['enable_pageselect', 'pageselect_dev_only'],
+        'colormode': ['enable_colormode', 'colormode_dev_only']
     }
     plugin_updates = {}
     for pname, keys in plugin_fields.items():
@@ -723,6 +731,8 @@ enable_downloadpng = str(os.getenv('DOCROPPER_ENABLE_DOWNLOADPNG', settings.get(
 downloadpng_dev = str(os.getenv('DOCROPPER_DOWNLOADPNG_DEV_ONLY', settings.get('downloadpng_dev_only', True))).lower() == 'true'
 enable_pageselect = str(os.getenv('DOCROPPER_ENABLE_PAGESELECT', settings.get('enable_pageselect', True))).lower() == 'true'
 pageselect_dev = str(os.getenv('DOCROPPER_PAGESELECT_DEV_ONLY', settings.get('pageselect_dev_only', False))).lower() == 'true'
+enable_colormode = str(os.getenv('DOCROPPER_ENABLE_COLORMODE', settings.get('enable_colormode', True))).lower() == 'true'
+colormode_dev = str(os.getenv('DOCROPPER_COLORMODE_DEV_ONLY', settings.get('colormode_dev_only', False))).lower() == 'true'
 
 if enable_sign and (not sign_dev or is_dev_license):
     register_sign(app, plugin_utils)
@@ -742,6 +752,8 @@ if enable_downloadpng and (not downloadpng_dev or is_dev_license):
     register_downloadpng(app, plugin_utils)
 if enable_pageselect and (not pageselect_dev or is_dev_license):
     register_pageselect(app, plugin_utils)
+if enable_colormode and (not colormode_dev or is_dev_license):
+    register_colormode(app, plugin_utils)
 
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):

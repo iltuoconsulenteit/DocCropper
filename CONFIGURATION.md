@@ -106,8 +106,8 @@ Copy the `*.env.example` files in `env/` to `*.env` and adjust the values.  All 
 ### License and plugin flags
 - `license_level` – installation tier (`free`, `pro`, `full`)
 - `license_check` – enable remote license validation
-- `enable_sign`, `enable_mobilesign`, `enable_removebg`, `enable_compresspdf`, `enable_watermark`, `enable_pageselect`
-- `crop_dev_only`, `sign_dev_only`, `mobilesign_dev_only`, `removebg_dev_only`, `compresspdf_dev_only`, `watermark_dev_only`, `pageselect_dev_only`, `sponsorframe_dev_only`, `login_dev_only`
+- `enable_sign`, `enable_mobilesign`, `enable_removebg`, `enable_compresspdf`, `enable_watermark`, `enable_pageselect`, `enable_colormode`
+- `crop_dev_only`, `sign_dev_only`, `mobilesign_dev_only`, `removebg_dev_only`, `compresspdf_dev_only`, `watermark_dev_only`, `pageselect_dev_only`, `colormode_dev_only`, `sponsorframe_dev_only`, `login_dev_only`
 - Plugin-specific flags like `enable_remotesign`, `remotesign_dev_only`, `enable_docuseal`, and `docuseal_dev_only` are stored in the respective `plugins/<name>/settings.json` files
 - `lan_user_limit` – cap for LAN user plugin
 

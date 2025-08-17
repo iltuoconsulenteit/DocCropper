@@ -145,9 +145,9 @@
                     <button @click="rotate(idx)" title="Rotate" class="text-base">↻</button>
                     <button @click="flip(idx)" :title="t('flip')" class="text-base">⇄</button>
                     <button @click="invert(idx)" :title="t('invert')" class="text-base">⇅</button>
-                    <button @click="toGray(idx)" title="Gray" class="text-base">🌑</button>
-                    <button @click="toBW(idx)" title="B/W" class="text-base">⬛</button>
-                    <button @click="toColor(idx)" title="Color" class="text-base">🎨</button>
+                    <button x-show="colorModeEnabled" @click="toGray(idx)" title="Gray" class="text-base">🌑</button>
+                    <button x-show="colorModeEnabled" @click="toBW(idx)" title="B/W" class="text-base">⬛</button>
+                    <button x-show="colorModeEnabled" @click="toColor(idx)" title="Color" class="text-base">🎨</button>
                     <button x-show="watermarkEnabled" @click="watermark(idx)" :title="t('watermark')" class="text-base">🖆</button>
                     <button x-show="removeBgEnabled" @click="removeBg(idx)" :title="file.bgOriginal ? t('restoreBg') : t('removeBg')" class="text-base" x-text="file.bgOriginal ? '↩' : '⌦'"></button>
                     <button @click="signPage(idx)" title="Sign" class="text-base">✒</button>
@@ -735,6 +735,7 @@
           removeSigBg:true,
           removeBgEnabled:false,
           watermarkEnabled:false,
+          colorModeEnabled:false,
           removeBgThreshold:50,
           sigScale:1,
           activeSig:null,
@@ -898,6 +899,7 @@
               this.refreshSlides();
               this.removeBgEnabled = !!cfg.enable_removebg;
               this.watermarkEnabled = !!cfg.enable_watermark;
+              this.colorModeEnabled = !!cfg.enable_colormode && (cfg.license_level || '').toLowerCase() !== 'free';
               this.maxUpload = parseInt(cfg.max_upload_files || 10);
               this.blankThreshold = parseInt(cfg.blank_threshold || 95);
               this.version = cfg.version || '';

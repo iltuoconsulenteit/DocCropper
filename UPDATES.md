@@ -269,3 +269,6 @@
 ## 2025-08-24
 - Add dev-only plugin that lets users download individual thumbnails as transparent PNG files
 
+
+## 2025-08-25
+- Group grayscale, black/white, and color thumbnail toggles into a pluggable color-mode module with enable and developer-only flags

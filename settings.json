@@ -53,6 +53,7 @@
   "enable_compresspdf": true,
   "enable_watermark": true,
   "enable_pageselect": true,
+  "enable_colormode": true,
   "login_dev_only": true,
   "crop_dev_only": false,
   "sign_dev_only": false,
@@ -61,6 +62,7 @@
   "compresspdf_dev_only": false,
   "watermark_dev_only": false,
   "pageselect_dev_only": false,
+  "colormode_dev_only": false,
   "sponsorframe_dev_only": false,
   "enable_sponsor_video": false,
   "banner_images": [

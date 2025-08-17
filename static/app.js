@@ -5,6 +5,7 @@ import { initPdfCompressPlugin } from './plugins/compresspdf.js';
 import { initWatermarkPlugin } from './plugins/watermark.js';
 import { initDownloadPngPlugin } from './plugins/downloadpng.js';
 import { initPageSelectPlugin } from './plugins/pageselect.js';
+import { initColorPlugin } from './plugins/colormode.js';
 
 let scaling_factor_w;
 let scaling_factor_h;
@@ -302,6 +303,7 @@ let removeBgEnabled = false;
 let compressEnabled = false;
 let downloadPngEnabled = false;
 let pageSelectEnabled = false;
+let colorModePluginEnabled = false;
 
 let translations = {};
 let currentLang = window.DC_LANG || 'it';
@@ -796,6 +798,7 @@ function applySettings(cfg) {
     watermarkEnabled = !!cfg.enable_watermark;
     downloadPngEnabled = !!cfg.enable_downloadpng;
     pageSelectEnabled = !!cfg.enable_pageselect && currentLicenseLevel !== 'free';
+    colorModePluginEnabled = !!cfg.enable_colormode && isLicensed && currentLicenseLevel !== 'free';
     if (typeof initRemoveBgPlugin === 'function' && Object.keys(translations).length) {
         initRemoveBgPlugin(translations, removeBgEnabled);
     }
@@ -807,6 +810,9 @@ function applySettings(cfg) {
     }
     if (typeof initPageSelectPlugin === 'function') {
         initPageSelectPlugin(pageSelectEnabled);
+    }
+    if (typeof initColorPlugin === 'function') {
+        initColorPlugin(translations, colorModePluginEnabled);
     }
     compressEnabled = !!cfg.enable_compresspdf && currentLicenseLevel !== 'free';
     if (cfg.update_interval !== undefined) {
@@ -1368,7 +1374,7 @@ function addThumbnail(src, index) {
     addOption('rotate', 'rotate');
     addOption('flip', 'flip');
     addOption('invert', 'invert');
-    if (isLicensed && currentLicenseLevel !== 'free') {
+    if (colorModePluginEnabled) {
         addOption('gray', 'toGray');
         addOption('bw', 'toBW');
         addOption('color', 'toColor');
@@ -1516,7 +1522,7 @@ function addThumbnail(src, index) {
         actions.appendChild(wmBtn);
     }
 
-    if (isLicensed && currentLicenseLevel !== 'free') {
+    if (colorModePluginEnabled) {
         const grayBtn = document.createElement('button');
         grayBtn.className = 'thumbBtn thumbCircle grayBtn';
         grayBtn.title = t('toGray');
@@ -3412,6 +3418,8 @@ loadSettings().then(async (cfg) => {
     initPdfCompressPlugin(translations, compressEnabled);
     initWatermarkPlugin(translations, watermarkEnabled);
     initDownloadPngPlugin(translations, downloadPngEnabled);
+    initPageSelectPlugin(pageSelectEnabled);
+    initColorPlugin(translations, colorModePluginEnabled);
     renderPaymentBox(cfg);
     renderLicenseBox();
     renderLogin(cfg);
