@@ -1510,7 +1510,7 @@ function addThumbnail(src, index) {
     if (watermarkEnabled) {
         const wmBtn = document.createElement('button');
         wmBtn.className = 'thumbBtn watermarkBtn';
-        wmBtn.textContent = '🖆';
+        wmBtn.innerHTML = '<img src="/static/icons/stamp.svg" alt="">';
         wmBtn.title = t('watermark');
         wmBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -3345,7 +3345,8 @@ function renderLogin(cfg) {
         loginArea.style.display = 'none';
         return;
     }
-    const devLicense = (cfg.license_key || '').toUpperCase().endsWith('-DEV');
+    const devLicense = (cfg.license_key || '').toUpperCase().endsWith('-DEV') ||
+        (cfg.license_level && cfg.license_level.toLowerCase() === 'developer');
     if (cfg.login_dev_only && !devLicense) {
         loginArea.style.display = 'none';
         return;

@@ -1,5 +1,10 @@
 # Updates
 
+## 2025-08-20
+- Treat "developer" license level as dev key so in-progress plugins like page select are visible to dev installs
+- Center layout toggle icon and equalize action button heights across the gallery controls
+- Replace watermark emoji with stamp icon and move watermark settings into a dedicated plugin config
+
 ## 2025-08-19
 - Allow selecting individual thumbnails for partial PDF export, automatically choosing all pages when none are selected
 

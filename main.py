@@ -393,6 +393,12 @@ def load_settings():
         docuseal_dev_env = os.getenv("DOCROPPER_DOCUSEAL_DEV_ONLY")
         if docuseal_dev_env is not None:
             merged["docuseal_dev_only"] = docuseal_dev_env.lower() == "true"
+        enable_watermark_env = os.getenv("DOCROPPER_ENABLE_WATERMARK")
+        if enable_watermark_env is not None:
+            merged["enable_watermark"] = enable_watermark_env.lower() == "true"
+        watermark_dev_env = os.getenv("DOCROPPER_WATERMARK_DEV_ONLY")
+        if watermark_dev_env is not None:
+            merged["watermark_dev_only"] = watermark_dev_env.lower() == "true"
         enable_downloadpng_env = os.getenv("DOCROPPER_ENABLE_DOWNLOADPNG")
         if enable_downloadpng_env is not None:
             merged["enable_downloadpng"] = enable_downloadpng_env.lower() == "true"
@@ -496,7 +502,8 @@ def save_settings(update: dict):
         'remotesign': ['enable_remotesign', 'remotesign_dev_only'],
         'downloadpng': ['enable_downloadpng', 'downloadpng_dev_only'],
         'pageselect': ['enable_pageselect', 'pageselect_dev_only'],
-        'colormode': ['enable_colormode', 'colormode_dev_only']
+        'colormode': ['enable_colormode', 'colormode_dev_only'],
+        'watermark': ['enable_watermark', 'watermark_dev_only']
     }
     plugin_updates = {}
     for pname, keys in plugin_fields.items():
@@ -702,7 +709,12 @@ plugin_utils = {
 settings = load_settings()
 key_upper = settings.get('license_key', '').strip().upper()
 dev_env = DEV_LICENSE_KEY_UPPER
-is_dev_license = (dev_env and key_upper == dev_env) or key_upper.endswith('-DEV')
+license_level = settings.get('license_level', '').strip().lower()
+is_dev_license = (
+    license_level == 'developer'
+    or (dev_env and key_upper == dev_env)
+    or key_upper.endswith('-DEV')
+)
 
 crop_dev = str(os.getenv('DOCROPPER_CROP_DEV_ONLY', settings.get('crop_dev_only', False))).lower() == 'true'
 if not crop_dev or is_dev_license:

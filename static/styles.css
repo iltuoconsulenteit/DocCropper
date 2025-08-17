@@ -297,6 +297,10 @@ button:hover {
     justify-content: center;
     cursor: pointer;
 }
+.thumbBtn img {
+    width: 16px;
+    height: 16px;
+}
 
 .thumbCircle {
     width: 18px;
@@ -371,8 +375,12 @@ button:hover {
 }
 
 #blankControls button {
-    padding: 10px 16px;
+    padding: 0 16px;
     font-size: 18px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #removeBlankGroup {
@@ -869,6 +877,8 @@ button:hover {
     color: #fff;
     font-weight: bold;
     font-size: 20px;
+    width: 40px;
+    height: 40px;
 }
 #removeBlankBtn,
 #restoreBlankBtn {
@@ -878,6 +888,15 @@ button:hover {
 #clearImagesBtn {
     background-color: #ef4444;
     color: #fff;
+    width: 40px;
+    height: 40px;
+}
+#layoutToggleBtn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 #layoutToggleBtn {
     background-color: #3b82f6;
