@@ -67,6 +67,7 @@ from app.auth.routes import router as auth_router, fastapi_users
 from app.auth.models import User
 from plugins.mobilesign import register as register_mobilesign
 from plugins.remotesign import register as register_remotesign
+from plugins.docuseal import register as register_docuseal
 from plugins.crop import register as register_crop
 from plugins.removebg import register as register_removebg
 from plugins.compresspdf import register as register_compresspdf
@@ -249,8 +250,6 @@ DEFAULT_SETTINGS = {
     "banner_images": ["DocCropper_slogan_main_{{lang}}.png"],
     "developer_watermark": False,
     "demo_full_mode": False,
-    "docuseal_api_url": "",
-    "docuseal_api_key": "",
     "public_url": "",
     "template": "static",
     "update_pin": "",
@@ -332,6 +331,15 @@ def load_settings():
             base = json.load(fh)
         merged = DEFAULT_SETTINGS.copy()
         merged.update(base)
+        plugins_dir = os.path.join(os.path.dirname(__file__), "plugins")
+        try:
+            for name in os.listdir(plugins_dir):
+                cfg_path = os.path.join(plugins_dir, name, "settings.json")
+                if os.path.exists(cfg_path):
+                    with open(cfg_path) as pf:
+                        merged.update(json.load(pf))
+        except Exception:
+            pass
         max_mb_env = os.getenv("DOCROPPER_MAX_UPLOAD_MB")
         if max_mb_env:
             merged["max_upload_mb"] = int(max_mb_env)
@@ -341,8 +349,6 @@ def load_settings():
         env_check = os.getenv("LICENSE_CHECK")
         env_level = os.getenv("DOCROPPER_LICENSE_LEVEL")
         dev_wm_env = os.getenv("DOCROPPER_DEV_WATERMARK")
-        docuseal_url = os.getenv("DOCUSEAL_API_URL")
-        docuseal_key = os.getenv("DOCUSEAL_API_KEY")
         stripe_secret = os.getenv("STRIPE_SECRET_KEY")
         stripe_publish = os.getenv("STRIPE_PUBLISHABLE_KEY")
         stripe_pro = os.getenv("STRIPE_PRICE_PRO")
@@ -366,10 +372,24 @@ def load_settings():
             merged["license_level"] = env_level.lower()
         if dev_wm_env is not None:
             merged["developer_watermark"] = dev_wm_env.lower() == "true"
+        enable_remotesign_env = os.getenv("DOCROPPER_ENABLE_REMOTESIGN")
+        if enable_remotesign_env is not None:
+            merged["enable_remotesign"] = enable_remotesign_env.lower() == "true"
+        remotesign_dev_env = os.getenv("DOCROPPER_REMOTESIGN_DEV_ONLY")
+        if remotesign_dev_env is not None:
+            merged["remotesign_dev_only"] = remotesign_dev_env.lower() == "true"
+        docuseal_url = os.getenv("DOCUSEAL_API_URL")
         if docuseal_url:
             merged["docuseal_api_url"] = docuseal_url
+        docuseal_key = os.getenv("DOCUSEAL_API_KEY")
         if docuseal_key:
             merged["docuseal_api_key"] = docuseal_key
+        enable_docuseal_env = os.getenv("DOCROPPER_ENABLE_DOCUSEAL")
+        if enable_docuseal_env is not None:
+            merged["enable_docuseal"] = enable_docuseal_env.lower() == "true"
+        docuseal_dev_env = os.getenv("DOCROPPER_DOCUSEAL_DEV_ONLY")
+        if docuseal_dev_env is not None:
+            merged["docuseal_dev_only"] = docuseal_dev_env.lower() == "true"
         if stripe_secret:
             merged["stripe_secret_key"] = stripe_secret
         if stripe_publish:
@@ -450,6 +470,15 @@ def save_settings(update: dict):
     data = load_settings()
     overrides = load_license_overrides()
     filtered = {k: v for k, v in update.items() if k not in overrides}
+    plugin_fields = {
+        'docuseal': ['enable_docuseal', 'docuseal_dev_only', 'docuseal_api_url', 'docuseal_api_key'],
+        'remotesign': ['enable_remotesign', 'remotesign_dev_only']
+    }
+    plugin_updates = {}
+    for pname, keys in plugin_fields.items():
+        subset = {k: filtered.pop(k) for k in list(filtered.keys()) if k in keys}
+        if subset:
+            plugin_updates[pname] = subset
     data.update(filtered)
     if os.getenv("DOCROPPER_PUBLIC_URL"):
         data["public_url"] = os.getenv("DOCROPPER_PUBLIC_URL")
@@ -476,6 +505,18 @@ def save_settings(update: dict):
         data[key] = val
     with open(SETTINGS_FILE, "w") as fh:
         json.dump(data, fh)
+    for pname, vals in plugin_updates.items():
+        cfg_path = os.path.join('plugins', pname, 'settings.json')
+        current = {}
+        if os.path.exists(cfg_path):
+            try:
+                with open(cfg_path) as fh:
+                    current = json.load(fh)
+            except Exception:
+                pass
+        current.update(vals)
+        with open(cfg_path, 'w') as fh:
+            json.dump(current, fh, indent=2)
     return data
 
 def sanitize_email(email: str) -> str:
@@ -653,7 +694,9 @@ sign_dev = str(os.getenv('DOCROPPER_SIGN_DEV_ONLY', settings.get('sign_dev_only'
 enable_mobilesign = str(os.getenv('DOCROPPER_ENABLE_MOBILESIGN', settings.get('enable_mobilesign', False))).lower() == 'true'
 mobilesign_dev = str(os.getenv('DOCROPPER_MOBILESIGN_DEV_ONLY', settings.get('mobilesign_dev_only', False))).lower() == 'true'
 enable_remotesign = str(os.getenv('DOCROPPER_ENABLE_REMOTESIGN', settings.get('enable_remotesign', False))).lower() == 'true'
-remotesign_dev = str(os.getenv('DOCROPPER_REMOTESIGN_DEV_ONLY', settings.get('remotesign_dev_only', False))).lower() == 'true'
+remotesign_dev = str(os.getenv('DOCROPPER_REMOTESIGN_DEV_ONLY', settings.get('remotesign_dev_only', True))).lower() == 'true'
+enable_docuseal = str(os.getenv('DOCROPPER_ENABLE_DOCUSEAL', settings.get('enable_docuseal', False))).lower() == 'true'
+docuseal_dev = str(os.getenv('DOCROPPER_DOCUSEAL_DEV_ONLY', settings.get('docuseal_dev_only', True))).lower() == 'true'
 enable_removebg = str(os.getenv('DOCROPPER_ENABLE_REMOVEBG', settings.get('enable_removebg', False))).lower() == 'true'
 removebg_dev = str(os.getenv('DOCROPPER_REMOVEBG_DEV_ONLY', settings.get('removebg_dev_only', False))).lower() == 'true'
 enable_compresspdf = str(os.getenv('DOCROPPER_ENABLE_COMPRESSPDF', settings.get('enable_compresspdf', False))).lower() == 'true'
@@ -667,6 +710,8 @@ if enable_mobilesign and (not mobilesign_dev or is_dev_license):
     register_mobilesign(app, plugin_utils)
 if enable_remotesign and (not remotesign_dev or is_dev_license):
     register_remotesign(app, plugin_utils)
+if enable_docuseal and (not docuseal_dev or is_dev_license):
+    register_docuseal(app, plugin_utils)
 if enable_removebg and (not removebg_dev or is_dev_license):
     register_removebg(app, plugin_utils)
 if enable_compresspdf and (not compresspdf_dev or is_dev_license) and settings.get('license_level', 'free').lower() != 'free':

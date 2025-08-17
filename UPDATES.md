@@ -260,3 +260,6 @@
 ## 2025-08-22
 - Secure developer settings with a default `DOCROPPER_DEV_PASSWORD` (87654321) and add API endpoints to force a password change before use
 
+## 2025-08-23
+- Separate Docuseal and remote command signing into individual dev-only plugins and move their settings into `plugins/` directories
+

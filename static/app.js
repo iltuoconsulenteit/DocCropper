@@ -784,7 +784,7 @@ function applySettings(cfg) {
     if (cfg.version_date) {
         appVersionDate = cfg.version_date;
     }
-    docusealEnabled = !!cfg.docuseal_api_url;
+    docusealEnabled = !!cfg.enable_docuseal && !!cfg.docuseal_api_url;
     signEnabled = cfg.enable_sign !== false;
     mobileSignEnabled = !!cfg.enable_mobilesign;
     remoteSignEnabled = !!cfg.enable_remotesign;

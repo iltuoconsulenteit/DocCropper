@@ -134,7 +134,7 @@ pip install -r requirements.txt
 Copy the sample environment files under `env/` and adjust any settings you need.
 Authentication variables live in `env/auth.env.example` while license-related
 settings are in `env/license.env.example`.
-Optional templates are provided for Google sign-in (`env/google.env.example`), Stripe payments (`env/stripe.env.example`), local signing (`env/signing.env.example`) and remote Docuseal signing (`env/docuseal.env.example`).
+Optional templates are provided for Google sign-in (`env/google.env.example`), Stripe payments (`env/stripe.env.example`), local and command-based signing (`env/signing.env.example`) and Docuseal signing (`env/docuseal.env.example`).
 When a license is validated remotely, DocCropper writes forced configuration values to `license_overrides.json`.
 These settings override the normal `settings.json` values and should not be edited manually.
 
@@ -368,9 +368,10 @@ matching keys in `settings.json`. Every plugin also supports a
 features remain visible only to developer licenses until promoted.
 
 Plugins include:
-`sign` for local page stamping, `mobilesign` for signing from a smartphone and
-`remotesign` for Docuseal or other external services. The Free edition only
-allows stamping one page with the `sign` plugin, while Pro removes this limit.
+`sign` for local page stamping, `mobilesign` for signing from a smartphone,
+`docuseal` for uploading PDFs to a Docuseal instance, and `remotesign` for
+external command based signing. The Free edition only allows stamping one page
+with the `sign` plugin, while Pro removes this limit.
 `mobilesign` is an add-on for Pro users and included in the Full edition. The
 mobile signing page includes a disclaimer that DocCropper and its authors accept
 no liability for illegal use. After scanning the QR code the phone fetches all
@@ -391,12 +392,13 @@ DocCropper can apply a personal signature in several ways:
    signatures to any page before exporting the final PDF.
    Each new stamp is offset slightly so it doesn’t hide the previous one by default.
 2. **Mobile Sign** – Before creating the QR code you may mark where each remote signer should place their signature. Open the signature panel, double-click the preview and press **Add** without loading a signature image to drop a red cross marker. Then use the **Mobile Sign** button (in the panel or export menu) to generate a one-time token and QR code. Scan it with your phone or tablet and draw your signature on the indicated pages. The drawing is saved under `signatures/signature_<token>.png` and added to the PDF.
-3. **Remote Digital Signing** – Configure `DOCUSEAL_API_URL` and `DOCUSEAL_API_KEY` to upload the exported PDF to a Docuseal instance. Press **Digital Sign** to receive a link where the document can be signed online. You may still set `DOCROPPER_REMOTE_SIGN_CMD` to run a custom script instead.
+3. **Remote Digital Signing** – Configure the Docuseal plugin with `DOCUSEAL_API_URL` and `DOCUSEAL_API_KEY` to upload the exported PDF to a Docuseal instance. Press **Digital Sign** to receive a link where the document can be signed online. You may still enable the `remotesign` plugin and set `DOCROPPER_REMOTE_SIGN_CMD` to run a custom signing script instead.
 
    - GET `/start-sign/` returns `{token, url, qr}` with a QR code for the LAN link
    - Visit `/sign/<token>` to draw the signature
    - POST `/submit-signature/<token>` with `{image: "data:image/png;base64,..."}` to save it
    - POST `/docuseal-sign/` uploads the last exported PDF to Docuseal and returns `{url}`
+   - POST `/remote-sign/` runs the external signing command and returns the signed PDF
 
 Alternatively, you may set `DOCROPPER_SIGN_CERT` and `DOCROPPER_SIGN_PASSWORD` to automatically apply a local PKCS#12 certificate.
 
