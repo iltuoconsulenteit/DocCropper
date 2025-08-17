@@ -101,7 +101,7 @@ Copy the `*.env.example` files in `env/` to `*.env` and adjust the values.  All 
 - `license_level` – installation tier (`free`, `pro`, `full`)
 - `license_check` – enable remote license validation
 - `enable_sign`, `enable_mobilesign`, `enable_remotesign`, `enable_removebg`, `enable_compresspdf`, `enable_watermark`
-- `crop_dev_only`, `sign_dev_only`, `mobilesign_dev_only`, `remotesign_dev_only`, `removebg_dev_only`, `compresspdf_dev_only`, `watermark_dev_only`, `sponsorframe_dev_only`
+- `crop_dev_only`, `sign_dev_only`, `mobilesign_dev_only`, `remotesign_dev_only`, `removebg_dev_only`, `compresspdf_dev_only`, `watermark_dev_only`, `sponsorframe_dev_only`, `login_dev_only`
 - `lan_user_limit` – cap for LAN user plugin
 
 ### Updates

@@ -3291,6 +3291,11 @@ function renderLogin(cfg) {
         loginArea.style.display = 'none';
         return;
     }
+    const devLicense = (cfg.license_key || '').toUpperCase().endsWith('-DEV');
+    if (cfg.login_dev_only && !devLicense) {
+        loginArea.style.display = 'none';
+        return;
+    }
     if (!cfg.google_client_id) {
         loginArea.style.display = 'block';
         loginArea.textContent = t('loginDisabled');

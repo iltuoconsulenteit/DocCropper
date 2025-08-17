@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-08-18
+- Convert Google login into a plugin guarded by `login_dev_only` so authentication is available only on developer builds
+
 ## 2025-08-17
 - Move Add/Import button to the start of the controls, show a + icon with tooltip, and fix its import action on mobile and desktop
 - Default sponsor frame embeds latest Facebook post and sponsored licenses require internet connectivity

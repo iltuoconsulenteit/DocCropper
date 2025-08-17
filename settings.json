@@ -53,6 +53,7 @@
   "enable_removebg": true,
   "enable_compresspdf": true,
   "enable_watermark": true,
+  "login_dev_only": true,
   "crop_dev_only": false,
   "sign_dev_only": false,
   "mobilesign_dev_only": false,

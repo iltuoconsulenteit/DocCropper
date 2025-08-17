@@ -71,6 +71,7 @@ from plugins.crop import register as register_crop
 from plugins.removebg import register as register_removebg
 from plugins.compresspdf import register as register_compresspdf
 from plugins.watermark import register as register_watermark
+from plugins.login import register as register_login
 
 try:
     import stripe
@@ -642,6 +643,11 @@ crop_dev = str(os.getenv('DOCROPPER_CROP_DEV_ONLY', settings.get('crop_dev_only'
 if not crop_dev or is_dev_license:
     register_crop(app, plugin_utils)
 
+enable_login = settings.get('license_check', False)
+login_dev = str(os.getenv('DOCROPPER_LOGIN_DEV_ONLY', settings.get('login_dev_only', True))).lower() == 'true'
+if enable_login and (not login_dev or is_dev_license):
+    register_login(app, plugin_utils)
+
 enable_sign = str(os.getenv('DOCROPPER_ENABLE_SIGN', settings.get('enable_sign', True))).lower() != 'false'
 sign_dev = str(os.getenv('DOCROPPER_SIGN_DEV_ONLY', settings.get('sign_dev_only', False))).lower() == 'true'
 enable_mobilesign = str(os.getenv('DOCROPPER_ENABLE_MOBILESIGN', settings.get('enable_mobilesign', False))).lower() == 'true'
@@ -900,26 +906,6 @@ async def stripe_checkout(level: str = Body(...)):
     except Exception as e:
         logger.exception("Stripe session creation failed")
         return JSONResponse(status_code=500, content={"message": str(e)})
-
-
-@app.post("/google-login/")
-async def google_login(token: str = Body(...)):
-    settings = load_settings()
-    client_id = settings.get("google_client_id", "")
-    if not client_id:
-        return JSONResponse(status_code=400, content={"message": "Google login not configured"})
-    try:
-        from google.oauth2 import id_token
-        from google.auth.transport import requests
-        info = id_token.verify_oauth2_token(token, requests.Request(), client_id)
-        resp = JSONResponse({"email": info.get("email"), "name": info.get("name")})
-        if info.get("email"):
-            resp.set_cookie("user_email", info.get("email"), httponly=True)
-        return resp
-    except Exception as e:
-        logger.exception("Google token verification failed")
-        return JSONResponse(status_code=400, content={"message": "Invalid token"})
-
 
 
 @app.post("/pdf-to-images/")
