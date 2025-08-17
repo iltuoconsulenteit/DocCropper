@@ -38,6 +38,7 @@ import urllib.parse
 import socket
 from pathlib import Path
 import importlib
+from passlib.hash import bcrypt
 
 _cv2 = None
 _np = None
@@ -98,6 +99,8 @@ if os.path.isdir(ENV_DIR):
             load_dotenv(os.path.join(ENV_DIR, name), override=False)
 # Directory containing per-user settings
 USERS_DIR = "users"
+
+DEFAULT_DEV_PASSWORD = os.getenv("DOCROPPER_DEV_PASSWORD", "87654321")
 
 # Read/write values that the license server enforces. They override normal
 # settings and cannot be changed by users.
@@ -251,6 +254,7 @@ DEFAULT_SETTINGS = {
     "template": "static",
     "update_pin": "",
     "update_interval": 3600000,
+    "developer_password_hash": bcrypt.hash(DEFAULT_DEV_PASSWORD),
 }
 
 def verify_license_server(key: str) -> bool:
@@ -397,6 +401,9 @@ def load_settings():
         if slides_env:
             merged["sponsor_slides"] = [s.strip() for s in slides_env.split(",") if s.strip()]
 
+        if "developer_password_hash" not in merged:
+            merged["developer_password_hash"] = bcrypt.hash(DEFAULT_DEV_PASSWORD)
+
         # Apply values enforced by a previous license check
         overrides = load_license_overrides()
         if overrides:
@@ -511,7 +518,6 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     from app.auth.database import engine, Base, async_session_maker
     from fastapi_users.db import SQLAlchemyUserDatabase
-    from passlib.hash import bcrypt
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -841,6 +847,32 @@ async def rollback_app(data: dict = Body(...)):
         raise HTTPException(status_code=403, detail="Invalid PIN")
     run_rollback_script()
     return {"status": "started"}
+
+
+@app.post("/developer-login/")
+async def developer_login(data: dict = Body(...)):
+    password = data.get("password", "")
+    settings = load_settings()
+    hashed = settings.get("developer_password_hash", "")
+    if hashed and bcrypt.verify(password, hashed):
+        if bcrypt.verify(DEFAULT_DEV_PASSWORD, hashed):
+            raise HTTPException(status_code=403, detail="Change default developer password")
+        return {"status": "ok"}
+    raise HTTPException(status_code=403, detail="Invalid password")
+
+
+@app.post("/developer-password/")
+async def change_developer_password(data: dict = Body(...)):
+    old = data.get("old", "")
+    new = data.get("new", "")
+    if not new:
+        raise HTTPException(status_code=400, detail="New password required")
+    settings = load_settings()
+    hashed = settings.get("developer_password_hash", "")
+    if not hashed or not bcrypt.verify(old, hashed):
+        raise HTTPException(status_code=403, detail="Invalid password")
+    save_settings({"developer_password_hash": bcrypt.hash(new)})
+    return {"status": "updated"}
 
 
 @app.post("/stripe-checkout/")

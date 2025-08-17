@@ -33,6 +33,7 @@ del "%TEMP%\_writetest.tmp" 2>NUL
 echo DOCROPPER_LICENSE_NAME=!LICENSE_NAME!>> "!ENVFILE!"
 echo DOCROPPER_DEV_LICENSE=!LICENSE_KEY!>> "!ENVFILE!"
 echo DOCROPPER_LICENSE_LEVEL=full>> "!ENVFILE!"
+echo DOCROPPER_DEV_PASSWORD=87654321>> "!ENVFILE!"
 
 echo Developer license saved to !ENVFILE!
 pause

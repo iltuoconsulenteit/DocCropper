@@ -254,3 +254,6 @@
 ## 2025-08-21
 - Introduce developer-only flags for plugins so new modules stay hidden unless a developer license is used
 
+## 2025-08-22
+- Secure developer settings with a default `DOCROPPER_DEV_PASSWORD` (87654321) and add API endpoints to force a password change before use
+

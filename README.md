@@ -136,6 +136,14 @@ Optional templates are provided for Google sign-in (`env/google.env.example`), S
 When a license is validated remotely, DocCropper writes forced configuration values to `license_overrides.json`.
 These settings override the normal `settings.json` values and should not be edited manually.
 
+The developer settings are protected by `DOCROPPER_DEV_PASSWORD`, which defaults to `87654321`. Change it immediately by POSTing to `/developer-password/` with a JSON body such as:
+
+```
+{"old":"87654321","new":"your-strong-password"}
+```
+
+Once changed, authenticate with `/developer-login/` by sending `{ "password": "your-strong-password" }`. Logging in while the default password is active returns an error until the password is replaced.
+
 ### Required environment variables
 
 Create a `.env` file (or multiple `.env` files inside the `env/` directory)
@@ -148,6 +156,7 @@ LICENSE_CHECK_URL=https://tuodominio.it/index.php?option=com_fabrik&view=list&li
 DOCROPPER_LAN_USER_LIMIT=0
 DOCROPPER_ADMIN_EMAIL=admin@example.com
 DOCROPPER_ADMIN_PASSWORD=changeme
+DOCROPPER_DEV_PASSWORD=87654321
 ```
 
 ---
