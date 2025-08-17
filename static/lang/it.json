@@ -26,6 +26,7 @@
   "edit": "Ritaglia",
   "delete": "Elimina",
   "downloadPng": "Scarica PNG",
+  "selectPage": "Seleziona pagina",
   "removeBg": "Rimuovi sfondo",
   "restoreBg": "Ripristina sfondo",
   "removeBgThresholdPrompt": "Soglia rimozione sfondo (%)",

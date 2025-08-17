@@ -26,6 +26,7 @@
   "edit": "Crop",
   "delete": "Delete",
   "downloadPng": "Download PNG",
+  "selectPage": "Select page",
   "removeBg": "Remove background",
   "restoreBg": "Restore background",
   "removeBgThresholdPrompt": "Background removal threshold (%)",

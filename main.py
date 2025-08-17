@@ -74,6 +74,7 @@ from plugins.compresspdf import register as register_compresspdf
 from plugins.watermark import register as register_watermark
 from plugins.login import register as register_login
 from plugins.downloadpng import register as register_downloadpng
+from plugins.pageselect import register as register_pageselect
 
 try:
     import stripe
@@ -397,6 +398,12 @@ def load_settings():
         downloadpng_dev_env = os.getenv("DOCROPPER_DOWNLOADPNG_DEV_ONLY")
         if downloadpng_dev_env is not None:
             merged["downloadpng_dev_only"] = downloadpng_dev_env.lower() == "true"
+        enable_pageselect_env = os.getenv("DOCROPPER_ENABLE_PAGESELECT")
+        if enable_pageselect_env is not None:
+            merged["enable_pageselect"] = enable_pageselect_env.lower() == "true"
+        pageselect_dev_env = os.getenv("DOCROPPER_PAGESELECT_DEV_ONLY")
+        if pageselect_dev_env is not None:
+            merged["pageselect_dev_only"] = pageselect_dev_env.lower() == "true"
         if stripe_secret:
             merged["stripe_secret_key"] = stripe_secret
         if stripe_publish:
@@ -480,7 +487,8 @@ def save_settings(update: dict):
     plugin_fields = {
         'docuseal': ['enable_docuseal', 'docuseal_dev_only', 'docuseal_api_url', 'docuseal_api_key'],
         'remotesign': ['enable_remotesign', 'remotesign_dev_only'],
-        'downloadpng': ['enable_downloadpng', 'downloadpng_dev_only']
+        'downloadpng': ['enable_downloadpng', 'downloadpng_dev_only'],
+        'pageselect': ['enable_pageselect', 'pageselect_dev_only']
     }
     plugin_updates = {}
     for pname, keys in plugin_fields.items():
@@ -713,6 +721,8 @@ enable_watermark = str(os.getenv('DOCROPPER_ENABLE_WATERMARK', settings.get('ena
 watermark_dev = str(os.getenv('DOCROPPER_WATERMARK_DEV_ONLY', settings.get('watermark_dev_only', False))).lower() == 'true'
 enable_downloadpng = str(os.getenv('DOCROPPER_ENABLE_DOWNLOADPNG', settings.get('enable_downloadpng', False))).lower() == 'true'
 downloadpng_dev = str(os.getenv('DOCROPPER_DOWNLOADPNG_DEV_ONLY', settings.get('downloadpng_dev_only', True))).lower() == 'true'
+enable_pageselect = str(os.getenv('DOCROPPER_ENABLE_PAGESELECT', settings.get('enable_pageselect', True))).lower() == 'true'
+pageselect_dev = str(os.getenv('DOCROPPER_PAGESELECT_DEV_ONLY', settings.get('pageselect_dev_only', False))).lower() == 'true'
 
 if enable_sign and (not sign_dev or is_dev_license):
     register_sign(app, plugin_utils)
@@ -730,6 +740,8 @@ if enable_watermark and (not watermark_dev or is_dev_license):
     register_watermark(app, plugin_utils)
 if enable_downloadpng and (not downloadpng_dev or is_dev_license):
     register_downloadpng(app, plugin_utils)
+if enable_pageselect and (not pageselect_dev or is_dev_license):
+    register_pageselect(app, plugin_utils)
 
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):

@@ -305,6 +305,13 @@ button:hover {
     border: 1px solid #666;
 }
 
+.thumbSelect {
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
 .deleteBtn {
     position: absolute;
     top: -24px;

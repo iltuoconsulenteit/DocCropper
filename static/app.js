@@ -4,6 +4,7 @@ import { initRemoveBgPlugin } from './plugins/removebg.js';
 import { initPdfCompressPlugin } from './plugins/compresspdf.js';
 import { initWatermarkPlugin } from './plugins/watermark.js';
 import { initDownloadPngPlugin } from './plugins/downloadpng.js';
+import { initPageSelectPlugin } from './plugins/pageselect.js';
 
 let scaling_factor_w;
 let scaling_factor_h;
@@ -300,6 +301,7 @@ let remoteSignEnabled = false;
 let removeBgEnabled = false;
 let compressEnabled = false;
 let downloadPngEnabled = false;
+let pageSelectEnabled = false;
 
 let translations = {};
 let currentLang = window.DC_LANG || 'it';
@@ -793,6 +795,7 @@ function applySettings(cfg) {
     removeBgEnabled = !!cfg.enable_removebg;
     watermarkEnabled = !!cfg.enable_watermark;
     downloadPngEnabled = !!cfg.enable_downloadpng;
+    pageSelectEnabled = !!cfg.enable_pageselect && currentLicenseLevel !== 'free';
     if (typeof initRemoveBgPlugin === 'function' && Object.keys(translations).length) {
         initRemoveBgPlugin(translations, removeBgEnabled);
     }
@@ -801,6 +804,9 @@ function applySettings(cfg) {
     }
     if (typeof initDownloadPngPlugin === 'function' && Object.keys(translations).length) {
         initDownloadPngPlugin(translations, downloadPngEnabled);
+    }
+    if (typeof initPageSelectPlugin === 'function') {
+        initPageSelectPlugin(pageSelectEnabled);
     }
     compressEnabled = !!cfg.enable_compresspdf && currentLicenseLevel !== 'free';
     if (cfg.update_interval !== undefined) {
@@ -1328,6 +1334,15 @@ function addThumbnail(src, index) {
     const container = document.createElement('div');
     container.className = 'thumbContainer';
     container.dataset.index = index;
+
+    if (pageSelectEnabled) {
+        const sel = document.createElement('input');
+        sel.type = 'checkbox';
+        sel.className = 'thumbSelect';
+        sel.title = t('selectPage');
+        sel.addEventListener('click', (e) => e.stopPropagation());
+        container.appendChild(sel);
+    }
 
     const imgEl = document.createElement('img');
     imgEl.src = src;
@@ -2222,7 +2237,19 @@ async function generatePdf() {
     const compression = window.getCompressionLevel ? window.getCompressionLevel() : 'none';
     const jpeg_quality = window.getJpegQuality ? window.getJpegQuality() : 75;
     const pdfa_version = window.getPdfaVersion ? window.getPdfaVersion() : null;
-    const payload = { images: processedImages, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures, remove_signature_bg: window.removeSignatureBackground !== false, compression, jpeg_quality, pdfa_version };
+    let imagesForPdf = processedImages;
+    if (pageSelectEnabled && processedGallery) {
+        let selected = Array.from(processedGallery.querySelectorAll('.thumbContainer:not([data-sponsor]) .thumbSelect:checked'));
+        if (selected.length === 0) {
+            selected = Array.from(processedGallery.querySelectorAll('.thumbContainer:not([data-sponsor]) .thumbSelect'));
+            selected.forEach(cb => cb.checked = true);
+        }
+        imagesForPdf = selected.map(cb => {
+            const idx = parseInt(cb.closest('.thumbContainer').dataset.index);
+            return processedImages[idx];
+        });
+    }
+    const payload = { images: imagesForPdf, layout, orientation, arrangement, scale_mode, scale_percent, color_mode: globalColorMode, signature_image: signatureImageData, signatures, remove_signature_bg: window.removeSignatureBackground !== false, compression, jpeg_quality, pdfa_version };
     if (window.lastSignEmail || window.lastSignPhone || window.lastSignName) {
         payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
     }

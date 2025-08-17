@@ -31,6 +31,7 @@ Configuration variables, environment files, and the `settings.json` options are 
 - ✍️ Sign from your phone via QR code and save the drawing for later use (Pro)
 - 📤 Share PDFs via WhatsApp Web or Email, attaching files via the Web Share API when possible (Pro)
 - 🗂️ Drag thumbnails to reorder images before exporting (Pro)
+- 🔘 Select individual thumbnails for partial PDF export, automatically selecting all when none are chosen (Pro)
 - 🖼️ Closable banner can rotate multiple promotional images
 - 🤝 Sponsor page shows Bronze, Silver, and Gold cards with medal icons and a benefits table covering marketing exposure and included licenses
 - 📝 Extract text via OCR (future Pro feature)

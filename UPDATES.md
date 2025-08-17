@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-08-19
+- Allow selecting individual thumbnails for partial PDF export, automatically choosing all pages when none are selected
+
 ## 2025-08-18
 - Convert Google login into a plugin guarded by `login_dev_only` so authentication is available only on developer builds
 
