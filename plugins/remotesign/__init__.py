@@ -1,11 +1,10 @@
 from fastapi import Request
 from fastapi.responses import JSONResponse
-import os, subprocess, base64, json, urllib.request
+import os, subprocess, base64
 
 __all__ = ['register']
 
 def register(app, utils):
-    load_settings = utils['load_settings']
     get_session_dir = utils['get_session_dir']
     decrypt_file = utils['decrypt_file']
     encrypt_bytes = utils['encrypt_bytes']
@@ -42,31 +41,3 @@ def register(app, utils):
         except Exception:
             return JSONResponse(status_code=500, content={'message': 'Remote signing failed'})
 
-    @app.post('/docuseal-sign/')
-    async def docuseal_sign(request: Request):
-        session_id = request.cookies.get('session_id')
-        session_dir = get_session_dir(session_id)
-        pdf_path = os.path.join(session_dir, 'output.pdf' + ENC_SUFFIX)
-        if not os.path.exists(pdf_path):
-            return JSONResponse(status_code=404, content={'message': 'PDF not found'})
-        settings = load_settings()
-        api_url = settings.get('docuseal_api_url') or os.getenv('DOCUSEAL_API_URL')
-        api_key = settings.get('docuseal_api_key') or os.getenv('DOCUSEAL_API_KEY')
-        if not api_url or not api_key:
-            return JSONResponse(status_code=400, content={'message': 'Docuseal not configured'})
-        try:
-            data = decrypt_file(session_id, pdf_path)
-            if data is None:
-                return JSONResponse(status_code=500, content={'message': 'Decrypt failed'})
-            req = urllib.request.Request(api_url, data=data, method='POST')
-            req.add_header('Authorization', f'Bearer {api_key}')
-            req.add_header('Content-Type', 'application/pdf')
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                resp_data = resp.read()
-            resp_json = json.loads(resp_data.decode())
-            url = resp_json.get('url') or resp_json.get('sign_url')
-            if not url:
-                raise ValueError('no url')
-            return {'url': url}
-        except Exception:
-            return JSONResponse(status_code=500, content={'message': 'Docuseal request failed'})

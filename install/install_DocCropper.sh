@@ -193,8 +193,8 @@ EOF
   fi
 fi
 
-read -r -p "🚀 Launch DocCropper with tray icon now? [Y/n] " RUN_APP
-if [[ ! "$RUN_APP" =~ ^[Nn]$ ]]; then
+read -r -p "🚀 Launch DocCropper with tray icon now? [y/N] " RUN_APP
+if [[ "$RUN_APP" =~ ^[yY]$ ]]; then
   pushd "$TARGET_DIR" >/dev/null
   if command -v pythonw >/dev/null 2>&1; then
     (pythonw doccropper_tray.py --auto-start &)

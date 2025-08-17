@@ -19,17 +19,24 @@
                 <option value="it" data-i18n="italian" selected>Italiano</option>
             </select>
         </div>
-        <div id="loginArea"><a href="/auth/google" id="loginBtn">Login with Google</a></div>
+        <div id="loginArea" style="display:none"><a href="/auth/google" id="loginBtn">Login with Google</a></div>
         <div id="licenseInfo"></div>
         <div id="brandBox"></div>
         <div id="actionButtons">
             <button id="helpBtn" data-i18n="showHelp" data-i18n-title="showHelp" title="Help">Help</button>
+            <button id="sponsorBtn" class="highlight" data-i18n="sponsor" data-i18n-title="sponsor" title="Sponsor">Sponsor</button>
             <button id="purchaseBtn" data-i18n="purchase" data-i18n-title="purchase" title="Purchase">Purchase</button>
             <button id="licenseBtn" data-i18n="licenses" data-i18n-title="licenses" title="Licenses">Licenses</button>
             <button id="settingsBtn" data-i18n="settings" data-i18n-title="settings" title="Settings">Settings</button>
+            <button id="updateBell" title="Update">🔔</button>
         </div>
         <div id="demoNotice" class="demo-notice" data-i18n="demoTestPage" style="display:none;"></div>
     </header>
+    <div id="sponsorBanner" style="display:none;text-align:center;">
+        <a id="sponsorBannerLink" target="_blank">
+            <img id="sponsorBannerImg" alt="Sponsor banner">
+        </a>
+    </div>
     <div id="brandArea">
         <button id="closeBanner" class="close">&times;</button>
         <img id="sloganImg" src="/static/slide/DocCropper_slogan_main_it.png" alt="DocCropper slogan">
@@ -43,7 +50,15 @@
 
     <div id="purchaseBox" style="display:none;"></div>
     <div id="licenseBox" style="display:none;"></div>
+    <div id="sponsorBox" style="display:none;"></div>
     <div id="settingsBox" style="display:none;"></div>
+    <div id="updateBox" style="display:none;">
+        <label for="updatePinInput"><span data-i18n="enterUpdatePin"></span></label>
+        <input id="updatePinInput" type="password" style="width:100%;margin:5px 0;">
+        <button id="updatePinSubmit" data-i18n="startUpdate" style="margin-right:5px;">Start update</button>
+        <button id="rollbackPinSubmit" data-i18n="rollback" style="margin-right:5px;">Rollback</button>
+        <button id="updatePinCancel" data-i18n="cancel">Cancel</button>
+      </div>
 
     <div id="inputControls">
         <label for="inputMode" data-i18n="inputModeLabel">Source:</label>
@@ -65,7 +80,7 @@
             <label for="cameraMargin" data-i18n="cameraMargin">Margin:</label>
             <input type="range" id="cameraMargin" min="0" max="40" value="10">
             <button id="captureBtn" data-i18n="capturePhoto" data-i18n-title="capturePhoto" title="Capture">Capture</button>
-            <input type="file" id="cameraFileInput" accept="image/*" capture="environment" multiple style="display:none;">
+            <input type="file" id="cameraFileInput" accept="image/*" capture="environment" style="display:none;">
         </div>
     </div>
 
@@ -195,13 +210,16 @@
     <h2 data-i18n="processedImages">Processed Images:</h2>
     <p id="reorderHint" data-i18n="reorderHint" style="display:none;"></p>
     <div id="blankControls" style="margin-bottom:8px; display:none;">
-        <button id="layoutToggleBtn">Toggle layout</button>
-        <label for="blankThreshold" data-i18n="blankThreshold">Blank page threshold (%):</label>
-        <input type="number" id="blankThreshold" value="95" min="80" max="100" step="1" style="width:60px;">
+        <button id="addImportBtn" data-i18n-title="addImport" title="Add/Import">+</button>
+        <div id="removeBlankGroup">
+            <button id="removeBlankBtn" data-i18n="removeBlank">Remove blank pages</button>
+            <label for="blankThreshold" data-i18n="blankThreshold">Blank page threshold (%):</label>
+            <input type="number" id="blankThreshold" value="95" min="80" max="100" step="1" style="width:60px;">
+        </div>
+        <button id="clearImagesBtn" data-i18n-title="clearImages" title="Clear images">🧹</button>
+        <button id="layoutToggleBtn" data-i18n-title="layoutToggle" title="Toggle layout">↔</button>
         <label><input type="checkbox" id="skipBlank" checked> <span data-i18n="skipBlank"></span></label>
-        <button id="removeBlankBtn" data-i18n="removeBlank">Remove blank pages</button>
         <button id="restoreBlankBtn" data-i18n="restoreBlank" style="display:none;">Restore pages</button>
-        <button id="clearImagesBtn" data-i18n="clearImages">Clear images</button>
     </div>
     <div id="galleryWrapper" class="horizontal">
         <div id="processedGallery" class="horizontal"></div>
@@ -233,7 +251,9 @@
     <a id="signedPdfLink" style="display:none;" download="signed.pdf"></a>
 
       <footer id="pageFooter">
-        <img id="sponsorBadge" src="/static/logos/sponsor_logo.png" alt="Sponsor logo" style="display:none;">
+        <a id="sponsorBadgeLink" href="#" target="_blank" style="display:none;">
+            <img id="sponsorBadge" src="/static/logos/sponsor_logo.png" alt="Sponsor logo">
+        </a>
         <div id="footerBrand">
             <a href="https://www.iltuoconsulenteit.it/site/index.php/applicazioni/doccropper" target="_blank" rel="noopener" style="display:flex;flex-direction:column;align-items:center;text-decoration:none;color:inherit;">
                 <span data-i18n="realizzato">By IlTuoConsulenteIT</span>
@@ -241,7 +261,9 @@
             </a>
             <span id="versionBox"></span>
         </div>
-        <img id="clientBadge" src="/static/logos/client_logo.png" alt="Client logo" style="display:none;">
+        <a id="clientBadgeLink" href="#" target="_blank" style="display:none;">
+            <img id="clientBadge" src="/static/logos/client_logo.png" alt="Client logo">
+        </a>
       </footer>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>

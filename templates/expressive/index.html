@@ -18,7 +18,7 @@
         position: fixed;
         top: 48px;
         right: 0;
-        bottom: 0;
+        bottom: 0; /* adjusted via script to stay above footer */
         width: 260px;
         background: #fff;
         border-left: 1px solid #ccc;
@@ -66,6 +66,9 @@
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('files')" x-text="t('files')"></button>
           </li>
           <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700 text-yellow-400 font-semibold" @click="command('sponsor')" x-text="t('sponsor')"></button>
+          </li>
+          <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('guide')" x-text="t('guide')"></button>
           </li>
           <li>
@@ -101,10 +104,14 @@
           <option value="en">EN</option>
           <option value="it" selected>IT</option>
         </select>
+        <button @click="openUpdateModal('update')" :class="{'text-yellow-400': updateAvailable}" title="Update">🔔</button>
       </header>
       <!-- Content -->
       <main class="flex-1 p-4 space-y-4 overflow-y-auto" x-cloak>
-        <input type="file" id="imageUpload" class="hidden" multiple accept="image/*,application/pdf" @change="handleImport">
+        <input type="file" id="imageUpload" x-ref="imageUpload" class="hidden" multiple accept="image/*,application/pdf" @change="handleImport">
+        <div class="mb-4 flex justify-center" x-show="sponsorBanner && files.length===0 && tab==='files'">
+          <a :href="sponsorUrl || '#'" target="_blank"><img :src="sponsorBanner" alt="Sponsor" class="max-h-32 w-auto object-contain" /></a>
+        </div>
         <div class="mb-4 flex justify-center" x-show="showSlides && currentSlide && files.length===0 && tab==='files'">
           <img :src="currentSlide" alt="slogan" class="max-h-64 w-auto object-contain" />
         </div>
@@ -114,16 +121,17 @@
             <p class="text-gray-600" x-text="t('noFiles')"></p>
           </template>
           <div x-show="status" id="statusMessage" class="mb-2 p-2 bg-blue-100 text-blue-800 text-sm rounded" x-text="status"></div>
-          <div x-show="files.length > 0" class="flex items-center justify-between gap-2 mb-2">
-            <div class="flex items-center gap-2">
+          <div x-show="files.length > 0" class="flex items-center flex-wrap gap-4 mb-3">
+            <button id="addImportBtn" class="w-10 h-10 rounded bg-green-500 text-white text-2xl font-bold flex items-center justify-center" @click="$refs.imageUpload.click()" :title="t('addImport')">+</button>
+            <div class="flex items-center gap-2 mx-auto" id="removeBlankGroup">
+              <button id="removeBlankBtn" class="h-10 px-4 rounded bg-yellow-500 text-white flex items-center justify-center text-sm" @click="removeBlankPages" x-text="t('removeBlank')"></button>
               <label class="text-xs" for="blankThreshold" x-text="t('blankThreshold')"></label>
-              <input id="blankThreshold" type="number" min="80" max="100" step="1" class="w-16 border rounded text-xs" x-model.number="blankThreshold">
-              <button class="px-2 py-1 border rounded text-xs" @click="removeBlankPages" x-text="t('removeBlank')"></button>
+              <input id="blankThreshold" type="number" min="80" max="100" step="1" class="h-10 w-16 border rounded text-xs" x-model.number="blankThreshold">
             </div>
-            <button id="clearImagesBtn" class="px-2 py-1 border rounded text-xs" @click="clearImages" x-text="t('clearImages')"></button>
-            <button class="px-2 py-1 border rounded text-xs" @click="toggleLayout" x-text="layoutHorizontal ? t('horizontalView') : t('verticalView')"></button>
+            <button id="clearImagesBtn" class="w-10 h-10 rounded bg-red-500 text-white text-2xl flex items-center justify-center" @click="clearImages" :title="t('clearImages')">🧹</button>
+            <button id="layoutToggleBtn" class="w-10 h-10 rounded bg-blue-500 text-white text-2xl flex items-center justify-center" @click="toggleLayout" :title="layoutHorizontal ? t('verticalView') : t('horizontalView')" x-text="layoutHorizontal ? '↕' : '↔'"></button>
           </div>
-          <div x-show="files.length > 0" x-ref="fileGrid" :class="layoutHorizontal ? 'flex overflow-x-auto space-x-4' : 'grid grid-cols-1 lg:grid-cols-2 gap-4'">
+          <div x-show="tab==='files'" x-ref="fileGrid" :class="layoutHorizontal ? 'flex overflow-x-auto space-x-4' : 'grid grid-cols-1 lg:grid-cols-2 gap-4'">
             <template x-for="(file, idx) in files" :key="file.id">
               <div class="mb-4 thumbContainer" :data-index="idx">
                 <p class="text-xs text-center mb-1 truncate" x-text="(idx+1)+' - '+file.name"></p>
@@ -137,10 +145,10 @@
                     <button @click="rotate(idx)" title="Rotate" class="text-base">↻</button>
                     <button @click="flip(idx)" :title="t('flip')" class="text-base">⇄</button>
                     <button @click="invert(idx)" :title="t('invert')" class="text-base">⇅</button>
-                    <button @click="toGray(idx)" title="Gray" class="text-base">🌑</button>
-                    <button @click="toBW(idx)" title="B/W" class="text-base">⬛</button>
-                    <button @click="toColor(idx)" title="Color" class="text-base">🎨</button>
-                    <button x-show="watermarkEnabled" @click="watermark(idx)" :title="t('watermark')" class="text-base">🖆</button>
+                    <button x-show="colorModeEnabled" @click="toGray(idx)" title="Gray" class="text-base">🌑</button>
+                    <button x-show="colorModeEnabled" @click="toBW(idx)" title="B/W" class="text-base">⬛</button>
+                    <button x-show="colorModeEnabled" @click="toColor(idx)" title="Color" class="text-base">🎨</button>
+                    <button x-show="watermarkEnabled" @click="watermark(idx)" :title="t('watermark')" class="text-base flex items-center justify-center"><img src="/static/icons/stamp.svg" alt="" class="h-4 w-4" /></button>
                     <button x-show="removeBgEnabled" @click="removeBg(idx)" :title="file.bgOriginal ? t('restoreBg') : t('removeBg')" class="text-base" x-text="file.bgOriginal ? '↩' : '⌦'"></button>
                     <button @click="signPage(idx)" title="Sign" class="text-base">✒</button>
                   </div>
@@ -151,6 +159,14 @@
                 </div>
               </div>
             </template>
+          <div x-show="sponsorFrame || sponsorBanner" id="sponsorPreview" class="mb-4 thumbContainer inline-flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-400" :style="`width:${sponsorThumbWidth}px;height:${sponsorThumbHeight}px`">
+              <template x-if="sponsorFrame">
+                <iframe :src="sponsorFrame" :style="`border:none;width:${sponsorFrameWidth}px;height:${sponsorFrameHeight}px;transform:scale(${Math.min(sponsorThumbWidth/sponsorFrameWidth, sponsorThumbHeight/sponsorFrameHeight)});transform-origin:0 0;`"></iframe>
+              </template>
+              <template x-if="!sponsorFrame && sponsorBanner">
+                <a :href="sponsorUrl || '#'" target="_blank"><img :src="sponsorBanner" :style="`width:100%;height:100%;object-fit:contain;`" /></a>
+              </template>
+            </div>
           </div>
         </div>
         <div x-show="tab==='guide'" class="w-full h-full">
@@ -160,6 +176,58 @@
           <template x-for="(note, idx) in updates[lang]" :key="idx">
             <div class="border-b pb-2" x-text="note"></div>
           </template>
+          <div class="pt-2 flex gap-2">
+            <button class="px-2 py-1 border rounded text-xs" @click="openUpdateModal('update')" x-text="t('startUpdate')"></button>
+            <button class="px-2 py-1 border rounded text-xs" @click="openUpdateModal('rollback')" x-text="t('rollback')"></button>
+          </div>
+        </div>
+        <div x-show="tab==='sponsor'" class="p-4 space-y-4" x-data="{tiers:[], price(c){const t=this.tiers.find(x=>x.codice===c);return t&&t.prezzo_base?('€'+t.prezzo_base):'';}}" x-init="fetch('/index.php?option=com_fabrik&view=list&listid=XX&format=raw&format=json').then(r=>r.json()).then(d=>tiers=d)">
+          <h2 class="text-2xl font-bold" x-text="t('sponsorTitle')"></h2>
+          <p x-text="t('sponsorIntro')"></p>
+          <table class="w-full text-sm text-left border-collapse">
+            <thead>
+              <tr>
+                <th class="border p-2" x-text="t('sponsorBenefit')"></th>
+                <th class="border p-2">Bronze</th>
+                <th class="border p-2">Silver</th>
+                <th class="border p-2">Gold</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="border p-2" x-text="t('sponsorPrice')"></td>
+                <td class="border p-2 text-center" x-text="price('bronze') || '€ xxx'"></td>
+                <td class="border p-2 text-center" x-text="price('silver') || '€ xxx'"></td>
+                <td class="border p-2 text-center" x-text="price('gold') || '€ xxx'"></td>
+              </tr>
+              <tr>
+                <td class="border p-2" x-text="t('sponsorBenefitVisibility')"></td>
+                <td class="border p-2 text-center">✔</td>
+                <td class="border p-2 text-center">✔</td>
+                <td class="border p-2 text-center">✔</td>
+              </tr>
+              <tr>
+                <td class="border p-2" x-text="t('sponsorBenefitBanner')"></td>
+                <td class="border p-2 text-center">–</td>
+                <td class="border p-2 text-center">✔</td>
+                <td class="border p-2 text-center">✔</td>
+              </tr>
+              <tr>
+                <td class="border p-2" x-text="t('sponsorBenefitMarketing')"></td>
+                <td class="border p-2 text-center">–</td>
+                <td class="border p-2 text-center">✔</td>
+                <td class="border p-2 text-center">✔</td>
+              </tr>
+              <tr>
+                <td class="border p-2" x-text="t('sponsorBenefitLicense')"></td>
+                <td class="border p-2 text-center">Base</td>
+                <td class="border p-2 text-center">Pro LAN</td>
+                <td class="border p-2 text-center">Full</td>
+              </tr>
+            </tbody>
+          </table>
+          <a href="mailto:info@iltuoconsulente.it" class="bg-blue-500 text-white px-4 py-2 rounded block mt-4" x-text="t('contactSponsor')"></a>
+          <p class="text-xs text-gray-600 mt-2" x-text="t('sponsorNote')"></p>
         </div>
         <div x-show="tab==='tutorials'" class="w-full h-full">
           <div id="tutorialsArea" class="w-full h-[80vh] flex items-center justify-center text-gray-500" x-text="t('tutorialsPlaceholder')"></div>
@@ -190,11 +258,13 @@
             <button @click="donate()" class="bg-yellow-400 text-black px-4 py-2 rounded text-sm" x-text="t('donate')"></button>
           </div>
         </div>
-        <div x-show="tab!=='files' && tab!=='guide' && tab!=='updates' && tab!=='tutorials' && tab!=='purchase'" class="text-gray-600" x-text="t('selectCommand')"></div>
+        <div x-show="tab!=='files' && tab!=='guide' && tab!=='updates' && tab!=='tutorials' && tab!=='purchase' && tab!=='sponsor'" class="text-gray-600" x-text="t('selectCommand')"></div>
       </main>
       <footer class="mt-auto py-1 px-4">
         <div class="flex flex-col sm:flex-row items-center justify-between w-full space-y-2 sm:space-y-0">
-          <img x-show="sponsorLogo" :src="sponsorLogo" alt="Sponsor" :style="'height:'+displaySponsorHeight()+'px'" />
+          <a x-show="sponsorLogo" :href="sponsorUrl || '#'" target="_blank">
+            <img :src="sponsorLogo" alt="Sponsor" :style="'height:'+displaySponsorHeight()+'px'" />
+          </a>
           <div class="flex flex-col items-center">
             <a href="https://www.iltuoconsulenteit.it/site/index.php/applicazioni/doccropper" target="_blank" rel="noopener" class="flex flex-col items-center">
               <span class="text-xs mb-1">By IlTuoConsulenteIT</span>
@@ -202,7 +272,9 @@
             </a>
             <span class="text-xs text-gray-500" x-text="versionInfo()"></span>
           </div>
-          <img x-show="clientLogo" :src="clientLogo" alt="Client" :style="'height:'+displayClientHeight()+'px'" />
+          <a x-show="clientLogo" :href="clientUrl || '#'" target="_blank">
+            <img :src="clientLogo" alt="Client" :style="'height:'+displayClientHeight()+'px'" />
+          </a>
         </div>
       </footer>
     </div>
@@ -225,7 +297,7 @@
           <input type="range" min="0" max="200" x-model.number="cropContrast" class="w-24" />
         </div>
         <div class="mt-2 text-right space-x-2">
-          <button @click="applyCrop" class="bg-blue-500 text-white px-3 py-1 rounded" x-text="t('apply')"></button>
+          <button @click="applyCrop()" class="bg-blue-500 text-white px-3 py-1 rounded" x-text="t('apply')"></button>
           <button @click="closeCrop" class="bg-gray-300 px-3 py-1 rounded" x-text="t('cancel')"></button>
         </div>
       </div>
@@ -337,8 +409,20 @@
           <input type="text" class="border w-full p-1" x-model="settings.clientLogo" />
         </div>
         <div>
+          <label class="block text-sm" x-text="t('clientUrl')"></label>
+          <input type="text" class="border w-full p-1" x-model="settings.clientUrl" />
+        </div>
+        <div>
           <label class="block text-sm" x-text="t('sponsorLogo')"></label>
           <input type="text" class="border w-full p-1" x-model="settings.sponsorLogo" />
+        </div>
+        <div>
+          <label class="block text-sm" x-text="t('sponsorUrl')"></label>
+          <input type="text" class="border w-full p-1" x-model="settings.sponsorUrl" />
+        </div>
+        <div>
+          <label class="block text-sm" x-text="t('sponsorFrame')"></label>
+          <input type="text" class="border w-full p-1" x-model="settings.sponsorFrame" />
         </div>
         <div>
           <label class="block text-sm" x-text="t('clientLogoHeight')"></label>
@@ -351,6 +435,18 @@
         <div class="text-right space-x-2 pt-2">
           <button class="px-3 py-1 bg-gray-300 rounded" @click="settingsModal=false" x-text="t('cancel')"></button>
           <button class="px-3 py-1 bg-blue-500 text-white rounded" @click="saveSettings" x-text="t('apply')"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Update PIN Modal -->
+    <div x-show="showUpdateModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded w-64 space-y-2">
+        <h2 class="text-lg" x-text="t('enterUpdatePin')"></h2>
+        <input type="password" class="border w-full p-1" x-model="updatePin" />
+        <div class="text-right space-x-2 pt-2">
+          <button class="px-3 py-1 bg-gray-300 rounded" @click="cancelUpdate" x-text="t('cancel')"></button>
+          <button class="px-3 py-1 bg-blue-500 text-white rounded" @click="confirmUpdate" x-text="updateAction==='rollback'?t('rollback'):t('startUpdate')"></button>
         </div>
       </div>
     </div>
@@ -397,6 +493,7 @@
             updates:'Updates',
             tutorials:'Tutorials',
             purchase:'Purchase',
+            sponsor:'Sponsor',
             subscriptions:'Subscriptions',
             purchaseInfo:'Purchase or subscription options will appear here.',
             subscriptionsInfo:'Subscription plans will appear here.',
@@ -407,6 +504,19 @@
             wrongPassword:'Wrong password',
             clientLogo:'Client logo',
             sponsorLogo:'Sponsor logo',
+            clientUrl:'Client link',
+            sponsorUrl:'Sponsor link',
+            sponsorFrame:'Sponsor frame URL',
+            sponsorTitle:'Become a Sponsor of the Project',
+            sponsorIntro:'Supporting DocCropper sustains an open source tool with perspective cropping, mobile signing, and local installation; internet is needed only to activate and renew the license.',
+            sponsorNote:'Sponsorship levels and pricing may change over time and can be tailored to each sponsor.',
+            contactSponsor:'Contact us to sponsor',
+            sponsorBenefit:'Benefit',
+            sponsorPrice:'Price',
+            sponsorBenefitVisibility:'Logo on project site',
+            sponsorBenefitBanner:'Homepage banner',
+            sponsorBenefitMarketing:'Marketing integration',
+            sponsorBenefitLicense:'Included license',
             clientLogoHeight:'Client logo height',
             sponsorLogoHeight:'Sponsor logo height',
             noFiles:'No files available.',
@@ -446,6 +556,7 @@
             verticalView:'Horizontal bar',
             blankThreshold:'Blank page threshold (%)',
             removeBlank:'Remove blank pages',
+            addImport:'Add/Import',
             clearImages:'Clear images',
             confirmClearImages:'Remove all images?',
             pagesRemoved:'{n} blank pages removed',
@@ -469,7 +580,14 @@
             email:'Email',
             maxUploadLimit:'Maximum {n} files per upload',
             lastUpdate:'Last update',
-            tutorialsPlaceholder:'Tutorial videos coming soon.'
+            tutorialsPlaceholder:'Tutorial videos coming soon.',
+            enterUpdatePin:'Enter update PIN',
+            startUpdate:'Start update',
+            updateStarted:'Update started',
+            updateFailed:'Update failed',
+            rollback:'Rollback',
+            rollbackStarted:'Rollback started',
+            rollbackFailed:'Rollback failed'
           },
           it:{
             commands:'Comandi',
@@ -485,6 +603,7 @@
             updates:'Aggiornamenti',
             tutorials:'Tutorial',
             purchase:'Acquisto',
+            sponsor:'Sponsor',
             subscriptions:'Abbonamenti',
             purchaseInfo:'Opzioni di acquisto o abbonamento saranno mostrate qui.',
             subscriptionsInfo:'I piani di abbonamento saranno mostrati qui.',
@@ -495,6 +614,19 @@
             wrongPassword:'Password errata',
             clientLogo:'Logo cliente',
             sponsorLogo:'Logo sponsor',
+            clientUrl:'Link cliente',
+            sponsorUrl:'Link sponsor',
+            sponsorFrame:'URL frame sponsor',
+            sponsorTitle:'Diventa Sponsor del Progetto',
+            sponsorIntro:'Sostenere DocCropper significa supportare un progetto open source con ritaglio prospettico, firma mobile e installazione locale; è richiesto internet solo per attivare e rinnovare la licenza.',
+            sponsorNote:'I livelli di sponsorizzazione e le relative condizioni economiche possono variare nel tempo e sono personalizzabili in base alle esigenze dello sponsor.',
+            contactSponsor:'Contattaci per sponsorizzare',
+            sponsorBenefit:'Vantaggio',
+            sponsorPrice:'Prezzo',
+            sponsorBenefitVisibility:'Logo sul sito del progetto',
+            sponsorBenefitBanner:'Banner in homepage',
+            sponsorBenefitMarketing:'Integrazione marketing',
+            sponsorBenefitLicense:'Licenza inclusa',
             clientLogoHeight:'Altezza logo cliente',
             sponsorLogoHeight:'Altezza logo sponsor',
             noFiles:'Nessun file disponibile.',
@@ -534,6 +666,7 @@
             verticalView:'Barra orizzontale',
             blankThreshold:'Soglia pagina bianca (%)',
             removeBlank:'Rimuovi pagine bianche',
+            addImport:'Aggiungi/Importa',
             clearImages:'Azzera immagini',
             confirmClearImages:'Rimuovere tutte le immagini?',
             pagesRemoved:'Rimosse {n} pagine bianche',
@@ -557,7 +690,14 @@
             email:'Email',
             maxUploadLimit:'Massimo {n} file per caricamento',
             lastUpdate:'Ultimo aggiornamento',
-            tutorialsPlaceholder:'Prossimamente video tutorial.'
+            tutorialsPlaceholder:'Prossimamente video tutorial.',
+            enterUpdatePin:'Inserisci PIN aggiornamento',
+            startUpdate:'Avvia aggiornamento',
+            updateStarted:'Aggiornamento avviato',
+            updateFailed:'Aggiornamento fallito',
+            rollback:'Ripristina',
+            rollbackStarted:'Ripristino avviato',
+            rollbackFailed:'Ripristino fallito'
           }
         };
         // Expose translations so external plugins (e.g., mobile sign) can reuse them
@@ -595,18 +735,27 @@
           removeSigBg:true,
           removeBgEnabled:false,
           watermarkEnabled:false,
+          colorModeEnabled:false,
           removeBgThreshold:50,
           sigScale:1,
           activeSig:null,
           signatureAspect:1,
           pendingSigPos:null,
+          sponsorBanner:null,
+          sponsorFrame:null,
           clientLogo:null,
           sponsorLogo:null,
           donateLink:null,
           settingsModal:false,
           passwordModal:false,
           passwordInput:'',
-          settings:{clientLogo:'', sponsorLogo:'', clientLogoHeight:125, sponsorLogoHeight:125},
+          settings:{clientLogo:'', sponsorLogo:'', clientLogoHeight:125, sponsorLogoHeight:125, clientUrl:'', sponsorUrl:'', sponsorFrame:''},
+          sponsorFrameWidth:340,
+          sponsorFrameHeight:500,
+          sponsorThumbWidth:150,
+          sponsorThumbHeight:150,
+          clientUrl:'',
+          sponsorUrl:'',
           clientLogoHeight:125,
           sponsorLogoHeight:125,
           version:'',
@@ -619,16 +768,21 @@
           lang: window.DC_LANG || 'it',
           strings,
           slides:{
-            en:['/static/slide/DocCropper_slogan_main_en.png','/static/slide/DocCropper_slogan_sign_en.png'],
-            it:['/static/slide/DocCropper_slogan_main_it.png','/static/slide/DocCropper_slogan_sign_it.png']
+            en:[],
+            it:[]
           },
           slideIndex:0,
           showSlides:true,
           currentSlide:'',
           updates:{
-            en:['Improved signing workflow and export options.'],
-            it:['Migliorato il flusso di firma e opzioni di esportazione.']
+            en:[],
+            it:[]
           },
+          updateAvailable:false,
+          showUpdateModal:false,
+          updatePin:'',
+          updateAction:'update',
+          updateInterval:3600000,
           maxUpload:10,
           showClearConfirm:false,
           isMobile: /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 640,
@@ -641,6 +795,7 @@
             this.status = this.t('imagesCleared');
             setTimeout(()=>{ this.status=''; },3000);
             this.showClearConfirm = false;
+            this.adjustSponsor();
           },
           refreshSlides(){
             this.slideIndex = 0;
@@ -650,6 +805,45 @@
             if(!this.version) return '';
             const base = `${this.t('version')} ${this.version}`;
             return this.versionDate ? `${base} - ${this.versionDate}` : base;
+          },
+          checkForUpdates(){
+            fetch('/update-check/').then(r=>r.json()).then(d=>{
+              this.updateAvailable = !!d.available;
+            }).catch(()=>{});
+          },
+          openUpdateModal(action='update'){
+            this.updatePin='';
+            this.updateAction = action;
+            this.showUpdateModal=true;
+          },
+          confirmUpdate(){
+            const pin = this.updatePin.trim();
+            if(!pin) { this.showUpdateModal=false; return; }
+            const url = this.updateAction==='rollback' ? '/rollback/' : '/update/';
+            fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin})})
+              .then(r=>{
+                if(r.ok){
+                  alert(this.t(this.updateAction==='rollback' ? 'rollbackStarted' : 'updateStarted'));
+                  if(this.updateAction!=='rollback') this.updateAvailable=false;
+                } else {
+                  alert(this.t(this.updateAction==='rollback' ? 'rollbackFailed' : 'updateFailed'));
+                }
+              }).catch(()=>{ alert(this.t(this.updateAction==='rollback' ? 'rollbackFailed' : 'updateFailed')); })
+              .finally(()=>{ this.showUpdateModal=false; });
+          },
+          cancelUpdate(){ this.showUpdateModal=false; },
+          adjustSponsor(){
+            this.$nextTick(()=>{
+              const grid = this.$refs.fileGrid;
+              if(grid){
+                const first = grid.querySelector('.thumbContainer:not(#sponsorPreview)');
+                if(first){
+                  const rect = first.getBoundingClientRect();
+                  this.sponsorThumbWidth = rect.width;
+                  this.sponsorThumbHeight = rect.height;
+                }
+              }
+            });
           },
           init(){
             if (window['pdfjsLib']) {
@@ -670,7 +864,7 @@
               }
             });
             setInterval(()=>{
-              if (this.showSlides) {
+              if (this.showSlides && this.slides[this.lang].length) {
                 this.slideIndex = (this.slideIndex+1) % this.slides[this.lang].length;
                 this.currentSlide = this.slides[this.lang][this.slideIndex];
               }
@@ -680,12 +874,32 @@
               this.settings.sponsorLogo = cfg.sponsor_logo || '';
               this.settings.clientLogoHeight = parseInt(cfg.client_logo_height || 125);
               this.settings.sponsorLogoHeight = parseInt(cfg.sponsor_logo_height || 125);
+              this.settings.clientUrl = cfg.client_url || '';
+              this.settings.sponsorUrl = cfg.sponsor_url || '';
+              this.settings.sponsorFrame = cfg.sponsor_frame || '';
+              this.clientUrl = this.settings.clientUrl;
+              this.sponsorUrl = this.settings.sponsorUrl;
+              this.sponsorBanner = cfg.sponsor_banner ? `/static/logos/${cfg.sponsor_banner}` : null;
+              this.sponsorFrame = cfg.sponsor_frame || null;
+              this.sponsorFrameWidth = parseInt(cfg.sponsor_frame_width || 340);
+              this.sponsorFrameHeight = parseInt(cfg.sponsor_frame_height || 500);
+              this.sponsorThumbWidth = parseInt(cfg.sponsor_thumb_width || 150);
+              this.sponsorThumbHeight = parseInt(cfg.sponsor_thumb_height || 150);
               this.clientLogo = this.settings.clientLogo ? `/static/logos/${this.settings.clientLogo}` : null;
               this.sponsorLogo = this.settings.sponsorLogo ? `/static/logos/${this.settings.sponsorLogo}` : null;
               this.clientLogoHeight = this.settings.clientLogoHeight;
               this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
+              if(Array.isArray(cfg.banner_images)){
+                this.slides.en = cfg.banner_images.map(img=>`/static/slide/${img.replace('{{lang}}','en')}`);
+                this.slides.it = cfg.banner_images.map(img=>`/static/slide/${img.replace('{{lang}}','it')}`);
+              } else {
+                this.slides.en = ['/static/slide/DocCropper_slogan_main_en.png'];
+                this.slides.it = ['/static/slide/DocCropper_slogan_main_it.png'];
+              }
+              this.refreshSlides();
               this.removeBgEnabled = !!cfg.enable_removebg;
               this.watermarkEnabled = !!cfg.enable_watermark;
+              this.colorModeEnabled = !!cfg.enable_colormode && (cfg.license_level || '').toLowerCase() !== 'free';
               this.maxUpload = parseInt(cfg.max_upload_files || 10);
               this.blankThreshold = parseInt(cfg.blank_threshold || 95);
               this.version = cfg.version || '';
@@ -694,11 +908,17 @@
               this.licenseName = cfg.license_name || '';
               this.licenseNameInput = this.licenseName;
               this.licenseLevel = (cfg.license_level || 'free').toLowerCase();
+              this.updateInterval = parseInt(cfg.update_interval || 3600000);
               const mode = cfg.payment_mode && cfg.payment_mode.toLowerCase();
               if(mode==='donation'){
                 this.donateLink = cfg.paypal_link || DEFAULT_PAYPAL;
                 window.DC_DONATE_URL = this.donateLink;
               }
+            }).catch(()=>{});
+            this.checkForUpdates();
+            setInterval(()=>this.checkForUpdates(), this.updateInterval);
+            fetch('/updates/').then(r=>r.json()).then(data=>{
+              this.updates = data;
             }).catch(()=>{});
             window.signatures = this.signatures;
             window.openSignatureForPage = (idx = 0) => {
@@ -716,6 +936,7 @@
               }
             };
             this.updateRemoveBgThreshold();
+            this.adjustSponsor();
           },
           async command(action){
             switch(action){
@@ -751,6 +972,10 @@
                 this.tab='purchase';
                 this.showSlides=false;
                 break;
+              case 'sponsor':
+                this.tab='sponsor';
+                this.showSlides=false;
+                break;
               case 'settings':
                 this.openSettings();
                 break;
@@ -777,7 +1002,10 @@
               client_logo:this.settings.clientLogo,
               sponsor_logo:this.settings.sponsorLogo,
               client_logo_height:this.settings.clientLogoHeight,
-              sponsor_logo_height:this.settings.sponsorLogoHeight
+              sponsor_logo_height:this.settings.sponsorLogoHeight,
+              client_url:this.settings.clientUrl,
+              sponsor_url:this.settings.sponsorUrl,
+              sponsor_frame:this.settings.sponsorFrame
             };
             fetch('/settings/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
               .then(()=>{
@@ -785,6 +1013,9 @@
                 this.sponsorLogo = this.settings.sponsorLogo ? `/static/logos/${this.settings.sponsorLogo}` : null;
                 this.clientLogoHeight = this.settings.clientLogoHeight;
                 this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
+                this.clientUrl = this.settings.clientUrl;
+                this.sponsorUrl = this.settings.sponsorUrl;
+                this.sponsorFrame = this.settings.sponsorFrame || null;
                 this.settingsModal = false;
               });
           },
@@ -841,7 +1072,7 @@
             this.files.push(...loaded);
             this.showSlides = false;
             this.tab = 'files';
-            this.$nextTick(()=>this.initSortable());
+            this.$nextTick(()=>{ this.initSortable(); this.adjustSponsor(); });
             e.target.value = '';
           },
           rotate(idx){
@@ -1193,7 +1424,7 @@
             this.signIndex=null;
           },
           view(url){ this.viewUrl=url; this.viewModal=true; },
-          remove(idx){ this.files.splice(idx,1); this.$nextTick(()=>this.initSortable()); },
+          remove(idx){ this.files.splice(idx,1); this.$nextTick(()=>{ this.initSortable(); this.adjustSponsor(); }); },
           crop(idx){
             this.cropIndex = idx;
             this.cropBrightness = 100;
@@ -1268,7 +1499,9 @@
             path.setAttribute('d',d);
           },
           closeCrop(){
-            ['cp1','cp2','cp3','cp4'].forEach(id=>{ try{interact('#'+id).unset();}catch(e){} });
+            Object.values(this.draggables || {}).forEach(el=>{
+              try{ interact(el).unset(); }catch(e){}
+            });
             this.cropModal=false;
           },
           cropTap(){
@@ -1565,6 +1798,16 @@
         if (box) box.style.display = 'none';
       });
 
+      const exportPanel = document.getElementById('exportOptions');
+      const footerEl = document.querySelector('footer');
+      const adjustExportBottom = () => {
+        if (exportPanel && footerEl) {
+          exportPanel.style.bottom = footerEl.offsetHeight + 'px';
+        }
+      };
+      window.addEventListener('load', adjustExportBottom);
+      window.addEventListener('resize', adjustExportBottom);
+
       window.addEventListener('signedPdfAvailable', (e) => {
         const url = e.detail.url;
         const exportBox = document.getElementById('exportOptions');
@@ -1573,7 +1816,7 @@
         const waBtn = document.getElementById('waShareBtn');
         const emailBtn = document.getElementById('emailShareBtn');
         const controls = document.getElementById('layoutControls');
-        if (exportBox) exportBox.style.display = 'block';
+        if (exportBox) { exportBox.style.display = 'block'; adjustExportBottom(); }
         if (controls) controls.style.display = 'block';
         updateLayoutPreview();
         if (frame) {
@@ -1610,5 +1853,9 @@
         }
       });
     </script>
+  <div id="loadingOverlay" style="display:none;">
+    <div class="loader"></div>
+    <span data-i18n="loading">Loading...</span>
+  </div>
   </body>
 </html>
