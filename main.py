@@ -417,6 +417,12 @@ def load_settings():
         colormode_dev_env = os.getenv("DOCROPPER_COLORMODE_DEV_ONLY")
         if colormode_dev_env is not None:
             merged["colormode_dev_only"] = colormode_dev_env.lower() == "true"
+        enable_imageeditor_env = os.getenv("DOCROPPER_ENABLE_IMAGEEDITOR")
+        if enable_imageeditor_env is not None:
+            merged["enable_imageeditor"] = enable_imageeditor_env.lower() == "true"
+        imageeditor_dev_env = os.getenv("DOCROPPER_IMAGEEDITOR_DEV_ONLY")
+        if imageeditor_dev_env is not None:
+            merged["imageeditor_dev_only"] = imageeditor_dev_env.lower() == "true"
         if stripe_secret:
             merged["stripe_secret_key"] = stripe_secret
         if stripe_publish:
@@ -503,7 +509,8 @@ def save_settings(update: dict):
         'downloadpng': ['enable_downloadpng', 'downloadpng_dev_only'],
         'pageselect': ['enable_pageselect', 'pageselect_dev_only'],
         'colormode': ['enable_colormode', 'colormode_dev_only'],
-        'watermark': ['enable_watermark', 'watermark_dev_only']
+        'watermark': ['enable_watermark', 'watermark_dev_only'],
+        'imageeditor': ['enable_imageeditor', 'imageeditor_dev_only']
     }
     plugin_updates = {}
     for pname, keys in plugin_fields.items():
@@ -745,6 +752,8 @@ enable_pageselect = str(os.getenv('DOCROPPER_ENABLE_PAGESELECT', settings.get('e
 pageselect_dev = str(os.getenv('DOCROPPER_PAGESELECT_DEV_ONLY', settings.get('pageselect_dev_only', False))).lower() == 'true'
 enable_colormode = str(os.getenv('DOCROPPER_ENABLE_COLORMODE', settings.get('enable_colormode', True))).lower() == 'true'
 colormode_dev = str(os.getenv('DOCROPPER_COLORMODE_DEV_ONLY', settings.get('colormode_dev_only', False))).lower() == 'true'
+enable_imageeditor = str(os.getenv('DOCROPPER_ENABLE_IMAGEEDITOR', settings.get('enable_imageeditor', True))).lower() == 'true'
+imageeditor_dev = str(os.getenv('DOCROPPER_IMAGEEDITOR_DEV_ONLY', settings.get('imageeditor_dev_only', True))).lower() == 'true'
 
 if enable_sign and (not sign_dev or is_dev_license):
     register_sign(app, plugin_utils)
@@ -766,6 +775,9 @@ if enable_pageselect and (not pageselect_dev or is_dev_license):
     register_pageselect(app, plugin_utils)
 if enable_colormode and (not colormode_dev or is_dev_license):
     register_colormode(app, plugin_utils)
+if enable_imageeditor and (not imageeditor_dev or is_dev_license):
+    from plugins.imageeditor import register as register_imageeditor
+    register_imageeditor(app, plugin_utils)
 
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):

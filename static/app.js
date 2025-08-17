@@ -6,6 +6,7 @@ import { initWatermarkPlugin } from './plugins/watermark.js';
 import { initDownloadPngPlugin } from './plugins/downloadpng.js';
 import { initPageSelectPlugin } from './plugins/pageselect.js';
 import { initColorPlugin } from './plugins/colormode.js';
+import { initImageEditorPlugin } from './plugins/imageeditor.js';
 
 let scaling_factor_w;
 let scaling_factor_h;
@@ -304,6 +305,7 @@ let compressEnabled = false;
 let downloadPngEnabled = false;
 let pageSelectEnabled = false;
 let colorModePluginEnabled = false;
+let imageEditorEnabled = false;
 
 let translations = {};
 let currentLang = window.DC_LANG || 'it';
@@ -799,6 +801,7 @@ function applySettings(cfg) {
     downloadPngEnabled = !!cfg.enable_downloadpng;
     pageSelectEnabled = !!cfg.enable_pageselect && currentLicenseLevel !== 'free';
     colorModePluginEnabled = !!cfg.enable_colormode && isLicensed && currentLicenseLevel !== 'free';
+    imageEditorEnabled = !!cfg.enable_imageeditor;
     if (typeof initRemoveBgPlugin === 'function' && Object.keys(translations).length) {
         initRemoveBgPlugin(translations, removeBgEnabled);
     }
@@ -813,6 +816,9 @@ function applySettings(cfg) {
     }
     if (typeof initColorPlugin === 'function') {
         initColorPlugin(translations, colorModePluginEnabled);
+    }
+    if (typeof initImageEditorPlugin === 'function') {
+        initImageEditorPlugin(translations, imageEditorEnabled);
     }
     compressEnabled = !!cfg.enable_compresspdf && currentLicenseLevel !== 'free';
     if (cfg.update_interval !== undefined) {
@@ -1520,6 +1526,21 @@ function addThumbnail(src, index) {
             }
         });
         actions.appendChild(wmBtn);
+    }
+
+    if (imageEditorEnabled) {
+        const editBtn = document.createElement('button');
+        editBtn.className = 'thumbBtn editBtn';
+        editBtn.textContent = '🎨';
+        editBtn.title = t('editImage');
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            if (typeof window.openImageEditor === 'function') {
+                window.openImageEditor(idx);
+            }
+        });
+        actions.appendChild(editBtn);
     }
 
     if (colorModePluginEnabled) {
@@ -3421,6 +3442,7 @@ loadSettings().then(async (cfg) => {
     initDownloadPngPlugin(translations, downloadPngEnabled);
     initPageSelectPlugin(pageSelectEnabled);
     initColorPlugin(translations, colorModePluginEnabled);
+    initImageEditorPlugin(translations, imageEditorEnabled);
     renderPaymentBox(cfg);
     renderLicenseBox();
     renderLogin(cfg);

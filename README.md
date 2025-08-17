@@ -23,7 +23,8 @@ Configuration variables, environment files, and the `settings.json` options are 
 - 🪄 Remove backgrounds with an adjustable threshold and restore originals when needed (Pro)
 - 🔁 Flip pages horizontally or invert upside-down scans
 - 🖍️ Add text or image watermarks with custom size, angle, color, font and optional propagation to all pages
- - 🧹 Skip blank pages when importing PDFs using a configurable threshold (Pro)
+- 🎨 Experimental image editor with saturation and sharpness controls (Developer)
+- 🧹 Skip blank pages when importing PDFs using a configurable threshold (Pro)
 - 📄 Create PDFs ready for download or sharing
 - 📦 Compress PDFs with Low, Medium or Extreme settings and optional JPEG quality tuning (Pro)
 - 📚 Export as PDF/A for archival and legal compliance, selecting versions 1–4

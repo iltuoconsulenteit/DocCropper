@@ -25,6 +25,7 @@ Copy the `*.env.example` files in `env/` to `*.env` and adjust the values.  All 
 | `DOCROPPER_ENABLE_DOWNLOADPNG` | Enable per-thumbnail PNG download plugin |
 | `DOCROPPER_ENABLE_PAGESELECT` | Enable per-page selection for PDF export |
 | `DOCROPPER_ENABLE_COLORMODE` | Enable color-mode plugin |
+| `DOCROPPER_ENABLE_IMAGEEDITOR` | Enable image editor plugin |
 | `DOCROPPER_SIGN_DEV_ONLY` | Restrict local signing to developer licenses |
 | `DOCROPPER_MOBILESIGN_DEV_ONLY` | Restrict mobile signing to developer licenses |
 | `DOCROPPER_REMOTESIGN_DEV_ONLY` | Restrict remote signing to developer licenses |
@@ -34,6 +35,7 @@ Copy the `*.env.example` files in `env/` to `*.env` and adjust the values.  All 
 | `DOCROPPER_REMOVEBG_DEV_ONLY` | Restrict background removal to developer licenses |
 | `DOCROPPER_COMPRESSPDF_DEV_ONLY` | Restrict PDF compression to developer licenses |
 | `DOCROPPER_WATERMARK_DEV_ONLY` | Restrict watermark plugin to developer licenses |
+| `DOCROPPER_IMAGEEDITOR_DEV_ONLY` | Restrict image editor plugin to developer licenses |
 | `DOCROPPER_CROP_DEV_ONLY` | Restrict cropping plugin to developer licenses |
 | `DOCROPPER_SPONSORFRAME_DEV_ONLY` | Restrict sponsor frame plugin to developer licenses |
 | `DOCROPPER_LAN_USER_LIMIT` | Maximum concurrent LAN users (0 = unlimited) |
@@ -109,7 +111,9 @@ Copy the `*.env.example` files in `env/` to `*.env` and adjust the values.  All 
 - `license_level` – installation tier (`free`, `pro`, `full`)
 - `license_check` – enable remote license validation
 - `enable_sign`, `enable_mobilesign`, `enable_removebg`, `enable_compresspdf`, `enable_watermark`, `enable_pageselect`, `enable_colormode`
+- `enable_imageeditor`
 - `crop_dev_only`, `sign_dev_only`, `mobilesign_dev_only`, `removebg_dev_only`, `compresspdf_dev_only`, `watermark_dev_only`, `pageselect_dev_only`, `colormode_dev_only`, `sponsorframe_dev_only`, `login_dev_only`
+- `imageeditor_dev_only`
 - Plugin-specific flags like `enable_remotesign`, `remotesign_dev_only`, `enable_docuseal`, `docuseal_dev_only`, `enable_watermark`, and `watermark_dev_only` are stored in the respective `plugins/<name>/settings.json` files
 - `lan_user_limit` – cap for LAN user plugin
 

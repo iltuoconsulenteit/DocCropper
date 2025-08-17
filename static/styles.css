@@ -311,9 +311,11 @@ button:hover {
 
 .thumbSelect {
     position: absolute;
-    top: -24px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 4px;
+    left: 4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
 }
 
 .deleteBtn {
