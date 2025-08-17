@@ -45,6 +45,7 @@ Configuration variables, environment files, and the `settings.json` options are 
 - 🚀 Cache busting (`?v=<commit>`) ensures browsers fetch updated files
 - 🔔 Notification bell checks for updates and lets licensed users trigger upgrades with a PIN
 - ⏪ Rollback command restores the previous version if an update causes issues
+- ⬇️ Optional plugin adds a per-thumbnail PNG download button
 
 ---
 

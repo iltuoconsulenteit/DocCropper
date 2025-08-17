@@ -25,6 +25,7 @@
   "invert": "Upside down",
   "edit": "Crop",
   "delete": "Delete",
+  "downloadPng": "Download PNG",
   "removeBg": "Remove background",
   "restoreBg": "Restore background",
   "removeBgThresholdPrompt": "Background removal threshold (%)",

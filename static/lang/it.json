@@ -25,6 +25,7 @@
   "invert": "Capovolgi",
   "edit": "Ritaglia",
   "delete": "Elimina",
+  "downloadPng": "Scarica PNG",
   "removeBg": "Rimuovi sfondo",
   "restoreBg": "Ripristina sfondo",
   "removeBgThresholdPrompt": "Soglia rimozione sfondo (%)",

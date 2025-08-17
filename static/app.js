@@ -3,6 +3,7 @@ import { initSignaturePlugin } from './plugins/mobilesign.js';
 import { initRemoveBgPlugin } from './plugins/removebg.js';
 import { initPdfCompressPlugin } from './plugins/compresspdf.js';
 import { initWatermarkPlugin } from './plugins/watermark.js';
+import { initDownloadPngPlugin } from './plugins/downloadpng.js';
 
 let scaling_factor_w;
 let scaling_factor_h;
@@ -298,6 +299,7 @@ let mobileSignEnabled = false;
 let remoteSignEnabled = false;
 let removeBgEnabled = false;
 let compressEnabled = false;
+let downloadPngEnabled = false;
 
 let translations = {};
 let currentLang = window.DC_LANG || 'it';
@@ -790,11 +792,15 @@ function applySettings(cfg) {
     remoteSignEnabled = !!cfg.enable_remotesign;
     removeBgEnabled = !!cfg.enable_removebg;
     watermarkEnabled = !!cfg.enable_watermark;
+    downloadPngEnabled = !!cfg.enable_downloadpng;
     if (typeof initRemoveBgPlugin === 'function' && Object.keys(translations).length) {
         initRemoveBgPlugin(translations, removeBgEnabled);
     }
     if (typeof initWatermarkPlugin === 'function' && Object.keys(translations).length) {
         initWatermarkPlugin(translations, watermarkEnabled);
+    }
+    if (typeof initDownloadPngPlugin === 'function' && Object.keys(translations).length) {
+        initDownloadPngPlugin(translations, downloadPngEnabled);
     }
     compressEnabled = !!cfg.enable_compresspdf && currentLicenseLevel !== 'free';
     if (cfg.update_interval !== undefined) {
@@ -1414,6 +1420,21 @@ function addThumbnail(src, index) {
         invertImage(idx);
     });
     actions.appendChild(invertBtnEl);
+
+    if (downloadPngEnabled) {
+        const dlBtnEl = document.createElement('button');
+        dlBtnEl.className = 'thumbBtn downloadBtn';
+        dlBtnEl.textContent = '⬇';
+        dlBtnEl.title = t('downloadPng');
+        dlBtnEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            if (typeof window.downloadPng === 'function') {
+                window.downloadPng(idx);
+            }
+        });
+        actions.appendChild(dlBtnEl);
+    }
 
     let thrWrap;
     if (removeBgEnabled) {
@@ -3363,6 +3384,7 @@ loadSettings().then(async (cfg) => {
     initRemoveBgPlugin(translations, removeBgEnabled);
     initPdfCompressPlugin(translations, compressEnabled);
     initWatermarkPlugin(translations, watermarkEnabled);
+    initDownloadPngPlugin(translations, downloadPngEnabled);
     renderPaymentBox(cfg);
     renderLicenseBox();
     renderLogin(cfg);

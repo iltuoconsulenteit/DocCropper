@@ -73,6 +73,7 @@ from plugins.removebg import register as register_removebg
 from plugins.compresspdf import register as register_compresspdf
 from plugins.watermark import register as register_watermark
 from plugins.login import register as register_login
+from plugins.downloadpng import register as register_downloadpng
 
 try:
     import stripe
@@ -390,6 +391,12 @@ def load_settings():
         docuseal_dev_env = os.getenv("DOCROPPER_DOCUSEAL_DEV_ONLY")
         if docuseal_dev_env is not None:
             merged["docuseal_dev_only"] = docuseal_dev_env.lower() == "true"
+        enable_downloadpng_env = os.getenv("DOCROPPER_ENABLE_DOWNLOADPNG")
+        if enable_downloadpng_env is not None:
+            merged["enable_downloadpng"] = enable_downloadpng_env.lower() == "true"
+        downloadpng_dev_env = os.getenv("DOCROPPER_DOWNLOADPNG_DEV_ONLY")
+        if downloadpng_dev_env is not None:
+            merged["downloadpng_dev_only"] = downloadpng_dev_env.lower() == "true"
         if stripe_secret:
             merged["stripe_secret_key"] = stripe_secret
         if stripe_publish:
@@ -472,7 +479,8 @@ def save_settings(update: dict):
     filtered = {k: v for k, v in update.items() if k not in overrides}
     plugin_fields = {
         'docuseal': ['enable_docuseal', 'docuseal_dev_only', 'docuseal_api_url', 'docuseal_api_key'],
-        'remotesign': ['enable_remotesign', 'remotesign_dev_only']
+        'remotesign': ['enable_remotesign', 'remotesign_dev_only'],
+        'downloadpng': ['enable_downloadpng', 'downloadpng_dev_only']
     }
     plugin_updates = {}
     for pname, keys in plugin_fields.items():
@@ -703,6 +711,8 @@ enable_compresspdf = str(os.getenv('DOCROPPER_ENABLE_COMPRESSPDF', settings.get(
 compresspdf_dev = str(os.getenv('DOCROPPER_COMPRESSPDF_DEV_ONLY', settings.get('compresspdf_dev_only', False))).lower() == 'true'
 enable_watermark = str(os.getenv('DOCROPPER_ENABLE_WATERMARK', settings.get('enable_watermark', False))).lower() == 'true'
 watermark_dev = str(os.getenv('DOCROPPER_WATERMARK_DEV_ONLY', settings.get('watermark_dev_only', False))).lower() == 'true'
+enable_downloadpng = str(os.getenv('DOCROPPER_ENABLE_DOWNLOADPNG', settings.get('enable_downloadpng', False))).lower() == 'true'
+downloadpng_dev = str(os.getenv('DOCROPPER_DOWNLOADPNG_DEV_ONLY', settings.get('downloadpng_dev_only', True))).lower() == 'true'
 
 if enable_sign and (not sign_dev or is_dev_license):
     register_sign(app, plugin_utils)
@@ -718,6 +728,8 @@ if enable_compresspdf and (not compresspdf_dev or is_dev_license) and settings.g
     register_compresspdf(app, plugin_utils)
 if enable_watermark and (not watermark_dev or is_dev_license):
     register_watermark(app, plugin_utils)
+if enable_downloadpng and (not downloadpng_dev or is_dev_license):
+    register_downloadpng(app, plugin_utils)
 
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):

@@ -263,3 +263,6 @@
 ## 2025-08-23
 - Separate Docuseal and remote command signing into individual dev-only plugins and move their settings into `plugins/` directories
 
+## 2025-08-24
+- Add dev-only plugin that lets users download individual thumbnails as transparent PNG files
+
