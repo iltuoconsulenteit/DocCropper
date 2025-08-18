@@ -481,7 +481,7 @@ def load_settings():
             if not merged.get("public_url"):
                 merged["public_url"] = "https://doccropper.iltuoconsulenteit.it"
         elif is_dev:
-            merged["license_level"] = "full"
+            merged["license_level"] = "developer"
             if not merged.get("license_name"):
                 merged["license_name"] = "Developer"
             merged["enable_mobilesign"] = True
@@ -536,7 +536,7 @@ def save_settings(update: dict):
         if not data.get("public_url"):
             data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
     elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
-        data["license_level"] = "full"
+        data["license_level"] = "developer"
         if not data.get("license_name"):
             data["license_name"] = "Developer"
         data["enable_mobilesign"] = True
@@ -1010,8 +1010,6 @@ async def settings_login(data: dict = Body(...)):
     settings = load_settings()
     hashed = settings.get("settings_password_hash", "")
     if hashed and bcrypt.verify(password, hashed):
-        if bcrypt.verify(DEFAULT_SETTINGS_PASSWORD, hashed):
-            raise HTTPException(status_code=403, detail="Change default settings password")
         return {"status": "ok"}
     raise HTTPException(status_code=403, detail="Invalid password")
 

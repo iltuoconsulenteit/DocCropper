@@ -295,3 +295,7 @@
 
 ## 2025-08-25
 - Group grayscale, black/white, and color thumbnail toggles into a pluggable color-mode module with enable and developer-only flags
+
+## 2025-08-18
+- Preserve the developer license level so dev-only plugins activate for developer keys
+- Allow the default general settings password to authenticate before a change
