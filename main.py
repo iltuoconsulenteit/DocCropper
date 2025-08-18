@@ -482,7 +482,7 @@ def load_settings():
         dev_env = get_dev_license_key()
         key_upper = merged.get("license_key", "").strip().upper()
         is_demo = key_upper == DEMO_FULL_LICENSE_KEY
-        is_dev = (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV")
+        is_dev = bool(dev_env) or key_upper.endswith("-DEV")
         if is_demo:
             merged["license_level"] = "full"
             merged["demo_full_mode"] = True
@@ -550,7 +550,7 @@ def save_settings(update: dict):
             data["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
         if not data.get("public_url"):
             data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
-    elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
+    elif bool(dev_env) or key_upper.endswith("-DEV"):
         data["license_level"] = "developer"
         if not data.get("license_name"):
             data["license_name"] = "Developer"
@@ -737,7 +737,7 @@ def compute_active_plugins(cfg: dict) -> list[str]:
     key_upper = cfg.get('license_key', '').strip().upper()
     dev_env = get_dev_license_key()
     level = cfg.get('license_level', '').strip().lower() or cfg.get('license_type', '').strip().lower()
-    is_dev = level == 'developer' or (dev_env and key_upper == dev_env) or key_upper.endswith('-DEV')
+    is_dev = level == 'developer' or key_upper.endswith('-DEV') or bool(dev_env)
 
     def allowed(enabled: bool, dev_only: bool) -> bool:
         return enabled and (not dev_only or is_dev)

@@ -85,7 +85,7 @@ def is_developer():
             data = json.load(fh)
         key = data.get('license_key', '').strip().upper()
         level = data.get('license_level', '').strip().lower()
-        dev_env = os.environ.get('DOCROPPER_DEV_LICENSE', '').upper()
+        dev_env = os.environ.get('DOCROPPER_DEV_LICENSE', '').strip().upper()
         masked = f"{key[:4]}..." if key else ""
         logging.info(
             "License check: level=%s key=%s env_dev=%s",
@@ -95,8 +95,8 @@ def is_developer():
         )
         return (
             level == 'developer'
-            or (dev_env and key == dev_env)
             or key.endswith('-DEV')
+            or bool(dev_env)
         )
     except Exception:
         logging.exception("Unable to read settings for developer check")
