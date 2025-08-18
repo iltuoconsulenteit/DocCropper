@@ -99,6 +99,7 @@ if [ -d "$TARGET_DIR/.git" ]; then
     echo "📥 Aggiornamento repository..."
     git -C "$TARGET_DIR" merge --abort >/dev/null 2>&1 || true
     git -C "$TARGET_DIR" rebase --abort >/dev/null 2>&1 || true
+    rm -f "$TARGET_DIR/db.sqlite3"
     git -C "$TARGET_DIR" fetch origin "$BRANCH"
     git -C "$TARGET_DIR" reset --hard "origin/$BRANCH"
     git -C "$TARGET_DIR" clean -fd
