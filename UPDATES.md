@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-02-14
+- Downscale large images before corner detection for faster cropping
+
 ## 2025-08-22
 - Optimize perspective crop responsiveness by preloading OpenCV and using a lighter interpolation mode
 

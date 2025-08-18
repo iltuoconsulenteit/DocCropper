@@ -32,6 +32,16 @@ def register(app, utils: dict[str, Any]):
         return rect
 
     def detect_document_corners(img):
+        h, w = img.shape[:2]
+        scale = 1.0
+        max_dim = max(w, h)
+        if max_dim > 1000:
+            scale = 1000.0 / max_dim
+            img = cv2.resize(
+                img,
+                (int(w * scale), int(h * scale)),
+                interpolation=cv2.INTER_AREA,
+            )
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (5, 5), 0)
         edged = cv2.Canny(gray, 50, 200)
@@ -41,7 +51,8 @@ def register(app, utils: dict[str, Any]):
             peri = cv2.arcLength(c, True)
             approx = cv2.approxPolyDP(c, 0.02 * peri, True)
             if len(approx) == 4:
-                return order_points(approx.reshape(4, 2))
+                pts = order_points(approx.reshape(4, 2))
+                return pts / scale
         return None
 
     @app.post("/detect-corners/")
