@@ -127,8 +127,7 @@ def save_license_overrides(update: dict) -> dict:
     return data
 
 # Developer license key for demonstration (case-insensitive)
-DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "")
-DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
+from license_utils import get_dev_license_key
 DEMO_FULL_LICENSE_KEY = "DEMO-FULL-DC"
 DEFAULT_SPONSOR_FRAME = (
     "https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2F"
@@ -466,7 +465,7 @@ def load_settings():
         if overrides:
             merged.update(overrides)
 
-        dev_env = DEV_LICENSE_KEY_UPPER
+        dev_env = get_dev_license_key()
         key_upper = merged.get("license_key", "").strip().upper()
         is_demo = key_upper == DEMO_FULL_LICENSE_KEY
         is_dev = (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV")
@@ -495,6 +494,8 @@ def load_settings():
         except Exception:
             logger.exception("sponsor plugin failed")
 
+        masked_key = key_upper[:4] + "..." if key_upper else "none"
+        logger.info("Loaded license %s (%s)", merged.get("license_level"), masked_key)
         return merged
     except Exception:
         return DEFAULT_SETTINGS.copy()
@@ -524,7 +525,7 @@ def save_settings(update: dict):
     if os.getenv("DOCROPPER_PUBLIC_URL"):
         data["public_url"] = os.getenv("DOCROPPER_PUBLIC_URL")
     key_upper = data.get("license_key", "").strip().upper()
-    dev_env = DEV_LICENSE_KEY_UPPER
+    dev_env = get_dev_license_key()
     if key_upper == DEMO_FULL_LICENSE_KEY:
         data["license_level"] = "full"
         data["demo_full_mode"] = True
@@ -719,7 +720,7 @@ plugin_utils = {
 settings = load_settings()
 ACTIVE_PLUGINS: list[str] = []
 key_upper = settings.get('license_key', '').strip().upper()
-dev_env = DEV_LICENSE_KEY_UPPER
+dev_env = get_dev_license_key()
 license_level = settings.get('license_level', '').strip().lower() or settings.get('license_type', '').strip().lower()
 is_dev_license = (
     license_level == 'developer'
@@ -1124,7 +1125,7 @@ async def create_pdf(
         settings = load_settings()
         key = settings.get("license_key", "").strip().upper()
         license_check = settings.get("license_check", False)
-        dev_env = DEV_LICENSE_KEY_UPPER
+        dev_env = get_dev_license_key()
         dev_key_valid = dev_env and key == dev_env
         demo_key = key == DEMO_FULL_LICENSE_KEY
         if license_check:
@@ -1472,7 +1473,7 @@ if __name__ == "__main__":
     port = args.port if args.port is not None else int(settings.get("port", 8765))
     host = args.host
     if settings.get("license_level", "free").lower() != "full":
-        dev_env = DEV_LICENSE_KEY_UPPER
+        dev_env = get_dev_license_key()
         key = settings.get("license_key", "").strip().upper()
         if not (dev_env and key == dev_env):
             host = "127.0.0.1"
