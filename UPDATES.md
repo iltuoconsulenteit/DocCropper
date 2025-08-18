@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-08-22
+- Optimize perspective crop responsiveness by preloading OpenCV and using a lighter interpolation mode
+
 ## 2025-08-21
 - Secure general settings behind `DOCROPPER_SETTINGS_PASSWORD` (default `12345678`) and expose a developer settings menu requiring the developer password; developer licenses now always load in-progress plugins
 
