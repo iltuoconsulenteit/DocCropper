@@ -469,9 +469,9 @@ def load_settings():
         if slides_env:
             merged["sponsor_slides"] = [s.strip() for s in slides_env.split(",") if s.strip()]
 
-        if "developer_password_hash" not in merged:
+        if not merged.get("developer_password_hash"):
             merged["developer_password_hash"] = bcrypt_hash(DEFAULT_DEV_PASSWORD)
-        if "settings_password_hash" not in merged:
+        if not merged.get("settings_password_hash"):
             merged["settings_password_hash"] = bcrypt_hash(DEFAULT_SETTINGS_PASSWORD)
 
         # Apply values enforced by a previous license check

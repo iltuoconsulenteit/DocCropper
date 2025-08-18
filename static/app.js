@@ -714,8 +714,8 @@ function applySettings(cfg) {
     }
     demoFullMode = !!cfg.demo_full_mode;
     const devLicense = ((cfg.license_key || '').toUpperCase().endsWith('-DEV')) ||
-        (cfg.license_level && cfg.license_level.toLowerCase() === 'developer') ||
-        (cfg.license_type && cfg.license_type.toLowerCase() === 'developer');
+        (cfg.license_level && cfg.license_level.toLowerCase().includes('developer')) ||
+        (cfg.license_type && cfg.license_type.toLowerCase().includes('developer'));
     if (devSettingsBtn) {
         devSettingsBtn.style.display = devLicense ? 'inline-block' : 'none';
     }
@@ -3462,8 +3462,8 @@ function renderLogin(cfg) {
         return;
     }
     const devLicense = (cfg.license_key || '').toUpperCase().endsWith('-DEV') ||
-        (cfg.license_level && cfg.license_level.toLowerCase() === 'developer') ||
-        (cfg.license_type && cfg.license_type.toLowerCase() === 'developer');
+        (cfg.license_level && cfg.license_level.toLowerCase().includes('developer')) ||
+        (cfg.license_type && cfg.license_type.toLowerCase().includes('developer'));
     if (cfg.login_dev_only && !devLicense) {
         loginArea.style.display = 'none';
         return;
