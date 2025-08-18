@@ -2,6 +2,7 @@
 
 ## 2025-08-18
 - Honor developer license after env load
+- Switch to native bcrypt for password hashes to avoid startup errors
 
 ## 2025-08-15
 - Add slide slogan

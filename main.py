@@ -38,7 +38,7 @@ import urllib.parse
 import socket
 from pathlib import Path
 import importlib
-from passlib.hash import bcrypt
+import bcrypt
 
 _cv2 = None
 _np = None
@@ -61,6 +61,17 @@ def get_fitz():
     if _fitz is None:
         _fitz = importlib.import_module("fitz")
     return _fitz
+
+
+def bcrypt_hash(password: str) -> str:
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+
+def bcrypt_verify(password: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(password.encode(), hashed.encode())
+    except Exception:
+        return False
 from plugins.sign import register as register_sign
 from app.licensing.check import verify_license
 from app.auth.routes import router as auth_router, fastapi_users
@@ -257,8 +268,11 @@ DEFAULT_SETTINGS = {
     "template": "static",
     "update_pin": "",
     "update_interval": 3600000,
-    "developer_password_hash": bcrypt.hash(DEFAULT_DEV_PASSWORD),
+    "developer_password_hash": None,
 }
+
+# Populate default developer password hash
+DEFAULT_SETTINGS["developer_password_hash"] = bcrypt_hash(DEFAULT_DEV_PASSWORD)
 
 def verify_license_server(key: str) -> bool:
     url = os.getenv("LICENSE_SERVER", "https://license.doccropper.it/verify")
@@ -456,9 +470,9 @@ def load_settings():
             merged["sponsor_slides"] = [s.strip() for s in slides_env.split(",") if s.strip()]
 
         if "developer_password_hash" not in merged:
-            merged["developer_password_hash"] = bcrypt.hash(DEFAULT_DEV_PASSWORD)
+            merged["developer_password_hash"] = bcrypt_hash(DEFAULT_DEV_PASSWORD)
         if "settings_password_hash" not in merged:
-            merged["settings_password_hash"] = bcrypt.hash(DEFAULT_SETTINGS_PASSWORD)
+            merged["settings_password_hash"] = bcrypt_hash(DEFAULT_SETTINGS_PASSWORD)
 
         # Apply values enforced by a previous license check
         overrides = load_license_overrides()
@@ -612,7 +626,7 @@ async def lifespan(app: FastAPI):
         user_db = SQLAlchemyUserDatabase(session, User)
         existing = await user_db.get_by_email(admin_email)
         if existing is None:
-            hashed = bcrypt.hash(admin_password)
+            hashed = bcrypt_hash(admin_password)
             admin = User(
                 email=admin_email,
                 hashed_password=hashed,
@@ -984,8 +998,8 @@ async def developer_login(data: dict = Body(...)):
     password = data.get("password", "")
     settings = load_settings()
     hashed = settings.get("developer_password_hash", "")
-    if hashed and bcrypt.verify(password, hashed):
-        if bcrypt.verify(DEFAULT_DEV_PASSWORD, hashed):
+    if hashed and bcrypt_verify(password, hashed):
+        if bcrypt_verify(DEFAULT_DEV_PASSWORD, hashed):
             raise HTTPException(status_code=403, detail="Change default developer password")
         return {"status": "ok"}
     raise HTTPException(status_code=403, detail="Invalid password")
@@ -999,9 +1013,9 @@ async def change_developer_password(data: dict = Body(...)):
         raise HTTPException(status_code=400, detail="New password required")
     settings = load_settings()
     hashed = settings.get("developer_password_hash", "")
-    if not hashed or not bcrypt.verify(old, hashed):
+    if not hashed or not bcrypt_verify(old, hashed):
         raise HTTPException(status_code=403, detail="Invalid password")
-    save_settings({"developer_password_hash": bcrypt.hash(new)})
+    save_settings({"developer_password_hash": bcrypt_hash(new)})
     return {"status": "updated"}
 
 
@@ -1010,7 +1024,7 @@ async def settings_login(data: dict = Body(...)):
     password = data.get("password", "")
     settings = load_settings()
     hashed = settings.get("settings_password_hash", "")
-    if hashed and bcrypt.verify(password, hashed):
+    if hashed and bcrypt_verify(password, hashed):
         return {"status": "ok"}
     raise HTTPException(status_code=403, detail="Invalid password")
 
@@ -1023,9 +1037,9 @@ async def change_settings_password(data: dict = Body(...)):
         raise HTTPException(status_code=400, detail="New password required")
     settings = load_settings()
     hashed = settings.get("settings_password_hash", "")
-    if not hashed or not bcrypt.verify(old, hashed):
+    if not hashed or not bcrypt_verify(old, hashed):
         raise HTTPException(status_code=403, detail="Invalid password")
-    save_settings({"settings_password_hash": bcrypt.hash(new)})
+    save_settings({"settings_password_hash": bcrypt_hash(new)})
     return {"status": "updated"}
 
 
