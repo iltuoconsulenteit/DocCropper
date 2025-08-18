@@ -1,6 +1,6 @@
 {
   "enable_docuseal": true,
-  "docuseal_dev_only": true,
+  "docuseal_dev_only": false,
   "docuseal_api_url": "",
   "docuseal_api_key": ""
 }
