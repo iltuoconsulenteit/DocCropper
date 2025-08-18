@@ -26,4 +26,12 @@ if exist "%TRAY_PID_FILE%" (
     del "%TRAY_PID_FILE%" >nul 2>&1
     echo Tray helper stopped
 )
+
+REM Fallback if PID files missing: search processes by script name
+if not exist "%PID_FILE%" (
+    for /f "tokens=2 delims=," %%p in ('tasklist /FI "IMAGENAME eq python.exe" /FO CSV ^| findstr /I "main.py"') do taskkill /F /PID %%p >nul 2>&1
+)
+if not exist "%TRAY_PID_FILE%" (
+    for /f "tokens=2 delims=," %%p in ('tasklist /FI "IMAGENAME eq pythonw.exe" /FO CSV ^| findstr /I "doccropper_tray"') do taskkill /F /PID %%p >nul 2>&1
+)
 endlocal

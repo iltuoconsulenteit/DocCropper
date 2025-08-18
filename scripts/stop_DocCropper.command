@@ -35,3 +35,19 @@ if [ -f "$TRAY_PID_FILE" ]; then
   rm -f "$TRAY_PID_FILE" 2>/dev/null || sudo -n rm -f "$TRAY_PID_FILE"
   echo "Stopped tray helper"
 fi
+
+if [ ! -f "$PID_FILE" ]; then
+  PIDS=$(pgrep -f "$APP_DIR/main.py" || true)
+  if [ -n "$PIDS" ]; then
+    echo "Stopping DocCropper processes: $PIDS"
+    kill $PIDS 2>/dev/null || sudo kill $PIDS || true
+  fi
+fi
+
+if [ ! -f "$TRAY_PID_FILE" ]; then
+  TPIDS=$(pgrep -f doccropper_tray || true)
+  if [ -n "$TPIDS" ]; then
+    kill $TPIDS 2>/dev/null || sudo kill $TPIDS || true
+    echo "Stopped stray tray helper ($TPIDS)"
+  fi
+fi
