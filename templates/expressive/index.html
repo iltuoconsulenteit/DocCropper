@@ -104,6 +104,7 @@
           <option value="en">EN</option>
           <option value="it" selected>IT</option>
         </select>
+        <button id="settingsBtn" class="text-xs underline" style="display:none" x-text="t('settings')"></button>
         <button id="devSettingsBtn" class="text-xs underline" style="display:none" x-text="t('developerSettings')"></button>
         <button @click="openUpdateModal('update')" :class="{'text-yellow-400': updateAvailable}" title="Update">🔔</button>
       </header>

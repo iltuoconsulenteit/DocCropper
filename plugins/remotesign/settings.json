@@ -1,4 +1,4 @@
 {
-  "enable_remotesign": false,
+  "enable_remotesign": true,
   "remotesign_dev_only": true
 }

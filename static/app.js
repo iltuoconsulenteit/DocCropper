@@ -865,7 +865,7 @@ function applySettings(cfg) {
         }
     }
     if (settingsBtn) {
-        settingsBtn.style.display = demoFullMode ? 'none' : 'inline-block';
+        settingsBtn.style.display = (demoFullMode && !devLicense) ? 'none' : 'inline-block';
     }
 }
 

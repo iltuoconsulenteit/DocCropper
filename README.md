@@ -150,6 +150,7 @@ The developer settings are protected by `DOCROPPER_DEV_PASSWORD`, which defaults
 Once changed, authenticate with `/developer-login/` by sending `{ "password": "your-strong-password" }`. Logging in while the default password is active returns an error until the password is replaced.
 
 The general settings panel is similarly secured with `DOCROPPER_SETTINGS_PASSWORD` (default `12345678`). Change it via `/settings-password/` and unlock with `/settings-login/` before editing settings.
+In developer installations a Settings button in the header opens this panel and requests the default password.
 
 ### Required environment variables
 
@@ -372,6 +373,7 @@ may be enabled individually using the `DOCROPPER_ENABLE_*` variables or the
 matching keys in `settings.json`. Every plugin also supports a
 `DOCROPPER_<NAME>_DEV_ONLY` flag (or `<name>_dev_only` setting) so unfinished
 features remain visible only to developer licenses until promoted.
+Development builds ship with all plugins enabled, letting developer licenses test new modules without manual configuration.
 
 Plugins include:
 `sign` for local page stamping, `mobilesign` for signing from a smartphone,
