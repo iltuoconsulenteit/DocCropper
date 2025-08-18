@@ -731,85 +731,77 @@ plugin_utils = {
     'MAX_UPLOAD_BYTES': MAX_UPLOAD_BYTES,
 }
 
+
+def compute_active_plugins(cfg: dict) -> list[str]:
+    """Determine which plugins should be active for the given settings."""
+    key_upper = cfg.get('license_key', '').strip().upper()
+    dev_env = get_dev_license_key()
+    level = cfg.get('license_level', '').strip().lower() or cfg.get('license_type', '').strip().lower()
+    is_dev = level == 'developer' or (dev_env and key_upper == dev_env) or key_upper.endswith('-DEV')
+
+    def allowed(enabled: bool, dev_only: bool) -> bool:
+        return enabled and (not dev_only or is_dev)
+
+    active: list[str] = []
+    if allowed(True, cfg.get('crop_dev_only', False)):
+        active.append('crop')
+    if allowed(cfg.get('license_check', False), cfg.get('login_dev_only', True)):
+        active.append('login')
+    if allowed(cfg.get('enable_sign', True), cfg.get('sign_dev_only', False)):
+        active.append('sign')
+    if allowed(cfg.get('enable_mobilesign', False), cfg.get('mobilesign_dev_only', False)):
+        active.append('mobilesign')
+    if allowed(cfg.get('enable_remotesign', False), cfg.get('remotesign_dev_only', True)):
+        active.append('remotesign')
+    if allowed(cfg.get('enable_docuseal', False), cfg.get('docuseal_dev_only', True)):
+        active.append('docuseal')
+    if allowed(cfg.get('enable_removebg', False), cfg.get('removebg_dev_only', False)):
+        active.append('removebg')
+    if allowed(cfg.get('enable_compresspdf', False), cfg.get('compresspdf_dev_only', False)) and cfg.get('license_level', 'free').lower() != 'free':
+        active.append('compresspdf')
+    if allowed(cfg.get('enable_watermark', False), cfg.get('watermark_dev_only', False)):
+        active.append('watermark')
+    if allowed(cfg.get('enable_downloadpng', False), cfg.get('downloadpng_dev_only', True)):
+        active.append('downloadpng')
+    if allowed(cfg.get('enable_pageselect', True), cfg.get('pageselect_dev_only', False)):
+        active.append('pageselect')
+    if allowed(cfg.get('enable_colormode', True), cfg.get('colormode_dev_only', False)):
+        active.append('colormode')
+    if allowed(cfg.get('enable_imageeditor', True), cfg.get('imageeditor_dev_only', True)):
+        active.append('imageeditor')
+    return active
+
+
 settings = load_settings()
-ACTIVE_PLUGINS: list[str] = []
-key_upper = settings.get('license_key', '').strip().upper()
-dev_env = get_dev_license_key()
-license_level = settings.get('license_level', '').strip().lower() or settings.get('license_type', '').strip().lower()
-is_dev_license = (
-    license_level == 'developer'
-    or (dev_env and key_upper == dev_env)
-    or key_upper.endswith('-DEV')
-)
+ACTIVE_PLUGINS: list[str] = compute_active_plugins(settings)
 
-crop_dev = str(os.getenv('DOCROPPER_CROP_DEV_ONLY', settings.get('crop_dev_only', False))).lower() == 'true'
-if not crop_dev or is_dev_license:
+if 'crop' in ACTIVE_PLUGINS:
     register_crop(app, plugin_utils)
-    ACTIVE_PLUGINS.append('crop')
-
-enable_login = settings.get('license_check', False)
-login_dev = str(os.getenv('DOCROPPER_LOGIN_DEV_ONLY', settings.get('login_dev_only', True))).lower() == 'true'
-if enable_login and (not login_dev or is_dev_license):
+if 'login' in ACTIVE_PLUGINS:
     register_login(app, plugin_utils)
-    ACTIVE_PLUGINS.append('login')
-
-enable_sign = str(os.getenv('DOCROPPER_ENABLE_SIGN', settings.get('enable_sign', True))).lower() != 'false'
-sign_dev = str(os.getenv('DOCROPPER_SIGN_DEV_ONLY', settings.get('sign_dev_only', False))).lower() == 'true'
-enable_mobilesign = str(os.getenv('DOCROPPER_ENABLE_MOBILESIGN', settings.get('enable_mobilesign', False))).lower() == 'true'
-mobilesign_dev = str(os.getenv('DOCROPPER_MOBILESIGN_DEV_ONLY', settings.get('mobilesign_dev_only', False))).lower() == 'true'
-enable_remotesign = str(os.getenv('DOCROPPER_ENABLE_REMOTESIGN', settings.get('enable_remotesign', False))).lower() == 'true'
-remotesign_dev = str(os.getenv('DOCROPPER_REMOTESIGN_DEV_ONLY', settings.get('remotesign_dev_only', True))).lower() == 'true'
-enable_docuseal = str(os.getenv('DOCROPPER_ENABLE_DOCUSEAL', settings.get('enable_docuseal', False))).lower() == 'true'
-docuseal_dev = str(os.getenv('DOCROPPER_DOCUSEAL_DEV_ONLY', settings.get('docuseal_dev_only', True))).lower() == 'true'
-enable_removebg = str(os.getenv('DOCROPPER_ENABLE_REMOVEBG', settings.get('enable_removebg', False))).lower() == 'true'
-removebg_dev = str(os.getenv('DOCROPPER_REMOVEBG_DEV_ONLY', settings.get('removebg_dev_only', False))).lower() == 'true'
-enable_compresspdf = str(os.getenv('DOCROPPER_ENABLE_COMPRESSPDF', settings.get('enable_compresspdf', False))).lower() == 'true'
-compresspdf_dev = str(os.getenv('DOCROPPER_COMPRESSPDF_DEV_ONLY', settings.get('compresspdf_dev_only', False))).lower() == 'true'
-enable_watermark = str(os.getenv('DOCROPPER_ENABLE_WATERMARK', settings.get('enable_watermark', False))).lower() == 'true'
-watermark_dev = str(os.getenv('DOCROPPER_WATERMARK_DEV_ONLY', settings.get('watermark_dev_only', False))).lower() == 'true'
-enable_downloadpng = str(os.getenv('DOCROPPER_ENABLE_DOWNLOADPNG', settings.get('enable_downloadpng', False))).lower() == 'true'
-downloadpng_dev = str(os.getenv('DOCROPPER_DOWNLOADPNG_DEV_ONLY', settings.get('downloadpng_dev_only', True))).lower() == 'true'
-enable_pageselect = str(os.getenv('DOCROPPER_ENABLE_PAGESELECT', settings.get('enable_pageselect', True))).lower() == 'true'
-pageselect_dev = str(os.getenv('DOCROPPER_PAGESELECT_DEV_ONLY', settings.get('pageselect_dev_only', False))).lower() == 'true'
-enable_colormode = str(os.getenv('DOCROPPER_ENABLE_COLORMODE', settings.get('enable_colormode', True))).lower() == 'true'
-colormode_dev = str(os.getenv('DOCROPPER_COLORMODE_DEV_ONLY', settings.get('colormode_dev_only', False))).lower() == 'true'
-enable_imageeditor = str(os.getenv('DOCROPPER_ENABLE_IMAGEEDITOR', settings.get('enable_imageeditor', True))).lower() == 'true'
-imageeditor_dev = str(os.getenv('DOCROPPER_IMAGEEDITOR_DEV_ONLY', settings.get('imageeditor_dev_only', True))).lower() == 'true'
-
-if enable_sign and (not sign_dev or is_dev_license):
+if 'sign' in ACTIVE_PLUGINS:
     register_sign(app, plugin_utils)
-    ACTIVE_PLUGINS.append('sign')
-if enable_mobilesign and (not mobilesign_dev or is_dev_license):
+if 'mobilesign' in ACTIVE_PLUGINS:
     register_mobilesign(app, plugin_utils)
-    ACTIVE_PLUGINS.append('mobilesign')
-if enable_remotesign and (not remotesign_dev or is_dev_license):
+if 'remotesign' in ACTIVE_PLUGINS:
     register_remotesign(app, plugin_utils)
-    ACTIVE_PLUGINS.append('remotesign')
-if enable_docuseal and (not docuseal_dev or is_dev_license):
+if 'docuseal' in ACTIVE_PLUGINS:
     register_docuseal(app, plugin_utils)
-    ACTIVE_PLUGINS.append('docuseal')
-if enable_removebg and (not removebg_dev or is_dev_license):
+if 'removebg' in ACTIVE_PLUGINS:
     register_removebg(app, plugin_utils)
-    ACTIVE_PLUGINS.append('removebg')
-if enable_compresspdf and (not compresspdf_dev or is_dev_license) and settings.get('license_level', 'free').lower() != 'free':
+if 'compresspdf' in ACTIVE_PLUGINS:
     register_compresspdf(app, plugin_utils)
-    ACTIVE_PLUGINS.append('compresspdf')
-if enable_watermark and (not watermark_dev or is_dev_license):
+if 'watermark' in ACTIVE_PLUGINS:
     register_watermark(app, plugin_utils)
-    ACTIVE_PLUGINS.append('watermark')
-if enable_downloadpng and (not downloadpng_dev or is_dev_license):
+if 'downloadpng' in ACTIVE_PLUGINS:
     register_downloadpng(app, plugin_utils)
-    ACTIVE_PLUGINS.append('downloadpng')
-if enable_pageselect and (not pageselect_dev or is_dev_license):
+if 'pageselect' in ACTIVE_PLUGINS:
     register_pageselect(app, plugin_utils)
-    ACTIVE_PLUGINS.append('pageselect')
-if enable_colormode and (not colormode_dev or is_dev_license):
+if 'colormode' in ACTIVE_PLUGINS:
     register_colormode(app, plugin_utils)
-    ACTIVE_PLUGINS.append('colormode')
-if enable_imageeditor and (not imageeditor_dev or is_dev_license):
+if 'imageeditor' in ACTIVE_PLUGINS:
     from plugins.imageeditor import register as register_imageeditor
     register_imageeditor(app, plugin_utils)
-    ACTIVE_PLUGINS.append('imageeditor')
 
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):
@@ -902,12 +894,12 @@ async def admin_page(user: User = Depends(require_superuser)):
 @app.get("/settings/")
 async def get_settings():
     data = load_settings()
+    data["active_plugins"] = compute_active_plugins(data)
     if not data.get("license_check") and not data.get("license_key"):
         data["license_key"] = "FREE"
         data["license_name"] = "Free Edition"
     data["version"] = VERSION
     data["version_date"] = VERSION_DATE
-    data["active_plugins"] = ACTIVE_PLUGINS
     if "stripe_secret_key" in data:
         data.pop("stripe_secret_key")
     return data
