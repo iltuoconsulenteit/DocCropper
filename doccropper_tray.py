@@ -84,9 +84,22 @@ def is_developer():
         with open(settings_file) as fh:
             data = json.load(fh)
         key = data.get('license_key', '').strip().upper()
-        dev = os.environ.get('DOCROPPER_DEV_LICENSE', '').upper()
-        return (dev and key == dev) or key.endswith('-DEV')
+        level = data.get('license_level', '').strip().lower()
+        dev_env = os.environ.get('DOCROPPER_DEV_LICENSE', '').upper()
+        masked = f"{key[:4]}..." if key else ""
+        logging.info(
+            "License check: level=%s key=%s env_dev=%s",
+            level or "",
+            masked,
+            bool(dev_env),
+        )
+        return (
+            level == 'developer'
+            or (dev_env and key == dev_env)
+            or key.endswith('-DEV')
+        )
     except Exception:
+        logging.exception("Unable to read settings for developer check")
         return False
 
 def run_script(name, env=None, folder=INSTALL_DIR):
