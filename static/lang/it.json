@@ -227,6 +227,16 @@
   "invalidPassword": "Password non valida",
   "enableImageEditor": "Abilita editor immagini",
   "enablePageSelect": "Abilita selezione pagine",
-  "enableDownloadPng": "Abilita download PNG"
+  "enableDownloadPng": "Abilita download PNG",
+  "enableSign": "Abilita firma",
+  "enableMobileSign": "Abilita firma mobile",
+  "enableRemoveBg": "Abilita rimozione sfondo",
+  "enableCompressPdf": "Abilita compressione PDF",
+  "enableRemoteSign": "Abilita firma remota",
+  "enableDocuSeal": "Abilita DocuSeal",
+  "enableWatermark": "Abilita watermark",
+  "enableColorMode": "Abilita modalità colore",
+  "languageLabel": "Lingua predefinita",
+  "maxUploadMb": "Limite upload MB"
 }
 

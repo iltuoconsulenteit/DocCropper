@@ -227,5 +227,15 @@
   "invalidPassword": "Invalid password",
   "enableImageEditor": "Enable image editor",
   "enablePageSelect": "Enable page selection",
-  "enableDownloadPng": "Enable PNG download"
+  "enableDownloadPng": "Enable PNG download",
+  "enableSign": "Enable signing",
+  "enableMobileSign": "Enable mobile signing",
+  "enableRemoveBg": "Enable background removal",
+  "enableCompressPdf": "Enable PDF compression",
+  "enableRemoteSign": "Enable remote signing",
+  "enableDocuSeal": "Enable DocuSeal",
+  "enableWatermark": "Enable watermark",
+  "enableColorMode": "Enable color modes",
+  "languageLabel": "Default language",
+  "maxUploadMb": "Max upload MB"
 }

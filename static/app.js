@@ -3352,6 +3352,13 @@ function renderSettingsBox() {
     const level = currentSettings.license_level || 'free';
     const html = `
     <div class="settingsForm">
+        <label>${t('languageLabel')}</label>
+        <select id="langSelect">
+            <option value="it" ${currentSettings.language==='it'?'selected':''}>Italiano</option>
+            <option value="en" ${currentSettings.language==='en'?'selected':''}>English</option>
+        </select>
+        <label>${t('maxUploadMb')}</label>
+        <input type="number" id="maxUploadMbInput" value="${currentSettings.max_upload_mb || 5}" min="1">
         <label>${t('licenseType')}</label>
         <select id="licenseLevelSelect">
             <option value="free" ${level==='free'?'selected':''}>${t('freeEdition')}</option>
@@ -3379,6 +3386,8 @@ function renderSettingsBox() {
     const levelSelect = document.getElementById('licenseLevelSelect');
     const googleDiv = document.getElementById('googleSettings');
     const docusealDiv = document.getElementById('docusealSettings');
+    const langSelect = document.getElementById('langSelect');
+    const maxUploadInput = document.getElementById('maxUploadMbInput');
     levelSelect.addEventListener('change', () => {
         const val = levelSelect.value;
         googleDiv.style.display = (val === 'pro' || val === 'full') ? 'block' : 'none';
@@ -3386,7 +3395,11 @@ function renderSettingsBox() {
     });
     document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
         const lvl = levelSelect.value;
-        const update = { license_level: lvl };
+        const update = {
+            license_level: lvl,
+            language: langSelect.value,
+            max_upload_mb: parseInt(maxUploadInput.value, 10)
+        };
         if (lvl === 'pro' || lvl === 'full') {
             update.google_client_id = document.getElementById('googleClientIdInput').value.trim();
         } else {
@@ -3409,21 +3422,31 @@ function renderSettingsBox() {
 }
 
 function renderDevSettingsBox() {
-    const html = `
-    <div class="settings-content">
-        <label><input type="checkbox" id="enableImageEditorChk" ${currentSettings.enable_imageeditor?'checked':''}> ${t('enableImageEditor')}</label>
-        <label><input type="checkbox" id="enablePageSelectChk" ${currentSettings.enable_pageselect?'checked':''}> ${t('enablePageSelect')}</label>
-        <label><input type="checkbox" id="enableDownloadPngChk" ${currentSettings.enable_downloadpng?'checked':''}> ${t('enableDownloadPng')}</label>
-        <button id="saveDevSettingsBtn">${t('saveSettings')}</button>
-    </div>`;
+    const plugins = [
+        { key: 'enable_sign', label: 'enableSign' },
+        { key: 'enable_mobilesign', label: 'enableMobileSign' },
+        { key: 'enable_removebg', label: 'enableRemoveBg' },
+        { key: 'enable_compresspdf', label: 'enableCompressPdf' },
+        { key: 'enable_remotesign', label: 'enableRemoteSign' },
+        { key: 'enable_docuseal', label: 'enableDocuSeal' },
+        { key: 'enable_watermark', label: 'enableWatermark' },
+        { key: 'enable_pageselect', label: 'enablePageSelect' },
+        { key: 'enable_colormode', label: 'enableColorMode' },
+        { key: 'enable_imageeditor', label: 'enableImageEditor' },
+        { key: 'enable_downloadpng', label: 'enableDownloadPng' }
+    ];
+    let html = '<div class="settings-content">';
+    plugins.forEach(p => {
+        html += `<label><input type="checkbox" id="${p.key}Chk" ${currentSettings[p.key]?'checked':''}> ${t(p.label)}</label>`;
+    });
+    html += `<button id="saveDevSettingsBtn">${t('saveSettings')}</button></div>`;
     devSettingsBox.innerHTML = html;
     devSettingsBox.style.display = 'block';
     document.getElementById('saveDevSettingsBtn').addEventListener('click', async () => {
-        const update = {
-            enable_imageeditor: document.getElementById('enableImageEditorChk').checked,
-            enable_pageselect: document.getElementById('enablePageSelectChk').checked,
-            enable_downloadpng: document.getElementById('enableDownloadPngChk').checked
-        };
+        const update = {};
+        plugins.forEach(p => {
+            update[p.key] = document.getElementById(p.key + 'Chk').checked;
+        });
         await saveSettings(update);
         const cfg = await loadSettings();
         applySettings(cfg);
