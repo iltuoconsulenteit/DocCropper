@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-08-18
+- Expose `active_plugins` in settings so the frontend shows developer-only tools when licensed and hides disabled plugins automatically
+
 ## 2025-02-14
 - Downscale large images before corner detection for faster cropping
 

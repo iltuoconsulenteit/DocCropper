@@ -288,7 +288,7 @@ To activate Pro or Full editions:
      developer key is active the tray menu includes an **Update Branch** option.
 - Mobile signing is enabled automatically when a developer key is used
 - Set `LICENSE_CHECK=true` in your `.env` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
-If the server response includes a `plugins` map, DocCropper will automatically enable or disable the corresponding `enable_<plugin>` settings.
+If the server response includes an `active_plugins` list, DocCropper automatically shows buttons for those modules and hides tools for any plugins that are disabled or unlicensed. Developer builds therefore see in-progress plugins while production installations do not.
 
 ### License verification via Joomla + Fabrik with a user token
 

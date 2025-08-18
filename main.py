@@ -717,6 +717,7 @@ plugin_utils = {
 }
 
 settings = load_settings()
+ACTIVE_PLUGINS: list[str] = []
 key_upper = settings.get('license_key', '').strip().upper()
 dev_env = DEV_LICENSE_KEY_UPPER
 license_level = settings.get('license_level', '').strip().lower() or settings.get('license_type', '').strip().lower()
@@ -729,11 +730,13 @@ is_dev_license = (
 crop_dev = str(os.getenv('DOCROPPER_CROP_DEV_ONLY', settings.get('crop_dev_only', False))).lower() == 'true'
 if not crop_dev or is_dev_license:
     register_crop(app, plugin_utils)
+    ACTIVE_PLUGINS.append('crop')
 
 enable_login = settings.get('license_check', False)
 login_dev = str(os.getenv('DOCROPPER_LOGIN_DEV_ONLY', settings.get('login_dev_only', True))).lower() == 'true'
 if enable_login and (not login_dev or is_dev_license):
     register_login(app, plugin_utils)
+    ACTIVE_PLUGINS.append('login')
 
 enable_sign = str(os.getenv('DOCROPPER_ENABLE_SIGN', settings.get('enable_sign', True))).lower() != 'false'
 sign_dev = str(os.getenv('DOCROPPER_SIGN_DEV_ONLY', settings.get('sign_dev_only', False))).lower() == 'true'
@@ -760,27 +763,38 @@ imageeditor_dev = str(os.getenv('DOCROPPER_IMAGEEDITOR_DEV_ONLY', settings.get('
 
 if enable_sign and (not sign_dev or is_dev_license):
     register_sign(app, plugin_utils)
+    ACTIVE_PLUGINS.append('sign')
 if enable_mobilesign and (not mobilesign_dev or is_dev_license):
     register_mobilesign(app, plugin_utils)
+    ACTIVE_PLUGINS.append('mobilesign')
 if enable_remotesign and (not remotesign_dev or is_dev_license):
     register_remotesign(app, plugin_utils)
+    ACTIVE_PLUGINS.append('remotesign')
 if enable_docuseal and (not docuseal_dev or is_dev_license):
     register_docuseal(app, plugin_utils)
+    ACTIVE_PLUGINS.append('docuseal')
 if enable_removebg and (not removebg_dev or is_dev_license):
     register_removebg(app, plugin_utils)
+    ACTIVE_PLUGINS.append('removebg')
 if enable_compresspdf and (not compresspdf_dev or is_dev_license) and settings.get('license_level', 'free').lower() != 'free':
     register_compresspdf(app, plugin_utils)
+    ACTIVE_PLUGINS.append('compresspdf')
 if enable_watermark and (not watermark_dev or is_dev_license):
     register_watermark(app, plugin_utils)
+    ACTIVE_PLUGINS.append('watermark')
 if enable_downloadpng and (not downloadpng_dev or is_dev_license):
     register_downloadpng(app, plugin_utils)
+    ACTIVE_PLUGINS.append('downloadpng')
 if enable_pageselect and (not pageselect_dev or is_dev_license):
     register_pageselect(app, plugin_utils)
+    ACTIVE_PLUGINS.append('pageselect')
 if enable_colormode and (not colormode_dev or is_dev_license):
     register_colormode(app, plugin_utils)
+    ACTIVE_PLUGINS.append('colormode')
 if enable_imageeditor and (not imageeditor_dev or is_dev_license):
     from plugins.imageeditor import register as register_imageeditor
     register_imageeditor(app, plugin_utils)
+    ACTIVE_PLUGINS.append('imageeditor')
 
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):
@@ -878,6 +892,7 @@ async def get_settings():
         data["license_name"] = "Free Edition"
     data["version"] = VERSION
     data["version_date"] = VERSION_DATE
+    data["active_plugins"] = ACTIVE_PLUGINS
     if "stripe_secret_key" in data:
         data.pop("stripe_secret_key")
     return data

@@ -802,16 +802,17 @@ function applySettings(cfg) {
     if (cfg.version_date) {
         appVersionDate = cfg.version_date;
     }
-    docusealEnabled = !!cfg.enable_docuseal && !!cfg.docuseal_api_url;
-    signEnabled = cfg.enable_sign !== false;
-    mobileSignEnabled = !!cfg.enable_mobilesign;
-    remoteSignEnabled = !!cfg.enable_remotesign;
-    removeBgEnabled = !!cfg.enable_removebg;
-    watermarkEnabled = !!cfg.enable_watermark;
-    downloadPngEnabled = !!cfg.enable_downloadpng;
-    pageSelectEnabled = !!cfg.enable_pageselect && currentLicenseLevel !== 'free';
-    colorModePluginEnabled = !!cfg.enable_colormode && isLicensed && currentLicenseLevel !== 'free';
-    imageEditorEnabled = !!cfg.enable_imageeditor;
+    const activePlugins = cfg.active_plugins || [];
+    docusealEnabled = activePlugins.includes('docuseal') && !!cfg.docuseal_api_url;
+    signEnabled = activePlugins.includes('sign');
+    mobileSignEnabled = activePlugins.includes('mobilesign');
+    remoteSignEnabled = activePlugins.includes('remotesign');
+    removeBgEnabled = activePlugins.includes('removebg');
+    watermarkEnabled = activePlugins.includes('watermark');
+    downloadPngEnabled = activePlugins.includes('downloadpng');
+    pageSelectEnabled = activePlugins.includes('pageselect');
+    colorModePluginEnabled = activePlugins.includes('colormode');
+    imageEditorEnabled = activePlugins.includes('imageeditor');
     if (typeof initRemoveBgPlugin === 'function' && Object.keys(translations).length) {
         initRemoveBgPlugin(translations, removeBgEnabled);
     }
@@ -830,7 +831,7 @@ function applySettings(cfg) {
     if (typeof initImageEditorPlugin === 'function') {
         initImageEditorPlugin(translations, imageEditorEnabled);
     }
-    compressEnabled = !!cfg.enable_compresspdf && currentLicenseLevel !== 'free';
+    compressEnabled = activePlugins.includes('compresspdf');
     if (cfg.update_interval !== undefined) {
         updateInterval = parseInt(cfg.update_interval);
     }
