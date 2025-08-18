@@ -1,42 +1,7 @@
 # Updates
 
-## 2025-08-19
-- Enable DocuSeal and remote signing plugins by default so developer licenses reveal them immediately
-- Add a Settings button for developer builds and wire it into the Expressive template
-
 ## 2025-08-18
-- Expose `active_plugins` in settings so the frontend shows developer-only tools when licensed and hides disabled plugins automatically
-
-## 2025-02-14
-- Downscale large images before corner detection for faster cropping
-
-## 2025-08-22
-- Optimize perspective crop responsiveness by preloading OpenCV and using a lighter interpolation mode
-
-## 2025-08-21
-- Secure general settings behind `DOCROPPER_SETTINGS_PASSWORD` (default `12345678`) and expose a developer settings menu requiring the developer password; developer licenses now always load in-progress plugins
-
-## 2025-08-20
-- Treat "developer" license level as dev key so in-progress plugins like page select are visible to dev installs
-- Center layout toggle icon and equalize action button heights across the gallery controls
-- Replace watermark emoji with stamp icon and move watermark settings into a dedicated plugin config
-- Adjust thumbnail checkbox so developer builds show the selection dot
-- Add experimental image editor plugin with saturation and sharpness controls
-
-## 2025-08-19
-- Allow selecting individual thumbnails for partial PDF export, automatically choosing all pages when none are selected
-
-## 2025-08-18
-- Convert Google login into a plugin guarded by `login_dev_only` so authentication is available only on developer builds
-
-## 2025-08-17
-- Move Add/Import button to the start of the controls, show a + icon with tooltip, and fix its import action on mobile and desktop
-- Default sponsor frame embeds latest Facebook post and sponsored licenses require internet connectivity
-
-## 2025-08-16
-- Show sponsor frame as persistent gallery preview that trails user images and is skipped during export
-- Add script to generate updates log from git history
-- Serve UPDATES.md, gate login behind license check, add update bell, optimize startup, restore Linux tray icon, polish Sponsor page, and add rollback option
+- Honor developer license after env load
 
 ## 2025-08-15
 - Add slide slogan
@@ -261,41 +226,5 @@
 - Add input source options for upload, scanner, and camera
 - Add OCR feature with language support
 - Add optional PDF signing
+- Add Node OAuth login example
 
-## 2025-08-16
-- Scale sponsor frame and show it on startup without importing files
-- Restore loading overlay for the Expressive template so imports show progress
-
-## 2025-08-17
-- Embed sponsor frame as a gallery thumbnail and add settings for frame and preview dimensions
-
-## 2025-08-18
-- Keep the sponsor preview visible on startup in the Expressive template and restyle gallery controls with colored icons for import, blank-page removal, clearing images, and layout toggling
-
-## 2025-08-19
-- Delete session folders immediately after clearing the gallery to remove residual data
-- Reduce default upload limit to 5&nbsp;MB per file and make it configurable via `max_upload_mb`
-- Remove debug console logs to avoid leaking sensitive information
-
-## 2025-08-20
-- Add plugin-based sponsor slot that adapts to license settings (Facebook, Instagram, landing page, banner, slide or image) and can be disabled when no advertising is desired
-
-## 2025-08-21
-- Introduce developer-only flags for plugins so new modules stay hidden unless a developer license is used
-
-## 2025-08-22
-- Secure developer settings with a default `DOCROPPER_DEV_PASSWORD` (87654321) and add API endpoints to force a password change before use
-
-## 2025-08-23
-- Separate Docuseal and remote command signing into individual dev-only plugins and move their settings into `plugins/` directories
-
-## 2025-08-24
-- Add dev-only plugin that lets users download individual thumbnails as transparent PNG files
-
-
-## 2025-08-25
-- Group grayscale, black/white, and color thumbnail toggles into a pluggable color-mode module with enable and developer-only flags
-
-## 2025-08-18
-- Preserve the developer license level so dev-only plugins activate for developer keys
-- Allow the default general settings password to authenticate before a change
