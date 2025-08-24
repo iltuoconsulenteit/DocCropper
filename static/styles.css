@@ -316,7 +316,10 @@ button:hover {
     width: 16px;
     height: 16px;
     border-radius: 50%;
+    background: #fff;
+    border: 1px solid #666;
     z-index: 2;
+    cursor: pointer;
 }
 
 .deleteBtn {
