@@ -22,6 +22,10 @@ if not exist "!APP_DIR!\env\auth.env" (
     )
 )
 
+if exist "!APP_DIR!\env\developer.env" (
+    for /f "delims=" %%e in (!APP_DIR!\env\developer.env) do set %%e
+)
+
 if not exist main.py (
     echo [ERROR] main.py not found in !APP_DIR!
     pause
@@ -33,6 +37,11 @@ set "LOG_FILE=%TEMP%\DocCropper_start.log"
 echo [INFO] Avvio DocCropper > "!LOG_FILE!"
 echo [INFO] Directory script: !SCRIPT_DIR! >> "!LOG_FILE!"
 echo [INFO] Directory app: !APP_DIR! >> "!LOG_FILE!"
+
+for /f %%v in ('git rev-parse --short HEAD 2^>nul') do set "APP_VERSION=%%v"
+echo [INFO] Versione: !APP_VERSION! >> "!LOG_FILE!"
+echo [INFO] Data: %date% >> "!LOG_FILE!"
+echo Versione !APP_VERSION! del %date%
 
 :: Default port
 set "PORT=8765"

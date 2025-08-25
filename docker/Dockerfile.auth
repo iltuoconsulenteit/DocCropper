@@ -1,0 +1,8 @@
+FROM node:18-slim
+WORKDIR /opt/auth
+COPY package.json ./
+RUN npm install --production
+COPY auth_server.js ./
+COPY static ./static
+EXPOSE 8765
+CMD ["node", "auth_server.js"]
