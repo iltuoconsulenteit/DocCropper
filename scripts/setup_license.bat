@@ -35,7 +35,19 @@ echo DOCROPPER_DEV_LICENSE=!LICENSE_KEY!>> "!ENVFILE!"
 echo DOCROPPER_LICENSE_LEVEL=full>> "!ENVFILE!"
 echo DOCROPPER_DEV_PASSWORD=87654321>> "!ENVFILE!"
 echo DOCROPPER_SETTINGS_PASSWORD=12345678>> "!ENVFILE!"
+python - <<PY
+import json,sys
+path='settings.json'
+try:
+    data=json.load(open(path))
+except Exception:
+    data={}
+data['license_key']=r'%LICENSE_KEY%'
+data['license_name']=r'%LICENSE_NAME%'
+json.dump(data,open(path,'w'),indent=2)
+PY
+if exist license_overrides.json del license_overrides.json
 
-echo Developer license saved to !ENVFILE!
+echo Developer license saved to !ENVFILE! and settings.json
 pause
 endlocal

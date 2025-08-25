@@ -22,6 +22,10 @@ if not exist "!APP_DIR!\env\auth.env" (
     )
 )
 
+if exist "!APP_DIR!\env\developer.env" (
+    for /f "delims=" %%e in (!APP_DIR!\env\developer.env) do set %%e
+)
+
 if not exist main.py (
     echo [ERROR] main.py not found in !APP_DIR!
     pause
