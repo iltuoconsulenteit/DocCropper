@@ -4,11 +4,12 @@ setlocal EnableDelayedExpansion
 set "LOGFILE=temp\license_setup.log"
 if not exist temp mkdir temp
 
-if "%~1"=="am_admin" goto main
-net session >nul 2>&1
-if not %errorlevel%==0 (
-    powershell -Command "Start-Process '%~f0' -ArgumentList 'am_admin' -Verb RunAs"
-    exit /b
+if not "%~1"=="am_admin" (
+    openfiles >nul 2>&1
+    if errorlevel 1 (
+        powershell -Command "Start-Process '%~f0' -ArgumentList 'am_admin' -Verb RunAs"
+        exit /b
+    )
 )
 
 :main

@@ -38,6 +38,11 @@ echo [INFO] Avvio DocCropper > "!LOG_FILE!"
 echo [INFO] Directory script: !SCRIPT_DIR! >> "!LOG_FILE!"
 echo [INFO] Directory app: !APP_DIR! >> "!LOG_FILE!"
 
+for /f %%v in ('git rev-parse --short HEAD 2^>nul') do set "APP_VERSION=%%v"
+echo [INFO] Versione: !APP_VERSION! >> "!LOG_FILE!"
+echo [INFO] Data: %date% >> "!LOG_FILE!"
+echo Versione !APP_VERSION! del %date%
+
 :: Default port
 set "PORT=8765"
 if exist settings.json (

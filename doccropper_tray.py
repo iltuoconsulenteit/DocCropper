@@ -199,7 +199,14 @@ def main():
     args = parser.parse_args()
 
     developer = os.environ.get('DOCROPPER_DEVELOPER') == '1' or is_developer()
-    logging.info("Tray icon started (developer=%s)", developer)
+    version = ""
+    try:
+        version = subprocess.check_output([
+            'git', 'rev-parse', '--short', 'HEAD'
+        ], text=True).strip()
+    except Exception:
+        pass
+    logging.info("Tray icon started (developer=%s version=%s)", developer, version)
     try:
         TRAY_PID_FILE.write_text(str(os.getpid()))
     except Exception:
