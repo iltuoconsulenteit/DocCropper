@@ -103,7 +103,6 @@ source control. Back up the database if you need to preserve accounts before upd
 - `sponsor_thumb_width`, `sponsor_thumb_height` – thumbnail size in the gallery
 - `sponsor_slides` – list of rotating images for the sponsor slot
 - `sponsor_facebook_page`, `sponsor_instagram_profile` – profiles used for social plugins
-- `sponsor_listid` – Fabrik list ID for dynamic sponsor tiers
 - `banner_images` – array of header slide filenames, `{{lang}}` is replaced with the current language
 - `banner_interval` – rotation interval for banner images (milliseconds)
 

@@ -482,11 +482,7 @@ def load_settings():
         dev_env = get_dev_license_key()
         key_upper = merged.get("license_key", "").strip().upper()
         is_demo = key_upper == DEMO_FULL_LICENSE_KEY
-        is_dev = (
-            bool(dev_env)
-            or key_upper.endswith("-DEV")
-            or merged.get("license_level", "").lower() == "developer"
-        )
+        is_dev = bool(dev_env) or key_upper.endswith("-DEV")
         if is_demo:
             merged["license_level"] = "full"
             merged["demo_full_mode"] = True
@@ -524,14 +520,6 @@ load_settings()
 def save_settings(update: dict):
     data = load_settings()
     overrides = load_license_overrides()
-    if 'license_key' in update:
-        new_key = update['license_key'].strip()
-        if overrides.get('license_key') and overrides.get('license_key') != new_key:
-            try:
-                os.remove(LICENSE_OVERRIDES_FILE)
-            except FileNotFoundError:
-                pass
-            overrides = {}
     filtered = {k: v for k, v in update.items() if k not in overrides}
     plugin_fields = {
         'docuseal': ['enable_docuseal', 'docuseal_dev_only', 'docuseal_api_url', 'docuseal_api_key'],
@@ -779,7 +767,7 @@ def compute_active_plugins(cfg: dict) -> list[str]:
         active.append('pageselect')
     if allowed(cfg.get('enable_colormode', True), cfg.get('colormode_dev_only', False)):
         active.append('colormode')
-    if allowed(cfg.get('enable_imageeditor', True), cfg.get('imageeditor_dev_only', False)):
+    if allowed(cfg.get('enable_imageeditor', True), cfg.get('imageeditor_dev_only', True)):
         active.append('imageeditor')
     return active
 
@@ -1144,11 +1132,7 @@ async def create_pdf(
         key = settings.get("license_key", "").strip().upper()
         license_check = settings.get("license_check", False)
         dev_env = get_dev_license_key()
-        dev_key_valid = (
-            key.endswith("-DEV")
-            or (dev_env and key == dev_env)
-            or settings.get("license_level", "").lower() == "developer"
-        )
+        dev_key_valid = dev_env and key == dev_env
         demo_key = key == DEMO_FULL_LICENSE_KEY
         if license_check:
             if demo_key:
