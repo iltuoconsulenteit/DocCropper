@@ -767,7 +767,7 @@ def compute_active_plugins(cfg: dict) -> list[str]:
         active.append('pageselect')
     if allowed(cfg.get('enable_colormode', True), cfg.get('colormode_dev_only', False)):
         active.append('colormode')
-    if allowed(cfg.get('enable_imageeditor', True), cfg.get('imageeditor_dev_only', True)):
+    if allowed(cfg.get('enable_imageeditor', True), cfg.get('imageeditor_dev_only', False)):
         active.append('imageeditor')
     return active
 
