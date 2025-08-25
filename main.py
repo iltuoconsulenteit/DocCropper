@@ -110,9 +110,9 @@ LICENSE_OVERRIDES_FILE = "license_overrides.json"
 # Load environment variables from any .env files in env/
 ENV_DIR = "env"
 if os.path.isdir(ENV_DIR):
-    for name in os.listdir(ENV_DIR):
+    for name in sorted(os.listdir(ENV_DIR)):
         if name.endswith(".env"):
-            load_dotenv(os.path.join(ENV_DIR, name), override=False)
+            load_dotenv(os.path.join(ENV_DIR, name), override=True)
 # Directory containing per-user settings
 USERS_DIR = "users"
 
