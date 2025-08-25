@@ -194,7 +194,7 @@
             <button class="px-2 py-1 border rounded text-xs" @click="openUpdateModal('rollback')" x-text="t('rollback')"></button>
           </div>
         </div>
-        <div x-show="tab==='sponsor'" class="p-4 space-y-4" x-data="{tiers:[], price(c){const t=Array.isArray(this.tiers)?this.tiers.find(x=>x.codice===c):null;return t&&t.prezzo_base?('€'+t.prezzo_base):'';}}" x-init="fetch('/index.php?option=com_fabrik&view=list&listid=XX&format=raw&format=json').then(r=>r.ok?r.json():[]).then(d=>{tiers=Array.isArray(d)?d:[]}).catch(()=>{tiers=[]})">
+        <div x-show="tab==='sponsor'" class="p-4 space-y-4" x-data="{tiers:[], price(c){const t=Array.isArray(this.tiers)?this.tiers.find(x=>x.codice===c):null;return t&&t.prezzo_base?('€'+t.prezzo_base):'';}}">
           <h2 class="text-2xl font-bold" x-text="t('sponsorTitle')"></h2>
           <p x-text="t('sponsorIntro')"></p>
           <table class="w-full text-sm text-left border-collapse">

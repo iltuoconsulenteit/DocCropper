@@ -3302,17 +3302,23 @@ async function loadSponsorLevels() {
     sponsorBox.style.display = 'block';
     sponsorBox.innerHTML = `<h3 data-i18n="sponsorTitle">${t('sponsorTitle')}</h3><p data-i18n="sponsorIntro">${t('sponsorIntro')}</p><table id="sponsorTable" class="sponsor-table"><thead><tr><th data-i18n="sponsorBenefit">${t('sponsorBenefit')}</th><th>Bronze</th><th>Silver</th><th>Gold</th></tr></thead><tbody><tr><td data-i18n="sponsorPrice">${t('sponsorPrice')}</td><td id="priceBronze">€ xxx</td><td id="priceSilver">€ xxx</td><td id="priceGold">€ xxx</td></tr><tr><td data-i18n="sponsorBenefitVisibility">${t('sponsorBenefitVisibility')}</td><td class="check">✔</td><td class="check">✔</td><td class="check">✔</td></tr><tr><td data-i18n="sponsorBenefitBanner">${t('sponsorBenefitBanner')}</td><td>–</td><td class="check">✔</td><td class="check">✔</td></tr><tr><td data-i18n="sponsorBenefitMarketing">${t('sponsorBenefitMarketing')}</td><td>–</td><td class="check">✔</td><td class="check">✔</td></tr><tr><td data-i18n="sponsorBenefitLicense">${t('sponsorBenefitLicense')}</td><td>Base</td><td>Pro LAN</td><td>Full</td></tr></tbody></table><div class="sponsor-contact"><a href="mailto:info@iltuoconsulente.it" class="btn btn-primary" data-i18n="contactSponsor">${t('contactSponsor')}</a></div><p data-i18n="sponsorNote">${t('sponsorNote')}</p>`;
     try {
-        const resp = await fetch('/index.php?option=com_fabrik&view=list&listid=XX&format=raw&format=json');
-        const data = await resp.json();
-        const prices = {bronze:'',silver:'',gold:''};
-        data.forEach(item => {
-            if (prices[item.codice] !== undefined) {
-                prices[item.codice] = item.prezzo_base || '';
+        const cfg = await loadSettings();
+        const listId = cfg.sponsor_listid;
+        if (listId) {
+            const resp = await fetch(`/index.php?option=com_fabrik&view=list&listid=${listId}&format=raw&format=json`);
+            if (resp.ok) {
+                const data = await resp.json();
+                const prices = {bronze:'',silver:'',gold:''};
+                data.forEach(item => {
+                    if (prices[item.codice] !== undefined) {
+                        prices[item.codice] = item.prezzo_base || '';
+                    }
+                });
+                document.getElementById('priceBronze').textContent = prices.bronze ? `€${prices.bronze}` : '€ xxx';
+                document.getElementById('priceSilver').textContent = prices.silver ? `€${prices.silver}` : '€ xxx';
+                document.getElementById('priceGold').textContent = prices.gold ? `€${prices.gold}` : '€ xxx';
             }
-        });
-        document.getElementById('priceBronze').textContent = prices.bronze ? `€${prices.bronze}` : '€ xxx';
-        document.getElementById('priceSilver').textContent = prices.silver ? `€${prices.silver}` : '€ xxx';
-        document.getElementById('priceGold').textContent = prices.gold ? `€${prices.gold}` : '€ xxx';
+        }
     } catch (e) {}
     applyTranslations();
 }
