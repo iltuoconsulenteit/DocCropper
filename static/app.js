@@ -8,6 +8,14 @@ import { initPageSelectPlugin } from './plugins/pageselect.js';
 import { initColorPlugin } from './plugins/colormode.js';
 import { initImageEditorPlugin } from './plugins/imageeditor.js';
 
+if (typeof MutationObserver !== 'undefined') {
+  const origObserve = MutationObserver.prototype.observe;
+  MutationObserver.prototype.observe = function(target, options) {
+    if (!(target instanceof Node)) return;
+    return origObserve.call(this, target, options);
+  };
+}
+
 let scaling_factor_w;
 let scaling_factor_h;
 let origW;
