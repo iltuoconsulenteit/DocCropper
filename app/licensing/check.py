@@ -12,6 +12,8 @@ async def verify_license(email: str, license_type: str, token: str) -> dict:
     """
 
     license_url = os.getenv("LICENSE_CHECK_URL")
+    if not license_url and license_type == "developer":
+        license_url = "https://www.iltuoconsulenteit.it/site/index.php?option=com_fabrik&view=list&listid=XXX&format=raw"
     if not license_url:
         return {"valid": True}  # fallback: passes when not configured
 

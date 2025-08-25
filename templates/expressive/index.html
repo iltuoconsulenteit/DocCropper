@@ -4,6 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DocCropper Expressive</title>
+    <script>
+      if (typeof MutationObserver !== 'undefined') {
+        const orig = MutationObserver.prototype.observe;
+        MutationObserver.prototype.observe = function(target, options) {
+          if (!(target instanceof Node)) return;
+          try { return orig.call(this, target, options); } catch (e) {}
+        };
+      }
+    </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.4/dist/tailwind.min.css" />
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
