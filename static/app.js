@@ -719,14 +719,10 @@ function applySettings(cfg) {
     if (devSettingsBtn) {
         devSettingsBtn.style.display = devLicense ? 'inline-block' : 'none';
     }
-    isLicensed = false;
-    licenseName = '';
-    if (cfg.license_key && cfg.license_key.trim()) {
-        isLicensed = true;
-    }
-    if (cfg.license_name) {
-        licenseName = cfg.license_name;
-    }
+    isLicensed = !!((cfg.license_key && cfg.license_key.trim()) ||
+        (cfg.license_level && cfg.license_level.toLowerCase() !== 'free'));
+    licenseName = cfg.license_name ||
+        ((cfg.license_level && cfg.license_level.toLowerCase() === 'developer') ? 'Developer' : '');
     if (cfg.public_url !== undefined) {
         currentSettings.public_url = cfg.public_url;
     }
