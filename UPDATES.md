@@ -3,6 +3,7 @@
 ## 2025-08-18
 - Honor developer license after env load
 - Treat manually entered developer licenses as valid without domain checks
+- Log license setup and activation results and run setup scripts with admin privileges
 - Switch to native bcrypt for password hashes to avoid startup errors
 - Improve page selection checkbox visibility
 - Fix image editor sidebar not appearing on thumbnail edit
