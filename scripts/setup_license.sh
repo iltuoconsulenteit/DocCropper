@@ -33,8 +33,8 @@ echo "DOCROPPER_DEV_PASSWORD=87654321"
 echo "DOCROPPER_SETTINGS_PASSWORD=12345678"
 } > "$ENVFILE" && log "Wrote $ENVFILE"
 
-python3 - <<PY && log("Updated settings.json")
-import json, sys
+python3 - <<'PY'
+import json
 path = 'settings.json'
 try:
     with open(path) as f:
@@ -47,6 +47,7 @@ data['license_level'] = 'developer'
 with open(path, 'w') as f:
     json.dump(data, f, indent=2)
 PY
+log "Updated settings.json"
 rm -f license_overrides.json
 
 echo "Developer license saved to $ENVFILE and settings.json"
