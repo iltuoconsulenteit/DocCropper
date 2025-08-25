@@ -29,11 +29,13 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)s: %(message)s'
 )
 
-# Load environment variables from env/*.env files
+# Load environment variables from env/*.env files, allowing them to
+# override any preexisting environment variables so that license
+# information from the local files always takes precedence.
 ENV_DIR = BASE_DIR / 'env'
 if ENV_DIR.is_dir():
     for env_file in ENV_DIR.glob('*.env'):
-        load_dotenv(env_file, override=False)
+        load_dotenv(env_file, override=True)
 
 def load_language():
     global LANG, TRANSLATIONS
@@ -83,24 +85,34 @@ def is_developer():
     try:
         with open(settings_file) as fh:
             data = json.load(fh)
-        key = data.get('license_key', '').strip().upper()
-        level = data.get('license_level', '').strip().lower()
-        dev_env = os.environ.get('DOCROPPER_DEV_LICENSE', '').strip().upper()
-        masked = f"{key[:4]}..." if key else ""
-        logging.info(
-            "License check: level=%s key=%s env_dev=%s",
-            level or "",
-            masked,
-            bool(dev_env),
-        )
-        return (
-            level == 'developer'
-            or key.endswith('-DEV')
-            or bool(dev_env)
-        )
     except Exception:
-        logging.exception("Unable to read settings for developer check")
-        return False
+        data = {}
+
+    key = data.get('license_key', '').strip().upper()
+    level = data.get('license_level', '').strip().lower()
+
+    # Environment variables override values from settings.json
+    env_key = os.environ.get('DOCROPPER_LICENSE_KEY', '').strip().upper()
+    env_level = os.environ.get('DOCROPPER_LICENSE_LEVEL', '').strip().lower()
+    if env_key:
+        key = env_key
+    if env_level:
+        level = env_level
+
+    dev_env = os.environ.get('DOCROPPER_DEV_LICENSE', '').strip().upper()
+    masked = f"{key[:4]}..." if key else ""
+    logging.info(
+        "License check: level=%s key=%s env_dev=%s",
+        level or "",
+        masked,
+        bool(dev_env),
+    )
+
+    return (
+        level == 'developer'
+        or key.endswith('-DEV')
+        or bool(dev_env)
+    )
 
 def run_script(name, env=None, folder=INSTALL_DIR):
     """Run a helper script while logging output.
