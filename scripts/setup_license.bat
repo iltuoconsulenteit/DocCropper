@@ -32,7 +32,7 @@ del "%TEMP%\_writetest.tmp" 2>NUL
 )
 echo DOCROPPER_LICENSE_NAME=!LICENSE_NAME!>> "!ENVFILE!"
 echo DOCROPPER_DEV_LICENSE=!LICENSE_KEY!>> "!ENVFILE!"
-echo DOCROPPER_LICENSE_LEVEL=full>> "!ENVFILE!"
+echo DOCROPPER_LICENSE_LEVEL=developer>> "!ENVFILE!"
 echo DOCROPPER_DEV_PASSWORD=87654321>> "!ENVFILE!"
 echo DOCROPPER_SETTINGS_PASSWORD=12345678>> "!ENVFILE!"
 python - <<PY
@@ -44,6 +44,7 @@ except Exception:
     data={}
 data['license_key']=r'%LICENSE_KEY%'
 data['license_name']=r'%LICENSE_NAME%'
+data['license_level']='developer'
 json.dump(data,open(path,'w'),indent=2)
 PY
 if exist license_overrides.json del license_overrides.json
