@@ -482,7 +482,11 @@ def load_settings():
         dev_env = get_dev_license_key()
         key_upper = merged.get("license_key", "").strip().upper()
         is_demo = key_upper == DEMO_FULL_LICENSE_KEY
-        is_dev = bool(dev_env) or key_upper.endswith("-DEV")
+        is_dev = (
+            bool(dev_env)
+            or key_upper.endswith("-DEV")
+            or merged.get("license_level", "").lower() == "developer"
+        )
         if is_demo:
             merged["license_level"] = "full"
             merged["demo_full_mode"] = True
@@ -1140,7 +1144,11 @@ async def create_pdf(
         key = settings.get("license_key", "").strip().upper()
         license_check = settings.get("license_check", False)
         dev_env = get_dev_license_key()
-        dev_key_valid = dev_env and key == dev_env
+        dev_key_valid = (
+            key.endswith("-DEV")
+            or (dev_env and key == dev_env)
+            or settings.get("license_level", "").lower() == "developer"
+        )
         demo_key = key == DEMO_FULL_LICENSE_KEY
         if license_check:
             if demo_key:
