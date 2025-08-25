@@ -571,9 +571,12 @@ async function importPdfPages(file) {
 }
 
 async function loadSettings() {
-    const url = userInfo ? '/user-settings/' : '/settings/';
+    const baseUrl = userInfo ? '/user-settings/' : '/settings/';
+    // Add a timestamp to bypass any browser caching that might serve stale
+    // license information even though the server disables caching.
+    const url = `${baseUrl}?_=${Date.now()}`;
     try {
-        const resp = await fetch(url);
+        const resp = await fetch(url, { cache: 'no-store' });
         if (resp.ok) {
             return await resp.json();
         }
