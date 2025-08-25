@@ -495,7 +495,13 @@ def load_settings():
                 merged["public_url"] = "https://doccropper.iltuoconsulenteit.it"
         elif is_dev:
             merged["license_level"] = "developer"
-            if not merged.get("license_name"):
+            if env_key:
+                merged["license_key"] = env_key
+            elif not merged.get("license_key") and dev_env:
+                merged["license_key"] = dev_env
+            if env_name:
+                merged["license_name"] = env_name
+            elif not merged.get("license_name"):
                 merged["license_name"] = "Developer"
             merged["enable_mobilesign"] = True
         if (is_demo or is_dev) and not merged.get("sponsor_frame"):
@@ -902,7 +908,9 @@ async def get_settings():
     data["version_date"] = VERSION_DATE
     if "stripe_secret_key" in data:
         data.pop("stripe_secret_key")
-    return data
+    resp = JSONResponse(data)
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
 
 
 @app.post("/settings/")
@@ -918,7 +926,9 @@ async def get_user_settings_endpoint(request: Request):
     data = load_user_settings(email)
     data["version"] = VERSION
     data["version_date"] = VERSION_DATE
-    return data
+    resp = JSONResponse(data)
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
 
 
 @app.post("/user-settings/")

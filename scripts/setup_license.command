@@ -37,4 +37,8 @@ with open(settings_file, "w") as f:
     json.dump(data, f, indent=2)
 PY
 
+# Remove any previous license enforcement
+OVERRIDE_FILE="license_overrides.json"
+[ -f "$OVERRIDE_FILE" ] && rm "$OVERRIDE_FILE"
+
 echo "Developer license saved to $ENVFILE and $SETTINGS_FILE updated"

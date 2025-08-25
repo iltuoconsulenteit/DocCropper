@@ -43,6 +43,8 @@ powershell -NoProfile -Command ^
   "$j.license_key = $key; $j.license_name = $name; $j.license_level = 'developer';" ^
   "$j | ConvertTo-Json -Depth 10 | Set-Content $sf"
 
+if exist license_overrides.json del /f license_overrides.json
+
 echo Developer license saved to !ENVFILE! and %SETTINGS_FILE% updated
 pause
 endlocal
