@@ -520,6 +520,14 @@ load_settings()
 def save_settings(update: dict):
     data = load_settings()
     overrides = load_license_overrides()
+    if 'license_key' in update:
+        new_key = update['license_key'].strip()
+        if overrides.get('license_key') and overrides.get('license_key') != new_key:
+            try:
+                os.remove(LICENSE_OVERRIDES_FILE)
+            except FileNotFoundError:
+                pass
+            overrides = {}
     filtered = {k: v for k, v in update.items() if k not in overrides}
     plugin_fields = {
         'docuseal': ['enable_docuseal', 'docuseal_dev_only', 'docuseal_api_url', 'docuseal_api_key'],
