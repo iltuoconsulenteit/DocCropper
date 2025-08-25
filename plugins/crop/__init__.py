@@ -19,9 +19,9 @@ def register(app, utils: dict[str, Any]):
     get_session_dir = utils["get_session_dir"]
     encrypt_bytes = utils["encrypt_bytes"]
     ENC_SUFFIX = utils["ENC_SUFFIX"]
-    MAX_UPLOAD_BYTES = utils.get("MAX_UPLOAD_BYTES", 20 * 1024 * 1024)
+    MAX_UPLOAD_BYTES = utils.get("MAX_UPLOAD_BYTES", 5 * 1024 * 1024)
 
-    def order_points(pts: np.ndarray) -> np.ndarray:
+    def order_points(pts):
         rect = np.zeros((4, 2), dtype="float32")
         s = pts.sum(axis=1)
         rect[0] = pts[np.argmin(s)]
@@ -31,24 +31,28 @@ def register(app, utils: dict[str, Any]):
         rect[3] = pts[np.argmax(diff)]
         return rect
 
-    def detect_document_corners(img: np.ndarray) -> np.ndarray | None:
+    def detect_document_corners(img):
+        h, w = img.shape[:2]
+        scale = 1.0
+        max_dim = max(w, h)
+        if max_dim > 1000:
+            scale = 1000.0 / max_dim
+            img = cv2.resize(
+                img,
+                (int(w * scale), int(h * scale)),
+                interpolation=cv2.INTER_AREA,
+            )
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (5, 5), 0)
-        # Auto-tune Canny thresholds based on image median to improve detection
-        v = np.median(gray)
-        lower = int(max(0, 0.66 * v))
-        upper = int(min(255, 1.33 * v))
-        edged = cv2.Canny(gray, lower, upper)
-        # Clean up edges to reduce noise
-        edged = cv2.dilate(edged, None, iterations=1)
-        edged = cv2.erode(edged, None, iterations=1)
+        edged = cv2.Canny(gray, 50, 200)
         cnts, _ = cv2.findContours(edged, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
         for c in cnts:
             peri = cv2.arcLength(c, True)
             approx = cv2.approxPolyDP(c, 0.02 * peri, True)
             if len(approx) == 4:
-                return order_points(approx.reshape(4, 2))
+                pts = order_points(approx.reshape(4, 2))
+                return pts / scale
         return None
 
     @app.post("/detect-corners/")
@@ -183,7 +187,7 @@ def register(app, utils: dict[str, Any]):
                 img_cv,
                 matrix,
                 (max_width, max_height),
-                flags=cv2.INTER_LANCZOS4,
+                flags=cv2.INTER_LINEAR,
                 borderMode=cv2.BORDER_REPLICATE,
             )
             b_factor = max(0, brightness) / 100.0

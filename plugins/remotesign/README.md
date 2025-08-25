@@ -1,1 +1,1 @@
-This plugin handles remote digital signing via Docuseal or a custom command.
+This plugin runs an external command to digitally sign the exported PDF.
