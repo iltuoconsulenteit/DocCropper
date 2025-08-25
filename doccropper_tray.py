@@ -100,6 +100,10 @@ def is_developer():
         level = env_level
 
     dev_env = os.environ.get('DOCROPPER_DEV_LICENSE', '').strip().upper()
+    if dev_env and not key:
+        key = dev_env
+    if dev_env and level != 'developer':
+        level = 'developer'
     masked = f"{key[:4]}..." if key else ""
     logging.info(
         "License check: level=%s key=%s env_dev=%s",

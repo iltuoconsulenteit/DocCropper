@@ -158,8 +158,13 @@ try:
         stderr=subprocess.DEVNULL,
     ).decode().strip()
 except Exception:
-    VERSION = "unknown"
-    VERSION_DATE = ""
+    # When the application is installed without the git repository available
+    # (for example in packaged distributions), fall back to optional
+    # environment variables so that the frontend can still display build
+    # information.  If these variables are missing we keep the "unknown"
+    # defaults used previously.
+    VERSION = os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
+    VERSION_DATE = os.getenv("DOCROPPER_BUILD_DATE", "")
 
 CACHE_BUST = f"?v={VERSION}"
 
@@ -504,6 +509,26 @@ def load_settings():
             elif not merged.get("license_name"):
                 merged["license_name"] = "Developer"
             merged["enable_mobilesign"] = True
+            # Persist the developer license so subsequent runs and external
+            # tools see the correct values even if the original settings file
+            # was missing or had stale data.
+            try:
+                with open(SETTINGS_FILE) as fh:
+                    current = json.load(fh)
+            except Exception:
+                current = {}
+            desired = {
+                "license_key": merged.get("license_key", ""),
+                "license_name": merged.get("license_name", ""),
+                "license_level": "developer",
+            }
+            if any(current.get(k) != v for k, v in desired.items()):
+                current.update(desired)
+                try:
+                    with open(SETTINGS_FILE, "w") as fh:
+                        json.dump(current, fh, indent=2)
+                except Exception:
+                    pass
         if (is_demo or is_dev) and not merged.get("sponsor_frame"):
             merged["sponsor_frame"] = DEFAULT_SPONSOR_FRAME
         try:
