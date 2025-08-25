@@ -168,6 +168,7 @@ if not exist "!APP_DIR!\.git" (
             )
         )
         call :log "Updating repository..."
+        if exist "db.sqlite3" del /F /Q "db.sqlite3" >>"%LOG_FILE%" 2>&1
         git fetch origin !BRANCH! >>"%LOG_FILE%" 2>&1 || (
             call :log "Failed to fetch branch !BRANCH! from origin"
             exit /b 1
@@ -176,11 +177,25 @@ if not exist "!APP_DIR!\.git" (
         git rebase --abort >nul 2>&1
         git checkout !BRANCH! >>"%LOG_FILE%" 2>&1 || git checkout -B !BRANCH! origin/!BRANCH! >>"%LOG_FILE%" 2>&1
         git reset --hard origin/!BRANCH! >>"%LOG_FILE%" 2>&1
-        git clean -fd >>"%LOG_FILE%" 2>&1
+        git clean -fd -e !BACKUP_FILE! >>"%LOG_FILE%" 2>&1
         for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
         git pull --ff-only >>"%LOG_FILE%" 2>&1
         if exist "!BACKUP_FILE!" (
-            call :log "Merge !BACKUP_FILE! in !CONFIG_FILE! (manual merge suggested)"
+            call :log "Merging saved settings..."
+            python - <<PY "!CONFIG_FILE!" "!BACKUP_FILE!"
+import json, sys
+dst, bak = sys.argv[1:3]
+with open(dst) as f:
+    data = json.load(f)
+try:
+    with open(bak) as f:
+        prev = json.load(f)
+    data.update(prev)
+except Exception:
+    pass
+with open(dst, 'w') as f:
+    json.dump(data, f, indent=2)
+PY
             del "!BACKUP_FILE!" >>"%LOG_FILE%" 2>&1
         )
         cd /d "%~dp0"
@@ -228,8 +243,8 @@ if exist requirements.txt (
     call :log "File requirements.txt non trovato!"
 )
 
-set /p RUN_APP=Launch DocCropper with tray icon now? [Y/n]
-if /I "!RUN_APP!" NEQ "n" if /I "!RUN_APP!" NEQ "N" (
+set /p RUN_APP=Launch DocCropper with tray icon now? [y/N]
+if /I "!RUN_APP!" EQU "y" (
     pushd "!APP_DIR!" >nul
     where pythonw >nul 2>&1 && (
         call :log "Launching tray icon"

@@ -4,10 +4,8 @@ import subprocess
 import logging
 from pathlib import Path
 import tempfile
-from pystray import Icon, Menu, MenuItem
 import threading
 import atexit
-from PIL import Image, ImageDraw
 import webbrowser
 from urllib.request import urlopen
 import json
@@ -22,6 +20,8 @@ INSTALL_DIR = BASE_DIR / 'install'
 SCRIPTS_DIR = BASE_DIR / 'scripts'
 
 LOG_FILE = Path(tempfile.gettempdir()) / 'doccropper_tray.log'
+# Separate log for license details so users can verify developer keys
+LICENSE_LOG = Path(tempfile.gettempdir()) / 'doccropper_license.log'
 
 # Store the tray process ID so launch scripts can detect it
 TRAY_PID_FILE = Path(tempfile.gettempdir()) / 'doccropper_tray.pid'
@@ -74,6 +74,11 @@ UNINSTALL_SCRIPTS = {
     'Darwin': 'uninstall_DocCropper.command',
 }.get(SYSTEM, 'uninstall_DocCropper.sh')
 
+ROLLBACK_SCRIPTS = {
+    'Windows': 'rollback_DocCropper.bat',
+    'Darwin': 'rollback_DocCropper.command',
+}.get(SYSTEM, 'rollback_DocCropper.sh')
+
 def is_developer():
     """Return True if a developer license is active."""
     settings_file = BASE_DIR / 'settings.json'
@@ -81,9 +86,27 @@ def is_developer():
         with open(settings_file) as fh:
             data = json.load(fh)
         key = data.get('license_key', '').strip().upper()
-        dev = os.environ.get('DOCROPPER_DEV_LICENSE', '').upper()
-        return (dev and key == dev) or key.endswith('-DEV')
+        level = data.get('license_level', '').strip().lower()
+        dev_env = os.environ.get('DOCROPPER_DEV_LICENSE', '').strip().upper()
+        masked = f"{key[:4]}..." if key else ""
+        logging.info(
+            "License check: level=%s key=%s env_dev=%s",
+            level or "",
+            masked,
+            bool(dev_env),
+        )
+        try:
+            with open(LICENSE_LOG, 'a') as lf:
+                lf.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} level={level} key={masked}\n")
+        except Exception:
+            logging.exception("Unable to write license log")
+        return (
+            level == 'developer'
+            or key.endswith('-DEV')
+            or bool(dev_env)
+        )
     except Exception:
+        logging.exception("Unable to read settings for developer check")
         return False
 
 def run_script(name, env=None, folder=INSTALL_DIR):
@@ -128,12 +151,22 @@ def update_branch():
 def uninstall_app():
     run_script(UNINSTALL_SCRIPTS)
 
+def rollback_app():
+    run_script(ROLLBACK_SCRIPTS, folder=SCRIPTS_DIR)
+
 def open_browser():
     port = get_port()
     url = os.environ.get('DOCROPPER_OPEN_URL')
     if not url:
         url = f'http://127.0.0.1:{port}/'
-    webbrowser.open(url)
+    try:
+        if not webbrowser.open(url):
+            raise RuntimeError('webbrowser failed')
+    except Exception:
+        try:
+            subprocess.Popen(['xdg-open', url])
+        except Exception:
+            logging.exception('Unable to open browser')
 
 def get_port():
     try:
@@ -151,31 +184,8 @@ def is_running():
     except Exception:
         return False
 
-BASE_IMAGE = None
-
-def load_base_image():
-    global BASE_IMAGE
-    for name in ('app_logo.png', 'header_logo.png'):
-        path = BASE_DIR / 'static' / 'logos' / name
-        if path.exists():
-            BASE_IMAGE = Image.open(path).convert('RGBA').resize((64, 64))
-            break
-    else:
-        BASE_IMAGE = Image.new('RGBA', (64, 64), 'white')
-
-def status_image(running):
-    img = BASE_IMAGE.copy()
-    draw = ImageDraw.Draw(img)
-    color = 'green' if running else 'red'
-    draw.ellipse((48, 48, 60, 60), fill=color)
-    return img
-
 def quit_app(icon, item):
     icon.stop()
-
-
-def create_image(running):
-    return status_image(running)
 
 
 def main():
@@ -196,7 +206,6 @@ def main():
         pass
     atexit.register(lambda: TRAY_PID_FILE.unlink(missing_ok=True))
 
-    load_base_image()
     running = is_running()
 
     if args.auto_start and not running:
@@ -212,21 +221,87 @@ def main():
             start_app()
         return
 
+    if SYSTEM == 'Linux' and not os.environ.get('DISPLAY'):
+        os.environ['DISPLAY'] = ':0'
+        logging.info("DISPLAY not set; defaulting to :0")
+
+    try:
+        from pystray import Icon, Menu, MenuItem
+        from PIL import Image, ImageDraw
+    except Exception as e:
+        logging.exception("Tray modules unavailable: %s", e)
+        if not running:
+            start_app()
+        return
+
+    BASE_IMAGE = None
+
+    def load_base_image():
+        nonlocal BASE_IMAGE
+        for name in ('app_logo.png', 'header_logo.png'):
+            path = BASE_DIR / 'static' / 'logos' / name
+            if path.exists():
+                BASE_IMAGE = Image.open(path).convert('RGBA').resize((64, 64))
+                break
+        else:
+            BASE_IMAGE = Image.new('RGBA', (64, 64), 'white')
+
+    def status_image(running):
+        img = BASE_IMAGE.copy()
+        draw = ImageDraw.Draw(img)
+        color = 'green' if running else 'red'
+        draw.ellipse((48, 48, 60, 60), fill=color)
+        return img
+
+    def create_image(running):
+        return status_image(running)
+
+    load_base_image()
+
     def update(state):
         icon.icon = create_image(state)
 
+    def open_app(icon, item):
+        open_browser()
+
+    def start_action(icon, item):
+        start_app()
+        update(True)
+
+    def stop_action(icon, item):
+        stop_app()
+        update(False)
+
+    def update_main_action(icon, item):
+        update_main()
+
+    def uninstall_action(icon, item):
+        uninstall_app()
+
+    def rollback_action(icon, item):
+        rollback_app()
+
+    def update_branch_action(icon, item):
+        update_branch()
+
     menu_items = [
-        MenuItem(tr('openApp'), lambda icon, item: open_browser()),
-        MenuItem(tr('startApp'), lambda icon, item: [start_app(), update(True)]),
-        MenuItem(tr('stopApp'), lambda icon, item: [stop_app(), update(False)]),
-        MenuItem(tr('updateMain'), lambda icon, item: update_main()),
-        MenuItem(tr('uninstallApp'), lambda icon, item: uninstall_app())
+        MenuItem(tr('openApp'), open_app, default=True),
+        MenuItem(tr('startApp'), start_action),
+        MenuItem(tr('stopApp'), stop_action),
+        MenuItem(tr('updateMain'), update_main_action),
+        MenuItem(tr('rollbackApp'), rollback_action),
+        MenuItem(tr('uninstallApp'), uninstall_action)
     ]
     if developer:
-        menu_items.append(MenuItem(tr('updateBranch'), lambda icon, item: update_branch()))
+        menu_items.append(MenuItem(tr('updateBranch'), update_branch_action))
     menu_items.append(MenuItem(tr('quit'), quit_app))
 
-    icon = Icon('DocCropper', create_image(running), 'DocCropper', menu=Menu(*menu_items))
+    icon = Icon(
+        'DocCropper',
+        create_image(running),
+        'DocCropper',
+        menu=Menu(*menu_items)
+    )
 
     def setup(icon):
         icon.visible = True
