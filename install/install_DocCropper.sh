@@ -103,7 +103,7 @@ if [ -d "$TARGET_DIR/.git" ]; then
     rm -f "$TARGET_DIR/db.sqlite3"
     git -C "$TARGET_DIR" fetch origin "$BRANCH"
     git -C "$TARGET_DIR" reset --hard "origin/$BRANCH"
-    git -C "$TARGET_DIR" clean -fd
+    git -C "$TARGET_DIR" clean -fd -e "$BACKUP_FILE"
     git -C "$TARGET_DIR" rev-parse HEAD > "$LAST_FILE" 2>/dev/null || true
   fi
 else

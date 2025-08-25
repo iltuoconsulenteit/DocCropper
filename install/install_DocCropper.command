@@ -15,6 +15,8 @@ fi
 REPO_URL="https://github.com/iltuoconsulenteit/DocCropper"
 DEV_KEY="${DOCROPPER_DEV_LICENSE:-}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CONFIG_FILE="settings.json"
+BACKUP_FILE="settings.local.json.bak"
 BRANCH_FILE="$SCRIPT_DIR/dev_branch"
 if [ -n "$DOCROPPER_DEV_BRANCH" ]; then
   DEV_BRANCH="$DOCROPPER_DEV_BRANCH"
@@ -96,13 +98,18 @@ if [ -d "$TARGET_DIR/.git" ]; then
     else
       git -C "$TARGET_DIR" rev-parse HEAD > "$PREV_FILE" 2>/dev/null || true
     fi
+    if [ -f "$TARGET_DIR/$CONFIG_FILE" ]; then
+      echo "🗄  Backup $CONFIG_FILE in $BACKUP_FILE"
+      cp "$TARGET_DIR/$CONFIG_FILE" "$TARGET_DIR/$BACKUP_FILE"
+      git -C "$TARGET_DIR" restore "$CONFIG_FILE" >/dev/null 2>&1 || true
+    fi
     echo "📥 Aggiornamento repository..."
     git -C "$TARGET_DIR" merge --abort >/dev/null 2>&1 || true
     git -C "$TARGET_DIR" rebase --abort >/dev/null 2>&1 || true
     rm -f "$TARGET_DIR/db.sqlite3"
     git -C "$TARGET_DIR" fetch origin "$BRANCH"
     git -C "$TARGET_DIR" reset --hard "origin/$BRANCH"
-    git -C "$TARGET_DIR" clean -fd
+    git -C "$TARGET_DIR" clean -fd -e "$BACKUP_FILE"
     git -C "$TARGET_DIR" rev-parse HEAD > "$LAST_FILE" 2>/dev/null || true
   fi
 else
@@ -131,6 +138,25 @@ if [ -n "$COMMIT_HASH" ]; then
 fi
 
 printf '\xE2\x9C\x85 Operazione completata.\n'
+# merge saved settings if present
+if [ -f "$TARGET_DIR/$BACKUP_FILE" ]; then
+  echo "🔀 Merging saved settings..."
+  python3 <<'PY' "$TARGET_DIR/$CONFIG_FILE" "$TARGET_DIR/$BACKUP_FILE"
+import json,sys
+dst,bak = sys.argv[1:3]
+with open(dst) as f:
+    data=json.load(f)
+try:
+    with open(bak) as f:
+        prev=json.load(f)
+    data.update(prev)
+except Exception:
+    pass
+with open(dst,'w') as f:
+    json.dump(data,f,indent=2)
+PY
+  rm -f "$TARGET_DIR/$BACKUP_FILE"
+fi
 
 # Ensure default environment files
 if [ ! -f "$TARGET_DIR/.env" ] && [ -f "$TARGET_DIR/.env.example" ]; then
@@ -151,7 +177,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 cd - >/dev/null
 
-SETTINGS_FILE="$TARGET_DIR/settings.json"
+SETTINGS_FILE="$TARGET_DIR/$CONFIG_FILE"
 if [ ! -f "$SETTINGS_FILE" ]; then
   cat > "$SETTINGS_FILE" <<'EOF'
 {

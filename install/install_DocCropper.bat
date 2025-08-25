@@ -177,11 +177,25 @@ if not exist "!APP_DIR!\.git" (
         git rebase --abort >nul 2>&1
         git checkout !BRANCH! >>"%LOG_FILE%" 2>&1 || git checkout -B !BRANCH! origin/!BRANCH! >>"%LOG_FILE%" 2>&1
         git reset --hard origin/!BRANCH! >>"%LOG_FILE%" 2>&1
-        git clean -fd >>"%LOG_FILE%" 2>&1
+        git clean -fd -e !BACKUP_FILE! >>"%LOG_FILE%" 2>&1
         for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
         git pull --ff-only >>"%LOG_FILE%" 2>&1
         if exist "!BACKUP_FILE!" (
-            call :log "Merge !BACKUP_FILE! in !CONFIG_FILE! (manual merge suggested)"
+            call :log "Merging saved settings..."
+            python - <<PY "!CONFIG_FILE!" "!BACKUP_FILE!"
+import json, sys
+dst, bak = sys.argv[1:3]
+with open(dst) as f:
+    data = json.load(f)
+try:
+    with open(bak) as f:
+        prev = json.load(f)
+    data.update(prev)
+except Exception:
+    pass
+with open(dst, 'w') as f:
+    json.dump(data, f, indent=2)
+PY
             del "!BACKUP_FILE!" >>"%LOG_FILE%" 2>&1
         )
         cd /d "%~dp0"
