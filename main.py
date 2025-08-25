@@ -7,11 +7,9 @@ import os
 import shutil
 import time
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime
 
-import cv2
-import numpy as np
-import fitz
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, Body, Request, Depends, HTTPException
 from PIL import Image, ImageDraw, ImageFont
@@ -32,21 +30,63 @@ from fastapi.middleware.cors import CORSMiddleware
 from cryptography.fernet import Fernet
 import subprocess
 import sys
+import platform
 import tempfile
 from dotenv import load_dotenv
 import urllib.request
 import urllib.parse
 import socket
+from pathlib import Path
+import importlib
+import bcrypt
+
+_cv2 = None
+_np = None
+_fitz = None
+
+def get_cv2():
+    global _cv2
+    if _cv2 is None:
+        _cv2 = importlib.import_module("cv2")
+    return _cv2
+
+def get_np():
+    global _np
+    if _np is None:
+        _np = importlib.import_module("numpy")
+    return _np
+
+def get_fitz():
+    global _fitz
+    if _fitz is None:
+        _fitz = importlib.import_module("fitz")
+    return _fitz
+
+
+def bcrypt_hash(password: str) -> str:
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+
+def bcrypt_verify(password: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(password.encode(), hashed.encode())
+    except Exception:
+        return False
 from plugins.sign import register as register_sign
 from app.licensing.check import verify_license
 from app.auth.routes import router as auth_router, fastapi_users
 from app.auth.models import User
 from plugins.mobilesign import register as register_mobilesign
 from plugins.remotesign import register as register_remotesign
+from plugins.docuseal import register as register_docuseal
 from plugins.crop import register as register_crop
 from plugins.removebg import register as register_removebg
 from plugins.compresspdf import register as register_compresspdf
 from plugins.watermark import register as register_watermark
+from plugins.login import register as register_login
+from plugins.downloadpng import register as register_downloadpng
+from plugins.pageselect import register as register_pageselect
+from plugins.colormode import register as register_colormode
 
 try:
     import stripe
@@ -76,6 +116,9 @@ if os.path.isdir(ENV_DIR):
 # Directory containing per-user settings
 USERS_DIR = "users"
 
+DEFAULT_DEV_PASSWORD = os.getenv("DOCROPPER_DEV_PASSWORD", "87654321")
+DEFAULT_SETTINGS_PASSWORD = os.getenv("DOCROPPER_SETTINGS_PASSWORD", "12345678")
+
 # Read/write values that the license server enforces. They override normal
 # settings and cannot be changed by users.
 def load_license_overrides() -> dict:
@@ -95,9 +138,13 @@ def save_license_overrides(update: dict) -> dict:
     return data
 
 # Developer license key for demonstration (case-insensitive)
-DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "")
-DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
+from license_utils import get_dev_license_key
 DEMO_FULL_LICENSE_KEY = "DEMO-FULL-DC"
+DEFAULT_SPONSOR_FRAME = (
+    "https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2F"
+    "iltuoconsulenteit%3Flocale%3Dit_IT&tabs=timeline&width=340&height=500&small_header=true&"
+    "adapt_container_width=true&hide_cover=true&show_facepile=false"
+)
 
 try:
     VERSION = subprocess.check_output(
@@ -121,8 +168,49 @@ SIGNATURES_DIR = "signatures"
 PID_FILE = os.path.join(tempfile.gettempdir(), "doccropper.pid")
 ENC_SUFFIX = ".enc"
 SESSION_KEYS: dict[str, bytes] = {}
-MAX_UPLOAD_MB = int(os.getenv("DOCROPPER_MAX_UPLOAD_MB", "20"))
+DEFAULT_MAX_UPLOAD_MB = 5
+MAX_UPLOAD_MB = int(os.getenv("DOCROPPER_MAX_UPLOAD_MB", str(DEFAULT_MAX_UPLOAD_MB)))
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
+
+BASE_DIR = Path(__file__).resolve().parent
+
+def repo_has_updates() -> bool:
+    """Check if remote Git repository has new commits."""
+    try:
+        subprocess.run(
+            ["git", "fetch"],
+            cwd=BASE_DIR,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True,
+            timeout=5,
+        )
+        local = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=BASE_DIR, timeout=5
+        ).strip()
+        remote = subprocess.check_output(
+            ["git", "rev-parse", "@{u}"], cwd=BASE_DIR, timeout=5
+        ).strip()
+        return local != remote
+    except Exception:
+        return False
+
+def run_update_script():
+    env = os.environ.copy()
+    env.setdefault("BRANCH", "main")
+    script = BASE_DIR / "install" / "install_DocCropper.sh"
+    subprocess.Popen(["bash", str(script)], cwd=BASE_DIR, env=env)
+
+def run_rollback_script():
+    system = platform.system()
+    script = {
+        "Windows": BASE_DIR / "scripts" / "rollback_DocCropper.bat",
+        "Darwin": BASE_DIR / "scripts" / "rollback_DocCropper.command",
+    }.get(system, BASE_DIR / "scripts" / "rollback_DocCropper.sh")
+    if system == "Windows":
+        subprocess.Popen(["cmd", "/c", str(script)], cwd=BASE_DIR)
+    else:
+        subprocess.Popen(["bash", str(script)], cwd=BASE_DIR)
 
 DEFAULT_SETTINGS = {
     "language": "it",
@@ -152,6 +240,18 @@ DEFAULT_SETTINGS = {
     "brand_html": "",
     "client_logo": "client_logo.png",
     "sponsor_logo": "sponsor_logo.png",
+    "client_url": "",
+    "sponsor_url": "",
+    "sponsor_banner": "",
+    "sponsor_frame": "",
+    "sponsor_plugin": "",
+    "sponsor_facebook_page": "iltuoconsulenteit",
+    "sponsor_instagram_profile": "",
+    "sponsor_slides": [],
+    "sponsor_frame_width": 340,
+    "sponsor_frame_height": 500,
+    "sponsor_thumb_width": 150,
+    "sponsor_thumb_height": 150,
     "sponsor_scale": 100,
     "sponsor_bottom": 80,
     "brand_height": 80,
@@ -159,15 +259,20 @@ DEFAULT_SETTINGS = {
     "blank_threshold": 95,
     "skip_blank": True,
     "max_upload_files": 10,
+    "max_upload_mb": 5,
     "enable_sponsor_video": False,
     "banner_images": ["DocCropper_slogan_main_{{lang}}.png"],
     "developer_watermark": False,
     "demo_full_mode": False,
-    "docuseal_api_url": "",
-    "docuseal_api_key": "",
     "public_url": "",
     "template": "static",
+    "update_pin": "",
+    "update_interval": 3600000,
+    "developer_password_hash": None,
 }
+
+# Populate default developer password hash
+DEFAULT_SETTINGS["developer_password_hash"] = bcrypt_hash(DEFAULT_DEV_PASSWORD)
 
 def verify_license_server(key: str) -> bool:
     url = os.getenv("LICENSE_SERVER", "https://license.doccropper.it/verify")
@@ -243,14 +348,24 @@ def load_settings():
             base = json.load(fh)
         merged = DEFAULT_SETTINGS.copy()
         merged.update(base)
+        plugins_dir = os.path.join(os.path.dirname(__file__), "plugins")
+        try:
+            for name in os.listdir(plugins_dir):
+                cfg_path = os.path.join(plugins_dir, name, "settings.json")
+                if os.path.exists(cfg_path):
+                    with open(cfg_path) as pf:
+                        merged.update(json.load(pf))
+        except Exception:
+            pass
+        max_mb_env = os.getenv("DOCROPPER_MAX_UPLOAD_MB")
+        if max_mb_env:
+            merged["max_upload_mb"] = int(max_mb_env)
         env_key = os.getenv("DOCROPPER_LICENSE_KEY")
         env_name = os.getenv("DOCROPPER_LICENSE_NAME")
         google_id = os.getenv("DOCROPPER_GOOGLE_CLIENT_ID")
         env_check = os.getenv("LICENSE_CHECK")
         env_level = os.getenv("DOCROPPER_LICENSE_LEVEL")
         dev_wm_env = os.getenv("DOCROPPER_DEV_WATERMARK")
-        docuseal_url = os.getenv("DOCUSEAL_API_URL")
-        docuseal_key = os.getenv("DOCUSEAL_API_KEY")
         stripe_secret = os.getenv("STRIPE_SECRET_KEY")
         stripe_publish = os.getenv("STRIPE_PUBLISHABLE_KEY")
         stripe_pro = os.getenv("STRIPE_PRICE_PRO")
@@ -259,6 +374,9 @@ def load_settings():
         stripe_cancel = os.getenv("STRIPE_CANCEL_URL")
         public_url_env = os.getenv("DOCROPPER_PUBLIC_URL")
         lan_limit_env = os.getenv("DOCROPPER_LAN_USER_LIMIT")
+        global MAX_UPLOAD_MB, MAX_UPLOAD_BYTES
+        MAX_UPLOAD_MB = int(merged.get("max_upload_mb", DEFAULT_MAX_UPLOAD_MB))
+        MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
         if env_key:
             merged["license_key"] = env_key
         if env_name:
@@ -271,10 +389,54 @@ def load_settings():
             merged["license_level"] = env_level.lower()
         if dev_wm_env is not None:
             merged["developer_watermark"] = dev_wm_env.lower() == "true"
+        enable_remotesign_env = os.getenv("DOCROPPER_ENABLE_REMOTESIGN")
+        if enable_remotesign_env is not None:
+            merged["enable_remotesign"] = enable_remotesign_env.lower() == "true"
+        remotesign_dev_env = os.getenv("DOCROPPER_REMOTESIGN_DEV_ONLY")
+        if remotesign_dev_env is not None:
+            merged["remotesign_dev_only"] = remotesign_dev_env.lower() == "true"
+        docuseal_url = os.getenv("DOCUSEAL_API_URL")
         if docuseal_url:
             merged["docuseal_api_url"] = docuseal_url
+        docuseal_key = os.getenv("DOCUSEAL_API_KEY")
         if docuseal_key:
             merged["docuseal_api_key"] = docuseal_key
+        enable_docuseal_env = os.getenv("DOCROPPER_ENABLE_DOCUSEAL")
+        if enable_docuseal_env is not None:
+            merged["enable_docuseal"] = enable_docuseal_env.lower() == "true"
+        docuseal_dev_env = os.getenv("DOCROPPER_DOCUSEAL_DEV_ONLY")
+        if docuseal_dev_env is not None:
+            merged["docuseal_dev_only"] = docuseal_dev_env.lower() == "true"
+        enable_watermark_env = os.getenv("DOCROPPER_ENABLE_WATERMARK")
+        if enable_watermark_env is not None:
+            merged["enable_watermark"] = enable_watermark_env.lower() == "true"
+        watermark_dev_env = os.getenv("DOCROPPER_WATERMARK_DEV_ONLY")
+        if watermark_dev_env is not None:
+            merged["watermark_dev_only"] = watermark_dev_env.lower() == "true"
+        enable_downloadpng_env = os.getenv("DOCROPPER_ENABLE_DOWNLOADPNG")
+        if enable_downloadpng_env is not None:
+            merged["enable_downloadpng"] = enable_downloadpng_env.lower() == "true"
+        downloadpng_dev_env = os.getenv("DOCROPPER_DOWNLOADPNG_DEV_ONLY")
+        if downloadpng_dev_env is not None:
+            merged["downloadpng_dev_only"] = downloadpng_dev_env.lower() == "true"
+        enable_pageselect_env = os.getenv("DOCROPPER_ENABLE_PAGESELECT")
+        if enable_pageselect_env is not None:
+            merged["enable_pageselect"] = enable_pageselect_env.lower() == "true"
+        pageselect_dev_env = os.getenv("DOCROPPER_PAGESELECT_DEV_ONLY")
+        if pageselect_dev_env is not None:
+            merged["pageselect_dev_only"] = pageselect_dev_env.lower() == "true"
+        enable_colormode_env = os.getenv("DOCROPPER_ENABLE_COLORMODE")
+        if enable_colormode_env is not None:
+            merged["enable_colormode"] = enable_colormode_env.lower() == "true"
+        colormode_dev_env = os.getenv("DOCROPPER_COLORMODE_DEV_ONLY")
+        if colormode_dev_env is not None:
+            merged["colormode_dev_only"] = colormode_dev_env.lower() == "true"
+        enable_imageeditor_env = os.getenv("DOCROPPER_ENABLE_IMAGEEDITOR")
+        if enable_imageeditor_env is not None:
+            merged["enable_imageeditor"] = enable_imageeditor_env.lower() == "true"
+        imageeditor_dev_env = os.getenv("DOCROPPER_IMAGEEDITOR_DEV_ONLY")
+        if imageeditor_dev_env is not None:
+            merged["imageeditor_dev_only"] = imageeditor_dev_env.lower() == "true"
         if stripe_secret:
             merged["stripe_secret_key"] = stripe_secret
         if stripe_publish:
@@ -294,15 +456,38 @@ def load_settings():
                 merged["lan_user_limit"] = int(lan_limit_env)
             except ValueError:
                 pass
+        sponsor_plugin_env = os.getenv("SPONSOR_PLUGIN")
+        if sponsor_plugin_env is not None:
+            merged["sponsor_plugin"] = sponsor_plugin_env
+        fb_page_env = os.getenv("SPONSOR_FACEBOOK_PAGE")
+        if fb_page_env:
+            merged["sponsor_facebook_page"] = fb_page_env
+        insta_env = os.getenv("SPONSOR_INSTAGRAM_PROFILE")
+        if insta_env:
+            merged["sponsor_instagram_profile"] = insta_env
+        slides_env = os.getenv("SPONSOR_SLIDES")
+        if slides_env:
+            merged["sponsor_slides"] = [s.strip() for s in slides_env.split(",") if s.strip()]
+
+        if not merged.get("developer_password_hash"):
+            merged["developer_password_hash"] = bcrypt_hash(DEFAULT_DEV_PASSWORD)
+        if not merged.get("settings_password_hash"):
+            merged["settings_password_hash"] = bcrypt_hash(DEFAULT_SETTINGS_PASSWORD)
 
         # Apply values enforced by a previous license check
         overrides = load_license_overrides()
         if overrides:
             merged.update(overrides)
 
-        dev_env = DEV_LICENSE_KEY_UPPER
+        dev_env = get_dev_license_key()
         key_upper = merged.get("license_key", "").strip().upper()
-        if key_upper == DEMO_FULL_LICENSE_KEY:
+        is_demo = key_upper == DEMO_FULL_LICENSE_KEY
+        is_dev = (
+            bool(dev_env)
+            or key_upper.endswith("-DEV")
+            or merged.get("license_level", "").lower() == "developer"
+        )
+        if is_demo:
             merged["license_level"] = "full"
             merged["demo_full_mode"] = True
             if not merged.get("license_name"):
@@ -312,25 +497,61 @@ def load_settings():
                 merged["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
             if not merged.get("public_url"):
                 merged["public_url"] = "https://doccropper.iltuoconsulenteit.it"
-        elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
-            merged["license_level"] = "full"
+        elif is_dev:
+            merged["license_level"] = "developer"
             if not merged.get("license_name"):
                 merged["license_name"] = "Developer"
             merged["enable_mobilesign"] = True
+        if (is_demo or is_dev) and not merged.get("sponsor_frame"):
+            merged["sponsor_frame"] = DEFAULT_SPONSOR_FRAME
+        try:
+            from plugins import sponsorframe
+            sponsor_dev = str(os.getenv("DOCROPPER_SPONSORFRAME_DEV_ONLY", merged.get("sponsorframe_dev_only", False))).lower() == "true"
+            if not sponsor_dev or is_dev:
+                merged.update(sponsorframe.get_config(merged))
+        except Exception:
+            logger.exception("sponsor plugin failed")
 
+        masked_key = key_upper[:4] + "..." if key_upper else "none"
+        logger.info("Loaded license %s (%s)", merged.get("license_level"), masked_key)
         return merged
     except Exception:
         return DEFAULT_SETTINGS.copy()
 
+# Initialize global upload limits from settings
+load_settings()
+
 def save_settings(update: dict):
     data = load_settings()
     overrides = load_license_overrides()
+    if 'license_key' in update:
+        new_key = update['license_key'].strip()
+        if overrides.get('license_key') and overrides.get('license_key') != new_key:
+            try:
+                os.remove(LICENSE_OVERRIDES_FILE)
+            except FileNotFoundError:
+                pass
+            overrides = {}
     filtered = {k: v for k, v in update.items() if k not in overrides}
+    plugin_fields = {
+        'docuseal': ['enable_docuseal', 'docuseal_dev_only', 'docuseal_api_url', 'docuseal_api_key'],
+        'remotesign': ['enable_remotesign', 'remotesign_dev_only'],
+        'downloadpng': ['enable_downloadpng', 'downloadpng_dev_only'],
+        'pageselect': ['enable_pageselect', 'pageselect_dev_only'],
+        'colormode': ['enable_colormode', 'colormode_dev_only'],
+        'watermark': ['enable_watermark', 'watermark_dev_only'],
+        'imageeditor': ['enable_imageeditor', 'imageeditor_dev_only']
+    }
+    plugin_updates = {}
+    for pname, keys in plugin_fields.items():
+        subset = {k: filtered.pop(k) for k in list(filtered.keys()) if k in keys}
+        if subset:
+            plugin_updates[pname] = subset
     data.update(filtered)
     if os.getenv("DOCROPPER_PUBLIC_URL"):
         data["public_url"] = os.getenv("DOCROPPER_PUBLIC_URL")
     key_upper = data.get("license_key", "").strip().upper()
-    dev_env = DEV_LICENSE_KEY_UPPER
+    dev_env = get_dev_license_key()
     if key_upper == DEMO_FULL_LICENSE_KEY:
         data["license_level"] = "full"
         data["demo_full_mode"] = True
@@ -341,8 +562,8 @@ def save_settings(update: dict):
             data["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
         if not data.get("public_url"):
             data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
-    elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
-        data["license_level"] = "full"
+    elif bool(dev_env) or key_upper.endswith("-DEV"):
+        data["license_level"] = "developer"
         if not data.get("license_name"):
             data["license_name"] = "Developer"
         data["enable_mobilesign"] = True
@@ -352,6 +573,18 @@ def save_settings(update: dict):
         data[key] = val
     with open(SETTINGS_FILE, "w") as fh:
         json.dump(data, fh)
+    for pname, vals in plugin_updates.items():
+        cfg_path = os.path.join('plugins', pname, 'settings.json')
+        current = {}
+        if os.path.exists(cfg_path):
+            try:
+                with open(cfg_path) as fh:
+                    current = json.load(fh)
+            except Exception:
+                pass
+        current.update(vals)
+        with open(cfg_path, 'w') as fh:
+            json.dump(current, fh, indent=2)
     return data
 
 def sanitize_email(email: str) -> str:
@@ -391,14 +624,10 @@ def save_user_settings(email: str, update: dict):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
-app.include_router(auth_router)
-
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     from app.auth.database import engine, Base, async_session_maker
     from fastapi_users.db import SQLAlchemyUserDatabase
-    from passlib.hash import bcrypt
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -409,7 +638,7 @@ async def startup_event():
         user_db = SQLAlchemyUserDatabase(session, User)
         existing = await user_db.get_by_email(admin_email)
         if existing is None:
-            hashed = bcrypt.hash(admin_password)
+            hashed = bcrypt_hash(admin_password)
             admin = User(
                 email=admin_email,
                 hashed_password=hashed,
@@ -419,6 +648,12 @@ async def startup_event():
             )
             session.add(admin)
             await session.commit()
+    yield
+
+app = FastAPI(lifespan=lifespan)
+# Only enable authentication routes when license checking is active
+if load_settings().get("license_check", False):
+    app.include_router(auth_router)
 
 # Enable cross-origin requests if needed
 origins = os.getenv("DOCROPPER_CORS_ORIGINS", "*")
@@ -508,28 +743,77 @@ plugin_utils = {
     'MAX_UPLOAD_BYTES': MAX_UPLOAD_BYTES,
 }
 
-register_crop(app, plugin_utils)
+
+def compute_active_plugins(cfg: dict) -> list[str]:
+    """Determine which plugins should be active for the given settings."""
+    key_upper = cfg.get('license_key', '').strip().upper()
+    dev_env = get_dev_license_key()
+    level = cfg.get('license_level', '').strip().lower() or cfg.get('license_type', '').strip().lower()
+    is_dev = level == 'developer' or key_upper.endswith('-DEV') or bool(dev_env)
+
+    def allowed(enabled: bool, dev_only: bool) -> bool:
+        return enabled and (not dev_only or is_dev)
+
+    active: list[str] = []
+    if allowed(True, cfg.get('crop_dev_only', False)):
+        active.append('crop')
+    if allowed(cfg.get('license_check', False), cfg.get('login_dev_only', True)):
+        active.append('login')
+    if allowed(cfg.get('enable_sign', True), cfg.get('sign_dev_only', False)):
+        active.append('sign')
+    if allowed(cfg.get('enable_mobilesign', False), cfg.get('mobilesign_dev_only', False)):
+        active.append('mobilesign')
+    if allowed(cfg.get('enable_remotesign', False), cfg.get('remotesign_dev_only', True)):
+        active.append('remotesign')
+    if allowed(cfg.get('enable_docuseal', False), cfg.get('docuseal_dev_only', True)):
+        active.append('docuseal')
+    if allowed(cfg.get('enable_removebg', False), cfg.get('removebg_dev_only', False)):
+        active.append('removebg')
+    if allowed(cfg.get('enable_compresspdf', False), cfg.get('compresspdf_dev_only', False)) and cfg.get('license_level', 'free').lower() != 'free':
+        active.append('compresspdf')
+    if allowed(cfg.get('enable_watermark', False), cfg.get('watermark_dev_only', False)):
+        active.append('watermark')
+    if allowed(cfg.get('enable_downloadpng', False), cfg.get('downloadpng_dev_only', True)):
+        active.append('downloadpng')
+    if allowed(cfg.get('enable_pageselect', True), cfg.get('pageselect_dev_only', False)):
+        active.append('pageselect')
+    if allowed(cfg.get('enable_colormode', True), cfg.get('colormode_dev_only', False)):
+        active.append('colormode')
+    if allowed(cfg.get('enable_imageeditor', True), cfg.get('imageeditor_dev_only', False)):
+        active.append('imageeditor')
+    return active
+
 
 settings = load_settings()
-enable_sign = str(os.getenv('DOCROPPER_ENABLE_SIGN', settings.get('enable_sign', True))).lower() != 'false'
-enable_mobilesign = str(os.getenv('DOCROPPER_ENABLE_MOBILESIGN', settings.get('enable_mobilesign', False))).lower() == 'true'
-enable_remotesign = str(os.getenv('DOCROPPER_ENABLE_REMOTESIGN', settings.get('enable_remotesign', False))).lower() == 'true'
-enable_removebg = str(os.getenv('DOCROPPER_ENABLE_REMOVEBG', settings.get('enable_removebg', False))).lower() == 'true'
-enable_compresspdf = str(os.getenv('DOCROPPER_ENABLE_COMPRESSPDF', settings.get('enable_compresspdf', False))).lower() == 'true'
-enable_watermark = str(os.getenv('DOCROPPER_ENABLE_WATERMARK', settings.get('enable_watermark', False))).lower() == 'true'
+ACTIVE_PLUGINS: list[str] = compute_active_plugins(settings)
 
-if enable_sign:
+if 'crop' in ACTIVE_PLUGINS:
+    register_crop(app, plugin_utils)
+if 'login' in ACTIVE_PLUGINS:
+    register_login(app, plugin_utils)
+if 'sign' in ACTIVE_PLUGINS:
     register_sign(app, plugin_utils)
-if enable_mobilesign:
+if 'mobilesign' in ACTIVE_PLUGINS:
     register_mobilesign(app, plugin_utils)
-if enable_remotesign:
+if 'remotesign' in ACTIVE_PLUGINS:
     register_remotesign(app, plugin_utils)
-if enable_removebg:
+if 'docuseal' in ACTIVE_PLUGINS:
+    register_docuseal(app, plugin_utils)
+if 'removebg' in ACTIVE_PLUGINS:
     register_removebg(app, plugin_utils)
-if enable_compresspdf and settings.get('license_level', 'free').lower() != 'free':
+if 'compresspdf' in ACTIVE_PLUGINS:
     register_compresspdf(app, plugin_utils)
-if enable_watermark:
+if 'watermark' in ACTIVE_PLUGINS:
     register_watermark(app, plugin_utils)
+if 'downloadpng' in ACTIVE_PLUGINS:
+    register_downloadpng(app, plugin_utils)
+if 'pageselect' in ACTIVE_PLUGINS:
+    register_pageselect(app, plugin_utils)
+if 'colormode' in ACTIVE_PLUGINS:
+    register_colormode(app, plugin_utils)
+if 'imageeditor' in ACTIVE_PLUGINS:
+    from plugins.imageeditor import register as register_imageeditor
+    register_imageeditor(app, plugin_utils)
 
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):
@@ -618,9 +902,11 @@ async def admin_page(user: User = Depends(require_superuser)):
     return HTMLResponse(content=content, status_code=200)
 
 
+
 @app.get("/settings/")
 async def get_settings():
     data = load_settings()
+    data["active_plugins"] = compute_active_plugins(data)
     if not data.get("license_check") and not data.get("license_key"):
         data["license_key"] = "FREE"
         data["license_name"] = "Free Edition"
@@ -658,6 +944,109 @@ async def update_user_settings_endpoint(request: Request, settings: dict = Body(
     return data
 
 
+@app.post("/clear-session/")
+async def clear_session(request: Request):
+    session_id = request.cookies.get("session_id")
+    if session_id:
+        session_dir = os.path.join(SESSIONS_ROOT, session_id)
+        if os.path.isdir(session_dir):
+            shutil.rmtree(session_dir, ignore_errors=True)
+        SESSION_KEYS.pop(session_id, None)
+    return {"status": "ok"}
+
+
+@app.get("/updates/")
+async def get_updates():
+    path = os.path.join(os.path.dirname(__file__), "UPDATES.md")
+    if not os.path.exists(path):
+        return {"en": [], "it": []}
+    entries = []
+    with open(path, "r", encoding="utf-8") as fh:
+        current_date = ""
+        for line in fh:
+            line = line.strip()
+            if line.startswith("##"):
+                current_date = line.lstrip("# ").strip()
+            elif line.startswith("- ") and current_date:
+                entries.append(f"{current_date}: {line[2:].strip()}")
+    return {"en": entries, "it": entries}
+
+
+@app.get("/update-check/")
+async def update_check():
+    return {"available": repo_has_updates()}
+
+
+@app.post("/update/")
+async def update_app(data: dict = Body(...)):
+    pin = data.get("pin", "")
+    settings = load_settings()
+    if pin != settings.get("update_pin", ""):
+        raise HTTPException(status_code=403, detail="Invalid PIN")
+    run_update_script()
+    return {"status": "started"}
+
+
+@app.post("/rollback/")
+async def rollback_app(data: dict = Body(...)):
+    pin = data.get("pin", "")
+    settings = load_settings()
+    if pin != settings.get("update_pin", ""):
+        raise HTTPException(status_code=403, detail="Invalid PIN")
+    run_rollback_script()
+    return {"status": "started"}
+
+
+@app.post("/developer-login/")
+async def developer_login(data: dict = Body(...)):
+    password = data.get("password", "")
+    settings = load_settings()
+    hashed = settings.get("developer_password_hash", "")
+    if hashed and bcrypt_verify(password, hashed):
+        if bcrypt_verify(DEFAULT_DEV_PASSWORD, hashed):
+            raise HTTPException(status_code=403, detail="Change default developer password")
+        return {"status": "ok"}
+    raise HTTPException(status_code=403, detail="Invalid password")
+
+
+@app.post("/developer-password/")
+async def change_developer_password(data: dict = Body(...)):
+    old = data.get("old", "")
+    new = data.get("new", "")
+    if not new:
+        raise HTTPException(status_code=400, detail="New password required")
+    settings = load_settings()
+    hashed = settings.get("developer_password_hash", "")
+    if not hashed or not bcrypt_verify(old, hashed):
+        raise HTTPException(status_code=403, detail="Invalid password")
+    save_settings({"developer_password_hash": bcrypt_hash(new)})
+    return {"status": "updated"}
+
+
+@app.post("/settings-login/")
+async def settings_login(data: dict = Body(...)):
+    password = data.get("password", "")
+    settings = load_settings()
+    hashed = settings.get("settings_password_hash", "")
+    if hashed and bcrypt_verify(password, hashed):
+        return {"status": "ok"}
+    raise HTTPException(status_code=403, detail="Invalid password")
+
+
+@app.post("/settings-password/")
+async def change_settings_password(data: dict = Body(...)):
+    old = data.get("old", "")
+    new = data.get("new", "")
+    if not new:
+        raise HTTPException(status_code=400, detail="New password required")
+    settings = load_settings()
+    hashed = settings.get("settings_password_hash", "")
+    if not hashed or not bcrypt_verify(old, hashed):
+        raise HTTPException(status_code=403, detail="Invalid password")
+    save_settings({"settings_password_hash": bcrypt_hash(new)})
+    return {"status": "updated"}
+
+
 @app.post("/stripe-checkout/")
 async def stripe_checkout(level: str = Body(...)):
     settings = load_settings()
@@ -683,26 +1072,6 @@ async def stripe_checkout(level: str = Body(...)):
     except Exception as e:
         logger.exception("Stripe session creation failed")
         return JSONResponse(status_code=500, content={"message": str(e)})
-
-
-@app.post("/google-login/")
-async def google_login(token: str = Body(...)):
-    settings = load_settings()
-    client_id = settings.get("google_client_id", "")
-    if not client_id:
-        return JSONResponse(status_code=400, content={"message": "Google login not configured"})
-    try:
-        from google.oauth2 import id_token
-        from google.auth.transport import requests
-        info = id_token.verify_oauth2_token(token, requests.Request(), client_id)
-        resp = JSONResponse({"email": info.get("email"), "name": info.get("name")})
-        if info.get("email"):
-            resp.set_cookie("user_email", info.get("email"), httponly=True)
-        return resp
-    except Exception as e:
-        logger.exception("Google token verification failed")
-        return JSONResponse(status_code=400, content={"message": "Invalid token"})
-
 
 
 @app.post("/pdf-to-images/")
@@ -732,6 +1101,8 @@ async def pdf_to_images(
             except Exception:
                 logger.exception("Failed to save uploaded PDF")
 
+        fitz = get_fitz()
+        np = get_np()
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         thr = max(0, min(100, int(threshold))) / 100.0
         images_b64: list[str] = []
@@ -772,8 +1143,12 @@ async def create_pdf(
         settings = load_settings()
         key = settings.get("license_key", "").strip().upper()
         license_check = settings.get("license_check", False)
-        dev_env = DEV_LICENSE_KEY_UPPER
-        dev_key_valid = dev_env and key == dev_env
+        dev_env = get_dev_license_key()
+        dev_key_valid = (
+            key.endswith("-DEV")
+            or (dev_env and key == dev_env)
+            or settings.get("license_level", "").lower() == "developer"
+        )
         demo_key = key == DEMO_FULL_LICENSE_KEY
         if license_check:
             if demo_key:
@@ -816,6 +1191,7 @@ async def create_pdf(
                 sig_bytes = base64.b64decode(sig_b64)
                 sig_img = Image.open(io.BytesIO(sig_bytes)).convert('RGBA')
                 if remove_signature_bg:
+                    np = get_np()
                     arr = np.array(sig_img)
                     white = (arr[:, :, :3] > 240).all(axis=2)
                     arr[white, 3] = 0
@@ -1020,6 +1396,7 @@ async def create_pdf(
             pdf_bytes = compressor(pdf_bytes, compression, jpeg_quality)
         if pdfa_version is not None:
             try:
+                fitz = get_fitz()
                 doc = fitz.open(stream=pdf_bytes, filetype="pdf")
                 pdf_bytes = doc.tobytes(deflate=True, clean=True, garbage=4, pdfa=int(pdfa_version) - 1)
             except Exception:
@@ -1054,6 +1431,8 @@ async def extract_text(request: Request, images: list[str] = Body(...)):
             if img_b64.startswith('data:'):
                 img_b64 = img_b64.split(',', 1)[1]
             img_bytes = base64.b64decode(img_b64)
+            np = get_np()
+            cv2 = get_cv2()
             nparr = np.frombuffer(img_bytes, np.uint8)
             img_cv = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
             if img_cv is None:
@@ -1116,7 +1495,7 @@ if __name__ == "__main__":
     port = args.port if args.port is not None else int(settings.get("port", 8765))
     host = args.host
     if settings.get("license_level", "free").lower() != "full":
-        dev_env = DEV_LICENSE_KEY_UPPER
+        dev_env = get_dev_license_key()
         key = settings.get("license_key", "").strip().upper()
         if not (dev_env and key == dev_env):
             host = "127.0.0.1"

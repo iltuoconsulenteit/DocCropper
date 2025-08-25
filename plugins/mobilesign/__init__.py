@@ -2,7 +2,6 @@ from fastapi import Request, Body
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 import uuid, qrcode, io, base64, os, json, hashlib, logging
 from datetime import datetime
-import fitz
 
 __all__ = ['register']
 
@@ -10,6 +9,15 @@ def register(app, utils):
     load_settings = utils['load_settings']
     get_session_dir = utils['get_session_dir']
     signatures_dir = utils['SIGNATURES_DIR']
+
+    import importlib
+    fitz_mod = None
+
+    def get_fitz():
+        nonlocal fitz_mod
+        if fitz_mod is None:
+            fitz_mod = importlib.import_module('fitz')
+        return fitz_mod
 
     @app.post('/start-sign/')
     async def start_sign(request: Request, data: dict = Body(...)):
@@ -476,6 +484,7 @@ def register(app, utils):
         phone = info.get('phone', '')
         consent = info.get('consent', False)
         try:
+            fitz = get_fitz()
             doc = fitz.open(stream=pdf_bytes, filetype='pdf')
             # Reapply recorded signatures to guarantee the server copy is signed
             for sig in info.get('signatures', []) or []:
@@ -510,6 +519,7 @@ def register(app, utils):
         content_hash = hashlib.sha256(doc_bytes).hexdigest()
         legal = f"Firmato elettronicamente in data {ts} da {name} con firma elettronica semplice ai sensi del Regolamento eIDAS(UE 910/2014). IP: {ip} | Email: {email} | SHA256: {content_hash}"
         try:
+            fitz = get_fitz()
             doc = fitz.open(stream=doc_bytes, filetype='pdf')
             try:
                 page = doc[-1]
