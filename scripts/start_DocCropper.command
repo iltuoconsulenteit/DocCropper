@@ -20,6 +20,12 @@ if [ ! -f "$APP_DIR/env/auth.env" ] && [ -f "$APP_DIR/env/auth.env.example" ]; t
   cp "$APP_DIR/env/auth.env.example" "$APP_DIR/env/auth.env"
 fi
 
+if [ -f "$APP_DIR/env/developer.env" ]; then
+  set -a
+  . "$APP_DIR/env/developer.env"
+  set +a
+fi
+
 PORT=$(python3 - <<'PY'
 import json
 try:

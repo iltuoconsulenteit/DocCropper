@@ -95,6 +95,11 @@ h1, h2 {
     flex: 1 0 auto;
     margin: 5px;
 }
+#actionButtons button.highlight {
+    background: #ffd700;
+    color: #000;
+    font-weight: bold;
+}
 
 #pageFooter {
     display: flex;
@@ -292,12 +297,29 @@ button:hover {
     justify-content: center;
     cursor: pointer;
 }
+.thumbBtn img {
+    width: 16px;
+    height: 16px;
+}
 
 .thumbCircle {
     width: 18px;
     height: 18px;
     border-radius: 50%;
     border: 1px solid #666;
+}
+
+.thumbSelect {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid #666;
+    z-index: 2;
+    cursor: pointer;
 }
 
 .deleteBtn {
@@ -355,7 +377,28 @@ button:hover {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    gap: 12px;
+}
+
+#blankControls button {
+    padding: 0 16px;
+    font-size: 18px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#removeBlankGroup {
+    display: flex;
+    align-items: center;
     gap: 8px;
+    margin: 0 auto;
+}
+
+#clearImagesBtn,
+#layoutToggleBtn {
+    font-size: 36px;
 }
 
 #signatureControls {
@@ -502,6 +545,93 @@ button:hover {
 #licenseBox.visible {
     transform: translateX(0);
     pointer-events: auto;
+}
+
+#sponsorBox {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 250px;
+    background: #fff;
+    border: 1px solid #888;
+    padding: 8px;
+    z-index: 1000;
+    font-size: 0.9em;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    pointer-events: none;
+}
+
+#sponsorBox.visible {
+    transform: translateX(0);
+    pointer-events: auto;
+}
+
+#updateBell.has-update {
+    color: #eab308;
+}
+
+#updateBox {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 250px;
+    background: #fff;
+    border: 1px solid #888;
+    padding: 8px;
+    z-index: 1000;
+    font-size: 0.9em;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    pointer-events: none;
+}
+
+#updateBox.visible {
+    transform: translateX(0);
+    pointer-events: auto;
+}
+
+#sponsorTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+#sponsorTable th,
+#sponsorTable td {
+    border: 1px solid #ccc;
+    padding: 6px;
+}
+
+#sponsorTable th {
+    background: #f8f8f8;
+}
+
+#sponsorTable .check {
+    text-align: center;
+}
+#sponsorBox .sponsor-contact {
+    margin-top: 20px;
+    text-align: center;
+}
+
+#sponsorBox .sponsor-contact .btn {
+    display: inline-block;
+}
+
+#sponsorPreview {
+    margin: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 2px dashed #999;
+}
+#sponsorPreview iframe,
+#sponsorPreview img {
+    width: 100%;
+    height: 100%;
+    border: none;
 }
 
 #settingsBox {
@@ -745,4 +875,36 @@ button:hover {
     #brandArea img {
         max-height: 60px;
     }
+}
+
+/* Colored action buttons */
+#addImportBtn {
+    background-color: #28a745;
+    color: #fff;
+    font-weight: bold;
+    font-size: 20px;
+    width: 40px;
+    height: 40px;
+}
+#removeBlankBtn,
+#restoreBlankBtn {
+    background-color: #f59e0b;
+    color: #fff;
+}
+#clearImagesBtn {
+    background-color: #ef4444;
+    color: #fff;
+    width: 40px;
+    height: 40px;
+}
+#layoutToggleBtn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#layoutToggleBtn {
+    background-color: #3b82f6;
+    color: #fff;
 }

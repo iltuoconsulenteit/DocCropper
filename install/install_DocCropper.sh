@@ -100,9 +100,10 @@ if [ -d "$TARGET_DIR/.git" ]; then
     echo "📥 Aggiornamento repository..."
     git -C "$TARGET_DIR" merge --abort >/dev/null 2>&1 || true
     git -C "$TARGET_DIR" rebase --abort >/dev/null 2>&1 || true
+    rm -f "$TARGET_DIR/db.sqlite3"
     git -C "$TARGET_DIR" fetch origin "$BRANCH"
     git -C "$TARGET_DIR" reset --hard "origin/$BRANCH"
-    git -C "$TARGET_DIR" clean -fd
+    git -C "$TARGET_DIR" clean -fd -e "$BACKUP_FILE"
     git -C "$TARGET_DIR" rev-parse HEAD > "$LAST_FILE" 2>/dev/null || true
   fi
 else
@@ -193,8 +194,8 @@ EOF
   fi
 fi
 
-read -r -p "🚀 Launch DocCropper with tray icon now? [Y/n] " RUN_APP
-if [[ ! "$RUN_APP" =~ ^[Nn]$ ]]; then
+read -r -p "🚀 Launch DocCropper with tray icon now? [y/N] " RUN_APP
+if [[ "$RUN_APP" =~ ^[yY]$ ]]; then
   pushd "$TARGET_DIR" >/dev/null
   if command -v pythonw >/dev/null 2>&1; then
     (pythonw doccropper_tray.py --auto-start &)
