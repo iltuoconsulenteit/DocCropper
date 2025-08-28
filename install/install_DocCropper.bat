@@ -124,7 +124,10 @@ if errorlevel 1 (
     )
 )
 
-if exist "!APP_DIR!\scripts\stop_DocCropper.bat" (
+if exist "!APP_DIR!\scripts\uninstall_DocCropper.bat" (
+    call :log "Removing previous DocCropper installation..."
+    call "!APP_DIR!\scripts\uninstall_DocCropper.bat" >nul 2>&1
+) else if exist "!APP_DIR!\scripts\stop_DocCropper.bat" (
     call :log "Stopping running DocCropper..."
     call "!APP_DIR!\scripts\stop_DocCropper.bat" >nul 2>&1
 )
