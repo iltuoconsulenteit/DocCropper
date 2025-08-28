@@ -270,6 +270,23 @@ if (cameraMargin) {
 
 let isLicensed = false;
 let licenseName = '';
+
+function refreshLicenseDisplay() {
+    if (licenseInfo) {
+        licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
+    }
+    if (versionBox && appVersion) {
+        const txt = translations['version'] ? `${translations['version']} ${appVersion}` : `Version ${appVersion}`;
+        versionBox.innerHTML = appVersionDate ? txt + '<br>' + appVersionDate : txt;
+    }
+    console.log('License status', {
+        level: currentLicenseLevel,
+        licensed: isLicensed,
+        key: (currentSettings.license_key || '').slice(0, 4),
+        version: appVersion,
+        date: appVersionDate
+    });
+}
 let appVersion = '';
 let appVersionDate = '';
 let userInfo = null;
@@ -865,6 +882,7 @@ function applySettings(cfg) {
     if (settingsBtn) {
         settingsBtn.style.display = (demoFullMode && !devLicense) ? 'none' : 'inline-block';
     }
+    refreshLicenseDisplay();
 }
 
 async function loadTranslations(lang) {
@@ -950,14 +968,6 @@ function applyTranslations() {
             opt.textContent = translations[key];
         }
     });
-    if (versionBox && appVersion) {
-        const txt = translations['version'] ? `${translations['version']} ${appVersion}` : `Version ${appVersion}`;
-        if (appVersionDate) {
-            versionBox.innerHTML = txt + '<br>' + appVersionDate;
-        } else {
-            versionBox.textContent = txt;
-        }
-    }
     if (sloganImg) {
         sloganImg.src = `/static/slide/DocCropper_slogan_main_${currentLang}.png`;
     }
@@ -967,6 +977,7 @@ function applyTranslations() {
     updateGalleryLayout();
     updateWikiLinks();
     startBannerRotation();
+    refreshLicenseDisplay();
 }
 
 function updateWikiLinks() {
@@ -3495,7 +3506,7 @@ function renderLogin(cfg) {
                         await loadTranslations(currentLang);
                         applyTranslations();
                         renderPaymentBox(baseCfg);
-                        licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
+                        refreshLicenseDisplay();
                         applyProStatus();
                         updateLayoutPreview();
                     });
@@ -3504,7 +3515,7 @@ function renderLogin(cfg) {
                     await loadTranslations(currentLang);
                     applyTranslations();
                     renderPaymentBox(newCfg);
-                    licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
+                    refreshLicenseDisplay();
                     applyProStatus();
                     updateLayoutPreview();
                 } else {
@@ -3540,7 +3551,7 @@ loadSettings().then(async (cfg) => {
     renderPaymentBox(cfg);
     renderLicenseBox();
     renderLogin(cfg);
-    licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
+    refreshLicenseDisplay();
     applyProStatus();
     updateLayoutPreview();
     setupDeviceMode();

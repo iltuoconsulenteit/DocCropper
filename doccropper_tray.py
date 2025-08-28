@@ -206,6 +206,21 @@ def get_port():
     except Exception:
         return 8765
 
+
+def fetch_server_build_info():
+    port = get_port()
+    try:
+        with urlopen(f'http://127.0.0.1:{port}/settings/?_={int(time.time())}', timeout=2) as resp:
+            data = json.load(resp)
+        return (
+            data.get('version'),
+            data.get('version_date'),
+            data.get('license_level'),
+            data.get('license_key'),
+        )
+    except Exception:
+        return None, None, None, None
+
 def is_running():
     port = get_port()
     try:
@@ -220,7 +235,7 @@ def quit_app(icon, item):
 
 def main():
     import argparse
-
+    global VERSION, VERSION_DATE
     parser = argparse.ArgumentParser(description="DocCropper tray helper")
     parser.add_argument("--no-tray", action="store_true",
                         help="Run without showing a system tray icon")
@@ -231,6 +246,16 @@ def main():
     force_dev = os.environ.get('DOCROPPER_DEVELOPER') == '1'
     level, key, masked, _ = get_license_info()
     developer = force_dev or is_developer()
+    srv_v, srv_d, srv_level, srv_key = fetch_server_build_info()
+    if srv_v:
+        VERSION = srv_v
+    if srv_d:
+        VERSION_DATE = srv_d
+    if srv_level:
+        level = srv_level
+    if srv_key:
+        key = srv_key
+        masked = f"{key[:4]}..."
     logging.info(
         "Tray icon started (developer=%s license=%s key=%s version=%s date=%s)",
         developer,
@@ -306,6 +331,7 @@ def main():
     def start_action(icon, item):
         start_app()
         update(True)
+        refresh_from_server()
 
     def stop_action(icon, item):
         stop_app()
@@ -349,6 +375,31 @@ def main():
         menu=Menu(*menu_items)
     )
 
+    def refresh_from_server():
+        global VERSION, VERSION_DATE
+        nonlocal level, key, masked
+        v, d, lvl, k = fetch_server_build_info()
+        updated = False
+        if v:
+            VERSION = v
+            updated = True
+        if d:
+            VERSION_DATE = d
+            updated = True
+        if lvl:
+            level = lvl
+            updated = True
+        if k:
+            key = k
+            masked = f"{k[:4]}..."
+            updated = True
+        if updated:
+            info_item.text = f"v{VERSION} ({VERSION_DATE}) - {level or ''} {masked}".strip()
+            icon.title = f"DocCropper {VERSION} ({VERSION_DATE}) - {level or ''} {masked}".strip()
+
+    if running:
+        refresh_from_server()
+
     def setup(icon):
         icon.visible = True
 
@@ -356,6 +407,8 @@ def main():
         while True:
             state = is_running()
             icon.icon = create_image(state)
+            if state:
+                refresh_from_server()
             time.sleep(5)
 
     thread = threading.Thread(target=poll, daemon=True)
