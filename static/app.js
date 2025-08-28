@@ -724,8 +724,7 @@ function applySettings(cfg) {
     }
     isLicensed = !!((cfg.license_key && cfg.license_key.trim()) ||
         (cfg.license_level && cfg.license_level.toLowerCase() !== 'free'));
-    licenseName = cfg.license_name ||
-        ((cfg.license_level && cfg.license_level.toLowerCase() === 'developer') ? 'Developer' : '');
+    licenseName = cfg.license_name || (devLicense ? 'Developer' : '');
     if (cfg.public_url !== undefined) {
         currentSettings.public_url = cfg.public_url;
     }
