@@ -4,37 +4,20 @@ export function initImageEditorPlugin(translations, enabled = true) {
     return;
   }
 
-  let modal;
-
-  function ensureModal() {
-    if (modal) return modal;
-    modal = document.createElement('div');
-    modal.id = 'imageEditorModal';
-    modal.className = 'modal';
-    modal.innerHTML = `
-      <div class="modal-content" style="max-width:300px;padding:10px;text-align:left;">
-        <h3 style="margin-top:0;">${translations.imageEdit || 'Edit'}</h3>
-        <label style="display:block;margin-bottom:4px;">${translations.saturation || 'Saturation'}<br>
-          <input id="satSlider" type="range" min="0" max="200" value="100" style="width:100%">
-        </label>
-        <label style="display:block;margin-bottom:4px;">${translations.sharpness || 'Sharpness'}<br>
-          <input id="sharpSlider" type="range" min="0" max="200" value="100" style="width:100%">
-        </label>
-        <div style="text-align:right;margin-top:8px;">
-          <button id="ieClose" class="btn">${translations.close || 'Close'}</button>
-        </div>
-      </div>`;
-    document.body.appendChild(modal);
-
-    document.getElementById('ieClose').addEventListener('click', () => {
-      modal.style.display = 'none';
-    });
-    return modal;
-  }
-
   function openImageEditor(index) {
-    const m = ensureModal();
-    m.style.display = 'block';
+    let sidebar = document.getElementById('imageEditorSidebar');
+    if (!sidebar) {
+      sidebar = document.createElement('div');
+      sidebar.id = 'imageEditorSidebar';
+      sidebar.className = 'toolSidebar';
+      sidebar.innerHTML = `
+        <h3>${translations.imageEdit || 'Edit'}</h3>
+        <label>${translations.saturation || 'Saturation'}<input id="satSlider" type="range" min="0" max="200" value="100"></label>
+        <label>${translations.sharpness || 'Sharpness'}<input id="sharpSlider" type="range" min="0" max="200" value="100"></label>
+      `;
+      document.body.appendChild(sidebar);
+    }
+    sidebar.style.display = 'block';
 
     const sat = document.getElementById('satSlider');
     const sharp = document.getElementById('sharpSlider');

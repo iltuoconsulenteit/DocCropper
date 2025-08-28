@@ -6,7 +6,6 @@ numpy
 pillow
 rembg
 google-auth
-bcrypt
 
 pystray
 python-dotenv
@@ -20,5 +19,6 @@ fastapi-users[sqlalchemy]
 sqlalchemy
 httpx
 aiosqlite
+passlib[bcrypt]
 python-jose
 email-validator

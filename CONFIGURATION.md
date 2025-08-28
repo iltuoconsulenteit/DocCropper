@@ -5,10 +5,6 @@ DocCropper uses a JSON file (`settings.json`) and several environment files loca
 ## Environment files
 Copy the `*.env.example` files in `env/` to `*.env` and adjust the values.  All `.env` files in this folder are loaded at startup so variables are available to both the backend and the tray helper.
 
-The authentication plugin stores user data in a local SQLite database (`db.sqlite3`).
-This file is ignored by Git and removed during updates to keep credentials out of
-source control. Back up the database if you need to preserve accounts before updating.
-
 ### `license.env`
 | Variable | Description |
 | --- | --- |

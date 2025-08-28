@@ -168,7 +168,6 @@ if not exist "!APP_DIR!\.git" (
             )
         )
         call :log "Updating repository..."
-        if exist "db.sqlite3" del /F /Q "db.sqlite3" >>"%LOG_FILE%" 2>&1
         git fetch origin !BRANCH! >>"%LOG_FILE%" 2>&1 || (
             call :log "Failed to fetch branch !BRANCH! from origin"
             exit /b 1

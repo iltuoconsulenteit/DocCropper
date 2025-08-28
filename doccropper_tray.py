@@ -29,13 +29,11 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)s: %(message)s'
 )
 
-# Load environment variables from env/*.env files, allowing them to
-# override any preexisting environment variables so that license
-# information from the local files always takes precedence.
+# Load environment variables from env/*.env files
 ENV_DIR = BASE_DIR / 'env'
 if ENV_DIR.is_dir():
     for env_file in ENV_DIR.glob('*.env'):
-        load_dotenv(env_file, override=True)
+        load_dotenv(env_file, override=False)
 
 def load_language():
     global LANG, TRANSLATIONS
@@ -78,72 +76,18 @@ ROLLBACK_SCRIPTS = {
     'Windows': 'rollback_DocCropper.bat',
     'Darwin': 'rollback_DocCropper.command',
 }.get(SYSTEM, 'rollback_DocCropper.sh')
-try:
-    VERSION = subprocess.check_output(
-        ["git", "rev-parse", "--short", "HEAD"],
-        cwd=BASE_DIR,
-        stderr=subprocess.DEVNULL,
-    ).decode().strip()
-    VERSION_DATE = subprocess.check_output(
-        ["git", "log", "-1", "--format=%cd", "--date=short"],
-        cwd=BASE_DIR,
-        stderr=subprocess.DEVNULL,
-    ).decode().strip()
-except Exception:
-    # Fall back to optional environment variables when running without a
-    # Git repository available (e.g. packaged installations)
-    VERSION = os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
-    VERSION_DATE = os.getenv("DOCROPPER_BUILD_DATE", "")
 
-
-def get_license_info():
-    """Return license level, key, masked key, dev flag and license name."""
+def is_developer():
+    """Return True if a developer license is active."""
     settings_file = BASE_DIR / 'settings.json'
     try:
         with open(settings_file) as fh:
             data = json.load(fh)
+        key = data.get('license_key', '').strip().upper()
+        dev = os.environ.get('DOCROPPER_DEV_LICENSE', '').upper()
+        return (dev and key == dev) or key.endswith('-DEV')
     except Exception:
-        data = {}
-
-    key = data.get('license_key', '').strip().upper()
-    level = data.get('license_level', '').strip().lower()
-    name = data.get('license_name', '').strip()
-
-    env_key = os.environ.get('DOCROPPER_LICENSE_KEY', '').strip().upper()
-    env_level = os.environ.get('DOCROPPER_LICENSE_LEVEL', '').strip().lower()
-    env_name = os.environ.get('DOCROPPER_LICENSE_NAME', '').strip()
-    if env_key:
-        key = env_key
-    if env_level:
-        level = env_level
-    if env_name:
-        name = env_name
-
-    dev_env = os.environ.get('DOCROPPER_DEV_LICENSE', '').strip().upper()
-    if dev_env and not key:
-        key = dev_env
-    if dev_env and level != 'developer':
-        level = 'developer'
-    if not name and (dev_env or key.endswith('-DEV')):
-        name = 'Developer'
-    masked = f"{key[:4]}..." if key else ""
-    return level, key, masked, bool(dev_env), name
-
-
-def is_developer():
-    """Return True if a developer license is active."""
-    level, key, masked, dev_env, _ = get_license_info()
-    logging.info(
-        "License check: level=%s key=%s env_dev=%s version=%s date=%s",
-        level or "",
-        masked,
-        dev_env,
-        VERSION,
-        VERSION_DATE,
-    )
-    return (
-        level == 'developer' or key.endswith('-DEV') or dev_env
-    )
+        return False
 
 def run_script(name, env=None, folder=INSTALL_DIR):
     """Run a helper script while logging output.
@@ -212,22 +156,6 @@ def get_port():
     except Exception:
         return 8765
 
-
-def fetch_server_build_info():
-    port = get_port()
-    try:
-        with urlopen(f'http://127.0.0.1:{port}/settings/?_={int(time.time())}', timeout=2) as resp:
-            data = json.load(resp)
-        return (
-            data.get('version'),
-            data.get('version_date'),
-            data.get('license_level'),
-            data.get('license_key'),
-            data.get('license_name'),
-        )
-    except Exception:
-        return None, None, None, None, None
-
 def is_running():
     port = get_port()
     try:
@@ -242,7 +170,7 @@ def quit_app(icon, item):
 
 def main():
     import argparse
-    global VERSION, VERSION_DATE
+
     parser = argparse.ArgumentParser(description="DocCropper tray helper")
     parser.add_argument("--no-tray", action="store_true",
                         help="Run without showing a system tray icon")
@@ -250,30 +178,8 @@ def main():
                         help="Start server immediately")
     args = parser.parse_args()
 
-    force_dev = os.environ.get('DOCROPPER_DEVELOPER') == '1'
-    level, key, masked, _, name = get_license_info()
-    developer = force_dev or is_developer()
-    srv_v, srv_d, srv_level, srv_key, srv_name = fetch_server_build_info()
-    if srv_v:
-        VERSION = srv_v
-    if srv_d:
-        VERSION_DATE = srv_d
-    if srv_level:
-        level = srv_level
-    if srv_key:
-        key = srv_key
-        masked = f"{key[:4]}..."
-    if srv_name:
-        name = srv_name
-    logging.info(
-        "Tray icon started (developer=%s license=%s name=%s key=%s version=%s date=%s)",
-        developer,
-        level or "",
-        name or "",
-        masked,
-        VERSION,
-        VERSION_DATE,
-    )
+    developer = os.environ.get('DOCROPPER_DEVELOPER') == '1' or is_developer()
+    logging.info("Tray icon started (developer=%s)", developer)
     try:
         TRAY_PID_FILE.write_text(str(os.getpid()))
     except Exception:
@@ -341,7 +247,6 @@ def main():
     def start_action(icon, item):
         start_app()
         update(True)
-        refresh_from_server()
 
     def stop_action(icon, item):
         stop_app()
@@ -359,13 +264,7 @@ def main():
     def update_branch_action(icon, item):
         update_branch()
 
-    info_item = MenuItem(
-        f"v{VERSION} ({VERSION_DATE}) - {level or ''} {name or ''} {masked}".strip(),
-        None,
-        enabled=False,
-    )
     menu_items = [
-        info_item,
         MenuItem(tr('openApp'), open_app, default=True),
         MenuItem(tr('startApp'), start_action),
         MenuItem(tr('stopApp'), stop_action),
@@ -377,41 +276,12 @@ def main():
         menu_items.append(MenuItem(tr('updateBranch'), update_branch_action))
     menu_items.append(MenuItem(tr('quit'), quit_app))
 
-    title = f"DocCropper {VERSION} ({VERSION_DATE}) - {level or ''} {name or ''} {masked}".strip()
     icon = Icon(
         'DocCropper',
         create_image(running),
-        title,
+        'DocCropper',
         menu=Menu(*menu_items)
     )
-
-    def refresh_from_server():
-        global VERSION, VERSION_DATE
-        nonlocal level, key, masked, name
-        v, d, lvl, k, n = fetch_server_build_info()
-        updated = False
-        if v:
-            VERSION = v
-            updated = True
-        if d:
-            VERSION_DATE = d
-            updated = True
-        if lvl:
-            level = lvl
-            updated = True
-        if k:
-            key = k
-            masked = f"{k[:4]}..."
-            updated = True
-        if n:
-            name = n
-            updated = True
-        if updated:
-            info_item.text = f"v{VERSION} ({VERSION_DATE}) - {level or ''} {name or ''} {masked}".strip()
-            icon.title = f"DocCropper {VERSION} ({VERSION_DATE}) - {level or ''} {name or ''} {masked}".strip()
-
-    if running:
-        refresh_from_server()
 
     def setup(icon):
         icon.visible = True
@@ -420,8 +290,6 @@ def main():
         while True:
             state = is_running()
             icon.icon = create_image(state)
-            if state:
-                refresh_from_server()
             time.sleep(5)
 
     thread = threading.Thread(target=poll, daemon=True)

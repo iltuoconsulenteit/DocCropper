@@ -168,10 +168,6 @@ DOCROPPER_DEV_PASSWORD=87654321
 DOCROPPER_SETTINGS_PASSWORD=12345678
 ```
 
-The SQLite file (`db.sqlite3`) stores authentication data and is ignored by Git.
-Install scripts remove this file during updates to avoid merge conflicts; if you
-need to preserve accounts, back up the database before running an update.
-
 ---
 
 ## ▶️ Running DocCropper

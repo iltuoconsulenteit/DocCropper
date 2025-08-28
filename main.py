@@ -38,7 +38,7 @@ import urllib.parse
 import socket
 from pathlib import Path
 import importlib
-import bcrypt
+from passlib.hash import bcrypt
 
 _cv2 = None
 _np = None
@@ -61,17 +61,6 @@ def get_fitz():
     if _fitz is None:
         _fitz = importlib.import_module("fitz")
     return _fitz
-
-
-def bcrypt_hash(password: str) -> str:
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-
-
-def bcrypt_verify(password: str, hashed: str) -> bool:
-    try:
-        return bcrypt.checkpw(password.encode(), hashed.encode())
-    except Exception:
-        return False
 from plugins.sign import register as register_sign
 from app.licensing.check import verify_license
 from app.auth.routes import router as auth_router, fastapi_users
@@ -103,7 +92,6 @@ try:
 except Exception:
     pytesseract = None
 
-logger = logging.getLogger(__name__)
 
 SETTINGS_FILE = "settings.json"
 # Additional file storing values enforced by a license check
@@ -111,9 +99,9 @@ LICENSE_OVERRIDES_FILE = "license_overrides.json"
 # Load environment variables from any .env files in env/
 ENV_DIR = "env"
 if os.path.isdir(ENV_DIR):
-    for name in sorted(os.listdir(ENV_DIR)):
+    for name in os.listdir(ENV_DIR):
         if name.endswith(".env"):
-            load_dotenv(os.path.join(ENV_DIR, name), override=True)
+            load_dotenv(os.path.join(ENV_DIR, name), override=False)
 # Directory containing per-user settings
 USERS_DIR = "users"
 
@@ -139,7 +127,8 @@ def save_license_overrides(update: dict) -> dict:
     return data
 
 # Developer license key for demonstration (case-insensitive)
-from license_utils import get_dev_license_key
+DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "")
+DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
 DEMO_FULL_LICENSE_KEY = "DEMO-FULL-DC"
 DEFAULT_SPONSOR_FRAME = (
     "https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2F"
@@ -159,13 +148,8 @@ try:
         stderr=subprocess.DEVNULL,
     ).decode().strip()
 except Exception:
-    # When the application is installed without the git repository available
-    # (for example in packaged distributions), fall back to optional
-    # environment variables so that the frontend can still display build
-    # information.  If these variables are missing we keep the "unknown"
-    # defaults used previously.
-    VERSION = os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
-    VERSION_DATE = os.getenv("DOCROPPER_BUILD_DATE", "")
+    VERSION = "unknown"
+    VERSION_DATE = ""
 
 CACHE_BUST = f"?v={VERSION}"
 
@@ -274,11 +258,8 @@ DEFAULT_SETTINGS = {
     "template": "static",
     "update_pin": "",
     "update_interval": 3600000,
-    "developer_password_hash": None,
+    "developer_password_hash": bcrypt.hash(DEFAULT_DEV_PASSWORD),
 }
-
-# Populate default developer password hash
-DEFAULT_SETTINGS["developer_password_hash"] = bcrypt_hash(DEFAULT_DEV_PASSWORD)
 
 def verify_license_server(key: str) -> bool:
     url = os.getenv("LICENSE_SERVER", "https://license.doccropper.it/verify")
@@ -368,9 +349,6 @@ def load_settings():
             merged["max_upload_mb"] = int(max_mb_env)
         env_key = os.getenv("DOCROPPER_LICENSE_KEY")
         env_name = os.getenv("DOCROPPER_LICENSE_NAME")
-        dev_env = get_dev_license_key()
-        if not env_key and dev_env:
-            env_key = dev_env
         google_id = os.getenv("DOCROPPER_GOOGLE_CLIENT_ID")
         env_check = os.getenv("LICENSE_CHECK")
         env_level = os.getenv("DOCROPPER_LICENSE_LEVEL")
@@ -478,17 +456,17 @@ def load_settings():
         if slides_env:
             merged["sponsor_slides"] = [s.strip() for s in slides_env.split(",") if s.strip()]
 
-        if not merged.get("developer_password_hash"):
-            merged["developer_password_hash"] = bcrypt_hash(DEFAULT_DEV_PASSWORD)
-        if not merged.get("settings_password_hash"):
-            merged["settings_password_hash"] = bcrypt_hash(DEFAULT_SETTINGS_PASSWORD)
+        if "developer_password_hash" not in merged:
+            merged["developer_password_hash"] = bcrypt.hash(DEFAULT_DEV_PASSWORD)
+        if "settings_password_hash" not in merged:
+            merged["settings_password_hash"] = bcrypt.hash(DEFAULT_SETTINGS_PASSWORD)
 
         # Apply values enforced by a previous license check
         overrides = load_license_overrides()
         if overrides:
             merged.update(overrides)
 
-        dev_env = get_dev_license_key()
+        dev_env = DEV_LICENSE_KEY_UPPER
         key_upper = merged.get("license_key", "").strip().upper()
         is_demo = key_upper == DEMO_FULL_LICENSE_KEY
         is_dev = (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV")
@@ -504,35 +482,9 @@ def load_settings():
                 merged["public_url"] = "https://doccropper.iltuoconsulenteit.it"
         elif is_dev:
             merged["license_level"] = "full"
-            if env_key:
-                merged["license_key"] = env_key
-            elif not merged.get("license_key") and dev_env:
-                merged["license_key"] = dev_env
-            if env_name:
-                merged["license_name"] = env_name
-            elif not merged.get("license_name"):
+            if not merged.get("license_name"):
                 merged["license_name"] = "Developer"
             merged["enable_mobilesign"] = True
-            # Persist the developer license so subsequent runs and external
-            # tools see the correct values even if the original settings file
-            # was missing or had stale data.
-            try:
-                with open(SETTINGS_FILE) as fh:
-                    current = json.load(fh)
-            except Exception:
-                current = {}
-            desired = {
-                "license_key": merged.get("license_key", ""),
-                "license_name": merged.get("license_name", ""),
-                "license_level": "full",
-            }
-            if any(current.get(k) != v for k, v in desired.items()):
-                current.update(desired)
-                try:
-                    with open(SETTINGS_FILE, "w") as fh:
-                        json.dump(current, fh, indent=2)
-                except Exception:
-                    pass
         if (is_demo or is_dev) and not merged.get("sponsor_frame"):
             merged["sponsor_frame"] = DEFAULT_SPONSOR_FRAME
         try:
@@ -543,20 +495,8 @@ def load_settings():
         except Exception:
             logger.exception("sponsor plugin failed")
 
-        masked_key = key_upper[:4] + "..." if key_upper else "none"
-        logger.info(
-            "Loaded license %s (%s) dev_env=%s demo=%s dev=%s - version %s (%s)",
-            merged.get("license_level"),
-            masked_key,
-            bool(dev_env),
-            is_demo,
-            is_dev,
-            VERSION,
-            VERSION_DATE,
-        )
         return merged
     except Exception:
-        logger.exception("load_settings failed")
         return DEFAULT_SETTINGS.copy()
 
 # Initialize global upload limits from settings
@@ -583,13 +523,9 @@ def save_settings(update: dict):
     data.update(filtered)
     if os.getenv("DOCROPPER_PUBLIC_URL"):
         data["public_url"] = os.getenv("DOCROPPER_PUBLIC_URL")
-    dev_env = get_dev_license_key()
-    if not data.get("license_key") and dev_env:
-        data["license_key"] = dev_env
     key_upper = data.get("license_key", "").strip().upper()
-    is_demo = key_upper == DEMO_FULL_LICENSE_KEY
-    is_dev = (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV")
-    if is_demo:
+    dev_env = DEV_LICENSE_KEY_UPPER
+    if key_upper == DEMO_FULL_LICENSE_KEY:
         data["license_level"] = "full"
         data["demo_full_mode"] = True
         if not data.get("license_name"):
@@ -599,7 +535,7 @@ def save_settings(update: dict):
             data["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
         if not data.get("public_url"):
             data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
-    elif is_dev:
+    elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
         data["license_level"] = "full"
         if not data.get("license_name"):
             data["license_name"] = "Developer"
@@ -622,15 +558,6 @@ def save_settings(update: dict):
         current.update(vals)
         with open(cfg_path, 'w') as fh:
             json.dump(current, fh, indent=2)
-    masked = key_upper[:4] + "..." if key_upper else "none"
-    logger.info(
-        "save_settings: key=%s env_dev=%s demo=%s dev=%s level=%s",
-        masked,
-        bool(dev_env),
-        is_demo,
-        is_dev,
-        data.get("license_level"),
-    )
     return data
 
 def sanitize_email(email: str) -> str:
@@ -644,9 +571,6 @@ def load_user_settings(email: str):
         try:
             with open(path) as fh:
                 user = json.load(fh)
-            # Ignore any stale license information saved in the per-user file.
-            for k in ("license_key", "license_name", "license_level"):
-                user.pop(k, None)
             base.update(user)
         except Exception:
             pass
@@ -662,10 +586,7 @@ def save_user_settings(email: str, update: dict):
                 data = json.load(fh)
         except Exception:
             data = {}
-    # Prevent license fields from being stored in the user-specific file so
-    # global license settings always take precedence.
-    filtered = {k: v for k, v in update.items() if k not in {"license_key", "license_name", "license_level"}}
-    data.update(filtered)
+    data.update(update)
     with open(path, "w") as fh:
         json.dump(data, fh)
     merged = load_settings()
@@ -690,7 +611,7 @@ async def lifespan(app: FastAPI):
         user_db = SQLAlchemyUserDatabase(session, User)
         existing = await user_db.get_by_email(admin_email)
         if existing is None:
-            hashed = bcrypt_hash(admin_password)
+            hashed = bcrypt.hash(admin_password)
             admin = User(
                 email=admin_email,
                 hashed_password=hashed,
@@ -795,86 +716,85 @@ plugin_utils = {
     'MAX_UPLOAD_BYTES': MAX_UPLOAD_BYTES,
 }
 
-
-def compute_active_plugins(cfg: dict) -> list[str]:
-    """Determine which plugins should be active for the given settings."""
-    key_upper = cfg.get('license_key', '').strip().upper()
-    dev_env = get_dev_license_key()
-    level = cfg.get('license_level', '').strip().lower() or cfg.get('license_type', '').strip().lower()
-    is_dev = level == 'developer' or key_upper.endswith('-DEV') or bool(dev_env)
-
-    def allowed(enabled: bool, dev_only: bool) -> bool:
-        return enabled and (not dev_only or is_dev)
-
-    active: list[str] = []
-    if allowed(True, cfg.get('crop_dev_only', False)):
-        active.append('crop')
-    if allowed(cfg.get('license_check', False), cfg.get('login_dev_only', True)):
-        active.append('login')
-    if allowed(cfg.get('enable_sign', True), cfg.get('sign_dev_only', False)):
-        active.append('sign')
-    if allowed(cfg.get('enable_mobilesign', False), cfg.get('mobilesign_dev_only', False)):
-        active.append('mobilesign')
-    if allowed(cfg.get('enable_remotesign', False), cfg.get('remotesign_dev_only', True)):
-        active.append('remotesign')
-    if allowed(cfg.get('enable_docuseal', False), cfg.get('docuseal_dev_only', True)):
-        active.append('docuseal')
-    if allowed(cfg.get('enable_removebg', False), cfg.get('removebg_dev_only', False)):
-        active.append('removebg')
-    if allowed(cfg.get('enable_compresspdf', False), cfg.get('compresspdf_dev_only', False)) and cfg.get('license_level', 'free').lower() != 'free':
-        active.append('compresspdf')
-    if allowed(cfg.get('enable_watermark', False), cfg.get('watermark_dev_only', False)):
-        active.append('watermark')
-    if allowed(cfg.get('enable_downloadpng', False), cfg.get('downloadpng_dev_only', True)):
-        active.append('downloadpng')
-    if allowed(cfg.get('enable_pageselect', True), cfg.get('pageselect_dev_only', False)):
-        active.append('pageselect')
-    if allowed(cfg.get('enable_colormode', True), cfg.get('colormode_dev_only', False)):
-        active.append('colormode')
-    if allowed(cfg.get('enable_imageeditor', True), cfg.get('imageeditor_dev_only', True)):
-        active.append('imageeditor')
-    masked = key_upper[:4] + '...' if key_upper else 'none'
-    logger.info(
-        'compute_active_plugins: level=%s key=%s env_dev=%s dev=%s active=%s',
-        level,
-        masked,
-        bool(dev_env),
-        is_dev,
-        active,
-    )
-    return active
-
-
 settings = load_settings()
-ACTIVE_PLUGINS: list[str] = compute_active_plugins(settings)
+ACTIVE_PLUGINS: list[str] = []
+key_upper = settings.get('license_key', '').strip().upper()
+dev_env = DEV_LICENSE_KEY_UPPER
+license_level = settings.get('license_level', '').strip().lower() or settings.get('license_type', '').strip().lower()
+is_dev_license = (
+    license_level == 'developer'
+    or (dev_env and key_upper == dev_env)
+    or key_upper.endswith('-DEV')
+)
 
-if 'crop' in ACTIVE_PLUGINS:
+crop_dev = str(os.getenv('DOCROPPER_CROP_DEV_ONLY', settings.get('crop_dev_only', False))).lower() == 'true'
+if not crop_dev or is_dev_license:
     register_crop(app, plugin_utils)
-if 'login' in ACTIVE_PLUGINS:
+    ACTIVE_PLUGINS.append('crop')
+
+enable_login = settings.get('license_check', False)
+login_dev = str(os.getenv('DOCROPPER_LOGIN_DEV_ONLY', settings.get('login_dev_only', True))).lower() == 'true'
+if enable_login and (not login_dev or is_dev_license):
     register_login(app, plugin_utils)
-if 'sign' in ACTIVE_PLUGINS:
+    ACTIVE_PLUGINS.append('login')
+
+enable_sign = str(os.getenv('DOCROPPER_ENABLE_SIGN', settings.get('enable_sign', True))).lower() != 'false'
+sign_dev = str(os.getenv('DOCROPPER_SIGN_DEV_ONLY', settings.get('sign_dev_only', False))).lower() == 'true'
+enable_mobilesign = str(os.getenv('DOCROPPER_ENABLE_MOBILESIGN', settings.get('enable_mobilesign', False))).lower() == 'true'
+mobilesign_dev = str(os.getenv('DOCROPPER_MOBILESIGN_DEV_ONLY', settings.get('mobilesign_dev_only', False))).lower() == 'true'
+enable_remotesign = str(os.getenv('DOCROPPER_ENABLE_REMOTESIGN', settings.get('enable_remotesign', False))).lower() == 'true'
+remotesign_dev = str(os.getenv('DOCROPPER_REMOTESIGN_DEV_ONLY', settings.get('remotesign_dev_only', True))).lower() == 'true'
+enable_docuseal = str(os.getenv('DOCROPPER_ENABLE_DOCUSEAL', settings.get('enable_docuseal', False))).lower() == 'true'
+docuseal_dev = str(os.getenv('DOCROPPER_DOCUSEAL_DEV_ONLY', settings.get('docuseal_dev_only', True))).lower() == 'true'
+enable_removebg = str(os.getenv('DOCROPPER_ENABLE_REMOVEBG', settings.get('enable_removebg', False))).lower() == 'true'
+removebg_dev = str(os.getenv('DOCROPPER_REMOVEBG_DEV_ONLY', settings.get('removebg_dev_only', False))).lower() == 'true'
+enable_compresspdf = str(os.getenv('DOCROPPER_ENABLE_COMPRESSPDF', settings.get('enable_compresspdf', False))).lower() == 'true'
+compresspdf_dev = str(os.getenv('DOCROPPER_COMPRESSPDF_DEV_ONLY', settings.get('compresspdf_dev_only', False))).lower() == 'true'
+enable_watermark = str(os.getenv('DOCROPPER_ENABLE_WATERMARK', settings.get('enable_watermark', False))).lower() == 'true'
+watermark_dev = str(os.getenv('DOCROPPER_WATERMARK_DEV_ONLY', settings.get('watermark_dev_only', False))).lower() == 'true'
+enable_downloadpng = str(os.getenv('DOCROPPER_ENABLE_DOWNLOADPNG', settings.get('enable_downloadpng', False))).lower() == 'true'
+downloadpng_dev = str(os.getenv('DOCROPPER_DOWNLOADPNG_DEV_ONLY', settings.get('downloadpng_dev_only', True))).lower() == 'true'
+enable_pageselect = str(os.getenv('DOCROPPER_ENABLE_PAGESELECT', settings.get('enable_pageselect', True))).lower() == 'true'
+pageselect_dev = str(os.getenv('DOCROPPER_PAGESELECT_DEV_ONLY', settings.get('pageselect_dev_only', False))).lower() == 'true'
+enable_colormode = str(os.getenv('DOCROPPER_ENABLE_COLORMODE', settings.get('enable_colormode', True))).lower() == 'true'
+colormode_dev = str(os.getenv('DOCROPPER_COLORMODE_DEV_ONLY', settings.get('colormode_dev_only', False))).lower() == 'true'
+enable_imageeditor = str(os.getenv('DOCROPPER_ENABLE_IMAGEEDITOR', settings.get('enable_imageeditor', True))).lower() == 'true'
+imageeditor_dev = str(os.getenv('DOCROPPER_IMAGEEDITOR_DEV_ONLY', settings.get('imageeditor_dev_only', True))).lower() == 'true'
+
+if enable_sign and (not sign_dev or is_dev_license):
     register_sign(app, plugin_utils)
-if 'mobilesign' in ACTIVE_PLUGINS:
+    ACTIVE_PLUGINS.append('sign')
+if enable_mobilesign and (not mobilesign_dev or is_dev_license):
     register_mobilesign(app, plugin_utils)
-if 'remotesign' in ACTIVE_PLUGINS:
+    ACTIVE_PLUGINS.append('mobilesign')
+if enable_remotesign and (not remotesign_dev or is_dev_license):
     register_remotesign(app, plugin_utils)
-if 'docuseal' in ACTIVE_PLUGINS:
+    ACTIVE_PLUGINS.append('remotesign')
+if enable_docuseal and (not docuseal_dev or is_dev_license):
     register_docuseal(app, plugin_utils)
-if 'removebg' in ACTIVE_PLUGINS:
+    ACTIVE_PLUGINS.append('docuseal')
+if enable_removebg and (not removebg_dev or is_dev_license):
     register_removebg(app, plugin_utils)
-if 'compresspdf' in ACTIVE_PLUGINS:
+    ACTIVE_PLUGINS.append('removebg')
+if enable_compresspdf and (not compresspdf_dev or is_dev_license) and settings.get('license_level', 'free').lower() != 'free':
     register_compresspdf(app, plugin_utils)
-if 'watermark' in ACTIVE_PLUGINS:
+    ACTIVE_PLUGINS.append('compresspdf')
+if enable_watermark and (not watermark_dev or is_dev_license):
     register_watermark(app, plugin_utils)
-if 'downloadpng' in ACTIVE_PLUGINS:
+    ACTIVE_PLUGINS.append('watermark')
+if enable_downloadpng and (not downloadpng_dev or is_dev_license):
     register_downloadpng(app, plugin_utils)
-if 'pageselect' in ACTIVE_PLUGINS:
+    ACTIVE_PLUGINS.append('downloadpng')
+if enable_pageselect and (not pageselect_dev or is_dev_license):
     register_pageselect(app, plugin_utils)
-if 'colormode' in ACTIVE_PLUGINS:
+    ACTIVE_PLUGINS.append('pageselect')
+if enable_colormode and (not colormode_dev or is_dev_license):
     register_colormode(app, plugin_utils)
-if 'imageeditor' in ACTIVE_PLUGINS:
+    ACTIVE_PLUGINS.append('colormode')
+if enable_imageeditor and (not imageeditor_dev or is_dev_license):
     from plugins.imageeditor import register as register_imageeditor
     register_imageeditor(app, plugin_utils)
+    ACTIVE_PLUGINS.append('imageeditor')
 
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):
@@ -967,47 +887,20 @@ async def admin_page(user: User = Depends(require_superuser)):
 @app.get("/settings/")
 async def get_settings():
     data = load_settings()
-    # Ensure developer licenses from the environment take precedence even if
-    # stale values remain in settings.json or overrides.
-    dev_env = get_dev_license_key()
-    if dev_env and data.get("license_key", "").strip().upper() != dev_env:
-        data["license_key"] = dev_env
-        if data.get("license_level", "").lower() == "free":
-            data["license_level"] = "full"
-        if not data.get("license_name"):
-            data["license_name"] = os.getenv("DOCROPPER_LICENSE_NAME", "Developer")
     if not data.get("license_check") and not data.get("license_key"):
         data["license_key"] = "FREE"
         data["license_name"] = "Free Edition"
-    data["active_plugins"] = compute_active_plugins(data)
-    data["version"] = VERSION or os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
-    data["version_date"] = VERSION_DATE or os.getenv("DOCROPPER_BUILD_DATE", "")
-    masked = data.get("license_key", "")
-    if masked:
-        masked = masked[:4] + "..."
-    logger.info(
-        "Serving settings: level=%s key=%s version=%s date=%s",
-        data.get("license_level"),
-        masked,
-        data["version"],
-        data["version_date"],
-    )
+    data["version"] = VERSION
+    data["version_date"] = VERSION_DATE
+    data["active_plugins"] = ACTIVE_PLUGINS
     if "stripe_secret_key" in data:
         data.pop("stripe_secret_key")
-    resp = JSONResponse(data)
-    resp.headers["Cache-Control"] = "no-cache"
-    return resp
+    return data
 
 
 @app.post("/settings/")
 async def update_settings(settings: dict = Body(...)):
-    data = save_settings(settings)
-    data["active_plugins"] = compute_active_plugins(data)
-    data["version"] = VERSION or os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
-    data["version_date"] = VERSION_DATE or os.getenv("DOCROPPER_BUILD_DATE", "")
-    if "stripe_secret_key" in data:
-        data.pop("stripe_secret_key")
-    return data
+    return save_settings(settings)
 
 
 @app.get("/user-settings/")
@@ -1016,31 +909,9 @@ async def get_user_settings_endpoint(request: Request):
     if not email:
         return JSONResponse(status_code=401, content={"message": "Not logged in"})
     data = load_user_settings(email)
-    # Mirror the developer license fallback used in the global settings so
-    # authenticated sessions always reflect an active developer license.
-    dev_env = get_dev_license_key()
-    if dev_env and data.get("license_key", "").strip().upper() != dev_env:
-        data["license_key"] = dev_env
-        if data.get("license_level", "").lower() == "free":
-            data["license_level"] = "full"
-        if not data.get("license_name"):
-            data["license_name"] = os.getenv("DOCROPPER_LICENSE_NAME", "Developer")
-    data["active_plugins"] = compute_active_plugins(data)
-    data["version"] = VERSION or os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
-    data["version_date"] = VERSION_DATE or os.getenv("DOCROPPER_BUILD_DATE", "")
-    masked = data.get("license_key", "")
-    if masked:
-        masked = masked[:4] + "..."
-    logger.info(
-        "Serving user settings: level=%s key=%s version=%s date=%s",
-        data.get("license_level"),
-        masked,
-        data["version"],
-        data["version_date"],
-    )
-    resp = JSONResponse(data)
-    resp.headers["Cache-Control"] = "no-cache"
-    return resp
+    data["version"] = VERSION
+    data["version_date"] = VERSION_DATE
+    return data
 
 
 @app.post("/user-settings/")
@@ -1049,11 +920,8 @@ async def update_user_settings_endpoint(request: Request, settings: dict = Body(
     if not email:
         return JSONResponse(status_code=401, content={"message": "Not logged in"})
     data = save_user_settings(email, settings)
-    data["active_plugins"] = compute_active_plugins(data)
     data["version"] = VERSION
     data["version_date"] = VERSION_DATE
-    if "stripe_secret_key" in data:
-        data.pop("stripe_secret_key")
     return data
 
 
@@ -1115,8 +983,8 @@ async def developer_login(data: dict = Body(...)):
     password = data.get("password", "")
     settings = load_settings()
     hashed = settings.get("developer_password_hash", "")
-    if hashed and bcrypt_verify(password, hashed):
-        if bcrypt_verify(DEFAULT_DEV_PASSWORD, hashed):
+    if hashed and bcrypt.verify(password, hashed):
+        if bcrypt.verify(DEFAULT_DEV_PASSWORD, hashed):
             raise HTTPException(status_code=403, detail="Change default developer password")
         return {"status": "ok"}
     raise HTTPException(status_code=403, detail="Invalid password")
@@ -1130,9 +998,9 @@ async def change_developer_password(data: dict = Body(...)):
         raise HTTPException(status_code=400, detail="New password required")
     settings = load_settings()
     hashed = settings.get("developer_password_hash", "")
-    if not hashed or not bcrypt_verify(old, hashed):
+    if not hashed or not bcrypt.verify(old, hashed):
         raise HTTPException(status_code=403, detail="Invalid password")
-    save_settings({"developer_password_hash": bcrypt_hash(new)})
+    save_settings({"developer_password_hash": bcrypt.hash(new)})
     return {"status": "updated"}
 
 
@@ -1141,7 +1009,9 @@ async def settings_login(data: dict = Body(...)):
     password = data.get("password", "")
     settings = load_settings()
     hashed = settings.get("settings_password_hash", "")
-    if hashed and bcrypt_verify(password, hashed):
+    if hashed and bcrypt.verify(password, hashed):
+        if bcrypt.verify(DEFAULT_SETTINGS_PASSWORD, hashed):
+            raise HTTPException(status_code=403, detail="Change default settings password")
         return {"status": "ok"}
     raise HTTPException(status_code=403, detail="Invalid password")
 
@@ -1154,9 +1024,9 @@ async def change_settings_password(data: dict = Body(...)):
         raise HTTPException(status_code=400, detail="New password required")
     settings = load_settings()
     hashed = settings.get("settings_password_hash", "")
-    if not hashed or not bcrypt_verify(old, hashed):
+    if not hashed or not bcrypt.verify(old, hashed):
         raise HTTPException(status_code=403, detail="Invalid password")
-    save_settings({"settings_password_hash": bcrypt_hash(new)})
+    save_settings({"settings_password_hash": bcrypt.hash(new)})
     return {"status": "updated"}
 
 
@@ -1256,7 +1126,7 @@ async def create_pdf(
         settings = load_settings()
         key = settings.get("license_key", "").strip().upper()
         license_check = settings.get("license_check", False)
-        dev_env = get_dev_license_key()
+        dev_env = DEV_LICENSE_KEY_UPPER
         dev_key_valid = dev_env and key == dev_env
         demo_key = key == DEMO_FULL_LICENSE_KEY
         if license_check:
@@ -1604,7 +1474,7 @@ if __name__ == "__main__":
     port = args.port if args.port is not None else int(settings.get("port", 8765))
     host = args.host
     if settings.get("license_level", "free").lower() != "full":
-        dev_env = get_dev_license_key()
+        dev_env = DEV_LICENSE_KEY_UPPER
         key = settings.get("license_key", "").strip().upper()
         if not (dev_env and key == dev_env):
             host = "127.0.0.1"

@@ -12,9 +12,6 @@ cd /d "!APP_DIR!"
 
 if not exist env mkdir env
 
-:: Remove any enforced license overrides before applying a new key
-if exist license_overrides.json del /f license_overrides.json
-
 set /p LICENSE_KEY=Enter license key:
 set /p LICENSE_NAME=Enter license name:
 
@@ -35,19 +32,10 @@ del "%TEMP%\_writetest.tmp" 2>NUL
 )
 echo DOCROPPER_LICENSE_NAME=!LICENSE_NAME!>> "!ENVFILE!"
 echo DOCROPPER_DEV_LICENSE=!LICENSE_KEY!>> "!ENVFILE!"
-echo DOCROPPER_LICENSE_LEVEL=developer>> "!ENVFILE!"
+echo DOCROPPER_LICENSE_LEVEL=full>> "!ENVFILE!"
 echo DOCROPPER_DEV_PASSWORD=87654321>> "!ENVFILE!"
 echo DOCROPPER_SETTINGS_PASSWORD=12345678>> "!ENVFILE!"
 
-set "SETTINGS_FILE=settings.json"
-powershell -NoProfile -Command ^
-  "$sf=\"%SETTINGS_FILE%\";$key=\"%LICENSE_KEY%\";$name=\"%LICENSE_NAME%\";" ^
-  "if (Test-Path $sf) { $j = Get-Content -Raw $sf | ConvertFrom-Json } else { $j = @{} };" ^
-  "$j.license_key = $key; $j.license_name = $name; $j.license_level = 'developer';" ^
-  "$j | ConvertTo-Json -Depth 10 | Set-Content $sf"
-
-if exist license_overrides.json del /f license_overrides.json
-
-echo Developer license saved to !ENVFILE! and %SETTINGS_FILE% updated
+echo Developer license saved to !ENVFILE!
 pause
 endlocal

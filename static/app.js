@@ -270,23 +270,6 @@ if (cameraMargin) {
 
 let isLicensed = false;
 let licenseName = '';
-
-function refreshLicenseDisplay() {
-    if (licenseInfo) {
-        licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
-    }
-    if (versionBox && appVersion) {
-        const txt = translations['version'] ? `${translations['version']} ${appVersion}` : `Version ${appVersion}`;
-        versionBox.innerHTML = appVersionDate ? txt + '<br>' + appVersionDate : txt;
-    }
-    console.log('License status', {
-        level: currentLicenseLevel,
-        licensed: isLicensed,
-        key: (currentSettings.license_key || '').slice(0, 4),
-        version: appVersion,
-        date: appVersionDate
-    });
-}
 let appVersion = '';
 let appVersionDate = '';
 let userInfo = null;
@@ -588,12 +571,9 @@ async function importPdfPages(file) {
 }
 
 async function loadSettings() {
-    const baseUrl = userInfo ? '/user-settings/' : '/settings/';
-    // Add a timestamp to bypass any browser caching that might serve stale
-    // license information even though the server disables caching.
-    const url = `${baseUrl}?_=${Date.now()}`;
+    const url = userInfo ? '/user-settings/' : '/settings/';
     try {
-        const resp = await fetch(url, { cache: 'no-store' });
+        const resp = await fetch(url);
         if (resp.ok) {
             return await resp.json();
         }
@@ -734,14 +714,19 @@ function applySettings(cfg) {
     }
     demoFullMode = !!cfg.demo_full_mode;
     const devLicense = ((cfg.license_key || '').toUpperCase().endsWith('-DEV')) ||
-        (cfg.license_level && cfg.license_level.toLowerCase().includes('developer')) ||
-        (cfg.license_type && cfg.license_type.toLowerCase().includes('developer'));
+        (cfg.license_level && cfg.license_level.toLowerCase() === 'developer') ||
+        (cfg.license_type && cfg.license_type.toLowerCase() === 'developer');
     if (devSettingsBtn) {
         devSettingsBtn.style.display = devLicense ? 'inline-block' : 'none';
     }
-    isLicensed = !!((cfg.license_key && cfg.license_key.trim()) ||
-        (cfg.license_level && cfg.license_level.toLowerCase() !== 'free'));
-    licenseName = cfg.license_name || (devLicense ? 'Developer' : '');
+    isLicensed = false;
+    licenseName = '';
+    if (cfg.license_key && cfg.license_key.trim()) {
+        isLicensed = true;
+    }
+    if (cfg.license_name) {
+        licenseName = cfg.license_name;
+    }
     if (cfg.public_url !== undefined) {
         currentSettings.public_url = cfg.public_url;
     }
@@ -882,7 +867,6 @@ function applySettings(cfg) {
     if (settingsBtn) {
         settingsBtn.style.display = (demoFullMode && !devLicense) ? 'none' : 'inline-block';
     }
-    refreshLicenseDisplay();
 }
 
 async function loadTranslations(lang) {
@@ -968,6 +952,14 @@ function applyTranslations() {
             opt.textContent = translations[key];
         }
     });
+    if (versionBox && appVersion) {
+        const txt = translations['version'] ? `${translations['version']} ${appVersion}` : `Version ${appVersion}`;
+        if (appVersionDate) {
+            versionBox.innerHTML = txt + '<br>' + appVersionDate;
+        } else {
+            versionBox.textContent = txt;
+        }
+    }
     if (sloganImg) {
         sloganImg.src = `/static/slide/DocCropper_slogan_main_${currentLang}.png`;
     }
@@ -977,7 +969,6 @@ function applyTranslations() {
     updateGalleryLayout();
     updateWikiLinks();
     startBannerRotation();
-    refreshLicenseDisplay();
 }
 
 function updateWikiLinks() {
@@ -3361,13 +3352,6 @@ function renderSettingsBox() {
     const level = currentSettings.license_level || 'free';
     const html = `
     <div class="settingsForm">
-        <label>${t('languageLabel')}</label>
-        <select id="langSelect">
-            <option value="it" ${currentSettings.language==='it'?'selected':''}>Italiano</option>
-            <option value="en" ${currentSettings.language==='en'?'selected':''}>English</option>
-        </select>
-        <label>${t('maxUploadMb')}</label>
-        <input type="number" id="maxUploadMbInput" value="${currentSettings.max_upload_mb || 5}" min="1">
         <label>${t('licenseType')}</label>
         <select id="licenseLevelSelect">
             <option value="free" ${level==='free'?'selected':''}>${t('freeEdition')}</option>
@@ -3395,8 +3379,6 @@ function renderSettingsBox() {
     const levelSelect = document.getElementById('licenseLevelSelect');
     const googleDiv = document.getElementById('googleSettings');
     const docusealDiv = document.getElementById('docusealSettings');
-    const langSelect = document.getElementById('langSelect');
-    const maxUploadInput = document.getElementById('maxUploadMbInput');
     levelSelect.addEventListener('change', () => {
         const val = levelSelect.value;
         googleDiv.style.display = (val === 'pro' || val === 'full') ? 'block' : 'none';
@@ -3404,11 +3386,7 @@ function renderSettingsBox() {
     });
     document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
         const lvl = levelSelect.value;
-        const update = {
-            license_level: lvl,
-            language: langSelect.value,
-            max_upload_mb: parseInt(maxUploadInput.value, 10)
-        };
+        const update = { license_level: lvl };
         if (lvl === 'pro' || lvl === 'full') {
             update.google_client_id = document.getElementById('googleClientIdInput').value.trim();
         } else {
@@ -3431,31 +3409,21 @@ function renderSettingsBox() {
 }
 
 function renderDevSettingsBox() {
-    const plugins = [
-        { key: 'enable_sign', label: 'enableSign' },
-        { key: 'enable_mobilesign', label: 'enableMobileSign' },
-        { key: 'enable_removebg', label: 'enableRemoveBg' },
-        { key: 'enable_compresspdf', label: 'enableCompressPdf' },
-        { key: 'enable_remotesign', label: 'enableRemoteSign' },
-        { key: 'enable_docuseal', label: 'enableDocuSeal' },
-        { key: 'enable_watermark', label: 'enableWatermark' },
-        { key: 'enable_pageselect', label: 'enablePageSelect' },
-        { key: 'enable_colormode', label: 'enableColorMode' },
-        { key: 'enable_imageeditor', label: 'enableImageEditor' },
-        { key: 'enable_downloadpng', label: 'enableDownloadPng' }
-    ];
-    let html = '<div class="settings-content">';
-    plugins.forEach(p => {
-        html += `<label><input type="checkbox" id="${p.key}Chk" ${currentSettings[p.key]?'checked':''}> ${t(p.label)}</label>`;
-    });
-    html += `<button id="saveDevSettingsBtn">${t('saveSettings')}</button></div>`;
+    const html = `
+    <div class="settings-content">
+        <label><input type="checkbox" id="enableImageEditorChk" ${currentSettings.enable_imageeditor?'checked':''}> ${t('enableImageEditor')}</label>
+        <label><input type="checkbox" id="enablePageSelectChk" ${currentSettings.enable_pageselect?'checked':''}> ${t('enablePageSelect')}</label>
+        <label><input type="checkbox" id="enableDownloadPngChk" ${currentSettings.enable_downloadpng?'checked':''}> ${t('enableDownloadPng')}</label>
+        <button id="saveDevSettingsBtn">${t('saveSettings')}</button>
+    </div>`;
     devSettingsBox.innerHTML = html;
     devSettingsBox.style.display = 'block';
     document.getElementById('saveDevSettingsBtn').addEventListener('click', async () => {
-        const update = {};
-        plugins.forEach(p => {
-            update[p.key] = document.getElementById(p.key + 'Chk').checked;
-        });
+        const update = {
+            enable_imageeditor: document.getElementById('enableImageEditorChk').checked,
+            enable_pageselect: document.getElementById('enablePageSelectChk').checked,
+            enable_downloadpng: document.getElementById('enableDownloadPngChk').checked
+        };
         await saveSettings(update);
         const cfg = await loadSettings();
         applySettings(cfg);
@@ -3471,8 +3439,8 @@ function renderLogin(cfg) {
         return;
     }
     const devLicense = (cfg.license_key || '').toUpperCase().endsWith('-DEV') ||
-        (cfg.license_level && cfg.license_level.toLowerCase().includes('developer')) ||
-        (cfg.license_type && cfg.license_type.toLowerCase().includes('developer'));
+        (cfg.license_level && cfg.license_level.toLowerCase() === 'developer') ||
+        (cfg.license_type && cfg.license_type.toLowerCase() === 'developer');
     if (cfg.login_dev_only && !devLicense) {
         loginArea.style.display = 'none';
         return;
@@ -3506,7 +3474,7 @@ function renderLogin(cfg) {
                         await loadTranslations(currentLang);
                         applyTranslations();
                         renderPaymentBox(baseCfg);
-                        refreshLicenseDisplay();
+                        licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
                         applyProStatus();
                         updateLayoutPreview();
                     });
@@ -3515,7 +3483,7 @@ function renderLogin(cfg) {
                     await loadTranslations(currentLang);
                     applyTranslations();
                     renderPaymentBox(newCfg);
-                    refreshLicenseDisplay();
+                    licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
                     applyProStatus();
                     updateLayoutPreview();
                 } else {
@@ -3551,7 +3519,7 @@ loadSettings().then(async (cfg) => {
     renderPaymentBox(cfg);
     renderLicenseBox();
     renderLogin(cfg);
-    refreshLicenseDisplay();
+    licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
     applyProStatus();
     updateLayoutPreview();
     setupDeviceMode();
