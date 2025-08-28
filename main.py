@@ -926,11 +926,19 @@ async def admin_page(user: User = Depends(require_superuser)):
 async def get_settings():
     data = load_settings()
     data["active_plugins"] = compute_active_plugins(data)
+    # Ensure developer licenses from the environment take precedence even if
+    # stale values remain in settings.json or overrides.
+    dev_env = get_dev_license_key()
+    if dev_env and data.get("license_level", "free").lower() == "free":
+        data["license_key"] = dev_env
+        data["license_level"] = "developer"
+        if not data.get("license_name"):
+            data["license_name"] = os.getenv("DOCROPPER_LICENSE_NAME", "Developer")
     if not data.get("license_check") and not data.get("license_key"):
         data["license_key"] = "FREE"
         data["license_name"] = "Free Edition"
-    data["version"] = VERSION
-    data["version_date"] = VERSION_DATE
+    data["version"] = VERSION or os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
+    data["version_date"] = VERSION_DATE or os.getenv("DOCROPPER_BUILD_DATE", "")
     if "stripe_secret_key" in data:
         data.pop("stripe_secret_key")
     resp = JSONResponse(data)
@@ -949,8 +957,16 @@ async def get_user_settings_endpoint(request: Request):
     if not email:
         return JSONResponse(status_code=401, content={"message": "Not logged in"})
     data = load_user_settings(email)
-    data["version"] = VERSION
-    data["version_date"] = VERSION_DATE
+    # Mirror the developer license fallback used in the global settings so
+    # authenticated sessions always reflect an active developer license.
+    dev_env = get_dev_license_key()
+    if dev_env and data.get("license_level", "free").lower() == "free":
+        data["license_key"] = dev_env
+        data["license_level"] = "developer"
+        if not data.get("license_name"):
+            data["license_name"] = os.getenv("DOCROPPER_LICENSE_NAME", "Developer")
+    data["version"] = VERSION or os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
+    data["version_date"] = VERSION_DATE or os.getenv("DOCROPPER_BUILD_DATE", "")
     resp = JSONResponse(data)
     resp.headers["Cache-Control"] = "no-cache"
     return resp
