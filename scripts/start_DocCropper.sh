@@ -38,8 +38,14 @@ import tempfile, os
 print(os.path.join(tempfile.gettempdir(), 'doccropper_tray.pid'))
 PY
 )
-if [ -f "$TRAY_PID_FILE" ] && ps -p $(cat "$TRAY_PID_FILE") >/dev/null 2>&1; then
-  TRAY_RUNNING=1
+if [ -f "$TRAY_PID_FILE" ]; then
+  TPID=$(cat "$TRAY_PID_FILE")
+  if ps -p "$TPID" >/dev/null 2>&1; then
+    TRAY_RUNNING=1
+  else
+    TRAY_RUNNING=0
+    rm -f "$TRAY_PID_FILE"
+  fi
 else
   TRAY_RUNNING=0
 fi
@@ -50,8 +56,14 @@ import tempfile, os
 print(os.path.join(tempfile.gettempdir(), 'doccropper.pid'))
 PY
 )
-if [ -f "$PID_FILE" ] && ps -p $(cat "$PID_FILE") >/dev/null 2>&1; then
-  SERVER_RUNNING=1
+if [ -f "$PID_FILE" ]; then
+  PID=$(cat "$PID_FILE")
+  if ps -p "$PID" >/dev/null 2>&1; then
+    SERVER_RUNNING=1
+  else
+    SERVER_RUNNING=0
+    rm -f "$PID_FILE"
+  fi
 else
   SERVER_RUNNING=0
 fi

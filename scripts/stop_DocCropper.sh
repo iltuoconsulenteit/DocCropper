@@ -26,13 +26,18 @@ PY
 if [ -f "$PID_FILE" ]; then
   PID=$(cat "$PID_FILE")
   if ps -p "$PID" >/dev/null 2>&1; then
-    kill "$PID" 2>/dev/null || sudo -n kill "$PID" || true
-    sleep 1
-    if ps -p "$PID" >/dev/null 2>&1; then
-      kill -9 "$PID" 2>/dev/null || sudo -n kill -9 "$PID" || true
-      log "Force killed DocCropper PID $PID"
+    CMD=$(ps -p "$PID" -o command=)
+    if echo "$CMD" | grep -q "$APP_DIR"; then
+      kill "$PID" 2>/dev/null || sudo -n kill "$PID" || true
+      sleep 1
+      if ps -p "$PID" >/dev/null 2>&1; then
+        kill -9 "$PID" 2>/dev/null || sudo -n kill -9 "$PID" || true
+        log "Force killed DocCropper PID $PID"
+      else
+        log "Stopped DocCropper PID $PID"
+      fi
     else
-      log "Stopped DocCropper PID $PID"
+      log "PID $PID does not belong to DocCropper"
     fi
   fi
   rm -f "$PID_FILE" 2>/dev/null || sudo -n rm -f "$PID_FILE" || true
@@ -46,13 +51,18 @@ PY
 if [ -f "$TRAY_PID_FILE" ]; then
   TPID=$(cat "$TRAY_PID_FILE")
   if ps -p "$TPID" >/dev/null 2>&1; then
-    kill "$TPID" 2>/dev/null || sudo -n kill "$TPID" || true
-    sleep 1
-    if ps -p "$TPID" >/dev/null 2>&1; then
-      kill -9 "$TPID" 2>/dev/null || sudo -n kill -9 "$TPID" || true
-      log "Force killed tray helper PID $TPID"
+    CMD=$(ps -p "$TPID" -o command=)
+    if echo "$CMD" | grep -q "doccropper_tray"; then
+      kill "$TPID" 2>/dev/null || sudo -n kill "$TPID" || true
+      sleep 1
+      if ps -p "$TPID" >/dev/null 2>&1; then
+        kill -9 "$TPID" 2>/dev/null || sudo -n kill -9 "$TPID" || true
+        log "Force killed tray helper PID $TPID"
+      else
+        log "Stopped tray helper PID $TPID"
+      fi
     else
-      log "Stopped tray helper PID $TPID"
+      log "PID $TPID does not belong to tray helper"
     fi
   fi
   rm -f "$TRAY_PID_FILE" 2>/dev/null || sudo -n rm -f "$TRAY_PID_FILE"

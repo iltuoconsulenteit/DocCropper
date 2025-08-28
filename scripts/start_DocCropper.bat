@@ -47,6 +47,7 @@ set "TRAY_RUNNING=0"
 if exist "!TRAY_PID_FILE!" (
     for /f %%p in (!TRAY_PID_FILE!) do set "TRAY_PID=%%p"
     tasklist /FI "PID eq !TRAY_PID!" | find "!TRAY_PID!" >nul && set "TRAY_RUNNING=1"
+    if "!TRAY_RUNNING!"=="0" del "!TRAY_PID_FILE!" >nul 2>&1
 )
 
 :: Check if server already running using PID file
@@ -55,6 +56,7 @@ set "SERVER_RUNNING=0"
 if exist "!PID_FILE!" (
     for /f %%p in (!PID_FILE!) do set "PID=%%p"
     tasklist /FI "PID eq !PID!" | find "!PID!" >nul && set "SERVER_RUNNING=1"
+    if "!SERVER_RUNNING!"=="0" del "!PID_FILE!" >nul 2>&1
 )
 
 if "!TRAY_RUNNING!"=="0" (
