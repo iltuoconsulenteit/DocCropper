@@ -79,8 +79,12 @@ ROLLBACK_SCRIPTS = {
     'Darwin': 'rollback_DocCropper.command',
 }.get(SYSTEM, 'rollback_DocCropper.sh')
 
-def is_developer():
-    """Return True if a developer license is active."""
+VERSION = os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
+VERSION_DATE = os.getenv("DOCROPPER_BUILD_DATE", "")
+
+
+def get_license_info():
+    """Return license level, full key, masked key and dev flag."""
     settings_file = BASE_DIR / 'settings.json'
     try:
         with open(settings_file) as fh:
@@ -91,7 +95,6 @@ def is_developer():
     key = data.get('license_key', '').strip().upper()
     level = data.get('license_level', '').strip().lower()
 
-    # Environment variables override values from settings.json
     env_key = os.environ.get('DOCROPPER_LICENSE_KEY', '').strip().upper()
     env_level = os.environ.get('DOCROPPER_LICENSE_LEVEL', '').strip().lower()
     if env_key:
@@ -105,17 +108,22 @@ def is_developer():
     if dev_env and level != 'developer':
         level = 'developer'
     masked = f"{key[:4]}..." if key else ""
+    return level, key, masked, bool(dev_env)
+
+
+def is_developer():
+    """Return True if a developer license is active."""
+    level, key, masked, dev_env = get_license_info()
     logging.info(
-        "License check: level=%s key=%s env_dev=%s",
+        "License check: level=%s key=%s env_dev=%s version=%s date=%s",
         level or "",
         masked,
-        bool(dev_env),
+        dev_env,
+        VERSION,
+        VERSION_DATE,
     )
-
     return (
-        level == 'developer'
-        or key.endswith('-DEV')
-        or bool(dev_env)
+        level == 'developer' or key.endswith('-DEV') or dev_env
     )
 
 def run_script(name, env=None, folder=INSTALL_DIR):
@@ -207,8 +215,17 @@ def main():
                         help="Start server immediately")
     args = parser.parse_args()
 
-    developer = os.environ.get('DOCROPPER_DEVELOPER') == '1' or is_developer()
-    logging.info("Tray icon started (developer=%s)", developer)
+    force_dev = os.environ.get('DOCROPPER_DEVELOPER') == '1'
+    level, key, masked, _ = get_license_info()
+    developer = force_dev or is_developer()
+    logging.info(
+        "Tray icon started (developer=%s license=%s key=%s version=%s date=%s)",
+        developer,
+        level or "",
+        masked,
+        VERSION,
+        VERSION_DATE,
+    )
     try:
         TRAY_PID_FILE.write_text(str(os.getpid()))
     except Exception:
@@ -305,10 +322,11 @@ def main():
         menu_items.append(MenuItem(tr('updateBranch'), update_branch_action))
     menu_items.append(MenuItem(tr('quit'), quit_app))
 
+    title = f"DocCropper {VERSION} ({VERSION_DATE}) - {level or ''} {masked}".strip()
     icon = Icon(
         'DocCropper',
         create_image(running),
-        'DocCropper',
+        title,
         menu=Menu(*menu_items)
     )
 

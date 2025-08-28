@@ -540,7 +540,13 @@ def load_settings():
             logger.exception("sponsor plugin failed")
 
         masked_key = key_upper[:4] + "..." if key_upper else "none"
-        logger.info("Loaded license %s (%s)", merged.get("license_level"), masked_key)
+        logger.info(
+            "Loaded license %s (%s) - version %s (%s)",
+            merged.get("license_level"),
+            masked_key,
+            VERSION,
+            VERSION_DATE,
+        )
         return merged
     except Exception:
         return DEFAULT_SETTINGS.copy()
