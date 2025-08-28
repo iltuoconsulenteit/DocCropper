@@ -97,7 +97,7 @@ except Exception:
 
 
 def get_license_info():
-    """Return license level, full key, masked key and dev flag."""
+    """Return license level, key, masked key, dev flag and license name."""
     settings_file = BASE_DIR / 'settings.json'
     try:
         with open(settings_file) as fh:
@@ -107,26 +107,32 @@ def get_license_info():
 
     key = data.get('license_key', '').strip().upper()
     level = data.get('license_level', '').strip().lower()
+    name = data.get('license_name', '').strip()
 
     env_key = os.environ.get('DOCROPPER_LICENSE_KEY', '').strip().upper()
     env_level = os.environ.get('DOCROPPER_LICENSE_LEVEL', '').strip().lower()
+    env_name = os.environ.get('DOCROPPER_LICENSE_NAME', '').strip()
     if env_key:
         key = env_key
     if env_level:
         level = env_level
+    if env_name:
+        name = env_name
 
     dev_env = os.environ.get('DOCROPPER_DEV_LICENSE', '').strip().upper()
     if dev_env and not key:
         key = dev_env
     if dev_env and level != 'developer':
         level = 'developer'
+    if not name and (dev_env or key.endswith('-DEV')):
+        name = 'Developer'
     masked = f"{key[:4]}..." if key else ""
-    return level, key, masked, bool(dev_env)
+    return level, key, masked, bool(dev_env), name
 
 
 def is_developer():
     """Return True if a developer license is active."""
-    level, key, masked, dev_env = get_license_info()
+    level, key, masked, dev_env, _ = get_license_info()
     logging.info(
         "License check: level=%s key=%s env_dev=%s version=%s date=%s",
         level or "",
@@ -217,9 +223,10 @@ def fetch_server_build_info():
             data.get('version_date'),
             data.get('license_level'),
             data.get('license_key'),
+            data.get('license_name'),
         )
     except Exception:
-        return None, None, None, None
+        return None, None, None, None, None
 
 def is_running():
     port = get_port()
@@ -244,9 +251,9 @@ def main():
     args = parser.parse_args()
 
     force_dev = os.environ.get('DOCROPPER_DEVELOPER') == '1'
-    level, key, masked, _ = get_license_info()
+    level, key, masked, _, name = get_license_info()
     developer = force_dev or is_developer()
-    srv_v, srv_d, srv_level, srv_key = fetch_server_build_info()
+    srv_v, srv_d, srv_level, srv_key, srv_name = fetch_server_build_info()
     if srv_v:
         VERSION = srv_v
     if srv_d:
@@ -256,10 +263,13 @@ def main():
     if srv_key:
         key = srv_key
         masked = f"{key[:4]}..."
+    if srv_name:
+        name = srv_name
     logging.info(
-        "Tray icon started (developer=%s license=%s key=%s version=%s date=%s)",
+        "Tray icon started (developer=%s license=%s name=%s key=%s version=%s date=%s)",
         developer,
         level or "",
+        name or "",
         masked,
         VERSION,
         VERSION_DATE,
@@ -350,7 +360,7 @@ def main():
         update_branch()
 
     info_item = MenuItem(
-        f"v{VERSION} ({VERSION_DATE}) - {level or ''} {masked}".strip(),
+        f"v{VERSION} ({VERSION_DATE}) - {level or ''} {name or ''} {masked}".strip(),
         None,
         enabled=False,
     )
@@ -367,7 +377,7 @@ def main():
         menu_items.append(MenuItem(tr('updateBranch'), update_branch_action))
     menu_items.append(MenuItem(tr('quit'), quit_app))
 
-    title = f"DocCropper {VERSION} ({VERSION_DATE}) - {level or ''} {masked}".strip()
+    title = f"DocCropper {VERSION} ({VERSION_DATE}) - {level or ''} {name or ''} {masked}".strip()
     icon = Icon(
         'DocCropper',
         create_image(running),
@@ -377,8 +387,8 @@ def main():
 
     def refresh_from_server():
         global VERSION, VERSION_DATE
-        nonlocal level, key, masked
-        v, d, lvl, k = fetch_server_build_info()
+        nonlocal level, key, masked, name
+        v, d, lvl, k, n = fetch_server_build_info()
         updated = False
         if v:
             VERSION = v
@@ -393,9 +403,12 @@ def main():
             key = k
             masked = f"{k[:4]}..."
             updated = True
+        if n:
+            name = n
+            updated = True
         if updated:
-            info_item.text = f"v{VERSION} ({VERSION_DATE}) - {level or ''} {masked}".strip()
-            icon.title = f"DocCropper {VERSION} ({VERSION_DATE}) - {level or ''} {masked}".strip()
+            info_item.text = f"v{VERSION} ({VERSION_DATE}) - {level or ''} {name or ''} {masked}".strip()
+            icon.title = f"DocCropper {VERSION} ({VERSION_DATE}) - {level or ''} {name or ''} {masked}".strip()
 
     if running:
         refresh_from_server()

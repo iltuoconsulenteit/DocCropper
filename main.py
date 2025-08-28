@@ -103,6 +103,7 @@ try:
 except Exception:
     pytesseract = None
 
+logger = logging.getLogger(__name__)
 
 SETTINGS_FILE = "settings.json"
 # Additional file storing values enforced by a license check
@@ -367,6 +368,9 @@ def load_settings():
             merged["max_upload_mb"] = int(max_mb_env)
         env_key = os.getenv("DOCROPPER_LICENSE_KEY")
         env_name = os.getenv("DOCROPPER_LICENSE_NAME")
+        dev_env = get_dev_license_key()
+        if not env_key and dev_env:
+            env_key = dev_env
         google_id = os.getenv("DOCROPPER_GOOGLE_CLIENT_ID")
         env_check = os.getenv("LICENSE_CHECK")
         env_level = os.getenv("DOCROPPER_LICENSE_LEVEL")
@@ -487,7 +491,7 @@ def load_settings():
         dev_env = get_dev_license_key()
         key_upper = merged.get("license_key", "").strip().upper()
         is_demo = key_upper == DEMO_FULL_LICENSE_KEY
-        is_dev = bool(dev_env) or key_upper.endswith("-DEV")
+        is_dev = (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV")
         if is_demo:
             merged["license_level"] = "full"
             merged["demo_full_mode"] = True
@@ -499,7 +503,7 @@ def load_settings():
             if not merged.get("public_url"):
                 merged["public_url"] = "https://doccropper.iltuoconsulenteit.it"
         elif is_dev:
-            merged["license_level"] = "developer"
+            merged["license_level"] = "full"
             if env_key:
                 merged["license_key"] = env_key
             elif not merged.get("license_key") and dev_env:
@@ -520,7 +524,7 @@ def load_settings():
             desired = {
                 "license_key": merged.get("license_key", ""),
                 "license_name": merged.get("license_name", ""),
-                "license_level": "developer",
+                "license_level": "full",
             }
             if any(current.get(k) != v for k, v in desired.items()):
                 current.update(desired)
@@ -552,6 +556,7 @@ def load_settings():
         )
         return merged
     except Exception:
+        logger.exception("load_settings failed")
         return DEFAULT_SETTINGS.copy()
 
 # Initialize global upload limits from settings
@@ -578,9 +583,13 @@ def save_settings(update: dict):
     data.update(filtered)
     if os.getenv("DOCROPPER_PUBLIC_URL"):
         data["public_url"] = os.getenv("DOCROPPER_PUBLIC_URL")
-    key_upper = data.get("license_key", "").strip().upper()
     dev_env = get_dev_license_key()
-    if key_upper == DEMO_FULL_LICENSE_KEY:
+    if not data.get("license_key") and dev_env:
+        data["license_key"] = dev_env
+    key_upper = data.get("license_key", "").strip().upper()
+    is_demo = key_upper == DEMO_FULL_LICENSE_KEY
+    is_dev = (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV")
+    if is_demo:
         data["license_level"] = "full"
         data["demo_full_mode"] = True
         if not data.get("license_name"):
@@ -590,8 +599,8 @@ def save_settings(update: dict):
             data["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
         if not data.get("public_url"):
             data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
-    elif bool(dev_env) or key_upper.endswith("-DEV"):
-        data["license_level"] = "developer"
+    elif is_dev:
+        data["license_level"] = "full"
         if not data.get("license_name"):
             data["license_name"] = "Developer"
         data["enable_mobilesign"] = True
@@ -613,6 +622,15 @@ def save_settings(update: dict):
         current.update(vals)
         with open(cfg_path, 'w') as fh:
             json.dump(current, fh, indent=2)
+    masked = key_upper[:4] + "..." if key_upper else "none"
+    logger.info(
+        "save_settings: key=%s env_dev=%s demo=%s dev=%s level=%s",
+        masked,
+        bool(dev_env),
+        is_demo,
+        is_dev,
+        data.get("license_level"),
+    )
     return data
 
 def sanitize_email(email: str) -> str:
@@ -952,12 +970,10 @@ async def get_settings():
     # Ensure developer licenses from the environment take precedence even if
     # stale values remain in settings.json or overrides.
     dev_env = get_dev_license_key()
-    if dev_env and (
-        data.get("license_level", "").lower() != "developer"
-        or data.get("license_key", "").strip().upper() != dev_env
-    ):
+    if dev_env and data.get("license_key", "").strip().upper() != dev_env:
         data["license_key"] = dev_env
-        data["license_level"] = "developer"
+        if data.get("license_level", "").lower() == "free":
+            data["license_level"] = "full"
         if not data.get("license_name"):
             data["license_name"] = os.getenv("DOCROPPER_LICENSE_NAME", "Developer")
     if not data.get("license_check") and not data.get("license_key"):
@@ -1003,12 +1019,10 @@ async def get_user_settings_endpoint(request: Request):
     # Mirror the developer license fallback used in the global settings so
     # authenticated sessions always reflect an active developer license.
     dev_env = get_dev_license_key()
-    if dev_env and (
-        data.get("license_level", "").lower() != "developer"
-        or data.get("license_key", "").strip().upper() != dev_env
-    ):
+    if dev_env and data.get("license_key", "").strip().upper() != dev_env:
         data["license_key"] = dev_env
-        data["license_level"] = "developer"
+        if data.get("license_level", "").lower() == "free":
+            data["license_level"] = "full"
         if not data.get("license_name"):
             data["license_name"] = os.getenv("DOCROPPER_LICENSE_NAME", "Developer")
     data["active_plugins"] = compute_active_plugins(data)
