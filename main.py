@@ -957,6 +957,16 @@ async def get_settings():
         data["license_name"] = "Free Edition"
     data["version"] = VERSION or os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
     data["version_date"] = VERSION_DATE or os.getenv("DOCROPPER_BUILD_DATE", "")
+    masked = data.get("license_key", "")
+    if masked:
+        masked = masked[:4] + "..."
+    logger.info(
+        "Serving settings: level=%s key=%s version=%s date=%s",
+        data.get("license_level"),
+        masked,
+        data["version"],
+        data["version_date"],
+    )
     if "stripe_secret_key" in data:
         data.pop("stripe_secret_key")
     resp = JSONResponse(data)
@@ -985,6 +995,16 @@ async def get_user_settings_endpoint(request: Request):
             data["license_name"] = os.getenv("DOCROPPER_LICENSE_NAME", "Developer")
     data["version"] = VERSION or os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
     data["version_date"] = VERSION_DATE or os.getenv("DOCROPPER_BUILD_DATE", "")
+    masked = data.get("license_key", "")
+    if masked:
+        masked = masked[:4] + "..."
+    logger.info(
+        "Serving user settings: level=%s key=%s version=%s date=%s",
+        data.get("license_level"),
+        masked,
+        data["version"],
+        data["version_date"],
+    )
     resp = JSONResponse(data)
     resp.headers["Cache-Control"] = "no-cache"
     return resp
