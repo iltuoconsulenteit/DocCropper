@@ -79,9 +79,21 @@ ROLLBACK_SCRIPTS = {
     'Windows': 'rollback_DocCropper.bat',
     'Darwin': 'rollback_DocCropper.command',
 }.get(SYSTEM, 'rollback_DocCropper.sh')
-
-VERSION = os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
-VERSION_DATE = os.getenv("DOCROPPER_BUILD_DATE", "")
+try:
+    VERSION = subprocess.check_output(
+        ["git", "rev-parse", "--short", "HEAD"],
+        cwd=BASE_DIR,
+        stderr=subprocess.DEVNULL,
+    ).decode().strip()
+    VERSION_DATE = subprocess.check_output(
+        ["git", "log", "-1", "--format=%cd", "--date=short"],
+        cwd=BASE_DIR,
+        stderr=subprocess.DEVNULL,
+    ).decode().strip()
+except Exception:
+    # Fallback to optional environment variables used in packaged builds
+    VERSION = os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
+    VERSION_DATE = os.getenv("DOCROPPER_BUILD_DATE", "")
 
 
 def get_license_info():
