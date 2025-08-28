@@ -24,12 +24,12 @@ if not exist "!APP_DIR!\env\auth.env" (
 
 if not exist main.py (
     echo [ERROR] main.py not found in !APP_DIR!
-    pause
     exit /b 1
 )
 
 :: Log file in temp directory
 set "LOG_FILE=%TEMP%\DocCropper_start.log"
+if exist "!LOG_FILE!" del /f "!LOG_FILE!" >nul 2>&1
 echo [INFO] Avvio DocCropper > "!LOG_FILE!"
 echo [INFO] Directory script: !SCRIPT_DIR! >> "!LOG_FILE!"
 echo [INFO] Directory app: !APP_DIR! >> "!LOG_FILE!"
@@ -92,7 +92,6 @@ call venv\Scripts\activate.bat
 if errorlevel 1 (
     echo ❌ ERRORE: attivazione ambiente virtuale fallita! >> "!LOG_FILE!"
     echo ❌ Attivazione ambiente virtuale fallita!
-    pause
     exit /b
 )
 
@@ -127,7 +126,6 @@ goto finish
 
 :finish
 echo [INFO] Script completato >> "!LOG_FILE!"
-pause
 endlocal
 exit /b
 

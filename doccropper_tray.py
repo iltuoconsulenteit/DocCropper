@@ -28,6 +28,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(levelname)s: %(message)s'
 )
+atexit.register(logging.shutdown)
 
 # Load environment variables from env/*.env files, allowing them to
 # override any preexisting environment variables so that license
@@ -139,13 +140,23 @@ def run_script(name, env=None, folder=INSTALL_DIR):
         if hasattr(subprocess, 'CREATE_NO_WINDOW'):
             flags = subprocess.CREATE_NO_WINDOW
         with open(LOG_FILE, 'a') as stdout:
-            subprocess.Popen(['cmd', '/c', str(script)], env=env,
-                             stdout=stdout, stderr=subprocess.STDOUT,
-                             creationflags=flags)
+            subprocess.Popen(
+                ['cmd', '/c', str(script)],
+                env=env,
+                stdout=stdout,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,
+                creationflags=flags,
+            )
     else:
         with open(LOG_FILE, 'a') as stdout:
-            subprocess.Popen(['bash', str(script)], env=env,
-                             stdout=stdout, stderr=subprocess.STDOUT)
+            subprocess.Popen(
+                ['bash', str(script)],
+                env=env,
+                stdout=stdout,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,
+            )
 
 
 def start_app():

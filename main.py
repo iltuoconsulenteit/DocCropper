@@ -932,6 +932,16 @@ async def admin_page(user: User = Depends(require_superuser)):
 async def get_settings():
     data = load_settings()
     data["active_plugins"] = compute_active_plugins(data)
+    # Always honor license information provided via environment variables.
+    env_key = os.getenv("DOCROPPER_LICENSE_KEY")
+    env_name = os.getenv("DOCROPPER_LICENSE_NAME")
+    env_level = os.getenv("DOCROPPER_LICENSE_LEVEL")
+    if env_key:
+        data["license_key"] = env_key
+    if env_name:
+        data["license_name"] = env_name
+    if env_level:
+        data["license_level"] = env_level.lower()
     # Ensure developer licenses from the environment take precedence even if
     # stale values remain in settings.json or overrides.
     dev_env = get_dev_license_key()
@@ -963,6 +973,16 @@ async def get_user_settings_endpoint(request: Request):
     if not email:
         return JSONResponse(status_code=401, content={"message": "Not logged in"})
     data = load_user_settings(email)
+    # Always honor license information provided via environment variables.
+    env_key = os.getenv("DOCROPPER_LICENSE_KEY")
+    env_name = os.getenv("DOCROPPER_LICENSE_NAME")
+    env_level = os.getenv("DOCROPPER_LICENSE_LEVEL")
+    if env_key:
+        data["license_key"] = env_key
+    if env_name:
+        data["license_name"] = env_name
+    if env_level:
+        data["license_level"] = env_level.lower()
     # Mirror the developer license fallback used in the global settings so
     # authenticated sessions always reflect an active developer license.
     dev_env = get_dev_license_key()
