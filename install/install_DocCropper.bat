@@ -1,4 +1,14 @@
 @echo off
+setlocal EnableDelayedExpansion
+
+:: Re-entry from temporary copy avoids self-deletion when wiping old installs
+if /I "%1"=="--from-temp" (
+    set "APP_DIR=%~2"
+    set "DOCROPPER_BRANCH=%~3"
+    set "FROM_TEMP=1"
+    shift & shift & shift
+)
+
 cd /d "%~dp0"
 
 :: Ensure we have administrator rights
@@ -8,8 +18,6 @@ if %errorlevel% neq 0 (
     powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
     exit /b
 )
-
-setlocal EnableDelayedExpansion
 
 rem Set up logging
 if defined TEMP (
@@ -23,13 +31,15 @@ echo DocCropper installer log - %DATE% %TIME% > "%LOG_FILE%"
 rem We'll define these after APP_DIR is known
 
 rem Default installation directory
-if defined DOCROPPER_HOME (
-    set "APP_DIR=%DOCROPPER_HOME%"
-) else (
-    set "APP_DIR=%ProgramFiles%\DocCropper"
+if not defined FROM_TEMP (
+    if defined DOCROPPER_HOME (
+        set "APP_DIR=%DOCROPPER_HOME%"
+    ) else (
+        set "APP_DIR=%ProgramFiles%\DocCropper"
+    )
+    set /p TARGET_DIR=Installation directory [%APP_DIR%]:
+    if not "!TARGET_DIR!"=="" set "APP_DIR=!TARGET_DIR!"
 )
-set /p TARGET_DIR=Installation directory [%APP_DIR%]:
-if not "!TARGET_DIR!"=="" set "APP_DIR=!TARGET_DIR!"
 call :log "Installation directory: !APP_DIR!"
 set "REPO_URL=https://github.com/iltuoconsulenteit/DocCropper.git"
 
@@ -50,15 +60,19 @@ if defined DOCROPPER_DEV_BRANCH (
 echo %DEV_BRANCH%>"%BRANCH_FILE%"
 
 if not defined DOCROPPER_BRANCH (
-    echo.
-    echo Choose branch to install:
-    echo  1^) main
-    echo  2^) !DEV_BRANCH!
-    set /p BSEL=Selection [1]:
-    if "!BSEL!"=="2" (
-        set "BRANCH=!DEV_BRANCH!"
+    if not defined FROM_TEMP (
+        echo.
+        echo Choose branch to install:
+        echo  1^) main
+        echo  2^) !DEV_BRANCH!
+        set /p BSEL=Selection [1]:
+        if "!BSEL!"=="2" (
+            set "BRANCH=!DEV_BRANCH!"
+        ) else (
+            set "BRANCH=main"
+        )
     ) else (
-        set "BRANCH=main"
+        set "BRANCH=%DOCROPPER_BRANCH%"
     )
 ) else (
     set "BRANCH=%DOCROPPER_BRANCH%"
@@ -74,6 +88,11 @@ if not exist "!APP_DIR!" (
         call :log "Unable to create !APP_DIR!. Run this script as Administrator."
         exit /b 1
     )
+)
+
+if defined FROM_TEMP (
+    rmdir /S /Q "!APP_DIR!" >nul 2>&1
+    mkdir "!APP_DIR!" >nul 2>&1
 )
 
 call :main
@@ -124,23 +143,36 @@ if errorlevel 1 (
     )
 )
 
-if exist "!APP_DIR!\scripts\stop_DocCropper.bat" (
-    call :log "Stopping running DocCropper..."
-    call "!APP_DIR!\scripts\stop_DocCropper.bat" >nul 2>&1
+if not defined FROM_TEMP (
+    if exist "!APP_DIR!\scripts\uninstall_DocCropper.bat" (
+        call :log "Removing previous DocCropper installation..."
+        call "!APP_DIR!\scripts\uninstall_DocCropper.bat" >nul 2>&1
+    ) else if exist "!APP_DIR!\scripts\stop_DocCropper.bat" (
+        call :log "Stopping running DocCropper..."
+        call "!APP_DIR!\scripts\stop_DocCropper.bat" >nul 2>&1
+    )
 )
 
 if not exist "!APP_DIR!\.git" (
     dir /b "!APP_DIR!" | findstr . >nul 2>&1
     if not errorlevel 1 (
         call :log "Destination !APP_DIR! exists and is not empty."
-        set /p wipe_choice=Delete contents and continue? [y/N] 
-        if /I "!wipe_choice!"=="y" (
-            call :log "Removing old files..."
-            rmdir /S /Q "!APP_DIR!" >>"%LOG_FILE%" 2>&1
-            mkdir "!APP_DIR!" >>"%LOG_FILE%" 2>&1
+        if not defined FROM_TEMP (
+            set /p wipe_choice=Delete contents and continue? [y/N]
+            if /I "!wipe_choice!"=="y" (
+                call :log "Re-launching from temporary directory to remove old files..."
+                set "TMP_DIR=%TEMP%\DocCropper_install"
+                rmdir /S /Q "!TMP_DIR!" >nul 2>&1
+                xcopy "%~dp0" "!TMP_DIR!\" /E /I /Q >nul
+                start "" /wait "!TMP_DIR!\install_DocCropper.bat" --from-temp "!APP_DIR!" "!BRANCH!"
+                rmdir /S /Q "!TMP_DIR!" >nul 2>&1
+                exit /b
+            ) else (
+                call :log "Please choose another directory."
+                exit /b 1
+            )
         ) else (
-            call :log "Please choose another directory."
-            exit /b 1
+            call :log "Temporary run detected; wiping already handled."
         )
     )
     call :log "Cloning repository..."

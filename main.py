@@ -110,9 +110,9 @@ LICENSE_OVERRIDES_FILE = "license_overrides.json"
 # Load environment variables from any .env files in env/
 ENV_DIR = "env"
 if os.path.isdir(ENV_DIR):
-    for name in os.listdir(ENV_DIR):
+    for name in sorted(os.listdir(ENV_DIR)):
         if name.endswith(".env"):
-            load_dotenv(os.path.join(ENV_DIR, name), override=False)
+            load_dotenv(os.path.join(ENV_DIR, name), override=True)
 # Directory containing per-user settings
 USERS_DIR = "users"
 
@@ -158,8 +158,13 @@ try:
         stderr=subprocess.DEVNULL,
     ).decode().strip()
 except Exception:
-    VERSION = "unknown"
-    VERSION_DATE = ""
+    # When the application is installed without the git repository available
+    # (for example in packaged distributions), fall back to optional
+    # environment variables so that the frontend can still display build
+    # information.  If these variables are missing we keep the "unknown"
+    # defaults used previously.
+    VERSION = os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
+    VERSION_DATE = os.getenv("DOCROPPER_BUILD_DATE", "")
 
 CACHE_BUST = f"?v={VERSION}"
 
@@ -495,9 +500,35 @@ def load_settings():
                 merged["public_url"] = "https://doccropper.iltuoconsulenteit.it"
         elif is_dev:
             merged["license_level"] = "developer"
-            if not merged.get("license_name"):
+            if env_key:
+                merged["license_key"] = env_key
+            elif not merged.get("license_key") and dev_env:
+                merged["license_key"] = dev_env
+            if env_name:
+                merged["license_name"] = env_name
+            elif not merged.get("license_name"):
                 merged["license_name"] = "Developer"
             merged["enable_mobilesign"] = True
+            # Persist the developer license so subsequent runs and external
+            # tools see the correct values even if the original settings file
+            # was missing or had stale data.
+            try:
+                with open(SETTINGS_FILE) as fh:
+                    current = json.load(fh)
+            except Exception:
+                current = {}
+            desired = {
+                "license_key": merged.get("license_key", ""),
+                "license_name": merged.get("license_name", ""),
+                "license_level": "developer",
+            }
+            if any(current.get(k) != v for k, v in desired.items()):
+                current.update(desired)
+                try:
+                    with open(SETTINGS_FILE, "w") as fh:
+                        json.dump(current, fh, indent=2)
+                except Exception:
+                    pass
         if (is_demo or is_dev) and not merged.get("sponsor_frame"):
             merged["sponsor_frame"] = DEFAULT_SPONSOR_FRAME
         try:
@@ -509,7 +540,13 @@ def load_settings():
             logger.exception("sponsor plugin failed")
 
         masked_key = key_upper[:4] + "..." if key_upper else "none"
-        logger.info("Loaded license %s (%s)", merged.get("license_level"), masked_key)
+        logger.info(
+            "Loaded license %s (%s) - version %s (%s)",
+            merged.get("license_level"),
+            masked_key,
+            VERSION,
+            VERSION_DATE,
+        )
         return merged
     except Exception:
         return DEFAULT_SETTINGS.copy()
@@ -895,14 +932,34 @@ async def admin_page(user: User = Depends(require_superuser)):
 async def get_settings():
     data = load_settings()
     data["active_plugins"] = compute_active_plugins(data)
+    # Always honor license information provided via environment variables.
+    env_key = os.getenv("DOCROPPER_LICENSE_KEY")
+    env_name = os.getenv("DOCROPPER_LICENSE_NAME")
+    env_level = os.getenv("DOCROPPER_LICENSE_LEVEL")
+    if env_key:
+        data["license_key"] = env_key
+    if env_name:
+        data["license_name"] = env_name
+    if env_level:
+        data["license_level"] = env_level.lower()
+    # Ensure developer licenses from the environment take precedence even if
+    # stale values remain in settings.json or overrides.
+    dev_env = get_dev_license_key()
+    if dev_env and data.get("license_level", "free").lower() == "free":
+        data["license_key"] = dev_env
+        data["license_level"] = "developer"
+        if not data.get("license_name"):
+            data["license_name"] = os.getenv("DOCROPPER_LICENSE_NAME", "Developer")
     if not data.get("license_check") and not data.get("license_key"):
         data["license_key"] = "FREE"
         data["license_name"] = "Free Edition"
-    data["version"] = VERSION
-    data["version_date"] = VERSION_DATE
+    data["version"] = VERSION or os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
+    data["version_date"] = VERSION_DATE or os.getenv("DOCROPPER_BUILD_DATE", "")
     if "stripe_secret_key" in data:
         data.pop("stripe_secret_key")
-    return data
+    resp = JSONResponse(data)
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
 
 
 @app.post("/settings/")
@@ -916,9 +973,29 @@ async def get_user_settings_endpoint(request: Request):
     if not email:
         return JSONResponse(status_code=401, content={"message": "Not logged in"})
     data = load_user_settings(email)
-    data["version"] = VERSION
-    data["version_date"] = VERSION_DATE
-    return data
+    # Always honor license information provided via environment variables.
+    env_key = os.getenv("DOCROPPER_LICENSE_KEY")
+    env_name = os.getenv("DOCROPPER_LICENSE_NAME")
+    env_level = os.getenv("DOCROPPER_LICENSE_LEVEL")
+    if env_key:
+        data["license_key"] = env_key
+    if env_name:
+        data["license_name"] = env_name
+    if env_level:
+        data["license_level"] = env_level.lower()
+    # Mirror the developer license fallback used in the global settings so
+    # authenticated sessions always reflect an active developer license.
+    dev_env = get_dev_license_key()
+    if dev_env and data.get("license_level", "free").lower() == "free":
+        data["license_key"] = dev_env
+        data["license_level"] = "developer"
+        if not data.get("license_name"):
+            data["license_name"] = os.getenv("DOCROPPER_LICENSE_NAME", "Developer")
+    data["version"] = VERSION or os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
+    data["version_date"] = VERSION_DATE or os.getenv("DOCROPPER_BUILD_DATE", "")
+    resp = JSONResponse(data)
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
 
 
 @app.post("/user-settings/")

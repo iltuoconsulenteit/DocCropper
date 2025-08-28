@@ -82,7 +82,10 @@ for cmd in git python3 pip3; do
   fi
 done
 
-if [ -f "$TARGET_DIR/scripts/stop_DocCropper.command" ]; then
+if [ -f "$TARGET_DIR/scripts/uninstall_DocCropper.command" ]; then
+  echo "🧹 Removing previous DocCropper installation..."
+  bash "$TARGET_DIR/scripts/uninstall_DocCropper.command" >/dev/null 2>&1 || true
+elif [ -f "$TARGET_DIR/scripts/stop_DocCropper.command" ]; then
   echo "🛑 Stopping running DocCropper..."
   bash "$TARGET_DIR/scripts/stop_DocCropper.command" >/dev/null 2>&1 || true
 fi

@@ -28,12 +28,15 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(levelname)s: %(message)s'
 )
+atexit.register(logging.shutdown)
 
-# Load environment variables from env/*.env files
+# Load environment variables from env/*.env files, allowing them to
+# override any preexisting environment variables so that license
+# information from the local files always takes precedence.
 ENV_DIR = BASE_DIR / 'env'
 if ENV_DIR.is_dir():
     for env_file in ENV_DIR.glob('*.env'):
-        load_dotenv(env_file, override=False)
+        load_dotenv(env_file, override=True)
 
 def load_language():
     global LANG, TRANSLATIONS
@@ -76,31 +79,65 @@ ROLLBACK_SCRIPTS = {
     'Windows': 'rollback_DocCropper.bat',
     'Darwin': 'rollback_DocCropper.command',
 }.get(SYSTEM, 'rollback_DocCropper.sh')
+try:
+    VERSION = subprocess.check_output(
+        ["git", "rev-parse", "--short", "HEAD"],
+        cwd=BASE_DIR,
+        stderr=subprocess.DEVNULL,
+    ).decode().strip()
+    VERSION_DATE = subprocess.check_output(
+        ["git", "log", "-1", "--format=%cd", "--date=short"],
+        cwd=BASE_DIR,
+        stderr=subprocess.DEVNULL,
+    ).decode().strip()
+except Exception:
+    # Fallback to optional environment variables used in packaged builds
+    VERSION = os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
+    VERSION_DATE = os.getenv("DOCROPPER_BUILD_DATE", "")
 
-def is_developer():
-    """Return True if a developer license is active."""
+
+def get_license_info():
+    """Return license level, full key, masked key and dev flag."""
     settings_file = BASE_DIR / 'settings.json'
     try:
         with open(settings_file) as fh:
             data = json.load(fh)
-        key = data.get('license_key', '').strip().upper()
-        level = data.get('license_level', '').strip().lower()
-        dev_env = os.environ.get('DOCROPPER_DEV_LICENSE', '').strip().upper()
-        masked = f"{key[:4]}..." if key else ""
-        logging.info(
-            "License check: level=%s key=%s env_dev=%s",
-            level or "",
-            masked,
-            bool(dev_env),
-        )
-        return (
-            level == 'developer'
-            or key.endswith('-DEV')
-            or bool(dev_env)
-        )
     except Exception:
-        logging.exception("Unable to read settings for developer check")
-        return False
+        data = {}
+
+    key = data.get('license_key', '').strip().upper()
+    level = data.get('license_level', '').strip().lower()
+
+    env_key = os.environ.get('DOCROPPER_LICENSE_KEY', '').strip().upper()
+    env_level = os.environ.get('DOCROPPER_LICENSE_LEVEL', '').strip().lower()
+    if env_key:
+        key = env_key
+    if env_level:
+        level = env_level
+
+    dev_env = os.environ.get('DOCROPPER_DEV_LICENSE', '').strip().upper()
+    if dev_env and not key:
+        key = dev_env
+    if dev_env and level != 'developer':
+        level = 'developer'
+    masked = f"{key[:4]}..." if key else ""
+    return level, key, masked, bool(dev_env)
+
+
+def is_developer():
+    """Return True if a developer license is active."""
+    level, key, masked, dev_env = get_license_info()
+    logging.info(
+        "License check: level=%s key=%s env_dev=%s version=%s date=%s",
+        level or "",
+        masked,
+        dev_env,
+        VERSION,
+        VERSION_DATE,
+    )
+    return (
+        level == 'developer' or key.endswith('-DEV') or dev_env
+    )
 
 def run_script(name, env=None, folder=INSTALL_DIR):
     """Run a helper script while logging output.
@@ -115,13 +152,23 @@ def run_script(name, env=None, folder=INSTALL_DIR):
         if hasattr(subprocess, 'CREATE_NO_WINDOW'):
             flags = subprocess.CREATE_NO_WINDOW
         with open(LOG_FILE, 'a') as stdout:
-            subprocess.Popen(['cmd', '/c', str(script)], env=env,
-                             stdout=stdout, stderr=subprocess.STDOUT,
-                             creationflags=flags)
+            subprocess.Popen(
+                ['cmd', '/c', str(script)],
+                env=env,
+                stdout=stdout,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,
+                creationflags=flags,
+            )
     else:
         with open(LOG_FILE, 'a') as stdout:
-            subprocess.Popen(['bash', str(script)], env=env,
-                             stdout=stdout, stderr=subprocess.STDOUT)
+            subprocess.Popen(
+                ['bash', str(script)],
+                env=env,
+                stdout=stdout,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,
+            )
 
 
 def start_app():
@@ -191,8 +238,17 @@ def main():
                         help="Start server immediately")
     args = parser.parse_args()
 
-    developer = os.environ.get('DOCROPPER_DEVELOPER') == '1' or is_developer()
-    logging.info("Tray icon started (developer=%s)", developer)
+    force_dev = os.environ.get('DOCROPPER_DEVELOPER') == '1'
+    level, key, masked, _ = get_license_info()
+    developer = force_dev or is_developer()
+    logging.info(
+        "Tray icon started (developer=%s license=%s key=%s version=%s date=%s)",
+        developer,
+        level or "",
+        masked,
+        VERSION,
+        VERSION_DATE,
+    )
     try:
         TRAY_PID_FILE.write_text(str(os.getpid()))
     except Exception:
@@ -289,10 +345,11 @@ def main():
         menu_items.append(MenuItem(tr('updateBranch'), update_branch_action))
     menu_items.append(MenuItem(tr('quit'), quit_app))
 
+    title = f"DocCropper {VERSION} ({VERSION_DATE}) - {level or ''} {masked}".strip()
     icon = Icon(
         'DocCropper',
         create_image(running),
-        'DocCropper',
+        title,
         menu=Menu(*menu_items)
     )
 
