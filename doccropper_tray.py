@@ -78,9 +78,22 @@ ROLLBACK_SCRIPTS = {
     'Windows': 'rollback_DocCropper.bat',
     'Darwin': 'rollback_DocCropper.command',
 }.get(SYSTEM, 'rollback_DocCropper.sh')
-
-VERSION = os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
-VERSION_DATE = os.getenv("DOCROPPER_BUILD_DATE", "")
+try:
+    VERSION = subprocess.check_output(
+        ["git", "rev-parse", "--short", "HEAD"],
+        cwd=BASE_DIR,
+        stderr=subprocess.DEVNULL,
+    ).decode().strip()
+    VERSION_DATE = subprocess.check_output(
+        ["git", "log", "-1", "--format=%cd", "--date=short"],
+        cwd=BASE_DIR,
+        stderr=subprocess.DEVNULL,
+    ).decode().strip()
+except Exception:
+    # Fall back to optional environment variables when running without a
+    # Git repository available (e.g. packaged installations)
+    VERSION = os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
+    VERSION_DATE = os.getenv("DOCROPPER_BUILD_DATE", "")
 
 
 def get_license_info():
@@ -310,7 +323,13 @@ def main():
     def update_branch_action(icon, item):
         update_branch()
 
+    info_item = MenuItem(
+        f"v{VERSION} ({VERSION_DATE}) - {level or ''} {masked}".strip(),
+        None,
+        enabled=False,
+    )
     menu_items = [
+        info_item,
         MenuItem(tr('openApp'), open_app, default=True),
         MenuItem(tr('startApp'), start_action),
         MenuItem(tr('stopApp'), stop_action),

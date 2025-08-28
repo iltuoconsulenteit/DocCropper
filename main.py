@@ -541,9 +541,12 @@ def load_settings():
 
         masked_key = key_upper[:4] + "..." if key_upper else "none"
         logger.info(
-            "Loaded license %s (%s) - version %s (%s)",
+            "Loaded license %s (%s) dev_env=%s demo=%s dev=%s - version %s (%s)",
             merged.get("license_level"),
             masked_key,
+            bool(dev_env),
+            is_demo,
+            is_dev,
             VERSION,
             VERSION_DATE,
         )
@@ -623,6 +626,9 @@ def load_user_settings(email: str):
         try:
             with open(path) as fh:
                 user = json.load(fh)
+            # Ignore any stale license information saved in the per-user file.
+            for k in ("license_key", "license_name", "license_level"):
+                user.pop(k, None)
             base.update(user)
         except Exception:
             pass
@@ -638,7 +644,10 @@ def save_user_settings(email: str, update: dict):
                 data = json.load(fh)
         except Exception:
             data = {}
-    data.update(update)
+    # Prevent license fields from being stored in the user-specific file so
+    # global license settings always take precedence.
+    filtered = {k: v for k, v in update.items() if k not in {"license_key", "license_name", "license_level"}}
+    data.update(filtered)
     with open(path, "w") as fh:
         json.dump(data, fh)
     merged = load_settings()
@@ -806,6 +815,15 @@ def compute_active_plugins(cfg: dict) -> list[str]:
         active.append('colormode')
     if allowed(cfg.get('enable_imageeditor', True), cfg.get('imageeditor_dev_only', True)):
         active.append('imageeditor')
+    masked = key_upper[:4] + '...' if key_upper else 'none'
+    logger.info(
+        'compute_active_plugins: level=%s key=%s env_dev=%s dev=%s active=%s',
+        level,
+        masked,
+        bool(dev_env),
+        is_dev,
+        active,
+    )
     return active
 
 
@@ -931,11 +949,13 @@ async def admin_page(user: User = Depends(require_superuser)):
 @app.get("/settings/")
 async def get_settings():
     data = load_settings()
-    data["active_plugins"] = compute_active_plugins(data)
     # Ensure developer licenses from the environment take precedence even if
     # stale values remain in settings.json or overrides.
     dev_env = get_dev_license_key()
-    if dev_env and data.get("license_level", "free").lower() == "free":
+    if dev_env and (
+        data.get("license_level", "").lower() != "developer"
+        or data.get("license_key", "").strip().upper() != dev_env
+    ):
         data["license_key"] = dev_env
         data["license_level"] = "developer"
         if not data.get("license_name"):
@@ -943,8 +963,19 @@ async def get_settings():
     if not data.get("license_check") and not data.get("license_key"):
         data["license_key"] = "FREE"
         data["license_name"] = "Free Edition"
+    data["active_plugins"] = compute_active_plugins(data)
     data["version"] = VERSION or os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
     data["version_date"] = VERSION_DATE or os.getenv("DOCROPPER_BUILD_DATE", "")
+    masked = data.get("license_key", "")
+    if masked:
+        masked = masked[:4] + "..."
+    logger.info(
+        "Serving settings: level=%s key=%s version=%s date=%s",
+        data.get("license_level"),
+        masked,
+        data["version"],
+        data["version_date"],
+    )
     if "stripe_secret_key" in data:
         data.pop("stripe_secret_key")
     resp = JSONResponse(data)
@@ -954,7 +985,13 @@ async def get_settings():
 
 @app.post("/settings/")
 async def update_settings(settings: dict = Body(...)):
-    return save_settings(settings)
+    data = save_settings(settings)
+    data["active_plugins"] = compute_active_plugins(data)
+    data["version"] = VERSION or os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
+    data["version_date"] = VERSION_DATE or os.getenv("DOCROPPER_BUILD_DATE", "")
+    if "stripe_secret_key" in data:
+        data.pop("stripe_secret_key")
+    return data
 
 
 @app.get("/user-settings/")
@@ -966,13 +1003,27 @@ async def get_user_settings_endpoint(request: Request):
     # Mirror the developer license fallback used in the global settings so
     # authenticated sessions always reflect an active developer license.
     dev_env = get_dev_license_key()
-    if dev_env and data.get("license_level", "free").lower() == "free":
+    if dev_env and (
+        data.get("license_level", "").lower() != "developer"
+        or data.get("license_key", "").strip().upper() != dev_env
+    ):
         data["license_key"] = dev_env
         data["license_level"] = "developer"
         if not data.get("license_name"):
             data["license_name"] = os.getenv("DOCROPPER_LICENSE_NAME", "Developer")
+    data["active_plugins"] = compute_active_plugins(data)
     data["version"] = VERSION or os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
     data["version_date"] = VERSION_DATE or os.getenv("DOCROPPER_BUILD_DATE", "")
+    masked = data.get("license_key", "")
+    if masked:
+        masked = masked[:4] + "..."
+    logger.info(
+        "Serving user settings: level=%s key=%s version=%s date=%s",
+        data.get("license_level"),
+        masked,
+        data["version"],
+        data["version_date"],
+    )
     resp = JSONResponse(data)
     resp.headers["Cache-Control"] = "no-cache"
     return resp
@@ -984,8 +1035,11 @@ async def update_user_settings_endpoint(request: Request, settings: dict = Body(
     if not email:
         return JSONResponse(status_code=401, content={"message": "Not logged in"})
     data = save_user_settings(email, settings)
+    data["active_plugins"] = compute_active_plugins(data)
     data["version"] = VERSION
     data["version_date"] = VERSION_DATE
+    if "stripe_secret_key" in data:
+        data.pop("stripe_secret_key")
     return data
 
 
