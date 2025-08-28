@@ -7,6 +7,9 @@ cd /d "%APP_DIR%"
 :: Stop running DocCropper processes
 if exist "%SCRIPT_DIR%stop_DocCropper.bat" call "%SCRIPT_DIR%stop_DocCropper.bat"
 
+:: Force kill any remaining DocCropper-related Python processes
+powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \"CommandLine LIKE '%%DocCropper%%' AND (Name='python.exe' OR Name='pythonw.exe')\" | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }" >nul 2>&1
+
 :: Wait briefly to ensure processes exit
 ping -n 2 127.0.0.1 >nul
 
@@ -16,11 +19,15 @@ for %%f in ("%TEMP%\DocCropper_start.log" "%TEMP%\doccropper_tray.log" "%TEMP%\d
 )
 
 :: Remove virtual environment and install directory
-if exist venv rmdir /s /q venv >nul 2>&1
+if exist venv (
+    rmdir /s /q venv >nul 2>&1 || powershell -NoProfile -Command "Remove-Item 'venv' -Recurse -Force -ErrorAction SilentlyContinue" >nul 2>&1
+)
 if exist install rmdir /s /q install >nul 2>&1
 
 :: Remove database file if not in use
-if exist db.sqlite3 del /f /q db.sqlite3 >nul 2>&1
+if exist db.sqlite3 (
+    del /f /q db.sqlite3 >nul 2>&1 || powershell -NoProfile -Command "Remove-Item 'db.sqlite3' -Force -ErrorAction SilentlyContinue" >nul 2>&1
+)
 
 :: Remove configuration and license files
 if exist settings.json del /f /q settings.json >nul 2>&1
