@@ -12,6 +12,9 @@ cd /d "!APP_DIR!"
 
 if not exist env mkdir env
 
+:: Remove any enforced license overrides before applying a new key
+if exist license_overrides.json del /f license_overrides.json
+
 set /p LICENSE_KEY=Enter license key:
 set /p LICENSE_NAME=Enter license name:
 

@@ -8,6 +8,10 @@ fi
 cd "$APP_DIR" || exit 1
 
 mkdir -p env
+
+# Remove any enforced license overrides before applying a new key
+OVERRIDE_FILE="license_overrides.json"
+[ -f "$OVERRIDE_FILE" ] && rm "$OVERRIDE_FILE"
 printf "Enter license key: "
 read KEY
 printf "Enter license name: "
@@ -38,9 +42,5 @@ data["license_level"] = "developer"
 with open(settings_file, "w") as f:
     json.dump(data, f, indent=2)
 PY
-
-# Remove any previous license enforcement
-OVERRIDE_FILE="license_overrides.json"
-[ -f "$OVERRIDE_FILE" ] && rm "$OVERRIDE_FILE"
 
 echo "Developer license saved to $ENVFILE and $SETTINGS_FILE updated"
