@@ -943,7 +943,6 @@ async def admin_page(user: User = Depends(require_superuser)):
 @app.get("/settings/")
 async def get_settings():
     data = load_settings()
-    data["active_plugins"] = compute_active_plugins(data)
     # Ensure developer licenses from the environment take precedence even if
     # stale values remain in settings.json or overrides.
     dev_env = get_dev_license_key()
@@ -955,6 +954,7 @@ async def get_settings():
     if not data.get("license_check") and not data.get("license_key"):
         data["license_key"] = "FREE"
         data["license_name"] = "Free Edition"
+    data["active_plugins"] = compute_active_plugins(data)
     data["version"] = VERSION or os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
     data["version_date"] = VERSION_DATE or os.getenv("DOCROPPER_BUILD_DATE", "")
     masked = data.get("license_key", "")
@@ -976,7 +976,13 @@ async def get_settings():
 
 @app.post("/settings/")
 async def update_settings(settings: dict = Body(...)):
-    return save_settings(settings)
+    data = save_settings(settings)
+    data["active_plugins"] = compute_active_plugins(data)
+    data["version"] = VERSION or os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
+    data["version_date"] = VERSION_DATE or os.getenv("DOCROPPER_BUILD_DATE", "")
+    if "stripe_secret_key" in data:
+        data.pop("stripe_secret_key")
+    return data
 
 
 @app.get("/user-settings/")
@@ -993,6 +999,7 @@ async def get_user_settings_endpoint(request: Request):
         data["license_level"] = "developer"
         if not data.get("license_name"):
             data["license_name"] = os.getenv("DOCROPPER_LICENSE_NAME", "Developer")
+    data["active_plugins"] = compute_active_plugins(data)
     data["version"] = VERSION or os.getenv("DOCROPPER_BUILD_VERSION", "unknown")
     data["version_date"] = VERSION_DATE or os.getenv("DOCROPPER_BUILD_DATE", "")
     masked = data.get("license_key", "")
@@ -1016,8 +1023,11 @@ async def update_user_settings_endpoint(request: Request, settings: dict = Body(
     if not email:
         return JSONResponse(status_code=401, content={"message": "Not logged in"})
     data = save_user_settings(email, settings)
+    data["active_plugins"] = compute_active_plugins(data)
     data["version"] = VERSION
     data["version_date"] = VERSION_DATE
+    if "stripe_secret_key" in data:
+        data.pop("stripe_secret_key")
     return data
 
 
