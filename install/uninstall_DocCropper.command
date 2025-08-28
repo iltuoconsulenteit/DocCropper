@@ -13,5 +13,8 @@ fi
 if [ -f "$TARGET_DIR/scripts/stop_DocCropper.command" ]; then
   bash "$TARGET_DIR/scripts/stop_DocCropper.command"
 fi
+
+# move outside of target directory before removing it
+cd /tmp
 rm -rf "$TARGET_DIR"
 echo "DocCropper uninstalled."
