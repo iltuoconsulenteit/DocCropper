@@ -310,7 +310,13 @@ def main():
     def update_branch_action(icon, item):
         update_branch()
 
+    info_item = MenuItem(
+        f"v{VERSION} ({VERSION_DATE}) - {level or ''} {masked}".strip(),
+        None,
+        enabled=False,
+    )
     menu_items = [
+        info_item,
         MenuItem(tr('openApp'), open_app, default=True),
         MenuItem(tr('startApp'), start_action),
         MenuItem(tr('stopApp'), stop_action),

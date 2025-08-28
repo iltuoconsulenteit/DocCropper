@@ -541,9 +541,12 @@ def load_settings():
 
         masked_key = key_upper[:4] + "..." if key_upper else "none"
         logger.info(
-            "Loaded license %s (%s) - version %s (%s)",
+            "Loaded license %s (%s) dev_env=%s demo=%s dev=%s - version %s (%s)",
             merged.get("license_level"),
             masked_key,
+            bool(dev_env),
+            is_demo,
+            is_dev,
             VERSION,
             VERSION_DATE,
         )
@@ -806,6 +809,15 @@ def compute_active_plugins(cfg: dict) -> list[str]:
         active.append('colormode')
     if allowed(cfg.get('enable_imageeditor', True), cfg.get('imageeditor_dev_only', True)):
         active.append('imageeditor')
+    masked = key_upper[:4] + '...' if key_upper else 'none'
+    logger.info(
+        'compute_active_plugins: level=%s key=%s env_dev=%s dev=%s active=%s',
+        level,
+        masked,
+        bool(dev_env),
+        is_dev,
+        active,
+    )
     return active
 
 
