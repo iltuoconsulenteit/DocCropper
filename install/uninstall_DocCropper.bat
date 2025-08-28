@@ -28,6 +28,10 @@ if exist "!APP_DIR!\scripts\stop_DocCropper.bat" (
     call "!APP_DIR!\scripts\stop_DocCropper.bat"
 )
 
+if exist "!APP_DIR!\scripts\uninstall_DocCropper.bat" (
+    call "!APP_DIR!\scripts\uninstall_DocCropper.bat"
+)
+
 :: move out of the installation directory so we can delete it
 cd /d "%TEMP%"
 

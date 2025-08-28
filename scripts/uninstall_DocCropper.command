@@ -18,6 +18,10 @@ rm -rf venv install 2>/dev/null || true
 # Remove database file
 rm -f db.sqlite3 2>/dev/null || true
 
+# Remove configuration and license files
+rm -f settings.json 2>/dev/null || true
+rm -rf env 2>/dev/null || true
+
 # Remove PID files
 rm -f /tmp/doccropper.pid /tmp/doccropper_tray.pid 2>/dev/null || true
 

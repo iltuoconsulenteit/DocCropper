@@ -25,6 +25,11 @@ if [ -f "$TARGET_DIR/scripts/stop_DocCropper.sh" ]; then
   bash "$TARGET_DIR/scripts/stop_DocCropper.sh"
 fi
 
+# run uninstall cleanup to remove config files
+if [ -f "$TARGET_DIR/scripts/uninstall_DocCropper.sh" ]; then
+  bash "$TARGET_DIR/scripts/uninstall_DocCropper.sh"
+fi
+
 # move outside of target directory before removing it
 cd /tmp
 rm -rf "$TARGET_DIR"

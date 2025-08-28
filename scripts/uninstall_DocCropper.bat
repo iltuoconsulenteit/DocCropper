@@ -22,6 +22,10 @@ if exist install rmdir /s /q install >nul 2>&1
 :: Remove database file if not in use
 if exist db.sqlite3 del /f /q db.sqlite3 >nul 2>&1
 
+:: Remove configuration and license files
+if exist settings.json del /f /q settings.json >nul 2>&1
+if exist env rmdir /s /q env >nul 2>&1
+
 :: Optional: remove pid files
 for %%f in ("%TEMP%\doccropper.pid" "%TEMP%\doccropper_tray.pid") do (
     if exist %%f del /f /q %%f >nul 2>&1
