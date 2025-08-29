@@ -490,6 +490,11 @@ Install dependencies from `requirements.txt` and run:
 uvicorn platform.config.asgi:application --reload
 ```
 
+By default the Django platform uses an on-disk SQLite database so no extra
+services are required for local development. Define `MYSQL_HOST` (and related
+`MYSQL_*` variables) to switch to a MySQL backend, as expected in the Docker
+setup.
+
 ### URLs
 
 - `http://localhost:8000/` – DocCropper Portal (placeholder)
