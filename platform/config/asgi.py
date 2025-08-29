@@ -2,6 +2,8 @@ import os
 
 from django.core.asgi import get_asgi_application
 from starlette.applications import Starlette
+from starlette.requests import Request
+import logging
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "platform.config.settings")
 
@@ -14,5 +16,15 @@ from services.api.app import app as fastapi_app
 # mounted before the Django catch‑all so requests to that path are handled by
 # FastAPI rather than Django's URL resolver.
 application = Starlette()
+
+logger = logging.getLogger("uvicorn.error")
+
+@application.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info("Incoming %s %s", request.method, request.url.path)
+    response = await call_next(request)
+    logger.info("Completed %s %s with status %s", request.method, request.url.path, response.status_code)
+    return response
+
 application.mount("/api", fastapi_app)
 application.mount("/", django_app)
