@@ -145,7 +145,7 @@ def open_browser():
     port = get_port()
     url = os.environ.get('DOCROPPER_OPEN_URL')
     if not url:
-        url = f'http://127.0.0.1:{port}/'
+        url = f'http://127.0.0.1:{port}/api'
     try:
         if not webbrowser.open(url):
             raise RuntimeError('webbrowser failed')

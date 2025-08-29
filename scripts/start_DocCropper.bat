@@ -71,7 +71,7 @@ if exist "!PID_FILE!" (
 )
 
 set "OPEN_URL=%DOCROPPER_OPEN_URL%"
-if "%OPEN_URL%"=="" set "OPEN_URL=http://localhost:%PORT%"
+if "%OPEN_URL%"=="" set "OPEN_URL=http://localhost:%PORT%/api"
 
 if "!SERVER_RUNNING!"=="1" (
     echo [INFO] DocCropper gia in esecuzione con PID !PID! >> "!LOG_FILE!"
