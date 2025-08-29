@@ -10,8 +10,9 @@ django_app = get_asgi_application()
 
 from services.api.app import app as fastapi_app
 
-application = Starlette()
-application.mount("/api", fastapi_app)
-application.mount("/", django_app)
-# Ensure the API mount takes precedence over the catch-all Django route
-application.router.routes.sort(key=lambda r: getattr(r, "path", ""), reverse=True)
+routes = [
+    Mount("/api", fastapi_app),
+    Mount("/", django_app),
+]
+
+application = Starlette(routes=routes)
