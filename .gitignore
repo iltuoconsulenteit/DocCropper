@@ -7,6 +7,7 @@ signatures/
 users/**
 !users/.gitkeep
 doccropper.pid
+backups/
 .env
 google-credentials.json
 *.p12

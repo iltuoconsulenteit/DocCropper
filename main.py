@@ -599,10 +599,12 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.auth.database import engine, Base, async_session_maker
+    from app.auth.database import async_session_maker, init_db
     from fastapi_users.db import SQLAlchemyUserDatabase
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    from app.utils.backup import backup_all
+
+    # Ensure database and tables exist
+    await init_db()
 
     # Create default admin user if none exists
     admin_email = os.getenv("DOCROPPER_ADMIN_EMAIL", "admin@example.com")
@@ -621,7 +623,14 @@ async def lifespan(app: FastAPI):
             )
             session.add(admin)
             await session.commit()
-    yield
+
+    # Initial backup on start
+    backup_all()
+    try:
+        yield
+    finally:
+        # Backup again on shutdown
+        backup_all()
 
 app = FastAPI(lifespan=lifespan)
 # Only enable authentication routes when license checking is active
