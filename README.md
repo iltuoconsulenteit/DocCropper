@@ -454,3 +454,44 @@ additional features such as Docuseal or local signing.
 
 Visit [http://localhost:8765](http://localhost:8765) and click **Login with Google**. After authenticating you'll be redirected to `/dashboard` which shows your name and email.
 
+
+## Platform
+
+```
+DocCropper/
+├─ platform/
+│  ├─ manage.py
+│  ├─ config/
+│  └─ apps/
+├─ services/
+│  └─ api/
+├─ plugin/
+│  ├─ core/
+│  └─ pro/
+├─ deploy/
+├─ scripts/
+```
+
+### Running Locally
+
+**Docker Compose**
+
+```
+cd deploy
+cp env.example .env
+docker-compose up --build
+```
+
+**Standalone**
+
+Install dependencies from `requirements.txt` and run:
+
+```
+uvicorn platform.config.asgi:application --reload
+```
+
+### URLs
+
+- `http://localhost:8000/` – DocCropper Portal (placeholder)
+- `http://localhost:8000/admin/` – Django admin
+- `http://localhost:8000/api` – FastAPI endpoints

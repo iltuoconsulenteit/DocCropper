@@ -22,3 +22,13 @@ aiosqlite
 passlib[bcrypt]
 python-jose
 email-validator
+django>=5.0
+djangorestframework
+django-allauth
+django-guardian
+django-tailwind
+mysqlclient
+uvicorn[standard]
+celery
+redis
+python-dotenv

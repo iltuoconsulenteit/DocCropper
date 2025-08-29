@@ -1,0 +1,56 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv()
+
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'change-me')
+DEBUG = True
+ALLOWED_HOSTS = ['*']
+
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'django.contrib.sites',
+    'rest_framework',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'guardian',
+    'tailwind',
+    'platform.apps.licenses',
+    'platform.apps.portal',
+]
+
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'guardian.backends.ObjectPermissionBackend',
+)
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.getenv('MYSQL_DATABASE', 'doccropper'),
+        'USER': os.getenv('MYSQL_USER', 'doccropper'),
+        'PASSWORD': os.getenv('MYSQL_PASSWORD', 'doccropper'),
+        'HOST': os.getenv('MYSQL_HOST', 'db'),
+        'PORT': os.getenv('MYSQL_PORT', '3306'),
+    }
+}
+
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+TAILWIND_APP_NAME = 'theme'
+
+CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
