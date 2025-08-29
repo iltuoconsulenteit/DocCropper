@@ -496,13 +496,17 @@ def load_settings():
         if (is_demo or is_dev) and not merged.get("sponsor_frame"):
             merged["sponsor_frame"] = DEFAULT_SPONSOR_FRAME
         try:
-            from plugins import sponsorframe
-            sponsor_dev = str(os.getenv("DOCROPPER_SPONSORFRAME_DEV_ONLY", merged.get("sponsorframe_dev_only", False))).lower() == "true"
+            from plugin.core import sponsorframe
+            sponsor_dev = str(
+                os.getenv(
+                    "DOCROPPER_SPONSORFRAME_DEV_ONLY",
+                    merged.get("sponsorframe_dev_only", False),
+                )
+            ).lower() == "true"
             if not sponsor_dev or is_dev:
                 merged.update(sponsorframe.get_config(merged))
         except Exception:
             logger.exception("sponsor plugin failed")
-
         return merged
     except Exception:
         return DEFAULT_SETTINGS.copy()
