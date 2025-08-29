@@ -1,7 +1,7 @@
 import os
 from django.conf import settings
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'platform.config.settings')
 import django
 
 def run():
