@@ -1,9 +1,21 @@
 import argparse
+import importlib.util
 import os
 import signal
+import sys
 import tempfile
+from pathlib import Path
 
 import uvicorn
+
+BASE_DIR = Path(__file__).resolve().parent
+platform_root = BASE_DIR / "platform"
+spec = importlib.util.spec_from_file_location(
+    "platform", platform_root / "__init__.py", submodule_search_locations=[str(platform_root)]
+)
+platform_pkg = importlib.util.module_from_spec(spec)
+sys.modules["platform"] = platform_pkg
+spec.loader.exec_module(platform_pkg)
 
 from platform.config.asgi import application
 from services.api.app import app as fastapi_app, load_settings, DEV_LICENSE_KEY_UPPER

@@ -1,0 +1,1 @@
+"""DocCropper Django platform package."""
