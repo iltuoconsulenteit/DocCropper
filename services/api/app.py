@@ -13,7 +13,7 @@ from datetime import datetime
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, Body, Request, Depends, HTTPException
 from PIL import Image, ImageDraw, ImageFont
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 
@@ -665,6 +665,11 @@ else:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+
+# Redirect bare /api to the interactive documentation
+@app.get("/", include_in_schema=False)
+async def root_redirect():
+    return RedirectResponse(url="/docs")
 
 # Dependency used to enforce that the configured license is valid
 async def require_valid_license(
