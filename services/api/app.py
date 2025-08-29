@@ -69,21 +69,21 @@ def get_fitz():
     if _fitz is None:
         _fitz = importlib.import_module("fitz")
     return _fitz
-from plugins.sign import register as register_sign
+from plugin.core.sign import register as register_sign
 from app.licensing.check import verify_license
 from app.auth.routes import router as auth_router, fastapi_users
 from app.auth.models import User
-from plugins.mobilesign import register as register_mobilesign
-from plugins.remotesign import register as register_remotesign
-from plugins.docuseal import register as register_docuseal
-from plugins.crop import register as register_crop
-from plugins.removebg import register as register_removebg
-from plugins.compresspdf import register as register_compresspdf
-from plugins.watermark import register as register_watermark
-from plugins.login import register as register_login
-from plugins.downloadpng import register as register_downloadpng
-from plugins.pageselect import register as register_pageselect
-from plugins.colormode import register as register_colormode
+from plugin.core.mobilesign import register as register_mobilesign
+from plugin.core.remotesign import register as register_remotesign
+from plugin.core.docuseal import register as register_docuseal
+from plugin.core.crop import register as register_crop
+from plugin.core.removebg import register as register_removebg
+from plugin.core.compresspdf import register as register_compresspdf
+from plugin.core.watermark import register as register_watermark
+from plugin.core.login import register as register_login
+from plugin.core.downloadpng import register as register_downloadpng
+from plugin.core.pageselect import register as register_pageselect
+from plugin.core.colormode import register as register_colormode
 
 try:
     import stripe
@@ -809,7 +809,7 @@ if enable_colormode and (not colormode_dev or is_dev_license):
     register_colormode(app, plugin_utils)
     ACTIVE_PLUGINS.append('colormode')
 if enable_imageeditor and (not imageeditor_dev or is_dev_license):
-    from plugins.imageeditor import register as register_imageeditor
+    from plugin.core.imageeditor import register as register_imageeditor
     register_imageeditor(app, plugin_utils)
     ACTIVE_PLUGINS.append('imageeditor')
 
