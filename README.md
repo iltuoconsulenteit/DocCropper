@@ -172,6 +172,27 @@ The SQLite file (`db.sqlite3`) stores authentication data and is ignored by Git.
 Install scripts remove this file during updates to avoid merge conflicts; if you
 need to preserve accounts, back up the database before running an update.
 
+### Backup e migrazioni del database
+
+Per salvare una copia di sicurezza è sufficiente duplicare il file SQLite:
+
+```bash
+cp db.sqlite3 db.sqlite3.bak
+# oppure con l'utilità integrata di SQLite
+sqlite3 db.sqlite3 ".backup 'db.sqlite3.bak'"
+```
+
+Se i modelli cambiano, le tabelle possono essere aggiornate con uno strumento
+di migrazione come [Alembic](https://alembic.sqlalchemy.org/):
+
+```bash
+alembic revision --autogenerate -m "messaggio"
+alembic upgrade head
+```
+
+Per modifiche minori è possibile eliminare `db.sqlite3` e lasciare che le
+tabelle vengano ricreate automaticamente all'avvio dell'applicazione.
+
 ---
 
 ## ▶️ Running DocCropper
