@@ -4,7 +4,21 @@ python-multipart
 opencv-python
 numpy
 pillow
+rembg
 google-auth
+bcrypt
 
 pystray
 python-dotenv
+pyhanko
+pytesseract
+PyMuPDF
+qrcode
+cryptography
+stripe
+fastapi-users[sqlalchemy]
+sqlalchemy
+httpx
+aiosqlite
+python-jose
+email-validator
