@@ -651,10 +651,9 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.auth.database import engine, Base, async_session_maker
+    from app.auth.database import init_db, async_session_maker
     from fastapi_users.db import SQLAlchemyUserDatabase
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    await init_db()
 
     # Create default admin user if none exists
     admin_email = os.getenv("DOCROPPER_ADMIN_EMAIL", "admin@example.com")
