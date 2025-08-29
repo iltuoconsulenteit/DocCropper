@@ -127,3 +127,26 @@ source control. Back up the database if you need to preserve accounts before upd
 - `update_interval` – interval between automatic update checks (milliseconds)
 
 User preferences are stored per account in the `users/` folder.  If a setting is defined in both the environment and `settings.json`, the environment variable takes precedence.
+
+## `license_overrides.json`
+`license_overrides.json` is created automatically after a successful remote license check.  The file contains values that the license server enforces and therefore override any corresponding entries in `settings.json`.
+
+Typical fields include:
+
+- `license_key` – the validated key
+- `license_name` – name associated with the license
+- `license_level` – tier such as `free`, `pro`, `full`, or `developer`
+- Other enforced options like plugin flags or user limits
+
+Example:
+
+```json
+{
+  "license_key": "ABCD-1234",
+  "license_name": "Example Corp",
+  "license_level": "pro",
+  "lan_user_limit": 5
+}
+```
+
+This file is managed by the application and should not be edited manually.

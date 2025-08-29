@@ -130,9 +130,27 @@ def load_license_overrides() -> dict:
     except Exception:
         return {}
 
-def save_license_overrides(update: dict) -> dict:
+def save_license_overrides(
+    update: dict,
+    key: str | None = None,
+    name: str | None = None,
+    level: str | None = None,
+) -> dict:
+    """Persist license-enforced settings and metadata.
+
+    ``update`` may contain arbitrary settings that the license server forces.
+    When ``key``, ``name`` or ``level`` are provided they are also written so
+    subsequent calls to :func:`load_settings` expose the current license
+    information to the frontend.
+    """
     data = load_license_overrides()
     data.update(update)
+    if key:
+        data["license_key"] = key
+    if name:
+        data["license_name"] = name
+    if level:
+        data["license_level"] = level
     with open(LICENSE_OVERRIDES_FILE, "w") as fh:
         json.dump(data, fh)
     return data
@@ -479,10 +497,10 @@ def load_settings():
         if not merged.get("settings_password_hash"):
             merged["settings_password_hash"] = bcrypt_hash(DEFAULT_SETTINGS_PASSWORD)
 
-        # Apply values enforced by a previous license check
+        # Apply values enforced by a previous license check, including
+        # license metadata saved by ``save_license_overrides``
         overrides = load_license_overrides()
-        if overrides:
-            merged.update(overrides)
+        merged.update(overrides)
 
         dev_env = get_dev_license_key()
         key_upper = merged.get("license_key", "").strip().upper()
@@ -738,7 +756,16 @@ async def require_valid_license(
             save_settings(updates)
 
     forced = data.get("settings", {})
-    if isinstance(forced, dict) and forced:
+    forced = forced if isinstance(forced, dict) else {}
+    license_fields = {
+        k: data.get(k)
+        for k in ("license_key", "license_name", "license_level")
+        if data.get(k) is not None
+    }
+    if license_fields.get("license_level"):
+        license_fields["license_level"] = license_fields["license_level"].lower()
+    if forced or license_fields:
+        forced.update(license_fields)
         save_license_overrides(forced)
 
     settings = load_settings()
