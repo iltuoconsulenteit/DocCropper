@@ -19,6 +19,7 @@ spec.loader.exec_module(platform_pkg)
 
 from platform.config.asgi import application
 from services.api.app import app as fastapi_app, load_settings, DEV_LICENSE_KEY_UPPER
+from django.core.management import call_command
 
 PID_FILE = os.path.join(tempfile.gettempdir(), 'doccropper.pid')
 
@@ -43,6 +44,11 @@ if __name__ == '__main__':
         else:
             print("PID file not found. Server may not be running.")
         raise SystemExit
+
+    try:
+        call_command('migrate', run_syncdb=True, interactive=False, verbosity=0)
+    except Exception as e:
+        print(f"Database migration failed: {e}")
 
     settings = load_settings()
     port = args.port if args.port is not None else int(settings.get('port', 8765))
