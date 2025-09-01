@@ -35,6 +35,7 @@ async def application(scope: Dict[str, Any], receive: Callable, send: Callable) 
     if path.startswith("/api"):
         scope_api = dict(scope)
         scope_api["path"] = path[4:] or "/"
+        scope_api["root_path"] = "/api"
         await fastapi_app(scope_api, receive, send_wrapper)
     else:
         await django_app(scope, receive, send_wrapper)

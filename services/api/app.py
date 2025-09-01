@@ -38,6 +38,12 @@ import socket
 from pathlib import Path
 import importlib
 import importlib.util
+from types import SimpleNamespace
+
+import bcrypt as _bcrypt
+if not hasattr(_bcrypt, "__about__"):
+    _bcrypt.__about__ = SimpleNamespace(__version__=getattr(_bcrypt, "__version__", ""))
+
 from passlib.hash import bcrypt
 
 _cv2 = None
@@ -674,13 +680,13 @@ else:
 # Using an absolute path ensures the browser ends up on ``/api/docs`` when the
 # application is mounted under ``/api``.
 @app.get("/", include_in_schema=False)
-async def root_redirect():
-    return RedirectResponse(url="/api/docs")
+async def root_redirect() -> RedirectResponse:
+    return RedirectResponse(url="docs")
 
 
 @app.get("", include_in_schema=False)
-async def root_redirect_empty():
-    return RedirectResponse(url="/api/docs")
+async def root_redirect_empty() -> RedirectResponse:
+    return RedirectResponse(url="docs")
 
 # Dependency used to enforce that the configured license is valid
 async def require_valid_license(
