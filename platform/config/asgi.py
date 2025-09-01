@@ -6,6 +6,8 @@ from django.core.asgi import get_asgi_application
 from starlette.applications import Starlette
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
+from starlette.responses import RedirectResponse
+from starlette.routing import Route
 
 # Configure Django settings and create the Django ASGI app
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "platform.config.settings")
@@ -31,7 +33,21 @@ class LogMiddleware(BaseHTTPMiddleware):
 
 
 # Starlette application that mounts FastAPI at /api and Django everywhere else
-application = Starlette()
+
+
+async def _openapi_forward(request: Request) -> RedirectResponse:
+    """Expose FastAPI's OpenAPI schema at ``/openapi.json``.
+
+    The Swagger UI served from ``/api/docs`` expects the schema at the root
+    path, so we forward such requests to the FastAPI application.
+    """
+
+    return RedirectResponse("/api/openapi.json")
+
+
+routes = [Route("/openapi.json", _openapi_forward)]
+
+application = Starlette(routes=routes)
 application.mount("/api", fastapi_app)
 application.mount("/", django_app)
 application.add_middleware(LogMiddleware)
