@@ -1,5 +1,6 @@
-from django.http import HttpResponse
+from django.shortcuts import render
 
 
 def home(request):
-    return HttpResponse('DocCropper Portal (placeholder)')
+    """Render the main portal page with navigation links."""
+    return render(request, 'portal/home.html')

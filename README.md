@@ -497,7 +497,7 @@ setup.
 
 ### URLs
 
-- `http://localhost:8000/` – DocCropper Portal (placeholder)
+ - `http://localhost:8000/` – DocCropper Portal
 - `http://localhost:8000/admin/` – Django admin
 - `http://localhost:8000/api` – FastAPI endpoints
 
