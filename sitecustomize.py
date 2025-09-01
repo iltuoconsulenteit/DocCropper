@@ -7,6 +7,7 @@ all helper scripts (Celery workers, management commands, etc.) show up with
 an identifiable name instead of the generic ``python`` entry.
 """
 
+import os
 import bcrypt
 from types import SimpleNamespace
 
@@ -15,15 +16,16 @@ if not hasattr(bcrypt, "__about__"):
     bcrypt.__about__ = SimpleNamespace(__version__=getattr(bcrypt, "__version__", ""))
 
 # Try to label the running process so it is easier to spot in task managers.
+_title = os.getenv("DOCROPPER_PROC", "DocCropper")
 try:  # pragma: no cover - platform specific
     import setproctitle
 
-    setproctitle.setproctitle("DocCropper")
+    setproctitle.setproctitle(_title)
 except Exception:  # noqa: BLE001
     try:  # Fallback for Windows without setproctitle
         import ctypes
 
-        ctypes.windll.kernel32.SetConsoleTitleW("DocCropper")
+        ctypes.windll.kernel32.SetConsoleTitleW(_title)
     except Exception:  # noqa: BLE001
         pass
 

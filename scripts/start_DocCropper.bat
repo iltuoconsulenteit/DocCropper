@@ -59,7 +59,7 @@ if exist "!PID_FILE!" (
 
 if "!TRAY_RUNNING!"=="0" (
     echo [INFO] Avvio tray helper >> "!LOG_FILE!"
-    start "" pythonw doccropper_tray.pyw >> "!LOG_FILE!" 2>&1
+    start "" cmd /c "set DOCROPPER_PROC=DocCropperTray && pythonw doccropper_tray.pyw" >> "!LOG_FILE!" 2>&1
     timeout /t 2 >nul
 )
 
@@ -106,7 +106,7 @@ python main.py --stop >> "!LOG_FILE!" 2>&1
 
 :: Launch application
 echo [INFO] Avvio DocCropper sulla porta %PORT% >> "!LOG_FILE!"
-start "" /b python main.py --port %PORT% >> "!LOG_FILE!" 2>&1
+start "" /b cmd /c "set DOCROPPER_PROC=DocCropper && python main.py --port %PORT%" >> "!LOG_FILE!" 2>&1
 if "%DOCROPPER_TUNNEL%"=="true" (
     where cloudflared >nul 2>&1 && (
         echo Starting Cloudflare Tunnel... >> "!LOG_FILE!"
