@@ -31,7 +31,11 @@ try:
     import setproctitle
     setproctitle.setproctitle("DocCropper")
 except Exception:
-    pass
+    try:  # Fallback for platforms where setproctitle is unavailable
+        import ctypes
+        ctypes.windll.kernel32.SetConsoleTitleW("DocCropper")
+    except Exception:
+        pass
 
 from platform.config.asgi import application
 from services.api.app import app as fastapi_app, load_settings, DEV_LICENSE_KEY_UPPER
