@@ -1155,6 +1155,7 @@ async def pdf_to_images(
         return JSONResponse(status_code=500, content={"message": f"PDF conversion failed: {str(e)}"})
 
 
+@app.post("/create-pdf", dependencies=[Depends(require_valid_license)])
 @app.post("/create-pdf/", dependencies=[Depends(require_valid_license)])
 async def create_pdf(
     request: Request,
