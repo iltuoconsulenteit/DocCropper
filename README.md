@@ -238,10 +238,11 @@ also open it in a new tab at `http://<host>:<port>/wiki/<lang>/` (by default
 ### Admin Page
 
 Developers can manage global settings and user accounts from a dedicated admin
-interface available at `/admin`. Access to this page requires authentication as a
-superuser using the `/auth/jwt/login` endpoint. Once logged in, the page exposes
-the same options found in the settings panel and lists all registered users with
-the ability to create or remove them. It relies on the REST endpoints under
+interface available at `/admin`. A default superuser with username `admin` and
+password `admin` is created by `scripts/seed_licenses.py` for local development.
+Access to this page requires authentication; once logged in, the page exposes the
+same options found in the settings panel and lists all registered users with the
+ability to create or remove them. It relies on the REST endpoints under
 `/settings/`, `/auth/` and `/users/`.
 
 ### Google Sign-In
@@ -454,3 +455,62 @@ additional features such as Docuseal or local signing.
 
 Visit [http://localhost:8765](http://localhost:8765) and click **Login with Google**. After authenticating you'll be redirected to `/dashboard` which shows your name and email.
 
+
+## Platform
+
+```
+DocCropper/
+├─ platform/
+│  ├─ manage.py
+│  ├─ config/
+│  └─ apps/
+├─ services/
+│  └─ api/
+├─ plugin/
+│  ├─ core/
+│  └─ pro/
+├─ deploy/
+├─ scripts/
+```
+
+### Running Locally
+
+**Docker Compose**
+
+```
+cd deploy
+cp env.example .env
+docker-compose up --build
+```
+
+**Standalone**
+
+Install dependencies from `requirements.txt` and run:
+
+```
+uvicorn platform.config.asgi:application --reload
+```
+
+By default the Django platform uses an on-disk SQLite database so no extra
+services are required for local development. Define `MYSQL_HOST` (and related
+`MYSQL_*` variables) to switch to a MySQL backend, as expected in the Docker
+setup.
+
+### URLs
+
+ - `http://localhost:8000/` – DocCropper Portal
+- `http://localhost:8000/admin/` – Django admin
+- `http://localhost:8000/api` – FastAPI endpoints
+
+### Simple License Webapp
+
+A lightweight FastAPI application is available for quick license management.
+Run it with:
+
+```
+uvicorn webapp.main:app --reload
+```
+
+The app protects endpoints with HTTP Basic auth. Default credentials are
+`admin` / `admin` and can be overridden via the `WEBAPP_USER` and
+`WEBAPP_PASSWORD` environment variables.
