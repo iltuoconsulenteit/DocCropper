@@ -655,8 +655,8 @@ async def lifespan(app: FastAPI):
 # root. This avoids 404 errors when the FastAPI app is mounted under Django.
 app = FastAPI(
     lifespan=lifespan,
-    docs_url="/api/docs",
-    openapi_url="/api/openapi.json",
+    docs_url="/docs",
+    openapi_url="/openapi.json",
 )
 # Only enable authentication routes when license checking is active
 if load_settings().get("license_check", False):
