@@ -32,9 +32,12 @@ async def application(scope: Dict[str, Any], receive: Callable, send: Callable) 
         await send(message)
 
     logger.info("Incoming %s %s", method, path)
-    if path.startswith("/api"):
+    if path.startswith("/api") or path == "/openapi.json":
         scope_api = dict(scope)
-        scope_api["path"] = path[4:] or "/"
+        if path.startswith("/api"):
+            scope_api["path"] = path[4:] or "/"
+        else:
+            scope_api["path"] = path
         scope_api["root_path"] = "/api"
         await fastapi_app(scope_api, receive, send_wrapper)
     else:
