@@ -650,7 +650,14 @@ async def lifespan(app: FastAPI):
         # Backup again on shutdown
         backup_all()
 
-app = FastAPI(lifespan=lifespan)
+# Expose the OpenAPI schema and docs under the /api path so the Swagger UI
+# fetches the specification from /api/openapi.json rather than the repository
+# root. This avoids 404 errors when the FastAPI app is mounted under Django.
+app = FastAPI(
+    lifespan=lifespan,
+    docs_url="/api/docs",
+    openapi_url="/api/openapi.json",
+)
 # Only enable authentication routes when license checking is active
 if load_settings().get("license_check", False):
     app.include_router(auth_router)
