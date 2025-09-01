@@ -1,6 +1,7 @@
 import os
 import logging
 from typing import Callable, Awaitable, Dict, Any
+from types import SimpleNamespace
 
 from django.core.asgi import get_asgi_application
 
@@ -38,3 +39,7 @@ async def application(scope: Dict[str, Any], receive: Callable, send: Callable) 
     else:
         await django_app(scope, receive, send_wrapper)
     logger.info("Completed %s %s with status %s", method, path, status_code)
+
+
+# allow external consumers (e.g. main.py) to attach server references
+application.state = SimpleNamespace()
