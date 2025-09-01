@@ -39,10 +39,26 @@ window.DC.export = window.DC.export || (async function () {
     body = new URLSearchParams({ [window.DC_CSRF]: 1 });
   }
   const resp = await fetch(url, { method: 'POST', headers, body });
+  let downloadUrl;
   try {
     const data = await resp.json();
-    if (data && data.downloadUrl) window.DC_DOWNLOAD_ENDPOINT = data.downloadUrl;
+    downloadUrl = data && data.downloadUrl;
+    if (downloadUrl) window.DC_DOWNLOAD_ENDPOINT = downloadUrl;
   } catch {}
+  if (downloadUrl) {
+    const box = document.getElementById('exportOptions');
+    if (box) box.style.display = 'block';
+    const dl = document.getElementById('downloadPdfBtn');
+    if (dl) {
+      dl.style.display = 'inline-block';
+      dl.onclick = () => window.location.href = downloadUrl;
+    }
+    const frame = document.getElementById('exportPreviewFrame');
+    if (frame) {
+      frame.src = downloadUrl + '#toolbar=0&navpanes=0';
+      frame.style.display = 'block';
+    }
+  }
   fire();
 });
 
@@ -116,7 +132,7 @@ window.DC.import = window.DC.import || (async function () {
 });
 
 window.DC.guide = window.DC.guide || (function () {
-  const url = window.DC_GUIDE_URL || '/guide';
+  const url = window.DC_GUIDE_URL || '/wiki/usage.html';
   window.open(url, '_blank');
 });
 

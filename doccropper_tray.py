@@ -37,6 +37,14 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)s: %(message)s'
 )
 
+# Try to label this process so it is easier to spot in task managers
+try:  # pragma: no cover - best effort only
+    import setproctitle
+
+    setproctitle.setproctitle("DocCropper Tray")
+except Exception:  # noqa: BLE001
+    pass
+
 # Load environment variables from env/*.env files
 ENV_DIR = BASE_DIR / 'env'
 if ENV_DIR.is_dir():
