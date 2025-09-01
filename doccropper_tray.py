@@ -10,6 +10,7 @@ from urllib.request import urlopen
 import json
 import time
 import importlib.util
+import subprocess
 from dotenv import load_dotenv
 
 # Ensure the standard library 'platform' module is used, not the local Django package
@@ -186,7 +187,15 @@ def main():
     args = parser.parse_args()
 
     developer = os.environ.get('DOCROPPER_DEVELOPER') == '1' or is_developer()
-    logging.info("Tray icon started (developer=%s)", developer)
+    try:
+        BUILD = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=BASE_DIR,
+        ).decode().strip()
+    except Exception:
+        BUILD = "unknown"
+
+    logging.info("Tray icon started (developer=%s, build=%s)", developer, BUILD)
     try:
         TRAY_PID_FILE.write_text(str(os.getpid()))
     except Exception:
@@ -284,9 +293,9 @@ def main():
     menu_items.append(MenuItem(tr('quit'), quit_app))
 
     icon = Icon(
-        'DocCropper',
+        f'DocCropper {BUILD}',
         create_image(running),
-        'DocCropper',
+        f'DocCropper {BUILD}',
         menu=Menu(*menu_items)
     )
 
