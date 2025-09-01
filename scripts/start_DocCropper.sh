@@ -56,7 +56,7 @@ else
   SERVER_RUNNING=0
 fi
 
-OPEN_URL="${DOCROPPER_OPEN_URL:-http://127.0.0.1:$PORT/api}"
+OPEN_URL="${DOCROPPER_OPEN_URL:-http://127.0.0.1:$PORT/}"
 
 if [ "$SERVER_RUNNING" -eq 1 ]; then
   echo "DocCropper already running on port $PORT"
