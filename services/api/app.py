@@ -676,17 +676,17 @@ else:
             allow_headers=["*"],
         )
 
-# Redirect bare /api to the interactive documentation served by FastAPI.
-# Using an absolute path ensures the browser ends up on ``/api/docs`` when the
-# application is mounted under ``/api``.
+# Redirect bare ``/api`` requests to the interactive documentation.
+# Returning an absolute path avoids ambiguities when the app is mounted under
+# ``/api`` behind a dispatcher such as Django.
 @app.get("/", include_in_schema=False)
 async def root_redirect() -> RedirectResponse:
-    return RedirectResponse(url="docs")
+    return RedirectResponse(url="/api/docs")
 
 
 @app.get("", include_in_schema=False)
 async def root_redirect_empty() -> RedirectResponse:
-    return RedirectResponse(url="docs")
+    return RedirectResponse(url="/api/docs")
 
 # Dependency used to enforce that the configured license is valid
 async def require_valid_license(
