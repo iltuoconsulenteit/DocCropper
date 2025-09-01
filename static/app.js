@@ -2291,7 +2291,7 @@ async function generatePdf() {
     if (window.lastSignEmail || window.lastSignPhone || window.lastSignName) {
         payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
     }
-    fetch('/create-pdf/', {
+    fetch('/api/create-pdf/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

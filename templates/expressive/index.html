@@ -1797,7 +1797,7 @@
         if (window.lastSignEmail || window.lastSignPhone || window.lastSignName) {
           payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
         }
-        const resp = await fetch('/create-pdf/', {
+        const resp = await fetch('/api/create-pdf/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
