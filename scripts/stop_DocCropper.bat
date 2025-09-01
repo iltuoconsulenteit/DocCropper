@@ -10,6 +10,8 @@ if exist venv\Scripts\python.exe (
     set "PY=python"
 )
 
+"%PY%" main.py --stop >nul 2>&1
+
 set "PID_FILE=%TEMP%\doccropper.pid"
 if exist "%PID_FILE%" (
     set /p PID=<"%PID_FILE%"
