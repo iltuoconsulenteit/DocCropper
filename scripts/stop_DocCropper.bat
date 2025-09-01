@@ -13,7 +13,7 @@ if exist venv\Scripts\python.exe (
 set "PID_FILE=%TEMP%\doccropper.pid"
 if exist "%PID_FILE%" (
     set /p PID=<"%PID_FILE%"
-    tasklist /FI "PID eq %PID%" | find "%PID%" >nul && taskkill /F /PID %PID% >nul 2>&1
+    tasklist /FI "PID eq %PID%" | find "%PID%" >nul && taskkill /F /T /PID %PID% >nul 2>&1
     del "%PID_FILE%" >nul 2>&1
     echo Stopped DocCropper (PID %PID%)
 )
@@ -21,9 +21,12 @@ if exist "%PID_FILE%" (
 set "TRAY_PID_FILE=%TEMP%\doccropper_tray.pid"
 if exist "%TRAY_PID_FILE%" (
     for /f %%p in (%TRAY_PID_FILE%) do (
-        tasklist /FI "PID eq %%p" | find "%%p" >nul && taskkill /F /PID %%p >nul 2>&1
+        tasklist /FI "PID eq %%p" | find "%%p" >nul && taskkill /F /T /PID %%p >nul 2>&1
     )
     del "%TRAY_PID_FILE%" >nul 2>&1
     echo Tray helper stopped
 )
+
+rem Fallback: terminate any Python process launched from DocCropper directory
+for /f "tokens=2 delims==" %%p in ('wmic process where "CommandLine like '%%DocCropper%%'" get ProcessId /value ^| find "="') do taskkill /F /T /PID %%p >nul 2>&1
 endlocal
