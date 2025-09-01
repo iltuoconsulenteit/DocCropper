@@ -5,8 +5,7 @@ setlocal EnableDelayedExpansion
 set "SCRIPT_DIR=%~dp0"
 
 :: Resolve the repository root so paths like ".." are expanded
-set "ROOT_DIR=%SCRIPT_DIR%.."
-for %%I in ("%ROOT_DIR%") do set "ROOT_DIR=%%~fI"
+for %%I in ("%SCRIPT_DIR%..") do set "ROOT_DIR=%%~fI"
 
 :: Locate DocCropper's main.py either in the script folder or the root
 if exist "%SCRIPT_DIR%main.py" (
