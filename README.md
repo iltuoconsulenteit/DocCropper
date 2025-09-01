@@ -454,3 +454,62 @@ additional features such as Docuseal or local signing.
 
 Visit [http://localhost:8765](http://localhost:8765) and click **Login with Google**. After authenticating you'll be redirected to `/dashboard` which shows your name and email.
 
+
+## Platform
+
+```
+DocCropper/
+├─ platform/
+│  ├─ manage.py
+│  ├─ config/
+│  └─ apps/
+├─ services/
+│  └─ api/
+├─ plugin/
+│  ├─ core/
+│  └─ pro/
+├─ deploy/
+├─ scripts/
+```
+
+### Running Locally
+
+**Docker Compose**
+
+```
+cd deploy
+cp env.example .env
+docker-compose up --build
+```
+
+**Standalone**
+
+Install dependencies from `requirements.txt` and run:
+
+```
+uvicorn platform.config.asgi:application --reload
+```
+
+By default the Django platform uses an on-disk SQLite database so no extra
+services are required for local development. Define `MYSQL_HOST` (and related
+`MYSQL_*` variables) to switch to a MySQL backend, as expected in the Docker
+setup.
+
+### URLs
+
+ - `http://localhost:8000/` – DocCropper Portal
+- `http://localhost:8000/admin/` – Django admin
+- `http://localhost:8000/api` – FastAPI endpoints
+
+### Simple License Webapp
+
+A lightweight FastAPI application is available for quick license management.
+Run it with:
+
+```
+uvicorn webapp.main:app --reload
+```
+
+The app protects endpoints with HTTP Basic auth. Default credentials are
+`admin` / `admin` and can be overridden via the `WEBAPP_USER` and
+`WEBAPP_PASSWORD` environment variables.

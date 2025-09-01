@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_DATABASE: doccropper
+      MYSQL_USER: doccropper
+      MYSQL_PASSWORD: doccropper
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  web:
+    build: ..
+    command: uvicorn platform.config.asgi:application --host 0.0.0.0 --port 8000
+    environment:
+      - DJANGO_SECRET_KEY=change-me
+      - MYSQL_HOST=db
+      - MYSQL_DATABASE=doccropper
+      - MYSQL_USER=doccropper
+      - MYSQL_PASSWORD=doccropper
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ..:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+
+  worker:
+    build: ..
+    command: celery -A platform.config.celery worker -l info
+    environment:
+      - DJANGO_SECRET_KEY=change-me
+      - MYSQL_HOST=db
+      - MYSQL_DATABASE=doccropper
+      - MYSQL_USER=doccropper
+      - MYSQL_PASSWORD=doccropper
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ..:/app
+    depends_on:
+      - db
+      - redis
+
+  beat:
+    build: ..
+    command: celery -A platform.config.celery beat -l info
+    environment:
+      - DJANGO_SECRET_KEY=change-me
+      - MYSQL_HOST=db
+      - MYSQL_DATABASE=doccropper
+      - MYSQL_USER=doccropper
+      - MYSQL_PASSWORD=doccropper
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ..:/app
+    depends_on:
+      - db
+      - redis

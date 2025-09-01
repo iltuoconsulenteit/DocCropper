@@ -1,5 +1,4 @@
 import os
-import platform
 import subprocess
 import logging
 from pathlib import Path
@@ -10,7 +9,16 @@ import webbrowser
 from urllib.request import urlopen
 import json
 import time
+import importlib.util
+import subprocess
 from dotenv import load_dotenv
+
+# Ensure the standard library 'platform' module is used, not the local Django package
+_platform_spec = importlib.util.spec_from_file_location(
+    "platform", Path(os.__file__).resolve().parent / "platform.py"
+)
+platform = importlib.util.module_from_spec(_platform_spec)
+_platform_spec.loader.exec_module(platform)
 
 LANG = 'it'
 TRANSLATIONS = {}
@@ -28,6 +36,14 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(levelname)s: %(message)s'
 )
+
+# Try to label this process so it is easier to spot in task managers
+try:  # pragma: no cover - best effort only
+    import setproctitle
+
+    setproctitle.setproctitle("DocCropper Tray")
+except Exception:  # noqa: BLE001
+    pass
 
 # Load environment variables from env/*.env files
 ENV_DIR = BASE_DIR / 'env'
@@ -179,7 +195,15 @@ def main():
     args = parser.parse_args()
 
     developer = os.environ.get('DOCROPPER_DEVELOPER') == '1' or is_developer()
-    logging.info("Tray icon started (developer=%s)", developer)
+    try:
+        BUILD = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=BASE_DIR,
+        ).decode().strip()
+    except Exception:
+        BUILD = "unknown"
+
+    logging.info("Tray icon started (developer=%s, build=%s)", developer, BUILD)
     try:
         TRAY_PID_FILE.write_text(str(os.getpid()))
     except Exception:
@@ -277,9 +301,9 @@ def main():
     menu_items.append(MenuItem(tr('quit'), quit_app))
 
     icon = Icon(
-        'DocCropper',
+        f'DocCropper {BUILD}',
         create_image(running),
-        'DocCropper',
+        f'DocCropper {BUILD}',
         menu=Menu(*menu_items)
     )
 

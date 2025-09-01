@@ -17,6 +17,7 @@ if [ -f "$PID_FILE" ]; then
   PID=$(cat "$PID_FILE")
   if ps -p "$PID" >/dev/null 2>&1; then
     kill "$PID" 2>/dev/null || sudo -n kill "$PID" || true
+    pkill -P "$PID" 2>/dev/null || true
     echo "Stopped DocCropper (PID $PID)"
   fi
   rm -f "$PID_FILE" 2>/dev/null || sudo -n rm -f "$PID_FILE" || true
@@ -35,3 +36,6 @@ if [ -f "$TRAY_PID_FILE" ]; then
   rm -f "$TRAY_PID_FILE" 2>/dev/null || sudo -n rm -f "$TRAY_PID_FILE"
   echo "Stopped tray helper"
 fi
+
+# Fallback: terminate any remaining DocCropper processes
+pkill -f DocCropper 2>/dev/null || true
