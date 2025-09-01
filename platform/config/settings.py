@@ -83,6 +83,7 @@ else:
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR.parent / 'static']
 
 TAILWIND_APP_NAME = 'theme'
 
