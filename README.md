@@ -500,3 +500,16 @@ setup.
 - `http://localhost:8000/` – DocCropper Portal (placeholder)
 - `http://localhost:8000/admin/` – Django admin
 - `http://localhost:8000/api` – FastAPI endpoints
+
+### Simple License Webapp
+
+A lightweight FastAPI application is available for quick license management.
+Run it with:
+
+```
+uvicorn webapp.main:app --reload
+```
+
+The app protects endpoints with HTTP Basic auth. Default credentials are
+`admin` / `admin` and can be overridden via the `WEBAPP_USER` and
+`WEBAPP_PASSWORD` environment variables.
