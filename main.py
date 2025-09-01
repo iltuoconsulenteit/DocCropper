@@ -7,6 +7,16 @@ import tempfile
 from pathlib import Path
 
 import uvicorn
+from types import SimpleNamespace
+
+# Ensure the third-party `bcrypt` package exposes the ``__about__`` attribute
+# expected by Passlib, even on newer releases where it was removed.
+import bcrypt as _bcrypt
+
+if not hasattr(_bcrypt, "__about__"):
+    _bcrypt.__about__ = SimpleNamespace(
+        __version__=getattr(_bcrypt, "__version__", "")
+    )
 
 BASE_DIR = Path(__file__).resolve().parent
 platform_root = BASE_DIR / "platform"

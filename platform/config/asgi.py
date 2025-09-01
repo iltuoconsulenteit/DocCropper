@@ -40,9 +40,11 @@ async def application(scope: Dict[str, Any], receive: Callable, send: Callable) 
     elif path == "/openapi.json":
         # Swagger UI, served at /api/docs, requests the OpenAPI schema from
         # the root path. Forward this standalone request to the FastAPI app
-        # without stripping the leading slash so the schema is returned
-        # correctly.
+        # while setting ``root_path`` so the generated schema contains the
+        # correct ``/api`` prefix when the application is mounted under
+        # Django.
         scope_api = dict(scope)
+        scope_api["root_path"] = "/api"
         await fastapi_app(scope_api, receive, send_wrapper)
     else:
         await django_app(scope, receive, send_wrapper)
