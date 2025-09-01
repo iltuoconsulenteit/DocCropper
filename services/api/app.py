@@ -7,6 +7,7 @@ import os
 import shutil
 import time
 import uuid
+from pathlib import Path
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -750,7 +751,11 @@ async def require_valid_license(
 # Mount static files directory and local wiki with no-cache headers
 app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
 app.mount("/wiki", NoCacheStaticFiles(directory="wiki", html=True), name="wiki")
-app.mount("/js", NoCacheStaticFiles(directory="public/js"), name="js")
+# Serve JavaScript helpers if present; fall back gracefully when the
+# directory is missing so the API can start even without optional assets.
+js_dir = Path("static/js")
+if js_dir.is_dir():
+    app.mount("/js", NoCacheStaticFiles(directory=str(js_dir)), name="js")
 plugin_utils = {
     'load_settings': load_settings,
     'get_session_dir': get_session_dir,

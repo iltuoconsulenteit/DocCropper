@@ -27,6 +27,9 @@ if exist "%TRAY_PID_FILE%" (
     echo Tray helper stopped
 )
 
-rem Fallback: terminate any Python process launched from DocCropper directory
-for /f "tokens=2 delims==" %%p in ('wmic process where "CommandLine like '%%DocCropper%%'" get ProcessId /value ^| find "="') do taskkill /F /T /PID %%p >nul 2>&1
+rem Fallback: terminate any Python process whose command line references DocCropper
+for /f "tokens=2 delims==" %%p in ('wmic process where "name='python.exe' and CommandLine like '%%DocCropper%%'" get ProcessId /value ^| find "="') do (
+    taskkill /F /T /PID %%p >nul 2>&1
+)
+
 endlocal

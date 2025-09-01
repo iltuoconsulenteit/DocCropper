@@ -27,6 +27,12 @@ platform_pkg = importlib.util.module_from_spec(spec)
 sys.modules["platform"] = platform_pkg
 spec.loader.exec_module(platform_pkg)
 
+try:
+    import setproctitle
+    setproctitle.setproctitle("DocCropper")
+except Exception:
+    pass
+
 from platform.config.asgi import application
 from services.api.app import app as fastapi_app, load_settings, DEV_LICENSE_KEY_UPPER
 from django.core.management import call_command
