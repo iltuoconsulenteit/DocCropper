@@ -853,8 +853,8 @@ async def get_me(user: User = Depends(fastapi_users.current_user())):
 
 @app.get('/favicon.ico')
 async def favicon():
-    icon_path = os.path.join(os.path.dirname(__file__), 'static', 'logos', 'app_logo.png')
-    return FileResponse(icon_path, headers={"Cache-Control": "no-cache"})
+    icon_path = Path(__file__).resolve().parents[2] / 'static' / 'logos' / 'app_logo.png'
+    return FileResponse(str(icon_path), headers={"Cache-Control": "no-cache"})
 
 def make_index_response(request: Request, lang: str) -> HTMLResponse:
     cleanup_old_sessions()

@@ -21,6 +21,10 @@
         }
         return _fetch(resource, init);
       };
+      function normalize(name, lang) {
+        const decoded = decodeURIComponent(name);
+        return decoded.replace(/^(en|it)/, '').replace('{{lang}}', lang);
+      }
     </script>
     <style>
       main::-webkit-scrollbar { width: 16px; }

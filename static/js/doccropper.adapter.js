@@ -58,6 +58,9 @@ window.DC.export = window.DC.export || (async function () {
       frame.src = downloadUrl + '#toolbar=0&navpanes=0';
       frame.style.display = 'block';
     }
+  } else {
+    const box = document.getElementById('exportOptions');
+    if (box) box.style.display = 'block';
   }
   fire();
 });
