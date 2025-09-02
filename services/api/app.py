@@ -343,12 +343,19 @@ def get_lan_ip() -> str:
 
 
 def _normalize_image_names(cfg: dict) -> None:
-    lang = cfg.get("language", "en")
+    """Strip stray language prefixes but preserve the ``{{lang}}`` placeholder.
+
+    The front-end performs its own ``{{lang}}`` substitution so we only
+    decode any URL-encoded characters and remove two-letter prefixes such as
+    ``itDocCropper`` that may have been accidentally stored.  Leaving the
+    placeholder intact ensures language switching works correctly in the
+    browser.
+    """
 
     def _clean(img: str) -> str:
         decoded = urllib.parse.unquote(img)
-        decoded = re.sub(r"(^|/)[a-z]{2}(?=DocCropper)", r"\1", decoded, flags=re.IGNORECASE)
-        return decoded.replace("{{lang}}", lang)
+        # remove optional language codes like "itDocCropper" or "en/DocCropper"
+        return re.sub(r"(^|/)[a-z]{2}(?=DocCropper)", r"\1", decoded, flags=re.IGNORECASE)
 
     imgs = cfg.get("banner_images")
     if isinstance(imgs, list):
