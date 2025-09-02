@@ -1133,6 +1133,8 @@ async def pdf_to_images(
             return JSONResponse(status_code=413, content={"message": "File too large"})
 
         session_id = request.cookies.get("session_id")
+        if not session_id:
+            session_id = uuid.uuid4().hex
         session_dir = get_session_dir(session_id)
         if session_dir:
             try:
@@ -1202,6 +1204,8 @@ async def create_pdf(
             if demo_key or (dev_key_valid and settings.get("developer_watermark", False)):
                 licensed = False
         session_id = request.cookies.get("session_id")
+        if not session_id:
+            session_id = uuid.uuid4().hex
         session_dir = get_session_dir(session_id)
         pil_images = []
         for img_b64 in images:
@@ -1449,7 +1453,9 @@ async def create_pdf(
             logger.exception("Failed to save PDF")
         pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
         cleanup_old_sessions()
-        return JSONResponse(content={"pdf": "data:application/pdf;base64," + pdf_base64})
+        response = JSONResponse(content={"pdf": "data:application/pdf;base64," + pdf_base64})
+        response.set_cookie("session_id", session_id, httponly=True)
+        return response
     except Exception as e:
         logger.exception("Failed to create PDF")
         return JSONResponse(status_code=500, content={"message": f"Could not create PDF: {str(e)}"})
