@@ -7,6 +7,7 @@ import { initDownloadPngPlugin } from './plugins/downloadpng.js';
 import { initPageSelectPlugin } from './plugins/pageselect.js';
 import { initColorPlugin } from './plugins/colormode.js';
 import { initImageEditorPlugin } from './plugins/imageeditor.js';
+import { initFormFieldsPlugin } from './plugins/formfields.js';
 
 let scaling_factor_w;
 let scaling_factor_h;
@@ -310,6 +311,7 @@ let downloadPngEnabled = false;
 let pageSelectEnabled = false;
 let colorModePluginEnabled = false;
 let imageEditorEnabled = false;
+let formFieldsEnabled = false;
 
 let translations = {};
 let currentLang = window.DC_LANG || 'it';
@@ -813,6 +815,7 @@ function applySettings(cfg) {
     pageSelectEnabled = activePlugins.includes('pageselect');
     colorModePluginEnabled = activePlugins.includes('colormode');
     imageEditorEnabled = activePlugins.includes('imageeditor');
+    formFieldsEnabled = activePlugins.includes('formfields');
     if (typeof initRemoveBgPlugin === 'function' && Object.keys(translations).length) {
         initRemoveBgPlugin(translations, removeBgEnabled);
     }
@@ -830,6 +833,9 @@ function applySettings(cfg) {
     }
     if (typeof initImageEditorPlugin === 'function') {
         initImageEditorPlugin(translations, imageEditorEnabled);
+    }
+    if (typeof initFormFieldsPlugin === 'function') {
+        initFormFieldsPlugin(translations, formFieldsEnabled);
     }
     compressEnabled = activePlugins.includes('compresspdf');
     if (cfg.update_interval !== undefined) {
@@ -980,7 +986,9 @@ function updateWikiLinks() {
 function updateBannerImage() {
     if (!sloganImg || bannerImages.length === 0) return;
     let img = bannerImages[bannerIndex % bannerImages.length];
-    img = img.replace('{{lang}}', currentLang);
+    img = img
+        .replace(/^\{\{lang\}\}/, '')
+        .replace(/\{\{lang\}\}/g, currentLang);
     sloganImg.src = `/static/slide/${img}`;
 }
 
@@ -1474,8 +1482,67 @@ function addThumbnail(src, index) {
         actions.appendChild(dlBtnEl);
     }
 
+    if (formFieldsEnabled) {
+        const txtBtn = document.createElement('button');
+        txtBtn.className = 'thumbBtn textFieldBtn';
+        txtBtn.textContent = 'T';
+        txtBtn.title = t('addTextField');
+        txtBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            if (typeof window.addFormField === 'function') {
+                window.addFormField(idx, 'text');
+            }
+        });
+        actions.appendChild(txtBtn);
+
+        const cbBtn = document.createElement('button');
+        cbBtn.className = 'thumbBtn checkFieldBtn';
+        cbBtn.textContent = '☑';
+        cbBtn.title = t('addCheckbox');
+        cbBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            if (typeof window.addFormField === 'function') {
+                window.addFormField(idx, 'checkbox');
+            }
+        });
+        actions.appendChild(cbBtn);
+
+        const selBtn = document.createElement('button');
+        selBtn.className = 'thumbBtn selectFieldBtn';
+        selBtn.textContent = '▾';
+        selBtn.title = t('addDropdown');
+        selBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            if (typeof window.addFormField === 'function') {
+                window.addFormField(idx, 'select');
+            }
+        });
+        actions.appendChild(selBtn);
+    }
+
     let thrWrap;
     if (removeBgEnabled) {
+        thrWrap = document.createElement('div');
+        thrWrap.className = 'thumbBgThreshold';
+        thrWrap.style.display = 'none';
+        const thrInput = document.createElement('input');
+        thrInput.type = 'range';
+        thrInput.min = '0';
+        thrInput.max = '100';
+        thrInput.value = '50';
+        thrInput.title = t('removeBgThresholdPrompt');
+        thrInput.addEventListener('input', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            if (typeof window.removeBackground === 'function') {
+                window.removeBackground(idx, parseInt(e.target.value, 10));
+            }
+        });
+        thrWrap.appendChild(thrInput);
+
         const bgBtnEl = document.createElement('button');
         bgBtnEl.className = 'thumbBtn removeBgBtn';
         if (bgOriginals[index]) {
@@ -1488,27 +1555,13 @@ function addThumbnail(src, index) {
         bgBtnEl.addEventListener('click', (e) => {
             e.stopPropagation();
             const idx = parseInt(container.dataset.index);
+            thrWrap.style.display = 'block';
+            const val = parseInt(thrInput.value, 10);
             if (typeof window.removeBackground === 'function') {
-                window.removeBackground(idx);
+                window.removeBackground(idx, val);
             }
         });
         actions.appendChild(bgBtnEl);
-
-        thrWrap = document.createElement('div');
-        thrWrap.className = 'thumbBgThreshold';
-        const thrInput = document.createElement('input');
-        thrInput.type = 'range';
-        thrInput.min = '0';
-        thrInput.max = '100';
-        thrInput.value = '50';
-        thrInput.title = t('removeBgThresholdPrompt');
-        thrInput.addEventListener('input', (e) => {
-            e.stopPropagation();
-            if (typeof window.setRemoveBgThreshold === 'function') {
-                window.setRemoveBgThreshold(parseInt(e.target.value, 10));
-            }
-        });
-        thrWrap.appendChild(thrInput);
     }
 
     if (signEnabled) {
@@ -3516,6 +3569,7 @@ loadSettings().then(async (cfg) => {
     initPageSelectPlugin(pageSelectEnabled);
     initColorPlugin(translations, colorModePluginEnabled);
     initImageEditorPlugin(translations, imageEditorEnabled);
+    initFormFieldsPlugin(translations, formFieldsEnabled);
     renderPaymentBox(cfg);
     renderLicenseBox();
     renderLogin(cfg);
