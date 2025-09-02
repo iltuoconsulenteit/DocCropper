@@ -350,7 +350,9 @@ def load_settings():
             base = json.load(fh)
         merged = DEFAULT_SETTINGS.copy()
         merged.update(base)
-        plugins_dir = os.path.join(os.path.dirname(__file__), "plugins")
+        plugins_dir = os.path.join(
+            os.path.dirname(__file__), "..", "..", "plugin", "core"
+        )
         try:
             for name in os.listdir(plugins_dir):
                 cfg_path = os.path.join(plugins_dir, name, "settings.json")
@@ -811,6 +813,8 @@ enable_colormode = str(os.getenv('DOCROPPER_ENABLE_COLORMODE', settings.get('ena
 colormode_dev = str(os.getenv('DOCROPPER_COLORMODE_DEV_ONLY', settings.get('colormode_dev_only', False))).lower() == 'true'
 enable_imageeditor = str(os.getenv('DOCROPPER_ENABLE_IMAGEEDITOR', settings.get('enable_imageeditor', True))).lower() == 'true'
 imageeditor_dev = str(os.getenv('DOCROPPER_IMAGEEDITOR_DEV_ONLY', settings.get('imageeditor_dev_only', True))).lower() == 'true'
+enable_formfields = str(os.getenv('DOCROPPER_ENABLE_FORMFIELDS', settings.get('enable_formfields', False))).lower() == 'true'
+formfields_dev = str(os.getenv('DOCROPPER_FORMFIELDS_DEV_ONLY', settings.get('formfields_dev_only', True))).lower() == 'true'
 
 if enable_sign and (not sign_dev or is_dev_license):
     register_sign(app, plugin_utils)
@@ -846,6 +850,10 @@ if enable_imageeditor and (not imageeditor_dev or is_dev_license):
     from plugin.core.imageeditor import register as register_imageeditor
     register_imageeditor(app, plugin_utils)
     ACTIVE_PLUGINS.append('imageeditor')
+if enable_formfields and (not formfields_dev or is_dev_license):
+    from plugin.core.formfields import register as register_formfields
+    register_formfields(app, plugin_utils)
+    ACTIVE_PLUGINS.append('formfields')
 
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):

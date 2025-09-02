@@ -146,12 +146,16 @@
             </div>
             <button id="clearImagesBtn" class="w-10 h-10 rounded bg-red-500 text-white text-2xl flex items-center justify-center" @click="clearImages" :title="t('clearImages')">🧹</button>
             <button id="layoutToggleBtn" class="w-10 h-10 rounded bg-blue-500 text-white text-2xl flex items-center justify-center" @click="toggleLayout" :title="layoutHorizontal ? t('verticalView') : t('horizontalView')" x-text="layoutHorizontal ? '↕' : '↔'"></button>
+            <button id="formFieldsBtn" class="w-10 h-10 rounded text-white text-2xl flex items-center justify-center" :class="formFieldMode ? 'bg-purple-700' : 'bg-purple-500'" x-show="formFieldsEnabled" @click="formFieldMode=!formFieldMode" :title="t('formFields')">📝</button>
           </div>
           <div x-show="tab==='files'" x-ref="fileGrid" :class="layoutHorizontal ? 'flex overflow-x-auto space-x-4' : 'grid grid-cols-1 lg:grid-cols-2 gap-4'">
             <template x-for="(file, idx) in files" :key="file.id">
               <div class="mb-4 thumbContainer" :data-index="idx">
                 <p class="text-xs text-center mb-1 truncate" x-text="(idx+1)+' - '+file.name"></p>
                 <div class="border p-1">
+                  <div class="flex justify-center mb-1" x-show="pageSelectEnabled">
+                    <input type="checkbox" class="thumbSelect" x-model="file.selected" @click.stop :title="t('selectPage')">
+                  </div>
                   <div class="relative">
                     <button @click="crop(idx)" title="Crop" class="absolute top-0 left-0 m-1 bg-white/70 w-8 h-8 rounded flex items-center justify-center text-lg">✂</button>
                     <button @click="remove(idx)" title="Delete" class="absolute top-0 right-0 m-1 bg-white/70 w-8 h-8 rounded flex items-center justify-center text-lg">✖</button>
@@ -165,12 +169,16 @@
                     <button x-show="colorModeEnabled" @click="toBW(idx)" title="B/W" class="text-base">⬛</button>
                     <button x-show="colorModeEnabled" @click="toColor(idx)" title="Color" class="text-base">🎨</button>
                     <button x-show="watermarkEnabled" @click="watermark(idx)" :title="t('watermark')" class="text-base flex items-center justify-center"><img src="/static/icons/stamp.svg" alt="" class="h-4 w-4" /></button>
-                    <button x-show="removeBgEnabled" @click="removeBg(idx)" :title="file.bgOriginal ? t('restoreBg') : t('removeBg')" class="text-base" x-text="file.bgOriginal ? '↩' : '⌦'"></button>
+                    <button x-show="removeBgEnabled" @click="removeBg(idx, file.bgThreshold)" :title="file.bgOriginal ? t('restoreBg') : t('removeBg')" class="text-base" x-text="file.bgOriginal ? '↩' : '⌦'"></button>
+                    <button x-show="downloadPngEnabled" @click="downloadPng(idx)" :title="t('downloadPng')" class="text-base">⬇</button>
+                    <button x-show="formFieldsEnabled && formFieldMode" @click="addFormField(idx,'text')" :title="t('addTextField')" class="text-base">T</button>
+                    <button x-show="formFieldsEnabled && formFieldMode" @click="addFormField(idx,'checkbox')" :title="t('addCheckbox')" class="text-base">☑</button>
+                    <button x-show="formFieldsEnabled && formFieldMode" @click="addFormField(idx,'select')" :title="t('addDropdown')" class="text-base">▾</button>
                     <button @click="signPage(idx)" title="Sign" class="text-base">✒</button>
                   </div>
-                  <div x-show="removeBgEnabled" class="flex flex-col items-center mt-1">
+                  <div x-show="removeBgEnabled && file.bgOriginal" class="flex flex-col items-center mt-1" @mousedown.stop @click.stop>
                     <label class="text-xs" x-text="t('removeBgThresholdPrompt')"></label>
-                    <input type="range" min="0" max="100" x-model.number="removeBgThreshold" @input="updateRemoveBgThreshold" class="w-24" />
+                    <input type="range" min="0" max="100" x-model.number="file.bgThreshold" @input="removeBg(idx, file.bgThreshold)" @mousedown.stop @click.stop class="w-24" />
                   </div>
                 </div>
               </div>
@@ -567,6 +575,13 @@
             restoreBg:'Restore BG',
             removeBgThresholdPrompt:'Background removal threshold (%)',
             removeBgFailed:'Background removal failed',
+            downloadPng:'Download PNG',
+            selectPage:'Select page',
+            addTextField:'Text box',
+            addCheckbox:'Checkbox',
+            addDropdown:'Dropdown',
+            formFields:'Form fields',
+            fieldRemove:'Double-click to remove field',
             imagesPerPage:'Images per page',
             orientation:'Orientation',
             layout:'Layout',
@@ -679,6 +694,13 @@
             restoreBg:'Ripristina sfondo',
             removeBgThresholdPrompt:'Soglia rimozione sfondo (%)',
             removeBgFailed:'Rimozione sfondo fallita',
+            downloadPng:'Scarica PNG',
+            selectPage:'Seleziona pagina',
+            addTextField:'Campo testo',
+            addCheckbox:'Casella',
+            addDropdown:'Lista',
+            formFields:'Campi modulo',
+            fieldRemove:'Doppio click per rimuovere',
             imagesPerPage:'Immagini per pagina',
             orientation:'Orientamento',
             layout:'Disposizione',
@@ -756,7 +778,10 @@
           removeBgEnabled:false,
           watermarkEnabled:false,
           colorModeEnabled:false,
-          removeBgThreshold:50,
+          pageSelectEnabled:false,
+          downloadPngEnabled:false,
+          formFieldsEnabled:false,
+          formFieldMode:false,
           sigScale:1,
           activeSig:null,
           signatureAspect:1,
@@ -910,8 +935,12 @@
               this.clientLogoHeight = this.settings.clientLogoHeight;
               this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
               if(Array.isArray(cfg.banner_images)){
-                this.slides.en = cfg.banner_images.map(img=>`/static/slide/${img.replace('{{lang}}','en')}`);
-                this.slides.it = cfg.banner_images.map(img=>`/static/slide/${img.replace('{{lang}}','it')}`);
+                this.slides.en = cfg.banner_images.map(img =>
+                  `/static/slide/${img.replace(/^\{\{lang\}\}/,'').replace(/\{\{lang\}\}/g,'en')}`
+                );
+                this.slides.it = cfg.banner_images.map(img =>
+                  `/static/slide/${img.replace(/^\{\{lang\}\}/,'').replace(/\{\{lang\}\}/g,'it')}`
+                );
               } else {
                 this.slides.en = ['/static/slide/DocCropper_slogan_main_en.png'];
                 this.slides.it = ['/static/slide/DocCropper_slogan_main_it.png'];
@@ -920,6 +949,9 @@
               this.removeBgEnabled = !!cfg.enable_removebg;
               this.watermarkEnabled = !!cfg.enable_watermark;
               this.colorModeEnabled = !!cfg.enable_colormode && (cfg.license_level || '').toLowerCase() !== 'free';
+              this.pageSelectEnabled = !!cfg.enable_pageselect;
+              this.downloadPngEnabled = !!cfg.enable_downloadpng;
+              this.formFieldsEnabled = !!cfg.enable_formfields;
               this.maxUpload = parseInt(cfg.max_upload_files || 10);
               this.blankThreshold = parseInt(cfg.blank_threshold || 95);
               this.version = cfg.version || '';
@@ -955,7 +987,6 @@
                 this.files = [...this.files];
               }
             };
-            this.updateRemoveBgThreshold();
             this.adjustSponsor();
           },
           async command(action){
@@ -1074,7 +1105,7 @@
                     canvas.height = viewport.height;
                     await page.render({ canvasContext: ctx, viewport }).promise;
                     const data = canvas.toDataURL();
-                    loaded.push({ id: Date.now()+Math.random(), name: `${f.name} p${i}`, url: data, original: data });
+                    loaded.push({ id: Date.now()+Math.random(), name: `${f.name} p${i}`, url: data, original: data, bgThreshold:50, selected:true });
                   }
                 } catch (err) {
                   console.error('PDF import failed', err);
@@ -1086,7 +1117,7 @@
                   reader.onerror = reject;
                   reader.readAsDataURL(f);
                 });
-                loaded.push({ id: Date.now()+Math.random(), name: f.name, url: data, original: data });
+                loaded.push({ id: Date.now()+Math.random(), name: f.name, url: data, original: data, bgThreshold:50, selected:true });
               }
             }
             this.files.push(...loaded);
@@ -1147,27 +1178,32 @@
           toBW(idx){ this._convertColor(idx,'bw'); },
           toColor(idx){ this.files[idx].url = this.files[idx].original; this.files = [...this.files]; },
           watermark(idx){ if(typeof window.openWatermarkDialog==='function'){ window.openWatermarkDialog(idx); } },
-          async removeBg(idx){
+          downloadPng(idx){ if(typeof window.downloadPng==='function'){ window.downloadPng(idx); } },
+          addFormField(idx,type){ if(typeof window.addFormField==='function'){ window.addFormField(idx,type); } },
+          async removeBg(idx, thr){
             try{
               const f = this.files[idx];
-              if(f.bgOriginal){
+              const threshold = typeof thr === 'number' ? thr : (f.bgThreshold ?? 50);
+              if(f.bgOriginal && typeof thr !== 'number'){
                 f.url = f.bgOriginal;
                 f.original = f.bgOriginal;
                 f.bgOriginal = null;
                 this.files = [...this.files];
                 return;
               }
-              const resp = await fetch(f.url);
+              const src = f.bgOriginal || f.url;
+              const resp = await fetch(src);
               const blob = await resp.blob();
               const fd = new FormData();
               fd.append('image_file', blob, `image${idx}.png`);
-              const r = await fetch(`/remove-background/?threshold=${this.removeBgThreshold}`, {method:'POST', body:fd});
+              const r = await fetch(`/remove-background/?threshold=${threshold}`, {method:'POST', body:fd});
               if(!r.ok){ alert(this.t('removeBgFailed')); return; }
               const data = await r.json();
               if(data.image){
-                f.bgOriginal = f.url;
+                if(!f.bgOriginal) f.bgOriginal = f.url;
                 f.url = 'data:image/png;base64,' + data.image;
                 f.original = f.url;
+                f.bgThreshold = threshold;
                 this.files = [...this.files];
               } else {
                 alert(this.t('removeBgFailed'));
@@ -1175,11 +1211,6 @@
             }catch(e){
               console.error('remove background error', e);
               alert(this.t('removeBgFailed'));
-            }
-          },
-          updateRemoveBgThreshold(){
-            if (typeof window.setRemoveBgThreshold === 'function') {
-              window.setRemoveBgThreshold(this.removeBgThreshold);
             }
           },
           isBlankImage(src, thr){
@@ -1647,12 +1678,18 @@
       import { initPdfCompressPlugin } from '/static/plugins/compresspdf.js';
       import { initPdfaPlugin } from '/static/plugins/pdfa.js';
       import { initWatermarkPlugin } from '/static/plugins/watermark.js';
+      import { initDownloadPngPlugin } from '/static/plugins/downloadpng.js';
+      import { initPageSelectPlugin } from '/static/plugins/pageselect.js';
+      import { initFormFieldsPlugin } from '/static/plugins/formfields.js';
       const lang = window.DC_LANG || document.documentElement.lang || 'en';
       const trans = (window.dcStrings && window.dcStrings[lang]) ? window.dcStrings[lang] : {};
       initSignaturePlugin(trans, true);
       initPdfCompressPlugin(trans, true);
       initPdfaPlugin(trans, true);
       initWatermarkPlugin(trans, true);
+      initDownloadPngPlugin(trans, true);
+      initPageSelectPlugin(true);
+      initFormFieldsPlugin(trans, true);
 
       function calculateGrid() {
         const layout = parseInt(document.getElementById('layoutSelect')?.value || '1');
