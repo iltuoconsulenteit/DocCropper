@@ -980,7 +980,9 @@ function updateWikiLinks() {
 function updateBannerImage() {
     if (!sloganImg || bannerImages.length === 0) return;
     let img = bannerImages[bannerIndex % bannerImages.length];
-    img = img.replace('{{lang}}', currentLang);
+    img = img
+        .replace(/^\{\{lang\}\}/, '')
+        .replace(/\{\{lang\}\}/g, currentLang);
     sloganImg.src = `/static/slide/${img}`;
 }
 
@@ -1476,6 +1478,24 @@ function addThumbnail(src, index) {
 
     let thrWrap;
     if (removeBgEnabled) {
+        thrWrap = document.createElement('div');
+        thrWrap.className = 'thumbBgThreshold';
+        thrWrap.style.display = 'none';
+        const thrInput = document.createElement('input');
+        thrInput.type = 'range';
+        thrInput.min = '0';
+        thrInput.max = '100';
+        thrInput.value = '50';
+        thrInput.title = t('removeBgThresholdPrompt');
+        thrInput.addEventListener('input', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            if (typeof window.removeBackground === 'function') {
+                window.removeBackground(idx, parseInt(e.target.value, 10));
+            }
+        });
+        thrWrap.appendChild(thrInput);
+
         const bgBtnEl = document.createElement('button');
         bgBtnEl.className = 'thumbBtn removeBgBtn';
         if (bgOriginals[index]) {
@@ -1488,27 +1508,13 @@ function addThumbnail(src, index) {
         bgBtnEl.addEventListener('click', (e) => {
             e.stopPropagation();
             const idx = parseInt(container.dataset.index);
+            thrWrap.style.display = 'block';
+            const val = parseInt(thrInput.value, 10);
             if (typeof window.removeBackground === 'function') {
-                window.removeBackground(idx);
+                window.removeBackground(idx, val);
             }
         });
         actions.appendChild(bgBtnEl);
-
-        thrWrap = document.createElement('div');
-        thrWrap.className = 'thumbBgThreshold';
-        const thrInput = document.createElement('input');
-        thrInput.type = 'range';
-        thrInput.min = '0';
-        thrInput.max = '100';
-        thrInput.value = '50';
-        thrInput.title = t('removeBgThresholdPrompt');
-        thrInput.addEventListener('input', (e) => {
-            e.stopPropagation();
-            if (typeof window.setRemoveBgThreshold === 'function') {
-                window.setRemoveBgThreshold(parseInt(e.target.value, 10));
-            }
-        });
-        thrWrap.appendChild(thrInput);
     }
 
     if (signEnabled) {

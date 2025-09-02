@@ -350,7 +350,9 @@ def load_settings():
             base = json.load(fh)
         merged = DEFAULT_SETTINGS.copy()
         merged.update(base)
-        plugins_dir = os.path.join(os.path.dirname(__file__), "plugins")
+        plugins_dir = os.path.join(
+            os.path.dirname(__file__), "..", "..", "plugin", "core"
+        )
         try:
             for name in os.listdir(plugins_dir):
                 cfg_path = os.path.join(plugins_dir, name, "settings.json")
