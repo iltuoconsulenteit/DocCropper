@@ -1647,12 +1647,16 @@
       import { initPdfCompressPlugin } from '/static/plugins/compresspdf.js';
       import { initPdfaPlugin } from '/static/plugins/pdfa.js';
       import { initWatermarkPlugin } from '/static/plugins/watermark.js';
+      import { initDownloadPngPlugin } from '/static/plugins/downloadpng.js';
+      import { initPageSelectPlugin } from '/static/plugins/pageselect.js';
       const lang = window.DC_LANG || document.documentElement.lang || 'en';
       const trans = (window.dcStrings && window.dcStrings[lang]) ? window.dcStrings[lang] : {};
       initSignaturePlugin(trans, true);
       initPdfCompressPlugin(trans, true);
       initPdfaPlugin(trans, true);
       initWatermarkPlugin(trans, true);
+      initDownloadPngPlugin(trans, true);
+      initPageSelectPlugin(true);
 
       function calculateGrid() {
         const layout = parseInt(document.getElementById('layoutSelect')?.value || '1');
