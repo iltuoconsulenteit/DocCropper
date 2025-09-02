@@ -980,6 +980,14 @@ function updateWikiLinks() {
 function updateBannerImage() {
     if (!sloganImg || bannerImages.length === 0) return;
     let img = bannerImages[bannerIndex % bannerImages.length];
+    // decode any encoded braces or characters
+    try {
+        img = decodeURIComponent(img);
+    } catch (e) {
+        /* noop */
+    }
+    // remove stray language prefixes like "itDocCropper" => "DocCropper"
+    img = img.replace(/^[a-z]{2}DocCropper/, 'DocCropper');
     img = img.replace('{{lang}}', currentLang);
     sloganImg.src = `/static/slide/${img}`;
 }
