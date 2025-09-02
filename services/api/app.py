@@ -645,10 +645,12 @@ def save_user_settings(email: str, update: dict):
         except Exception:
             data = {}
     data.update(update)
+    _normalize_image_names(data)
     with open(path, "w") as fh:
         json.dump(data, fh)
     merged = load_settings()
     merged.update(data)
+    _normalize_image_names(merged)
     return merged
 
 # Configure logging
