@@ -342,18 +342,25 @@ def get_lan_ip() -> str:
         return "localhost"
 
 
-def _normalize_banner_images(cfg: dict) -> None:
-    imgs = cfg.get("banner_images")
-    if not isinstance(imgs, list):
-        return
+def _normalize_image_names(cfg: dict) -> None:
     lang = cfg.get("language", "en")
-    cleaned = []
-    for img in imgs:
+
+    def _clean(img: str) -> str:
         decoded = urllib.parse.unquote(img)
         decoded = re.sub(r"^[a-z]{2}(?=DocCropper)", "", decoded)
-        decoded = decoded.replace("{{lang}}", lang)
-        cleaned.append(decoded)
-    cfg["banner_images"] = cleaned
+        return decoded.replace("{{lang}}", lang)
+
+    imgs = cfg.get("banner_images")
+    if isinstance(imgs, list):
+        cfg["banner_images"] = [_clean(img) for img in imgs]
+
+    slides = cfg.get("sponsor_slides")
+    if isinstance(slides, list):
+        cfg["sponsor_slides"] = [_clean(img) for img in slides]
+
+    banner = cfg.get("sponsor_banner")
+    if isinstance(banner, str):
+        cfg["sponsor_banner"] = _clean(banner)
 
 
 def load_settings():
@@ -531,7 +538,7 @@ def load_settings():
         except Exception:
             logger.exception("sponsor plugin failed")
 
-        _normalize_banner_images(merged)
+        _normalize_image_names(merged)
         return merged
     except Exception:
         return DEFAULT_SETTINGS.copy()
@@ -611,7 +618,7 @@ def load_user_settings(email: str):
             base.update(user)
         except Exception:
             pass
-    _normalize_banner_images(base)
+    _normalize_image_names(base)
     return base
 
 def save_user_settings(email: str, update: dict):
