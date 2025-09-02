@@ -1555,10 +1555,16 @@ function addThumbnail(src, index) {
         bgBtnEl.addEventListener('click', (e) => {
             e.stopPropagation();
             const idx = parseInt(container.dataset.index);
-            thrWrap.style.display = 'block';
-            const val = parseInt(thrInput.value, 10);
-            if (typeof window.removeBackground === 'function') {
-                window.removeBackground(idx, val);
+            if (bgOriginals[idx]) {
+                if (typeof window.removeBackground === 'function') {
+                    window.removeBackground(idx);
+                }
+            } else {
+                thrWrap.style.display = 'block';
+                const val = parseInt(thrInput.value, 10);
+                if (typeof window.removeBackground === 'function') {
+                    window.removeBackground(idx, val);
+                }
             }
         });
         actions.appendChild(bgBtnEl);

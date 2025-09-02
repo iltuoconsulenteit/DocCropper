@@ -20,7 +20,7 @@ export function initRemoveBgPlugin(translations, enabled = true) {
     }
     async function removeBackground(index, t) {
         try {
-            if (originals[index]) {
+            if (originals[index] && typeof t !== 'number') {
                 const url = originals[index];
                 window.processedImages[index] = url;
                 if (window.originalImages) window.originalImages[index] = url;
@@ -33,11 +33,11 @@ export function initRemoveBgPlugin(translations, enabled = true) {
                 window.dispatchEvent(new CustomEvent('imageUpdated', { detail: { index, src: url } }));
                 return;
             }
-            const src = window.processedImages ? window.processedImages[index] : null;
-            if (!src) return;
             const threshold = typeof t === 'number' ? t : thresholds[index] ?? 50;
             thresholds[index] = threshold;
-            originals[index] = src;
+            const src = originals[index] || (window.processedImages ? window.processedImages[index] : null);
+            if (!src) return;
+            if (!originals[index]) originals[index] = src;
             const resp = await fetch(src);
             const blob = await resp.blob();
             const fd = new FormData();
