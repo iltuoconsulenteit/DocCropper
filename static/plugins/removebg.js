@@ -61,6 +61,8 @@ export function initRemoveBgPlugin(translations, enabled = true) {
                 const container = document.querySelector(`.thumbContainer[data-index="${index}"] img`);
                 if (container) container.src = url;
                 updateBtn(index, true);
+                const wrap = document.querySelector(`.thumbContainer[data-index="${index}"] .thumbBgThreshold`);
+                if (wrap) wrap.style.display = 'block';
                 window.dispatchEvent(new CustomEvent('imageUpdated', { detail: { index, src: url } }));
             } else {
                 originals[index] = null;

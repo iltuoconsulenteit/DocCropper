@@ -146,6 +146,7 @@
             </div>
             <button id="clearImagesBtn" class="w-10 h-10 rounded bg-red-500 text-white text-2xl flex items-center justify-center" @click="clearImages" :title="t('clearImages')">🧹</button>
             <button id="layoutToggleBtn" class="w-10 h-10 rounded bg-blue-500 text-white text-2xl flex items-center justify-center" @click="toggleLayout" :title="layoutHorizontal ? t('verticalView') : t('horizontalView')" x-text="layoutHorizontal ? '↕' : '↔'"></button>
+            <button id="formFieldsBtn" class="w-10 h-10 rounded bg-purple-500 text-white text-2xl flex items-center justify-center" data-i18n-title="formFields" style="display:none;">📝</button>
           </div>
           <div x-show="tab==='files'" x-ref="fileGrid" :class="layoutHorizontal ? 'flex overflow-x-auto space-x-4' : 'grid grid-cols-1 lg:grid-cols-2 gap-4'">
             <template x-for="(file, idx) in files" :key="file.id">

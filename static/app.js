@@ -151,6 +151,7 @@ const sponsorBox = document.getElementById('sponsorBox');
 const settingsBox = document.getElementById('settingsBox');
 const loginArea = document.getElementById('loginArea');
 const layoutToggleBtn = document.getElementById('layoutToggleBtn');
+const formFieldsBtn = document.getElementById('formFieldsBtn');
 let galleryHorizontal = true;
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
@@ -312,6 +313,7 @@ let pageSelectEnabled = false;
 let colorModePluginEnabled = false;
 let imageEditorEnabled = false;
 let formFieldsEnabled = false;
+let formFieldMode = false;
 
 let translations = {};
 let currentLang = window.DC_LANG || 'it';
@@ -816,6 +818,9 @@ function applySettings(cfg) {
     colorModePluginEnabled = activePlugins.includes('colormode');
     imageEditorEnabled = activePlugins.includes('imageeditor');
     formFieldsEnabled = activePlugins.includes('formfields');
+    formFieldMode = false;
+    toggleFormFieldButtons();
+    if (formFieldsBtn) formFieldsBtn.style.display = formFieldsEnabled ? 'inline-block' : 'none';
     if (typeof initRemoveBgPlugin === 'function' && Object.keys(translations).length) {
         initRemoveBgPlugin(translations, removeBgEnabled);
     }
@@ -911,6 +916,19 @@ if (layoutToggleBtn) {
     layoutToggleBtn.addEventListener('click', () => {
         galleryHorizontal = !galleryHorizontal;
         updateGalleryLayout();
+    });
+}
+
+if (formFieldsBtn) {
+    formFieldsBtn.addEventListener('click', () => {
+        formFieldMode = !formFieldMode;
+        toggleFormFieldButtons();
+    });
+}
+
+function toggleFormFieldButtons() {
+    document.querySelectorAll('.textFieldBtn, .checkFieldBtn, .selectFieldBtn').forEach(btn => {
+        btn.style.display = formFieldMode ? 'inline-block' : 'none';
     });
 }
 
@@ -1487,6 +1505,7 @@ function addThumbnail(src, index) {
         txtBtn.className = 'thumbBtn textFieldBtn';
         txtBtn.textContent = 'T';
         txtBtn.title = t('addTextField');
+        txtBtn.style.display = formFieldMode ? 'inline-block' : 'none';
         txtBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             const idx = parseInt(container.dataset.index);
@@ -1500,6 +1519,7 @@ function addThumbnail(src, index) {
         cbBtn.className = 'thumbBtn checkFieldBtn';
         cbBtn.textContent = '☑';
         cbBtn.title = t('addCheckbox');
+        cbBtn.style.display = formFieldMode ? 'inline-block' : 'none';
         cbBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             const idx = parseInt(container.dataset.index);
@@ -1513,6 +1533,7 @@ function addThumbnail(src, index) {
         selBtn.className = 'thumbBtn selectFieldBtn';
         selBtn.textContent = '▾';
         selBtn.title = t('addDropdown');
+        selBtn.style.display = formFieldMode ? 'inline-block' : 'none';
         selBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             const idx = parseInt(container.dataset.index);
@@ -1541,6 +1562,10 @@ function addThumbnail(src, index) {
                 window.removeBackground(idx, parseInt(e.target.value, 10));
             }
         });
+        thrInput.addEventListener('mousedown', (e) => e.stopPropagation());
+        thrInput.addEventListener('click', (e) => e.stopPropagation());
+        thrWrap.addEventListener('mousedown', (e) => e.stopPropagation());
+        thrWrap.addEventListener('click', (e) => e.stopPropagation());
         thrWrap.appendChild(thrInput);
 
         const bgBtnEl = document.createElement('button');
