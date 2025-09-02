@@ -910,8 +910,12 @@
               this.clientLogoHeight = this.settings.clientLogoHeight;
               this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
               if(Array.isArray(cfg.banner_images)){
-                this.slides.en = cfg.banner_images.map(img=>`/static/slide/${img.replace('{{lang}}','en')}`);
-                this.slides.it = cfg.banner_images.map(img=>`/static/slide/${img.replace('{{lang}}','it')}`);
+                this.slides.en = cfg.banner_images.map(img =>
+                  `/static/slide/${img.replace(/^\{\{lang\}\}/,'').replace(/\{\{lang\}\}/g,'en')}`
+                );
+                this.slides.it = cfg.banner_images.map(img =>
+                  `/static/slide/${img.replace(/^\{\{lang\}\}/,'').replace(/\{\{lang\}\}/g,'it')}`
+                );
               } else {
                 this.slides.en = ['/static/slide/DocCropper_slogan_main_en.png'];
                 this.slides.it = ['/static/slide/DocCropper_slogan_main_it.png'];

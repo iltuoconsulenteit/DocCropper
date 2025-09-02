@@ -980,7 +980,9 @@ function updateWikiLinks() {
 function updateBannerImage() {
     if (!sloganImg || bannerImages.length === 0) return;
     let img = bannerImages[bannerIndex % bannerImages.length];
-    img = img.replace('{{lang}}', currentLang);
+    img = img
+        .replace(/^\{\{lang\}\}/, '')
+        .replace(/\{\{lang\}\}/g, currentLang);
     sloganImg.src = `/static/slide/${img}`;
 }
 
