@@ -782,9 +782,12 @@ function applySettings(cfg) {
     }
     initSponsorPreview(cfg);
     if (Array.isArray(cfg.banner_images)) {
-        bannerImages = cfg.banner_images;
+        bannerImages = cfg.banner_images.map(img => {
+            try { img = decodeURIComponent(img); } catch (e) {}
+            return img.replace(/(^|\/)[a-z]{2}(?=DocCropper)/i, '').replace('{{lang}}', currentLang);
+        });
     } else {
-        bannerImages = ['DocCropper_slogan_main_{{lang}}.png'];
+        bannerImages = [`DocCropper_slogan_main_${currentLang}.png`];
     }
     bannerInterval = parseInt(cfg.banner_interval || 5000);
     bannerIndex = 0;
