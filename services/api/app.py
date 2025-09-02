@@ -4,6 +4,7 @@ import logging
 import json
 import math
 import os
+import re
 import shutil
 import time
 import secrets
@@ -519,10 +520,11 @@ def load_settings():
         imgs = merged.get("banner_images")
         if isinstance(imgs, list):
             cleaned = []
+            lang = merged.get("language", "en")
             for img in imgs:
                 decoded = urllib.parse.unquote(img)
-                if decoded.startswith(("en", "it")):
-                    decoded = decoded[2:]
+                decoded = re.sub(r"^[a-z]{2}(?=DocCropper)", "", decoded)
+                decoded = decoded.replace("{{lang}}", lang)
                 cleaned.append(decoded)
             merged["banner_images"] = cleaned
         return merged
