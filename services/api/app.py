@@ -515,6 +515,16 @@ def load_settings():
                 merged.update(sponsorframe.get_config(merged))
         except Exception:
             logger.exception("sponsor plugin failed")
+
+        imgs = merged.get("banner_images")
+        if isinstance(imgs, list):
+            cleaned = []
+            for img in imgs:
+                decoded = urllib.parse.unquote(img)
+                if decoded.startswith(("en", "it")):
+                    decoded = decoded[2:]
+                cleaned.append(decoded)
+            merged["banner_images"] = cleaned
         return merged
     except Exception:
         return DEFAULT_SETTINGS.copy()

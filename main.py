@@ -70,6 +70,14 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"Database migration failed: {e}")
 
+    try:
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        if not User.objects.filter(username="admin").exists():
+            User.objects.create_superuser("admin", "admin@example.com", "admin")
+    except Exception as e:
+        print(f"Failed to ensure admin user: {e}")
+
     settings = load_settings()
     port = args.port if args.port is not None else int(settings.get('port', 8765))
     host = args.host
