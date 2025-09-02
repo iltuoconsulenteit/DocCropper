@@ -904,3 +904,10 @@ button:hover {
     background-color: #3b82f6;
     color: #fff;
 }
+
+/* Form field plugin */
+.formField {
+    border: 1px dashed #2563eb;
+    background: rgba(255,255,255,0.8);
+    resize: none;
+}
