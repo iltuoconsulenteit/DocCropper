@@ -244,6 +244,13 @@ the same options found in the settings panel and lists all registered users with
 the ability to create or remove them. It relies on the REST endpoints under
 `/settings/`, `/auth/` and `/users/`.
 
+On first launch the backend checks whether a superuser exists and creates one
+if necessary. The default credentials are `admin` / `admin`, but you can
+customise them by setting the `DJANGO_SUPERUSER_USERNAME` and
+`DJANGO_SUPERUSER_PASSWORD` environment variables (for example in a `.env`
+file in the project root). Once created you can change this user from the
+standard Django admin interface and the updated credentials will be preserved.
+
 ### Google Sign-In
 
 To enable optional Google authentication, set `google_client_id` in

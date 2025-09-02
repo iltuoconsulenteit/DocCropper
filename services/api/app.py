@@ -661,6 +661,12 @@ app = FastAPI(
     docs_url="/docs",
     openapi_url="/openapi.json",
 )
+# Allow embedding the API in same-origin frames
+@app.middleware("http")
+async def set_frame_options(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    return response
 # Only enable authentication routes when license checking is active
 if load_settings().get("license_check", False):
     app.include_router(auth_router)
