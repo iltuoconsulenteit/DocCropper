@@ -986,8 +986,8 @@ function updateBannerImage() {
     } catch (e) {
         /* noop */
     }
-    // remove stray language prefixes like "itDocCropper" => "DocCropper"
-    img = img.replace(/^[a-z]{2}DocCropper/, 'DocCropper');
+    // remove stray language prefixes like "itDocCropper" or "it/DocCropper"
+    img = img.replace(/(^|\/)[a-z]{2}(?=DocCropper)/, '$1');
     img = img.replace('{{lang}}', currentLang);
     sloganImg.src = `/static/slide/${img}`;
 }
