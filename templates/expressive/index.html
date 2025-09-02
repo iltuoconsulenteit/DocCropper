@@ -918,7 +918,7 @@
               if(Array.isArray(cfg.banner_images)){
                 const normalize = (img, lang) =>
                   decodeURIComponent(img)
-                    .replace(/^(en|it)/,'')
+                    .replace(/(^|\/)[a-z]{2}(?=[A-Z])/g, '$1')
                     .replace('{{lang}}', lang);
                 this.slides.en = cfg.banner_images.map(img=>`/static/slide/${normalize(img,'en')}`);
                 this.slides.it = cfg.banner_images.map(img=>`/static/slide/${normalize(img,'it')}`);

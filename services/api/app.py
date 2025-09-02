@@ -354,8 +354,8 @@ def _normalize_image_names(cfg: dict) -> None:
 
     def _clean(img: str) -> str:
         decoded = urllib.parse.unquote(img)
-        # remove optional language codes like "itDocCropper" or "en/DocCropper"
-        return re.sub(r"(^|/)[a-z]{2}(?=DocCropper)", r"\1", decoded, flags=re.IGNORECASE)
+        # strip leading locale codes like "itDocCropper" or "en/DocCropper"
+        return re.sub(r"(^|/)[a-z]{2}(?=[A-Z])", r"\1", decoded, flags=re.IGNORECASE)
 
     imgs = cfg.get("banner_images")
     if isinstance(imgs, list):
