@@ -1,11 +1,10 @@
 export function initRemoveBgPlugin(translations, enabled = true) {
     if (!enabled) {
         window.removeBackground = () => {};
-        window.setRemoveBgThreshold = () => {};
         return;
     }
-    let threshold = 50;
     const originals = window.bgOriginals || [];
+    const thresholds = {};
     window.bgOriginals = originals;
 
     function updateBtn(index, removed) {
@@ -19,13 +18,7 @@ export function initRemoveBgPlugin(translations, enabled = true) {
             btn.textContent = '⌦';
         }
     }
-    function setRemoveBgThreshold(val) {
-        const num = parseInt(val, 10);
-        if (!isNaN(num) && num >= 0 && num <= 100) {
-            threshold = num;
-        }
-    }
-    async function removeBackground(index) {
+    async function removeBackground(index, t) {
         try {
             if (originals[index]) {
                 const url = originals[index];
@@ -35,11 +28,15 @@ export function initRemoveBgPlugin(translations, enabled = true) {
                 if (imgEl) imgEl.src = url;
                 originals[index] = null;
                 updateBtn(index, false);
+                const wrap = document.querySelector(`.thumbContainer[data-index="${index}"] .thumbBgThreshold`);
+                if (wrap) wrap.style.display = 'none';
                 window.dispatchEvent(new CustomEvent('imageUpdated', { detail: { index, src: url } }));
                 return;
             }
             const src = window.processedImages ? window.processedImages[index] : null;
             if (!src) return;
+            const threshold = typeof t === 'number' ? t : thresholds[index] ?? 50;
+            thresholds[index] = threshold;
             originals[index] = src;
             const resp = await fetch(src);
             const blob = await resp.blob();
@@ -74,5 +71,4 @@ export function initRemoveBgPlugin(translations, enabled = true) {
         }
     }
     window.removeBackground = removeBackground;
-    window.setRemoveBgThreshold = setRemoveBgThreshold;
 }
