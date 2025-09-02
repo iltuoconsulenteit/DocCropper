@@ -4,14 +4,17 @@ setlocal EnableDelayedExpansion
 :: Directory where this script resides
 set "SCRIPT_DIR=%~dp0"
 
-:: Locate DocCropper's main.py either here or one level up
-if exist "!SCRIPT_DIR!main.py" (
-    set "APP_DIR=!SCRIPT_DIR!"
+:: Resolve the repository root so paths like ".." are expanded
+for %%I in ("%SCRIPT_DIR%..") do set "ROOT_DIR=%%~fI"
+
+:: Locate DocCropper's main.py either in the script folder or the root
+if exist "%SCRIPT_DIR%main.py" (
+    set "APP_DIR=%SCRIPT_DIR%"
 ) else (
-    set "APP_DIR=!SCRIPT_DIR!\.."
+    set "APP_DIR=%ROOT_DIR%"
 )
 
-cd /d "!APP_DIR!"
+cd /d "%APP_DIR%"
 
 rem Copy default environment files if missing
 if not exist "!APP_DIR!\.env" if exist "!APP_DIR!\.env.example" copy "!APP_DIR!\.env.example" "!APP_DIR!\.env" >nul
@@ -22,8 +25,8 @@ if not exist "!APP_DIR!\env\auth.env" (
     )
 )
 
-if not exist main.py (
-    echo [ERROR] main.py not found in !APP_DIR!
+if not exist "%APP_DIR%\main.py" (
+    echo [ERROR] main.py not found in %APP_DIR%
     pause
     exit /b 1
 )
@@ -59,7 +62,7 @@ if exist "!PID_FILE!" (
 
 if "!TRAY_RUNNING!"=="0" (
     echo [INFO] Avvio tray helper >> "!LOG_FILE!"
-    start "" pythonw doccropper_tray.pyw >> "!LOG_FILE!" 2>&1
+    start "" cmd /c "set DOCROPPER_PROC=DocCropperTray && pythonw doccropper_tray.pyw" >> "!LOG_FILE!" 2>&1
     timeout /t 2 >nul
 )
 
@@ -71,7 +74,7 @@ if exist "!PID_FILE!" (
 )
 
 set "OPEN_URL=%DOCROPPER_OPEN_URL%"
-if "%OPEN_URL%"=="" set "OPEN_URL=http://localhost:%PORT%"
+if "%OPEN_URL%"=="" set "OPEN_URL=http://localhost:%PORT%/"
 
 if "!SERVER_RUNNING!"=="1" (
     echo [INFO] DocCropper gia in esecuzione con PID !PID! >> "!LOG_FILE!"
@@ -106,7 +109,7 @@ python main.py --stop >> "!LOG_FILE!" 2>&1
 
 :: Launch application
 echo [INFO] Avvio DocCropper sulla porta %PORT% >> "!LOG_FILE!"
-start "" /b python main.py --port %PORT% >> "!LOG_FILE!" 2>&1
+start "" /b cmd /c "set DOCROPPER_PROC=DocCropper && python main.py --port %PORT%" >> "!LOG_FILE!" 2>&1
 if "%DOCROPPER_TUNNEL%"=="true" (
     where cloudflared >nul 2>&1 && (
         echo Starting Cloudflare Tunnel... >> "!LOG_FILE!"

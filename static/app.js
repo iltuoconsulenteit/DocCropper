@@ -782,9 +782,14 @@ function applySettings(cfg) {
     }
     initSponsorPreview(cfg);
     if (Array.isArray(cfg.banner_images)) {
-        bannerImages = cfg.banner_images;
+        bannerImages = cfg.banner_images.map(img => {
+            try { img = decodeURIComponent(img); } catch (e) {}
+            return img
+                .replace(/(^|\/)[a-z]{2}(?=[A-Z])/g, '$1')
+                .replace('{{lang}}', currentLang);
+        });
     } else {
-        bannerImages = ['DocCropper_slogan_main_{{lang}}.png'];
+        bannerImages = [`DocCropper_slogan_main_${currentLang}.png`];
     }
     bannerInterval = parseInt(cfg.banner_interval || 5000);
     bannerIndex = 0;
@@ -980,6 +985,14 @@ function updateWikiLinks() {
 function updateBannerImage() {
     if (!sloganImg || bannerImages.length === 0) return;
     let img = bannerImages[bannerIndex % bannerImages.length];
+    // decode any encoded braces or characters
+    try {
+        img = decodeURIComponent(img);
+    } catch (e) {
+        /* noop */
+    }
+    // remove stray language prefixes like "itDocCropper" or "it/DocCropper"
+    img = img.replace(/(^|\/)[a-z]{2}(?=DocCropper)/, '$1');
     img = img.replace('{{lang}}', currentLang);
     sloganImg.src = `/static/slide/${img}`;
 }
@@ -2291,7 +2304,7 @@ async function generatePdf() {
     if (window.lastSignEmail || window.lastSignPhone || window.lastSignName) {
         payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
     }
-    fetch('/create-pdf/', {
+    fetch('/api/create-pdf/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

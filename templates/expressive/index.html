@@ -4,11 +4,29 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DocCropper Expressive</title>
+    <link rel="icon" href="/favicon.ico" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.11/dist/interact.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script>
+      // Prefix all relative fetch() calls with the API root so existing
+      // front-end code continues to work after mounting FastAPI under /api.
+      const DC_API_PREFIX = '/api';
+      const _fetch = window.fetch.bind(window);
+      window.fetch = function(resource, init) {
+        if (typeof resource === 'string' && resource.startsWith('/') && !resource.startsWith(DC_API_PREFIX)) {
+          resource = DC_API_PREFIX + resource;
+        }
+        return _fetch(resource, init);
+      };
+      window.DC_EXPORT_ENDPOINT = '/api/create-pdf/';
+      function normalize(name, lang) {
+        const decoded = decodeURIComponent(name);
+        return decoded.replace(/^(en|it)/, '').replace('{{lang}}', lang);
+      }
+    </script>
     <style>
       main::-webkit-scrollbar { width: 16px; }
       main::-webkit-scrollbar-track { background: #f3f4f6; }
@@ -98,6 +116,8 @@
         <button class="mr-2" @click="pinned ? (pinned=false, drawer=false) : drawer=!drawer">☰</button>
         <img src="/static/logos/header_logo.png" alt="IlTuoConsulenteIT" class="h-8 cursor-pointer" @click="command('files')" />
         <div class="flex-1"></div>
+        <a href="/admin/" class="text-xs underline mr-2">Area amministratore</a>
+        <a href="/api/docs" class="text-xs underline mr-2">Documentazione API</a>
         <span class="text-xs text-gray-600" x-text="licenseInfo()"></span>
         <button @click="licenseModal=true" class="text-xs underline" x-text="t('licenses')"></button>
         <select x-model="lang" @change="setLang" class="border rounded p-1 text-sm">
@@ -477,7 +497,7 @@
       </div>
     </div>
 
-    <script src="/js/doccropper.adapter.js"></script>
+    <script src="/static/js/doccropper.adapter.js"></script>
     <script>
       function dcApp(){
         const strings = {
@@ -896,8 +916,12 @@
               this.clientLogoHeight = this.settings.clientLogoHeight;
               this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
               if(Array.isArray(cfg.banner_images)){
-                this.slides.en = cfg.banner_images.map(img=>`/static/slide/${img.replace('{{lang}}','en')}`);
-                this.slides.it = cfg.banner_images.map(img=>`/static/slide/${img.replace('{{lang}}','it')}`);
+                const normalize = (img, lang) =>
+                  decodeURIComponent(img)
+                    .replace(/(^|\/)[a-z]{2}(?=[A-Z])/g, '$1')
+                    .replace('{{lang}}', lang);
+                this.slides.en = cfg.banner_images.map(img=>`/static/slide/${normalize(img,'en')}`);
+                this.slides.it = cfg.banner_images.map(img=>`/static/slide/${normalize(img,'it')}`);
               } else {
                 this.slides.en = ['/static/slide/DocCropper_slogan_main_en.png'];
                 this.slides.it = ['/static/slide/DocCropper_slogan_main_it.png'];
@@ -1774,7 +1798,7 @@
         if (window.lastSignEmail || window.lastSignPhone || window.lastSignName) {
           payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
         }
-        const resp = await fetch('/create-pdf/', {
+        const resp = await fetch('/api/create-pdf/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
