@@ -804,8 +804,27 @@ async def require_valid_license(
     if not data.get("valid", False):
         raise HTTPException(status_code=403, detail="Licenza non valida")
 
+    license_type = data.get("license_type")
+    if license_type in {"developer", "demo_full"}:
+        save_settings({"license_type": license_type})
+    else:
+        # Fall back to a minimal demo mode when no license information is
+        # provided or when the license corresponds to the free tier.
+        save_settings({"license_type": "demo_base"})
+
+    features = data.get("features")
     plugins = data.get("plugins", {})
-    if isinstance(plugins, dict) and plugins:
+    if isinstance(features, list):
+        settings = load_settings()
+        updates = {}
+        if license_type in {"developer", "demo_full"}:
+            for name in features:
+                key = f"enable_{name}"
+                if not settings.get(key, False):
+                    updates[key] = True
+        if updates:
+            save_settings(updates)
+    elif isinstance(plugins, dict) and plugins:
         settings = load_settings()
         updates = {}
         for name, allowed in plugins.items():

@@ -41,6 +41,23 @@
             <button type="submit">Create</button>
         </form>
     </section>
+    <section id="licenseSection">
+        <h2>Licenses</h2>
+        <table id="licenseTable">
+            <thead><tr><th>ID</th><th>Type</th><th>Domains</th><th>Actions</th></tr></thead>
+            <tbody></tbody>
+        </table>
+        <h3>Create License</h3>
+        <form id="createLicenseForm">
+            <input type="text" id="licenseCustomer" placeholder="customer" required>
+            <select id="licenseType">
+                <option value="demo_full">Demo Full</option>
+                <option value="developer">Developer</option>
+            </select>
+            <input type="text" id="licenseDomains" placeholder="allowed domains (comma separated)">
+            <button type="submit">Create</button>
+        </form>
+    </section>
 <script src="/static/admin.js"></script>
 </body>
 </html>
