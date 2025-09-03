@@ -281,6 +281,19 @@ DocCropper ships with three editions. A **Licenses** button in the header opens 
   When this license is active the **Purchase** button turns into a PayPal
   donation link that opens in a new tab.
 
+### Setting a license key
+
+Provide the license in `env/license.env`, a top‑level `.env`, or `settings.json`
+via the `DOCROPPER_LICENSE_KEY` entry. The key determines the active edition:
+
+- leave the value empty or set it to `FREE` for the basic demo
+- use `DEMO-FULL-DC` to unlock the **Demo Full** mode with all features but a
+  watermark
+- enter the developer key defined by `DOCROPPER_DEV_LICENSE` (default
+  `DEVELOPER`) to enable developer features and plugins
+- keys matching `DOCROPPER_MANUAL_LICENSE` or `DOCROPPER_ONLINE_LICENSE` trigger
+  manual or online validation respectively
+
 When the LAN plugin is active the `lan_user_limit` setting controls how many
 accounts may use DocCropper over the network. Licenses are typically sold in
 blocks of five users (5, 10, 15 and so on).
