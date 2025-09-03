@@ -102,6 +102,9 @@ export function initFormFieldsPlugin(translations, enabled = true) {
             canvas.style.height = '100%';
             el.appendChild(canvas);
             const ctx = canvas.getContext('2d');
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
             function resize() {
                 canvas.width = el.clientWidth;
                 canvas.height = el.clientHeight;
@@ -111,7 +114,6 @@ export function initFormFieldsPlugin(translations, enabled = true) {
                     img.src = f.value;
                 }
             }
-            resize();
             let drawing = false;
             function pos(ev) {
                 const rect = canvas.getBoundingClientRect();
@@ -190,6 +192,9 @@ export function initFormFieldsPlugin(translations, enabled = true) {
             height: (f.h * 100) + '%'
         });
         parent.appendChild(el);
+        if (f.type === 'sign') {
+            requestAnimationFrame(resize);
+        }
         f.el = el;
         return el;
     }

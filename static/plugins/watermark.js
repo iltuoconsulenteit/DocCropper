@@ -140,7 +140,6 @@ export function initWatermarkPlugin(translations, enabled = true) {
                 : (window.processedImages || []);
             const targets = all.checked ? imgs.map((_, i) => i) : [index];
             targets.forEach(p => createOverlay(dataUrl, p, opts.angle));
-            await mergeAllWatermarks();
             txt.value = '';
             img.value = '';
             all.checked = false;
