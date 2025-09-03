@@ -579,7 +579,7 @@ async function importPdfPages(file) {
 async function loadSettings() {
     const url = userInfo ? '/user-settings/' : '/settings/';
     try {
-        const resp = await fetch(url);
+        const resp = await fetch(url + `?t=${Date.now()}` , { cache: 'no-store' });
         if (resp.ok) {
             return await resp.json();
         }
@@ -596,6 +596,14 @@ function saveSettings(data) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     }).catch(e => console.error('Save settings error', e));
+}
+
+async function refreshLicenseInfo() {
+    const cfg = await loadSettings();
+    applySettings(cfg);
+    if (licenseInfo) {
+        licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
+    }
 }
 
 function initSponsorPreview(cfg) {
@@ -3394,7 +3402,14 @@ function renderLicenseBox() {
             const key = document.getElementById('licenseKeyInput').value.trim();
             const name = document.getElementById('licenseNameInput').value.trim();
             await saveSettings({license_key: key, license_name: name});
+            await refreshLicenseInfo();
             await fetch('/restart/', {method: 'POST'});
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                for (const k of keys) {
+                    await caches.delete(k);
+                }
+            }
             alert(t('licenseSaved'));
             licenseBox.classList.remove('visible');
             setTimeout(() => { location.reload(); }, 1000);

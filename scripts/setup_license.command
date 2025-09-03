@@ -21,7 +21,7 @@ ENVFILE="env/license.env"
 
 # Update settings.json for immediate use
 python3 - "$KEY" "$NAME" <<'PY'
-import json,sys
+import json,sys,urllib.request,shutil,pathlib,time
 key,name=sys.argv[1],sys.argv[2]
 path="settings.json"
 try:
@@ -34,6 +34,14 @@ data["license_name"]=name
 data["license_check"]=False
 with open(path,"w") as f:
     json.dump(data,f)
+for p in pathlib.Path('.').rglob('__pycache__'):
+    shutil.rmtree(p, ignore_errors=True)
+try:
+    req=urllib.request.Request('http://localhost:8765/restart/', data=b'', method='POST')
+    urllib.request.urlopen(req, timeout=2)
+    time.sleep(1)
+except Exception:
+    pass
 PY
 
 echo "Manual license saved to $ENVFILE and settings.json updated"
