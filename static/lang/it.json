@@ -34,6 +34,8 @@
   "addTextField": "Area testo",
   "addCheckbox": "Casella",
   "addDropdown": "Menu a discesa",
+  "addSignatureField": "Firma",
+  "importImage": "Importa immagine",
   "fieldRemove": "Doppio click per rimuovere",
   "formFields": "Campi modulo",
   "compression": "Compressione",

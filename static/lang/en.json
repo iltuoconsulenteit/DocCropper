@@ -34,6 +34,8 @@
   "addTextField": "Text box",
   "addCheckbox": "Checkbox",
   "addDropdown": "Dropdown",
+  "addSignatureField": "Signature",
+  "importImage": "Import image",
   "fieldRemove": "Double-click to remove field",
   "formFields": "Form fields",
   "compression": "Compression",

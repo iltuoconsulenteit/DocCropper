@@ -23,6 +23,7 @@ export function initFormFieldsPlugin(translations, enabled = true) {
                     <button id="ffText">${translations.addTextField || 'Text box'}</button>
                     <button id="ffCheck">${translations.addCheckbox || 'Checkbox'}</button>
                     <button id="ffSelect">${translations.addDropdown || 'Dropdown'}</button>
+                    <button id="ffSign">${translations.addSignatureField || 'Signature'}</button>
                     <div style="flex:1"></div>
                     <div style="text-align:right;">
                         <button id="ffCancel" style="margin-right:8px;">${translations.cancel || 'Cancel'}</button>
@@ -35,6 +36,7 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         document.getElementById('ffText').onclick = () => { currentType = 'text'; };
         document.getElementById('ffCheck').onclick = () => { currentType = 'checkbox'; };
         document.getElementById('ffSelect').onclick = () => { currentType = 'select'; };
+        document.getElementById('ffSign').onclick = () => { currentType = 'sign'; };
         document.getElementById('ffCancel').onclick = () => { modal.style.display = 'none'; };
         document.getElementById('ffOk').onclick = saveAndClose;
         overlay = document.getElementById('ffOverlay');
@@ -93,9 +95,90 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         } else if (f.type === 'select') {
             el = document.createElement('select');
             el.innerHTML = '<option></option>';
+        } else if (f.type === 'sign') {
+            el = document.createElement('div');
+            const canvas = document.createElement('canvas');
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            el.appendChild(canvas);
+            const ctx = canvas.getContext('2d');
+            function resize() {
+                canvas.width = el.clientWidth;
+                canvas.height = el.clientHeight;
+                if (f.value) {
+                    const img = new Image();
+                    img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    img.src = f.value;
+                }
+            }
+            resize();
+            let drawing = false;
+            function pos(ev) {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+                const clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+                return {
+                    x: (clientX - rect.left) * canvas.width / rect.width,
+                    y: (clientY - rect.top) * canvas.height / rect.height
+                };
+            }
+            function start(ev) {
+                drawing = true;
+                const p = pos(ev);
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ev.preventDefault();
+            }
+            function move(ev) {
+                if (!drawing) return;
+                const p = pos(ev);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+                ev.preventDefault();
+            }
+            function end() {
+                if (drawing) {
+                    drawing = false;
+                    f.value = canvas.toDataURL('image/png');
+                }
+            }
+            canvas.addEventListener('mousedown', start);
+            canvas.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', end);
+            canvas.addEventListener('touchstart', start, { passive: false });
+            canvas.addEventListener('touchmove', move, { passive: false });
+            window.addEventListener('touchend', end);
+            const file = document.createElement('input');
+            file.type = 'file';
+            file.accept = 'image/*';
+            file.title = translations.importImage || 'Import image';
+            Object.assign(file.style, {
+                position: 'absolute',
+                bottom: '2px',
+                right: '2px',
+                opacity: 0.7
+            });
+            file.addEventListener('change', (e) => {
+                const fobj = e.target.files[0];
+                if (!fobj) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        f.value = canvas.toDataURL('image/png');
+                    };
+                    img.src = ev.target.result;
+                };
+                reader.readAsDataURL(fobj);
+            });
+            el.appendChild(file);
+            window.addEventListener('resize', resize);
         } else {
             el = document.createElement('textarea');
         }
+        el.dataset.type = f.type;
         el.className = 'formField';
         el.title = translations.fieldRemove || 'Double-click to remove';
         el.addEventListener('dblclick', () => el.remove());
@@ -126,14 +209,22 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         const contRect = overlay.getBoundingClientRect();
         const pageFields = Array.from(overlay.querySelectorAll('.formField')).map(el => {
             const rect = el.getBoundingClientRect();
+            const type = el.dataset.type || (el.tagName === 'TEXTAREA' ? 'text' : (el.tagName === 'SELECT' ? 'select' : 'checkbox'));
             const f = {
-                type: el.tagName === 'TEXTAREA' ? 'text' : (el.tagName === 'SELECT' ? 'select' : 'checkbox'),
+                type,
                 x: (rect.left - contRect.left) / contRect.width,
                 y: (rect.top - contRect.top) / contRect.height,
                 w: rect.width / contRect.width,
-                h: rect.height / contRect.height,
-                value: el.tagName === 'TEXTAREA' ? el.value : (el.tagName === 'SELECT' ? el.value : el.checked)
+                h: rect.height / contRect.height
             };
+            if (type === 'checkbox') {
+                f.value = el.checked;
+            } else if (type === 'sign') {
+                const canv = el.querySelector('canvas');
+                f.value = canv ? canv.toDataURL('image/png') : null;
+            } else {
+                f.value = el.value;
+            }
             return f;
         });
         fields[currentPage] = pageFields;
@@ -148,10 +239,15 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         container.querySelectorAll('.formField').forEach(el => el.remove());
         (fields[page] || []).forEach(f => {
             const el = createFieldElement(container, f);
-            el.value = typeof f.value === 'boolean' ? undefined : f.value;
-            if (f.type === 'checkbox') el.checked = !!f.value;
-            el.addEventListener('input', () => { f.value = el.tagName === 'TEXTAREA' ? el.value : el.value; });
-            el.addEventListener('change', () => { f.value = el.tagName === 'INPUT' ? el.checked : el.value; });
+            if (f.type === 'checkbox') {
+                el.checked = !!f.value;
+                el.addEventListener('change', () => { f.value = el.checked; });
+            } else if (f.type === 'sign') {
+                // value handled inside createFieldElement
+            } else {
+                el.value = f.value || '';
+                el.addEventListener('input', () => { f.value = el.value; });
+            }
         });
     }
 
@@ -200,6 +296,9 @@ export function initFormFieldsPlugin(translations, enabled = true) {
                     ctx.font = `${Math.max(10, h*0.8)}px sans-serif`;
                     ctx.textBaseline = 'top';
                     ctx.fillText(f.value || '', x+2, y+2, w-4);
+                } else if (f.type === 'sign' && f.value) {
+                    const img = await loadImage(f.value);
+                    ctx.drawImage(img, x, y, w, h);
                 }
             }
             const url = canvas.toDataURL('image/png');
