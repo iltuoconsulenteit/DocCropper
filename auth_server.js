@@ -4,8 +4,46 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const path = require('path');
 require('dotenv').config();
+const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
+
+app.use(express.json());
+app.set('trust proxy', 1);
+
+const LICENSE_SECRET = process.env.LICENSE_SECRET || 'change-me';
+const ALLOWED_DOMAINS = (process.env.ALLOWED_DOMAINS || '')
+  .split(',')
+  .map(d => d.trim())
+  .filter(Boolean);
+
+function requireHttps(req, res, next) {
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    return next();
+  }
+  res.status(400).json({ error: 'HTTPS required' });
+}
+
+function checkDomain(req, res, next) {
+  if (!ALLOWED_DOMAINS.length) return next();
+  const origin = req.get('origin') || req.hostname;
+  const host = origin.replace(/^https?:\/\//, '').split(':')[0];
+  if (ALLOWED_DOMAINS.includes(host)) return next();
+  res.status(403).json({ error: 'Domain not allowed' });
+}
+
+const verifyLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  handler: (req, res) => {
+    console.warn(`Rate limit exceeded for IP ${req.ip}`);
+    res.status(429).json({ error: 'Too many verification attempts' });
+  }
+});
 
 app.use(session({
   secret: 'doccropper-secret',
@@ -52,6 +90,28 @@ app.get('/logout', (req, res, next) => {
       res.redirect('/');
     });
   });
+});
+
+app.post('/license/token', requireHttps, checkDomain, (req, res) => {
+  const { license_type, expires_at, plugins } = req.body;
+  const payload = { license_type, expires_at, plugins };
+  const token = jwt.sign(payload, LICENSE_SECRET);
+  res.json({ token });
+});
+
+app.post('/license/verify', requireHttps, checkDomain, verifyLimiter, (req, res) => {
+  const { token } = req.body;
+  try {
+    const payload = jwt.verify(token, LICENSE_SECRET);
+    res.json({ valid: true, payload });
+  } catch (err) {
+    console.warn(`Token verification failed for ${req.ip}: ${err.message}`);
+    if (err.name === 'TokenExpiredError') {
+      const payload = jwt.verify(token, LICENSE_SECRET, { ignoreExpiration: true });
+      return res.status(401).json({ valid: false, expired: true, payload });
+    }
+    res.status(401).json({ valid: false, error: 'invalid token' });
+  }
 });
 
 app.use(express.static(path.join(__dirname, 'static')));
