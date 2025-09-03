@@ -36,6 +36,8 @@
   "addCheckbox": "Checkbox",
   "addDropdown": "Dropdown",
   "addSignatureField": "Signature",
+  "addSignatureDraw": "Draw signature",
+  "addSignatureImage": "Import signature/logo",
   "importImage": "Import image",
   "fieldRemove": "Double-click to remove field",
   "formFields": "Form fields",

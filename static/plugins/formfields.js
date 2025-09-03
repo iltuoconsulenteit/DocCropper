@@ -5,8 +5,87 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         return;
     }
 
-    const fields = {};
+    let fields = {};
+    const originals = {};
     let modal, overlay, currentPage, currentType = null;
+
+    const stored = sessionStorage.getItem('formFieldData');
+    if (stored) {
+        try {
+            fields = JSON.parse(atob(stored));
+        } catch (e) {
+            fields = {};
+        }
+    }
+
+    let signModal, signCanvas, signCtx, signOk, signCancel, signClear;
+
+    function ensureSignModal() {
+        if (signModal) return;
+        signModal = document.createElement('div');
+        signModal.id = 'ffSignModal';
+        signModal.className = 'modal';
+        signModal.innerHTML = `
+            <div class="modal-content" style="padding:10px;">
+                <canvas id="ffSignCanvas" style="border:1px solid #000;width:400px;height:200px;"></canvas>
+                <div style="text-align:right;margin-top:8px;">
+                    <button id="ffSignClear">${translations.clear || 'Clear'}</button>
+                    <button id="ffSignCancel">${translations.cancel || 'Cancel'}</button>
+                    <button id="ffSignOk">${translations.ok || 'OK'}</button>
+                </div>
+            </div>`;
+        document.body.appendChild(signModal);
+        signCanvas = document.getElementById('ffSignCanvas');
+        signCtx = signCanvas.getContext('2d');
+        signCtx.lineWidth = 2;
+        signCtx.lineCap = 'round';
+        let drawing = false;
+        function pos(ev){
+            const r = signCanvas.getBoundingClientRect();
+            const cX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+            const cY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+            return { x: (cX - r.left) * signCanvas.width / r.width, y: (cY - r.top) * signCanvas.height / r.height };
+        }
+        function start(ev){ drawing = true; const p = pos(ev); signCtx.beginPath(); signCtx.moveTo(p.x,p.y); ev.preventDefault(); }
+        function move(ev){ if(!drawing) return; const p = pos(ev); signCtx.lineTo(p.x,p.y); signCtx.stroke(); ev.preventDefault(); }
+        function end(){ if(drawing){ drawing=false; } }
+        signCanvas.addEventListener('mousedown', start);
+        signCanvas.addEventListener('mousemove', move);
+        window.addEventListener('mouseup', end);
+        signCanvas.addEventListener('touchstart', start, {passive:false});
+        signCanvas.addEventListener('touchmove', move, {passive:false});
+        window.addEventListener('touchend', end);
+        signClear = document.getElementById('ffSignClear');
+        signCancel = document.getElementById('ffSignCancel');
+        signOk = document.getElementById('ffSignOk');
+        signClear.onclick = () => { signCtx.clearRect(0,0,signCanvas.width,signCanvas.height); };
+        signCancel.onclick = () => { signModal.style.display = 'none'; };
+    }
+
+    function openSignDrawModal(callback){
+        ensureSignModal();
+        signCtx.clearRect(0,0,signCanvas.width,signCanvas.height);
+        signModal.style.display = 'flex';
+        signOk.onclick = () => {
+            const data = signCanvas.toDataURL('image/png');
+            callback(data);
+            signModal.style.display = 'none';
+        };
+    }
+
+    function pickSignImage(callback){
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        inp.accept = 'image/*';
+        inp.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => callback(ev.target.result);
+            reader.readAsDataURL(file);
+        };
+        inp.click();
+    }
 
     function ensureModal() {
         if (modal) return;
@@ -23,7 +102,8 @@ export function initFormFieldsPlugin(translations, enabled = true) {
                     <button id="ffText">${translations.addTextField || 'Text box'}</button>
                     <button id="ffCheck">${translations.addCheckbox || 'Checkbox'}</button>
                     <button id="ffSelect">${translations.addDropdown || 'Dropdown'}</button>
-                    <button id="ffSign">${translations.addSignatureField || 'Signature'}</button>
+                    <button id="ffSignDraw">${translations.addSignatureDraw || 'Draw signature'}</button>
+                    <button id="ffSignImg">${translations.addSignatureImage || 'Import signature/logo'}</button>
                     <div style="flex:1"></div>
                     <div style="text-align:right;">
                         <button id="ffCancel" style="margin-right:8px;">${translations.cancel || 'Cancel'}</button>
@@ -36,7 +116,8 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         document.getElementById('ffText').onclick = () => { currentType = 'text'; };
         document.getElementById('ffCheck').onclick = () => { currentType = 'checkbox'; };
         document.getElementById('ffSelect').onclick = () => { currentType = 'select'; };
-        document.getElementById('ffSign').onclick = () => { currentType = 'sign'; };
+        document.getElementById('ffSignDraw').onclick = () => { currentType = 'signdraw'; };
+        document.getElementById('ffSignImg').onclick = () => { currentType = 'signimg'; };
         document.getElementById('ffCancel').onclick = () => { modal.style.display = 'none'; };
         document.getElementById('ffOk').onclick = saveAndClose;
         overlay = document.getElementById('ffOverlay');
@@ -95,88 +176,20 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         } else if (f.type === 'select') {
             el = document.createElement('select');
             el.innerHTML = '<option></option>';
-        } else if (f.type === 'sign') {
+        } else if (f.type === 'signdraw' || f.type === 'signimg') {
             el = document.createElement('div');
-            const canvas = document.createElement('canvas');
-            canvas.style.width = '100%';
-            canvas.style.height = '100%';
-            el.appendChild(canvas);
-            const ctx = canvas.getContext('2d');
-            ctx.lineWidth = 2;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            function resize() {
-                canvas.width = el.clientWidth;
-                canvas.height = el.clientHeight;
-                if (f.value) {
-                    const img = new Image();
-                    img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    img.src = f.value;
-                }
-            }
-            let drawing = false;
-            function pos(ev) {
-                const rect = canvas.getBoundingClientRect();
-                const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
-                const clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
-                return {
-                    x: (clientX - rect.left) * canvas.width / rect.width,
-                    y: (clientY - rect.top) * canvas.height / rect.height
-                };
-            }
-            function start(ev) {
-                drawing = true;
-                const p = pos(ev);
-                ctx.beginPath();
-                ctx.moveTo(p.x, p.y);
-                ev.preventDefault();
-            }
-            function move(ev) {
-                if (!drawing) return;
-                const p = pos(ev);
-                ctx.lineTo(p.x, p.y);
-                ctx.stroke();
-                ev.preventDefault();
-            }
-            function end() {
-                if (drawing) {
-                    drawing = false;
-                    f.value = canvas.toDataURL('image/png');
-                }
-            }
-            canvas.addEventListener('mousedown', start);
-            canvas.addEventListener('mousemove', move);
-            window.addEventListener('mouseup', end);
-            canvas.addEventListener('touchstart', start, { passive: false });
-            canvas.addEventListener('touchmove', move, { passive: false });
-            window.addEventListener('touchend', end);
-            const file = document.createElement('input');
-            file.type = 'file';
-            file.accept = 'image/*';
-            file.title = translations.importImage || 'Import image';
-            Object.assign(file.style, {
-                position: 'absolute',
-                bottom: '2px',
-                right: '2px',
-                opacity: 0.7
+            Object.assign(el.style, {
+                backgroundSize: 'contain',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center'
             });
-            file.addEventListener('change', (e) => {
-                const fobj = e.target.files[0];
-                if (!fobj) return;
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        f.value = canvas.toDataURL('image/png');
-                    };
-                    img.src = ev.target.result;
-                };
-                reader.readAsDataURL(fobj);
-            });
-            el.appendChild(file);
-            window.addEventListener('resize', resize);
+            if (f.value) {
+                el.style.backgroundImage = `url(${f.value})`;
+            } else if (f.type === 'signdraw') {
+                openSignDrawModal((data) => { f.value = data; el.style.backgroundImage = `url(${data})`; });
+            } else {
+                pickSignImage((data) => { f.value = data; el.style.backgroundImage = `url(${data})`; });
+            }
         } else {
             el = document.createElement('textarea');
         }
@@ -224,9 +237,6 @@ export function initFormFieldsPlugin(translations, enabled = true) {
             window.addEventListener('mouseup', up);
         });
         parent.appendChild(el);
-        if (f.type === 'sign') {
-            requestAnimationFrame(resize);
-        }
         f.el = el;
         return el;
     }
@@ -256,15 +266,15 @@ export function initFormFieldsPlugin(translations, enabled = true) {
             };
             if (type === 'checkbox') {
                 f.value = el.checked;
-            } else if (type === 'sign') {
-                const canv = el.querySelector('canvas');
-                f.value = canv ? canv.toDataURL('image/png') : null;
+            } else if (type === 'signdraw' || type === 'signimg') {
+                f.value = el.style.backgroundImage ? el.style.backgroundImage.slice(5, -2) : null;
             } else {
                 f.value = el.value;
             }
             return f;
         });
         fields[currentPage] = pageFields;
+        sessionStorage.setItem('formFieldData', btoa(JSON.stringify(fields)));
         await mergeFieldsToThumbnail(currentPage);
         modal.style.display = 'none';
     }
@@ -277,7 +287,7 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         function loadImage(src) {
             return new Promise(res => { const im = new Image(); im.onload = () => res(im); im.src = src; });
         }
-        const baseSrc = imgs[page];
+        const baseSrc = originals[page] || imgs[page];
         if (!baseSrc) return;
         const base = await loadImage(baseSrc);
         canvas.width = base.width;
@@ -309,7 +319,7 @@ export function initFormFieldsPlugin(translations, enabled = true) {
                 ctx.font = `${Math.max(10, h*0.8)}px sans-serif`;
                 ctx.textBaseline = 'top';
                 ctx.fillText(f.value || '', x+2, y+2, w-4);
-            } else if (f.type === 'sign' && f.value) {
+            } else if ((f.type === 'signdraw' || f.type === 'signimg') && f.value) {
                 const img = await loadImage(f.value);
                 ctx.drawImage(img, x, y, w, h);
             }
@@ -322,7 +332,7 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         }
         const imgEl = document.querySelector(`.thumbContainer[data-index="${page}"] img`);
         if (imgEl) imgEl.src = url;
-        delete fields[page];
+        originals[page] = baseSrc;
     }
 
     async function mergeAllFormFields() {

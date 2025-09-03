@@ -36,6 +36,8 @@
   "addCheckbox": "Casella",
   "addDropdown": "Menu a discesa",
   "addSignatureField": "Firma",
+  "addSignatureDraw": "Firma grafica",
+  "addSignatureImage": "Importa firma/logo",
   "importImage": "Importa immagine",
   "fieldRemove": "Doppio click per rimuovere",
   "formFields": "Campi modulo",
