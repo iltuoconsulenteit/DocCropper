@@ -328,21 +328,21 @@ export function initFormFieldsPlugin(translations, enabled = true) {
     }
 
     async function saveAndClose() {
-        const contRect = overlay.getBoundingClientRect();
         const pageFields = Array.from(overlay.querySelectorAll('.formField')).map(el => {
-            const rect = el.getBoundingClientRect();
             const type = el.dataset.type || (el.tagName === 'TEXTAREA' ? 'text' : (el.tagName === 'SELECT' ? 'select' : 'checkbox'));
             const f = {
                 type,
-                x: (rect.left - contRect.left) / contRect.width,
-                y: (rect.top - contRect.top) / contRect.height,
-                w: rect.width / contRect.width,
-                h: rect.height / contRect.height
+                x: parseFloat(el.style.left) / 100,
+                y: parseFloat(el.style.top) / 100,
+                w: parseFloat(el.style.width) / 100,
+                h: parseFloat(el.style.height) / 100
             };
             if (type === 'checkbox') {
                 f.value = el.dataset.checked === 'true';
+                f.border = el.dataset.border !== 'false';
             } else if (type === 'signdraw' || type === 'signimg') {
                 f.value = el.style.backgroundImage ? el.style.backgroundImage.slice(5, -2) : null;
+                f.border = el.dataset.border !== 'false';
             } else {
                 f.value = el.value;
                 f.color = el.dataset.color || '#000';
