@@ -93,16 +93,31 @@ app.get('/logout', (req, res, next) => {
 });
 
 app.post('/license/token', requireHttps, checkDomain, (req, res) => {
-  const { license_type, expires_at, plugins } = req.body;
+  const { license_type, expires_at, plugins, allowed_domains } = req.body;
   const payload = { license_type, expires_at, plugins };
+  if (Array.isArray(allowed_domains) && allowed_domains.length) {
+    payload.allowed_domains = allowed_domains;
+  }
   const token = jwt.sign(payload, LICENSE_SECRET);
   res.json({ token });
 });
 
 app.post('/license/verify', requireHttps, checkDomain, verifyLimiter, (req, res) => {
-  const { token } = req.body;
+  const { token, domain } = req.body;
   try {
     const payload = jwt.verify(token, LICENSE_SECRET);
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.expires_at && payload.expires_at < now) {
+      return res.status(401).json({ valid: false, expired: true, payload });
+    }
+    if (
+      domain &&
+      Array.isArray(payload.allowed_domains) &&
+      payload.allowed_domains.length &&
+      !payload.allowed_domains.includes(domain)
+    ) {
+      return res.status(403).json({ valid: false, error: 'domain not allowed', payload });
+    }
     res.json({ valid: true, payload });
   } catch (err) {
     console.warn(`Token verification failed for ${req.ip}: ${err.message}`);

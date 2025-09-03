@@ -789,6 +789,7 @@ async def root_redirect_empty() -> RedirectResponse:
 
 # Dependency used to enforce that the configured license is valid
 async def require_valid_license(
+    request: Request,
     user: User | None = Depends(fastapi_users.current_user(optional=True)),
 ):
     settings = load_settings()
@@ -800,7 +801,10 @@ async def require_valid_license(
     if not user.license_token:
         raise HTTPException(status_code=403, detail="Token licenza mancante")
 
-    data = await verify_license(user.email, user.license_type, user.license_token)
+    domain = request.url.hostname
+    data = await verify_license(
+        user.email, user.license_type, user.license_token, domain
+    )
     if not data.get("valid", False):
         raise HTTPException(status_code=403, detail="Licenza non valida")
 
@@ -1213,6 +1217,28 @@ async def stripe_checkout(level: str = Body(...)):
     except Exception as e:
         logger.exception("Stripe session creation failed")
         return JSONResponse(status_code=500, content={"message": str(e)})
+
+
+@app.post("/stripe-webhook/")
+async def stripe_webhook(request: Request):
+    if stripe is None:
+        return JSONResponse(status_code=503, content={"message": "Stripe library missing"})
+    settings = load_settings()
+    webhook_secret = settings.get("stripe_webhook_secret")
+    if not webhook_secret:
+        return JSONResponse(status_code=503, content={"message": "Stripe not configured"})
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+    except Exception:
+        return JSONResponse(status_code=400, content={"message": "Invalid payload"})
+    if event.get("type") == "checkout.session.completed":
+        session = event.get("data", {}).get("object", {})
+        if session.get("payment_status") != "paid":
+            return JSONResponse(status_code=400, content={"message": "Payment not completed"})
+        # License generation would occur here
+    return {"received": True}
 
 
 @app.post("/pdf-to-images/")

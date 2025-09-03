@@ -36,7 +36,7 @@ export async function verifyTokenRemotely(token) {
   const resp = await fetch('/license/verify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token })
+    body: JSON.stringify({ token, domain: location.hostname })
   });
   return resp.json();
 }
