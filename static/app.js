@@ -9,6 +9,7 @@ import { initColorPlugin } from './plugins/colormode.js';
 import { initImageEditorPlugin } from './plugins/imageeditor.js';
 import { initFormFieldsPlugin } from './plugins/formfields.js';
 import { initScanPlugin } from './plugins/scan.js';
+import { initCloudSavePlugin } from './plugins/cloudsave.js';
 
 let scaling_factor_w;
 let scaling_factor_h;
@@ -314,6 +315,7 @@ let colorModePluginEnabled = false;
 let imageEditorEnabled = false;
 let formFieldsEnabled = false;
 let scanEnabled = false;
+let cloudSaveEnabled = false;
 
 let translations = {};
 let currentLang = window.DC_LANG || 'it';
@@ -819,6 +821,7 @@ function applySettings(cfg) {
     imageEditorEnabled = activePlugins.includes('imageeditor');
     formFieldsEnabled = activePlugins.includes('formfields');
     scanEnabled = activePlugins.includes('scan');
+    cloudSaveEnabled = activePlugins.includes('cloudsave');
     if (typeof initRemoveBgPlugin === 'function' && Object.keys(translations).length) {
         initRemoveBgPlugin(translations, removeBgEnabled);
     }
@@ -842,6 +845,9 @@ function applySettings(cfg) {
     }
     if (typeof initFormFieldsPlugin === 'function') {
         initFormFieldsPlugin(translations, formFieldsEnabled);
+    }
+    if (typeof initCloudSavePlugin === 'function') {
+        initCloudSavePlugin(translations, cloudSaveEnabled);
     }
     compressEnabled = activePlugins.includes('compresspdf');
     if (cfg.update_interval !== undefined) {
@@ -3567,6 +3573,7 @@ loadSettings().then(async (cfg) => {
     initColorPlugin(translations, colorModePluginEnabled);
     initImageEditorPlugin(translations, imageEditorEnabled);
     initFormFieldsPlugin(translations, formFieldsEnabled);
+    initCloudSavePlugin(translations, cloudSaveEnabled);
     renderPaymentBox(cfg);
     renderLicenseBox();
     renderLogin(cfg);

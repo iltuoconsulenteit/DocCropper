@@ -832,6 +832,7 @@
           downloadPngEnabled:false,
           formFieldsEnabled:false,
           scanEnabled:false,
+          cloudSaveEnabled:false,
           scanners:[],
           scanProfiles:[],
           selectedScanner:'',
@@ -1009,6 +1010,7 @@
               this.downloadPngEnabled = !!cfg.enable_downloadpng;
               this.formFieldsEnabled = !!cfg.enable_formfields;
               this.scanEnabled = !!cfg.enable_scan;
+              this.cloudSaveEnabled = !!cfg.enable_cloudsave;
               if(this.scanEnabled) this.loadScanProfiles();
               this.maxUpload = parseInt(cfg.max_upload_files || 10);
               this.blankThreshold = parseInt(cfg.blank_threshold || 95);
@@ -1780,6 +1782,7 @@
       import { initPageSelectPlugin } from '/static/plugins/pageselect.js';
       import { initFormFieldsPlugin } from '/static/plugins/formfields.js';
       import { initScanPlugin } from '/static/plugins/scan.js';
+      import { initCloudSavePlugin } from '/static/plugins/cloudsave.js';
       const lang = window.DC_LANG || document.documentElement.lang || 'en';
       const trans = (window.dcStrings && window.dcStrings[lang]) ? window.dcStrings[lang] : {};
       initSignaturePlugin(trans, true);
@@ -1790,6 +1793,7 @@
       initPageSelectPlugin(true);
       initFormFieldsPlugin(trans, true);
       initScanPlugin(trans, true);
+      initCloudSavePlugin(trans, true);
 
       function calculateGrid() {
         const layout = parseInt(document.getElementById('layoutSelect')?.value || '1');
