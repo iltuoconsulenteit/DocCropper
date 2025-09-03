@@ -237,5 +237,13 @@
   "enablePageSelect": "Enable page selection",
   "enableDownloadPng": "Enable PNG download",
   "enableScan": "Enable scanning",
-  "installScanner": "Install the scanner helper"
+  "installScanner": "Install the scanner helper",
+  "selectScanner": "Select scanner",
+  "scanProfile": "Profile",
+  "newProfile": "New profile",
+  "profileName": "Profile name",
+  "dpi": "DPI",
+  "startScan": "Start scan",
+  "saveProfile": "Save profile",
+  "none": "None"
 }

@@ -143,7 +143,7 @@
               <span class="text-2xl">+</span>
               <span class="text-xs" x-text="t('addImport')"></span>
             </div>
-            <div id="scanArea" x-show="scanEnabled" class="w-32 h-20 rounded border-2 border-dashed border-blue-500 text-blue-600 flex flex-col items-center justify-center cursor-pointer" @click="scan" :title="t('scan')">
+            <div id="scanArea" x-show="scanEnabled" class="w-32 h-20 rounded border-2 border-dashed border-blue-500 text-blue-600 flex flex-col items-center justify-center cursor-pointer" @click="openScan" :title="t('scan')">
               <span class="text-2xl">📠</span>
               <span class="text-xs" x-text="t('scan')"></span>
             </div>
@@ -464,6 +464,45 @@
         <div class="text-right space-x-2 pt-2">
           <button class="px-3 py-1 bg-gray-300 rounded" @click="settingsModal=false" x-text="t('cancel')"></button>
           <button class="px-3 py-1 bg-blue-500 text-white rounded" @click="saveSettings" x-text="t('apply')"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scan Modal -->
+    <div x-show="scanModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded w-80 space-y-3">
+        <h2 class="text-lg" x-text="t('scan')"></h2>
+        <div>
+          <label class="block text-sm" x-text="t('selectScanner')"></label>
+          <select class="border w-full p-1" x-model="selectedScanner">
+            <template x-for="s in scanners" :key="s"><option x-text="s"></option></template>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm" x-text="t('scanProfile')"></label>
+          <select class="border w-full p-1" x-model="selectedProfile">
+            <option value="" x-text="t('none')"></option>
+            <template x-for="p in scanProfiles" :key="p.name"><option :value="p.name" x-text="p.name"></option></template>
+          </select>
+        </div>
+        <div class="border-t pt-2 space-y-2">
+          <h3 class="text-sm font-semibold" x-text="t('newProfile')"></h3>
+          <input type="text" class="border w-full p-1" x-model="newProfile.name" :placeholder="t('profileName')">
+          <div class="flex gap-2">
+            <input type="number" class="border w-1/2 p-1" x-model.number="newProfile.dpi" :placeholder="t('dpi')">
+            <select class="border w-1/2 p-1" x-model="newProfile.color">
+              <option value="color" x-text="t('color')"></option>
+              <option value="gray" x-text="t('gray')"></option>
+              <option value="bw" x-text="t('bw')"></option>
+            </select>
+          </div>
+          <div class="text-right">
+            <button class="px-2 py-1 bg-blue-500 text-white rounded text-sm" @click="saveScanProfile" x-text="t('saveProfile')"></button>
+          </div>
+        </div>
+        <div class="text-right space-x-2 pt-2">
+          <button class="px-3 py-1 bg-gray-300 rounded" @click="scanModal=false" x-text="t('cancel')"></button>
+          <button class="px-3 py-1 bg-blue-500 text-white rounded" @click="startScan" x-text="t('startScan')"></button>
         </div>
       </div>
     </div>
@@ -789,6 +828,12 @@
           downloadPngEnabled:false,
           formFieldsEnabled:false,
           scanEnabled:false,
+          scanners:[],
+          scanProfiles:[],
+          selectedScanner:'',
+          selectedProfile:'',
+          scanModal:false,
+          newProfile:{name:'',dpi:300,color:'color'},
           sigScale:1,
           activeSig:null,
           signatureAspect:1,
@@ -960,6 +1005,7 @@
               this.downloadPngEnabled = !!cfg.enable_downloadpng;
               this.formFieldsEnabled = !!cfg.enable_formfields;
               this.scanEnabled = !!cfg.enable_scan;
+              if(this.scanEnabled) this.loadScanProfiles();
               this.maxUpload = parseInt(cfg.max_upload_files || 10);
               this.blankThreshold = parseInt(cfg.blank_threshold || 95);
               this.version = cfg.version || '';
@@ -1196,7 +1242,38 @@
           watermark(idx){ if(typeof window.openWatermarkDialog==='function'){ window.openWatermarkDialog(idx); } },
           downloadPng(idx){ if(typeof window.downloadPng==='function'){ window.downloadPng(idx); } },
           formFields(idx){ if(typeof window.openFormFieldsDialog==='function'){ window.openFormFieldsDialog(idx); } },
-          scan(){ if(typeof window.scanDocument==='function'){ window.scanDocument(); } },
+          openScan(){
+            if(!this.scanEnabled) return;
+            this.scanModal = true;
+            this.loadScanners();
+          },
+          startScan(){
+            if(typeof window.scanDocument==='function'){
+              const opts = {};
+              if(this.selectedScanner) opts.scanner = this.selectedScanner;
+              if(this.selectedProfile) opts.profile = this.selectedProfile;
+              window.scanDocument(opts);
+            }
+            this.scanModal = false;
+          },
+          loadScanners(){
+            if(typeof window.scanGetScanners==='function'){
+              window.scanGetScanners().then(list=>{
+                this.scanners = list || [];
+                if(!this.selectedScanner && this.scanners.length) this.selectedScanner = this.scanners[0];
+              });
+            }
+          },
+          saveScanProfile(){
+            if(!this.newProfile.name) return;
+            this.scanProfiles.push({...this.newProfile});
+            localStorage.setItem('scanProfiles', JSON.stringify(this.scanProfiles));
+            this.newProfile = {name:'',dpi:300,color:'color'};
+          },
+          loadScanProfiles(){
+            try{ this.scanProfiles = JSON.parse(localStorage.getItem('scanProfiles')||'[]'); }
+            catch(e){ this.scanProfiles = []; }
+          },
           async removeBg(idx, thr){
             try{
               const f = this.files[idx];
