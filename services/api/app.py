@@ -144,7 +144,7 @@ def save_license_overrides(update: dict) -> dict:
     return data
 
 # Developer license key for demonstration (case-insensitive)
-DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "")
+DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "DEVELOPER")
 DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
 DEMO_FULL_LICENSE_KEY = "DEMO-FULL-DC"
 DEFAULT_SPONSOR_FRAME = (
@@ -491,6 +491,7 @@ def load_settings():
         is_dev = (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV")
         if is_demo:
             merged["license_level"] = "full"
+            merged["license_type"] = "demo"
             merged["demo_full_mode"] = True
             if not merged.get("license_name"):
                 merged["license_name"] = "Demo User"
@@ -501,6 +502,7 @@ def load_settings():
                 merged["public_url"] = "https://doccropper.iltuoconsulenteit.it"
         elif is_dev:
             merged["license_level"] = "full"
+            merged["license_type"] = "developer"
             if not merged.get("license_name"):
                 merged["license_name"] = "Developer"
             merged["enable_mobilesign"] = True
