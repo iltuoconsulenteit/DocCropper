@@ -534,6 +534,11 @@ def load_settings():
                 merged.update(sponsorframe.get_config(merged))
         except Exception:
             logger.exception("sponsor plugin failed")
+        logger.info(
+            "License key '%s' loaded (level: %s)",
+            merged.get("license_key", ""),
+            merged.get("license_level", ""),
+        )
         return merged
     except Exception:
         return DEFAULT_SETTINGS.copy()

@@ -289,8 +289,8 @@ def main():
         update_branch()
 
     menu_items = [
-        MenuItem(tr('openApp'), open_app, default=True),
-        MenuItem(tr('startApp'), start_action),
+        MenuItem(tr('openApp'), open_app),
+        MenuItem(tr('startApp'), start_action, default=True),
         MenuItem(tr('stopApp'), stop_action),
         MenuItem(tr('updateMain'), update_main_action),
         MenuItem(tr('rollbackApp'), rollback_action),

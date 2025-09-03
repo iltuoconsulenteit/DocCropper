@@ -1000,6 +1000,7 @@ function updateBannerImage() {
     if (!sloganImg || bannerImages.length === 0) return;
     let img = bannerImages[bannerIndex % bannerImages.length];
     img = img
+        .replace(/^[a-z]{2}(?=DocCropper)/i, '')
         .replace(/^\{\{lang\}\}/, '')
         .replace(/\{\{lang\}\}/g, currentLang);
     sloganImg.src = `/static/slide/${img}`;
