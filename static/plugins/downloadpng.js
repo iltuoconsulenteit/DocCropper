@@ -5,8 +5,10 @@ export function initDownloadPngPlugin(translations, enabled = true) {
     }
 
     async function downloadPng(index) {
-        const images = window.processedImages || [];
-        const src = images[index];
+        const imgs = typeof window.getProcessedImages === 'function'
+            ? window.getProcessedImages()
+            : (window.processedImages || []);
+        const src = imgs[index];
         if (!src) return;
 
         try {
@@ -21,7 +23,16 @@ export function initDownloadPngPlugin(translations, enabled = true) {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         } catch (err) {
-            console.error('download png', err);
+            try {
+                const a = document.createElement('a');
+                a.href = src;
+                a.download = `page${index + 1}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } catch (e) {
+                console.error('download png', err);
+            }
         }
     }
 
