@@ -143,6 +143,10 @@
               <span class="text-2xl">+</span>
               <span class="text-xs" x-text="t('addImport')"></span>
             </div>
+            <div id="scanArea" x-show="scanEnabled" class="w-32 h-20 rounded border-2 border-dashed border-blue-500 text-blue-600 flex flex-col items-center justify-center cursor-pointer" @click="scan" :title="t('scan')">
+              <span class="text-2xl">📠</span>
+              <span class="text-xs" x-text="t('scan')"></span>
+            </div>
             <div class="flex items-center gap-2 mx-auto" id="removeBlankGroup" x-show="files.length > 0">
               <button id="removeBlankBtn" class="h-10 px-4 rounded bg-yellow-500 text-white flex items-center justify-center text-sm" @click="removeBlankPages" x-text="t('removeBlank')"></button>
               <label class="text-xs" for="blankThreshold" x-text="t('blankThreshold')"></label>
@@ -577,6 +581,7 @@
             removeBgThresholdPrompt:'Background removal threshold (%)',
             removeBgFailed:'Background removal failed',
             downloadPng:'Download PNG',
+            scan:'Scan',
             selectPage:'Select page',
             addTextField:'Text box',
             addCheckbox:'Checkbox',
@@ -696,6 +701,7 @@
             removeBgThresholdPrompt:'Soglia rimozione sfondo (%)',
             removeBgFailed:'Rimozione sfondo fallita',
             downloadPng:'Scarica PNG',
+            scan:'Scanner',
             selectPage:'Seleziona pagina',
             addTextField:'Campo testo',
             addCheckbox:'Casella',
@@ -782,6 +788,7 @@
           pageSelectEnabled:false,
           downloadPngEnabled:false,
           formFieldsEnabled:false,
+          scanEnabled:false,
           sigScale:1,
           activeSig:null,
           signatureAspect:1,
@@ -952,6 +959,7 @@
               this.pageSelectEnabled = !!cfg.enable_pageselect;
               this.downloadPngEnabled = !!cfg.enable_downloadpng;
               this.formFieldsEnabled = !!cfg.enable_formfields;
+              this.scanEnabled = !!cfg.enable_scan;
               this.maxUpload = parseInt(cfg.max_upload_files || 10);
               this.blankThreshold = parseInt(cfg.blank_threshold || 95);
               this.version = cfg.version || '';
@@ -1188,6 +1196,7 @@
           watermark(idx){ if(typeof window.openWatermarkDialog==='function'){ window.openWatermarkDialog(idx); } },
           downloadPng(idx){ if(typeof window.downloadPng==='function'){ window.downloadPng(idx); } },
           formFields(idx){ if(typeof window.openFormFieldsDialog==='function'){ window.openFormFieldsDialog(idx); } },
+          scan(){ if(typeof window.scanDocument==='function'){ window.scanDocument(); } },
           async removeBg(idx, thr){
             try{
               const f = this.files[idx];
@@ -1689,6 +1698,7 @@
       import { initDownloadPngPlugin } from '/static/plugins/downloadpng.js';
       import { initPageSelectPlugin } from '/static/plugins/pageselect.js';
       import { initFormFieldsPlugin } from '/static/plugins/formfields.js';
+      import { initScanPlugin } from '/static/plugins/scan.js';
       const lang = window.DC_LANG || document.documentElement.lang || 'en';
       const trans = (window.dcStrings && window.dcStrings[lang]) ? window.dcStrings[lang] : {};
       initSignaturePlugin(trans, true);
@@ -1698,6 +1708,7 @@
       initDownloadPngPlugin(trans, true);
       initPageSelectPlugin(true);
       initFormFieldsPlugin(trans, true);
+      initScanPlugin(trans, true);
 
       function calculateGrid() {
         const layout = parseInt(document.getElementById('layoutSelect')?.value || '1');

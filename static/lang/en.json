@@ -26,6 +26,7 @@
   "edit": "Crop",
   "delete": "Delete",
   "downloadPng": "Download PNG",
+  "scan": "Scan",
   "selectPage": "Select page",
   "removeBg": "Remove background",
   "restoreBg": "Restore background",
@@ -234,5 +235,7 @@
   "invalidPassword": "Invalid password",
   "enableImageEditor": "Enable image editor",
   "enablePageSelect": "Enable page selection",
-  "enableDownloadPng": "Enable PNG download"
+  "enableDownloadPng": "Enable PNG download",
+  "enableScan": "Enable scanning",
+  "installScanner": "Install the scanner helper"
 }

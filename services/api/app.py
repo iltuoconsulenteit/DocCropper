@@ -91,6 +91,7 @@ from plugin.core.login import register as register_login
 from plugin.core.downloadpng import register as register_downloadpng
 from plugin.core.pageselect import register as register_pageselect
 from plugin.core.colormode import register as register_colormode
+from plugin.core.scan import register as register_scan
 
 try:
     import stripe
@@ -534,7 +535,8 @@ def save_settings(update: dict):
         'pageselect': ['enable_pageselect', 'pageselect_dev_only'],
         'colormode': ['enable_colormode', 'colormode_dev_only'],
         'watermark': ['enable_watermark', 'watermark_dev_only'],
-        'imageeditor': ['enable_imageeditor', 'imageeditor_dev_only']
+        'imageeditor': ['enable_imageeditor', 'imageeditor_dev_only'],
+        'scan': ['enable_scan', 'scan_dev_only']
     }
     plugin_updates = {}
     for pname, keys in plugin_fields.items():
@@ -821,6 +823,8 @@ enable_imageeditor = str(os.getenv('DOCROPPER_ENABLE_IMAGEEDITOR', settings.get(
 imageeditor_dev = str(os.getenv('DOCROPPER_IMAGEEDITOR_DEV_ONLY', settings.get('imageeditor_dev_only', True))).lower() == 'true'
 enable_formfields = str(os.getenv('DOCROPPER_ENABLE_FORMFIELDS', settings.get('enable_formfields', False))).lower() == 'true'
 formfields_dev = str(os.getenv('DOCROPPER_FORMFIELDS_DEV_ONLY', settings.get('formfields_dev_only', True))).lower() == 'true'
+enable_scan = str(os.getenv('DOCROPPER_ENABLE_SCAN', settings.get('enable_scan', False))).lower() == 'true'
+scan_dev = str(os.getenv('DOCROPPER_SCAN_DEV_ONLY', settings.get('scan_dev_only', True))).lower() == 'true'
 
 if enable_sign and (not sign_dev or is_dev_license):
     register_sign(app, plugin_utils)
@@ -860,6 +864,9 @@ if enable_formfields and (not formfields_dev or is_dev_license):
     from plugin.core.formfields import register as register_formfields
     register_formfields(app, plugin_utils)
     ACTIVE_PLUGINS.append('formfields')
+if enable_scan and (not scan_dev or is_dev_license):
+    register_scan(app, plugin_utils)
+    ACTIVE_PLUGINS.append('scan')
 
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):

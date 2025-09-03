@@ -8,6 +8,7 @@ import { initPageSelectPlugin } from './plugins/pageselect.js';
 import { initColorPlugin } from './plugins/colormode.js';
 import { initImageEditorPlugin } from './plugins/imageeditor.js';
 import { initFormFieldsPlugin } from './plugins/formfields.js';
+import { initScanPlugin } from './plugins/scan.js';
 
 let scaling_factor_w;
 let scaling_factor_h;
@@ -312,6 +313,7 @@ let pageSelectEnabled = false;
 let colorModePluginEnabled = false;
 let imageEditorEnabled = false;
 let formFieldsEnabled = false;
+let scanEnabled = false;
 
 let translations = {};
 let currentLang = window.DC_LANG || 'it';
@@ -816,11 +818,15 @@ function applySettings(cfg) {
     colorModePluginEnabled = activePlugins.includes('colormode');
     imageEditorEnabled = activePlugins.includes('imageeditor');
     formFieldsEnabled = activePlugins.includes('formfields');
+    scanEnabled = activePlugins.includes('scan');
     if (typeof initRemoveBgPlugin === 'function' && Object.keys(translations).length) {
         initRemoveBgPlugin(translations, removeBgEnabled);
     }
     if (typeof initWatermarkPlugin === 'function' && Object.keys(translations).length) {
         initWatermarkPlugin(translations, watermarkEnabled);
+    }
+    if (typeof initScanPlugin === 'function' && Object.keys(translations).length) {
+        initScanPlugin(translations, scanEnabled);
     }
     if (typeof initDownloadPngPlugin === 'function' && Object.keys(translations).length) {
         initDownloadPngPlugin(translations, downloadPngEnabled);
@@ -3455,6 +3461,7 @@ function renderDevSettingsBox() {
         <label><input type="checkbox" id="enableImageEditorChk" ${currentSettings.enable_imageeditor?'checked':''}> ${t('enableImageEditor')}</label>
         <label><input type="checkbox" id="enablePageSelectChk" ${currentSettings.enable_pageselect?'checked':''}> ${t('enablePageSelect')}</label>
         <label><input type="checkbox" id="enableDownloadPngChk" ${currentSettings.enable_downloadpng?'checked':''}> ${t('enableDownloadPng')}</label>
+        <label><input type="checkbox" id="enableScanChk" ${currentSettings.enable_scan?'checked':''}> ${t('enableScan')}</label>
         <button id="saveDevSettingsBtn">${t('saveSettings')}</button>
     </div>`;
     devSettingsBox.innerHTML = html;
@@ -3463,7 +3470,8 @@ function renderDevSettingsBox() {
         const update = {
             enable_imageeditor: document.getElementById('enableImageEditorChk').checked,
             enable_pageselect: document.getElementById('enablePageSelectChk').checked,
-            enable_downloadpng: document.getElementById('enableDownloadPngChk').checked
+            enable_downloadpng: document.getElementById('enableDownloadPngChk').checked,
+            enable_scan: document.getElementById('enableScanChk').checked
         };
         await saveSettings(update);
         const cfg = await loadSettings();
@@ -3553,6 +3561,7 @@ loadSettings().then(async (cfg) => {
     initRemoveBgPlugin(translations, removeBgEnabled);
     initPdfCompressPlugin(translations, compressEnabled);
     initWatermarkPlugin(translations, watermarkEnabled);
+    initScanPlugin(translations, scanEnabled);
     initDownloadPngPlugin(translations, downloadPngEnabled);
     initPageSelectPlugin(pageSelectEnabled);
     initColorPlugin(translations, colorModePluginEnabled);
