@@ -8,6 +8,8 @@ export function initFormFieldsPlugin(translations, enabled = true) {
     let fields = {};
     const originals = {};
     let modal, overlay, currentPage, currentType = null;
+    let currentField = null;
+    let colorInput, sizeInput, borderInput;
 
     const stored = sessionStorage.getItem('formFieldData');
     if (stored) {
@@ -96,14 +98,26 @@ export function initFormFieldsPlugin(translations, enabled = true) {
             <div class="modal-content" style="max-width:90%;max-height:90%;display:flex;">
                 <div id="ffImageWrap" style="position:relative;flex:1;display:flex;justify-content:center;align-items:center;">
                     <img id="ffImage" style="max-width:100%;max-height:100%;" />
-                    <div id="ffOverlay" style="position:absolute;left:0;top:0;right:0;bottom:0;"></div>
+                    <div id="ffOverlay" style="position:absolute;left:0;top:0;"></div>
                 </div>
-                <div style="width:150px;padding:10px;background:#fff;display:flex;flex-direction:column;gap:4px;">
+                <div style="width:170px;padding:10px;background:#fff;display:flex;flex-direction:column;gap:4px;">
                     <button id="ffText">${translations.addTextField || 'Text box'}</button>
                     <button id="ffCheck">${translations.addCheckbox || 'Checkbox'}</button>
                     <button id="ffSelect">${translations.addDropdown || 'Dropdown'}</button>
                     <button id="ffSignDraw">${translations.addSignatureDraw || 'Draw signature'}</button>
                     <button id="ffSignImg">${translations.addSignatureImage || 'Import signature/logo'}</button>
+                    <label style="margin-top:8px;">
+                        ${translations.ffFontColor || 'Color'}
+                        <input id="ffColor" type="color" value="#000000" style="width:100%;">
+                    </label>
+                    <label>
+                        ${translations.ffFontSize || 'Font size'}
+                        <input id="ffSize" type="number" value="16" min="8" style="width:100%;">
+                    </label>
+                    <label>
+                        <input id="ffBorder" type="checkbox" checked>
+                        ${translations.ffBorder || 'Border'}
+                    </label>
                     <div style="flex:1"></div>
                     <div style="text-align:right;">
                         <button id="ffCancel" style="margin-right:8px;">${translations.cancel || 'Cancel'}</button>
@@ -122,6 +136,12 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         document.getElementById('ffOk').onclick = saveAndClose;
         overlay = document.getElementById('ffOverlay');
         overlay.addEventListener('mousedown', startDraw);
+        colorInput = document.getElementById('ffColor');
+        sizeInput = document.getElementById('ffSize');
+        borderInput = document.getElementById('ffBorder');
+        colorInput.oninput = () => { if (currentField) { currentField.style.color = colorInput.value; currentField.dataset.color = colorInput.value; } };
+        sizeInput.oninput = () => { if (currentField) { currentField.style.fontSize = sizeInput.value + 'px'; currentField.dataset.size = (parseFloat(sizeInput.value) / overlay.clientHeight); } };
+        borderInput.onchange = () => { if (currentField) { currentField.style.border = borderInput.checked ? '1px solid #000' : 'none'; currentField.dataset.border = borderInput.checked ? 'true' : 'false'; } };
     }
 
     function startDraw(e) {
@@ -160,7 +180,16 @@ export function initFormFieldsPlugin(translations, enabled = true) {
             const w = rect2.width / contRect.width;
             const h = rect2.height / contRect.height;
             box.remove();
-            createFieldElement(overlay, { type: currentType, x, y, w, h });
+            createFieldElement(overlay, {
+                type: currentType,
+                x,
+                y,
+                w,
+                h,
+                color: colorInput ? colorInput.value : '#000000',
+                size: sizeInput ? (parseFloat(sizeInput.value) / contRect.height) : (16 / contRect.height),
+                border: borderInput ? borderInput.checked : true
+            });
             currentType = null;
         }
 
@@ -202,13 +231,19 @@ export function initFormFieldsPlugin(translations, enabled = true) {
             left: (f.x * 100) + '%',
             top: (f.y * 100) + '%',
             width: (f.w * 100) + '%',
-            height: (f.h * 100) + '%'
+            height: (f.h * 100) + '%',
+            border: f.border === false ? 'none' : '1px solid #000',
+            color: f.color || '#000',
+            fontSize: f.size ? (f.size * parent.clientHeight) + 'px' : ''
         });
+        el.dataset.color = f.color || '#000';
+        el.dataset.size = f.size || (16 / parent.clientHeight);
+        el.dataset.border = f.border === false ? 'false' : 'true';
         const handle = document.createElement('div');
         Object.assign(handle.style, {
             position: 'absolute',
-            left: '-4px',
-            top: '-4px',
+            left: '-6px',
+            top: '-6px',
             width: '12px',
             height: '12px',
             background: 'rgba(37,99,235,0.8)',
@@ -236,6 +271,13 @@ export function initFormFieldsPlugin(translations, enabled = true) {
             window.addEventListener('mousemove', move);
             window.addEventListener('mouseup', up);
         });
+        el.addEventListener('click', () => {
+            currentType = null;
+            currentField = el;
+            if (colorInput) colorInput.value = el.dataset.color || '#000000';
+            if (sizeInput) sizeInput.value = Math.round((el.dataset.size || (16 / parent.clientHeight)) * parent.clientHeight);
+            if (borderInput) borderInput.checked = el.dataset.border !== 'false';
+        });
         parent.appendChild(el);
         f.el = el;
         return el;
@@ -244,11 +286,23 @@ export function initFormFieldsPlugin(translations, enabled = true) {
     function openFormFieldsDialog(page) {
         ensureModal();
         currentPage = page;
+        currentField = null;
         const img = document.getElementById('ffImage');
+        const wrap = document.getElementById('ffImageWrap');
         const imgs = typeof window.getProcessedImages === 'function' ? window.getProcessedImages() : (window.processedImages || []);
+        img.onload = () => {
+            const w = img.clientWidth;
+            const h = img.clientHeight;
+            const offX = (wrap.clientWidth - w) / 2;
+            const offY = (wrap.clientHeight - h) / 2;
+            overlay.style.left = offX + 'px';
+            overlay.style.top = offY + 'px';
+            overlay.style.width = w + 'px';
+            overlay.style.height = h + 'px';
+            overlay.innerHTML = '';
+            (fields[page] || []).forEach(f => createFieldElement(overlay, f));
+        };
         img.src = imgs[page];
-        overlay.innerHTML = '';
-        (fields[page] || []).forEach(f => createFieldElement(overlay, f));
         modal.style.display = 'block';
     }
 
@@ -270,6 +324,9 @@ export function initFormFieldsPlugin(translations, enabled = true) {
                 f.value = el.style.backgroundImage ? el.style.backgroundImage.slice(5, -2) : null;
             } else {
                 f.value = el.value;
+                f.color = el.dataset.color || '#000';
+                f.border = el.dataset.border !== 'false';
+                f.size = parseFloat(el.dataset.size || '0');
             }
             return f;
         });
@@ -298,12 +355,15 @@ export function initFormFieldsPlugin(translations, enabled = true) {
             const y = f.y * canvas.height;
             const w = f.w * canvas.width;
             const h = f.h * canvas.height;
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(x,y,w,h);
+            if (f.border !== false) {
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x,y,w,h);
+            }
             if (f.type === 'text') {
-                ctx.fillStyle = '#000';
-                ctx.font = `${Math.max(10, h*0.8)}px sans-serif`;
+                ctx.fillStyle = f.color || '#000';
+                const fontPx = f.size ? f.size * canvas.height : Math.max(10, h*0.8);
+                ctx.font = `${fontPx}px sans-serif`;
                 ctx.textBaseline = 'top';
                 ctx.fillText(f.value || '', x+2, y+2, w-4);
             } else if (f.type === 'checkbox') {
@@ -315,8 +375,9 @@ export function initFormFieldsPlugin(translations, enabled = true) {
                     ctx.stroke();
                 }
             } else if (f.type === 'select') {
-                ctx.fillStyle = '#000';
-                ctx.font = `${Math.max(10, h*0.8)}px sans-serif`;
+                ctx.fillStyle = f.color || '#000';
+                const fontPx = f.size ? f.size * canvas.height : Math.max(10, h*0.8);
+                ctx.font = `${fontPx}px sans-serif`;
                 ctx.textBaseline = 'top';
                 ctx.fillText(f.value || '', x+2, y+2, w-4);
             } else if ((f.type === 'signdraw' || f.type === 'signimg') && f.value) {
