@@ -265,11 +265,9 @@ def main():
     def update(state):
         icon.icon = create_image(state)
 
-    def open_app(icon, item):
-        open_browser()
-
     def start_action(icon, item):
         start_app()
+        open_browser()
         update(True)
 
     def stop_action(icon, item):
@@ -289,7 +287,6 @@ def main():
         update_branch()
 
     menu_items = [
-        MenuItem(tr('openApp'), open_app),
         MenuItem(tr('startApp'), start_action, default=True),
         MenuItem(tr('stopApp'), stop_action),
         MenuItem(tr('updateMain'), update_main_action),

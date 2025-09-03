@@ -155,6 +155,8 @@ def save_license_overrides(update: dict) -> dict:
 # Developer license key for demonstration (case-insensitive)
 DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "DEVELOPER")
 DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
+MANUAL_LICENSE_KEY = os.environ.get("DOCROPPER_MANUAL_LICENSE", "").upper()
+ONLINE_LICENSE_KEY = os.environ.get("DOCROPPER_ONLINE_LICENSE", "").upper()
 DEMO_FULL_LICENSE_KEY = "DEMO-FULL-DC"
 DEFAULT_SPONSOR_FRAME = (
     "https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2F"
@@ -354,9 +356,11 @@ def get_lan_ip() -> str:
 def load_settings():
     # Reload environment variables so license changes are picked up on each call
     load_env_files(override=True)
-    global DEV_LICENSE_KEY, DEV_LICENSE_KEY_UPPER
+    global DEV_LICENSE_KEY, DEV_LICENSE_KEY_UPPER, MANUAL_LICENSE_KEY, ONLINE_LICENSE_KEY
     DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "DEVELOPER")
     DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper().strip()
+    MANUAL_LICENSE_KEY = os.environ.get("DOCROPPER_MANUAL_LICENSE", "").upper().strip()
+    ONLINE_LICENSE_KEY = os.environ.get("DOCROPPER_ONLINE_LICENSE", "").upper().strip()
     if not os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "w") as fh:
             json.dump(DEFAULT_SETTINGS, fh)
@@ -500,6 +504,8 @@ def load_settings():
             merged.update(overrides)
 
         dev_env = DEV_LICENSE_KEY_UPPER
+        manual_env = MANUAL_LICENSE_KEY
+        online_env = ONLINE_LICENSE_KEY
         key_upper = merged.get("license_key", "").strip().upper()
         is_demo = key_upper == DEMO_FULL_LICENSE_KEY
         is_dev = (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV")
@@ -520,6 +526,29 @@ def load_settings():
             if not merged.get("license_name"):
                 merged["license_name"] = "Developer"
             merged["enable_mobilesign"] = True
+        elif manual_env and key_upper == manual_env:
+            merged["license_level"] = "full"
+            merged["license_type"] = "manual"
+            if not merged.get("license_name"):
+                merged["license_name"] = "Manual License"
+        elif online_env and key_upper == online_env:
+            merged["license_level"] = "full"
+            merged["license_type"] = "online"
+            merged["license_check"] = True
+            if not merged.get("license_name"):
+                merged["license_name"] = "Online License"
+        else:
+            merged["license_level"] = "full"
+            merged["license_type"] = "demo"
+            merged["demo_full_mode"] = True
+            if not merged.get("license_name"):
+                merged["license_name"] = "Demo User"
+            merged["enable_mobilesign"] = True
+            if not merged.get("paypal_link"):
+                merged["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
+            if not merged.get("public_url"):
+                merged["public_url"] = "https://doccropper.iltuoconsulenteit.it"
+            is_demo = True
         if (is_demo or is_dev) and not merged.get("sponsor_frame"):
             merged["sponsor_frame"] = DEFAULT_SPONSOR_FRAME
         try:
@@ -570,8 +599,11 @@ def save_settings(update: dict):
         data["public_url"] = os.getenv("DOCROPPER_PUBLIC_URL")
     key_upper = data.get("license_key", "").strip().upper()
     dev_env = DEV_LICENSE_KEY_UPPER
+    manual_env = MANUAL_LICENSE_KEY
+    online_env = ONLINE_LICENSE_KEY
     if key_upper == DEMO_FULL_LICENSE_KEY:
         data["license_level"] = "full"
+        data["license_type"] = "demo"
         data["demo_full_mode"] = True
         if not data.get("license_name"):
             data["license_name"] = "Demo User"
@@ -582,9 +614,32 @@ def save_settings(update: dict):
             data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
     elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
         data["license_level"] = "full"
+        data["license_type"] = "developer"
         if not data.get("license_name"):
             data["license_name"] = "Developer"
         data["enable_mobilesign"] = True
+    elif manual_env and key_upper == manual_env:
+        data["license_level"] = "full"
+        data["license_type"] = "manual"
+        if not data.get("license_name"):
+            data["license_name"] = "Manual License"
+    elif online_env and key_upper == online_env:
+        data["license_level"] = "full"
+        data["license_type"] = "online"
+        data["license_check"] = True
+        if not data.get("license_name"):
+            data["license_name"] = "Online License"
+    else:
+        data["license_level"] = "full"
+        data["license_type"] = "demo"
+        data["demo_full_mode"] = True
+        if not data.get("license_name"):
+            data["license_name"] = "Demo User"
+        data["enable_mobilesign"] = True
+        if not data.get("paypal_link"):
+            data["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
+        if not data.get("public_url"):
+            data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
     # Remove fields that are enforced by license
     license_locked = load_license_overrides()
     for key, val in license_locked.items():

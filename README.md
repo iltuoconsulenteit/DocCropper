@@ -295,6 +295,9 @@ To activate Pro or Full editions:
     or the key ends with `-DEV`. Saving such a key through the Licenses panel now
      automatically sets the edition to **Full** and enables mobile signing. When a
      developer key is active the tray menu includes an **Update Branch** option.
+  - Manual keys unlock Full features when `DOCROPPER_MANUAL_LICENSE` matches the entered key
+  - A key matching `DOCROPPER_ONLINE_LICENSE` forces an online validation against the license server
+  - If no known key is found, DocCropper falls back to demo mode with logos and banners still visible
 - Mobile signing is enabled automatically when a developer key is used
 - Set `LICENSE_CHECK=true` in your `.env` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
 If the server response includes an `active_plugins` list, DocCropper automatically shows buttons for those modules and hides tools for any plugins that are disabled or unlicensed. Developer builds therefore see in-progress plugins while production installations do not.
