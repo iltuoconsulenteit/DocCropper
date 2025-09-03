@@ -983,7 +983,10 @@
             window.startSign = () => {
               if (this.files.length > 0) this.signPage(0);
             };
-            window.getProcessedImages = () => this.files.map(f => f.url);
+            window.getProcessedImages = () =>
+              this.files
+                .filter(f => !this.pageSelectEnabled || f.selected !== false)
+                .map(f => f.url);
             window.setProcessedImage = (i, src) => {
               if (this.files[i]) {
                 this.files[i].url = src;
