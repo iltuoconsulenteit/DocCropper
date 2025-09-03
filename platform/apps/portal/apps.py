@@ -6,7 +6,7 @@ import os
 def _ensure_default_admin():
     """Create a default superuser if none exists."""
     from django.contrib.auth import get_user_model
-    from django.db.utils import OperationalError, ProgrammingError
+    from django.db.utils import OperationalError, ProgrammingError, IntegrityError
 
     try:
         User = get_user_model()
@@ -14,8 +14,8 @@ def _ensure_default_admin():
             username = os.getenv("DJANGO_SUPERUSER_USERNAME", "admin")
             password = os.getenv("DJANGO_SUPERUSER_PASSWORD", "admin")
             User.objects.create_superuser(username=username, email="", password=password)
-    except (OperationalError, ProgrammingError):
-        # Database might not be ready (e.g. during migrations)
+    except (OperationalError, ProgrammingError, IntegrityError):
+        # Database might not be ready or another process may have created the user
         pass
 
 
