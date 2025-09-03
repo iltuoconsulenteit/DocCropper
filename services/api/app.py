@@ -115,10 +115,19 @@ SETTINGS_FILE = "settings.json"
 LICENSE_OVERRIDES_FILE = "license_overrides.json"
 # Load environment variables from any .env files in env/
 ENV_DIR = "env"
-if os.path.isdir(ENV_DIR):
-    for name in os.listdir(ENV_DIR):
-        if name.endswith(".env"):
-            load_dotenv(os.path.join(ENV_DIR, name), override=False)
+
+
+def load_env_files(override: bool = False) -> None:
+    """Load all .env files so license changes take effect without restart."""
+    if os.path.isdir(ENV_DIR):
+        for name in os.listdir(ENV_DIR):
+            if name.endswith(".env"):
+                load_dotenv(os.path.join(ENV_DIR, name), override=override)
+
+
+# Initial environment load
+load_env_files()
+
 # Directory containing per-user settings
 USERS_DIR = "users"
 
@@ -343,6 +352,11 @@ def get_lan_ip() -> str:
 
 
 def load_settings():
+    # Reload environment variables so license changes are picked up on each call
+    load_env_files(override=True)
+    global DEV_LICENSE_KEY, DEV_LICENSE_KEY_UPPER
+    DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "DEVELOPER")
+    DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper().strip()
     if not os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "w") as fh:
             json.dump(DEFAULT_SETTINGS, fh)
