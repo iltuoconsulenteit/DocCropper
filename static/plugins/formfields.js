@@ -29,7 +29,7 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         signModal.className = 'modal';
         signModal.innerHTML = `
             <div class="modal-content" style="padding:10px;">
-                <canvas id="ffSignCanvas" style="border:1px solid #000;width:400px;height:200px;"></canvas>
+                <canvas id="ffSignCanvas" width="400" height="200" style="border:1px solid #000;width:400px;height:200px;"></canvas>
                 <div style="text-align:right;margin-top:8px;">
                     <button id="ffSignClear">${translations.clear || 'Clear'}</button>
                     <button id="ffSignCancel">${translations.cancel || 'Cancel'}</button>
@@ -200,11 +200,24 @@ export function initFormFieldsPlugin(translations, enabled = true) {
     function createFieldElement(parent, f) {
         let el;
         if (f.type === 'checkbox') {
-            el = document.createElement('input');
-            el.type = 'checkbox';
+            el = document.createElement('div');
+            el.dataset.checked = f.value ? 'true' : 'false';
+            el.textContent = f.value ? '✓' : '';
+            Object.assign(el.style, {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#fff'
+            });
+            el.addEventListener('click', (ev) => {
+                if (ev.target !== el) return;
+                el.dataset.checked = el.dataset.checked === 'true' ? 'false' : 'true';
+                el.textContent = el.dataset.checked === 'true' ? '✓' : '';
+            });
         } else if (f.type === 'select') {
             el = document.createElement('select');
             el.innerHTML = '<option></option>';
+            if (f.value) el.value = f.value;
         } else if (f.type === 'signdraw' || f.type === 'signimg') {
             el = document.createElement('div');
             Object.assign(el.style, {
@@ -221,6 +234,7 @@ export function initFormFieldsPlugin(translations, enabled = true) {
             }
         } else {
             el = document.createElement('textarea');
+            if (f.value) el.value = f.value;
         }
         el.dataset.type = f.type;
         el.className = 'formField';
@@ -242,15 +256,16 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         const handle = document.createElement('div');
         Object.assign(handle.style, {
             position: 'absolute',
-            left: '-6px',
-            top: '-6px',
-            width: '12px',
-            height: '12px',
+            left: '-8px',
+            top: '-8px',
+            width: '16px',
+            height: '16px',
             background: 'rgba(37,99,235,0.8)',
-            cursor: 'move'
+            cursor: 'move',
+            zIndex: 10
         });
         el.appendChild(handle);
-        handle.addEventListener('mousedown', (e) => {
+        const dragStart = (e) => {
             e.preventDefault();
             e.stopPropagation();
             const rect = parent.getBoundingClientRect();
@@ -270,6 +285,12 @@ export function initFormFieldsPlugin(translations, enabled = true) {
             }
             window.addEventListener('mousemove', move);
             window.addEventListener('mouseup', up);
+        };
+        handle.addEventListener('mousedown', dragStart);
+        el.addEventListener('mousedown', (e) => {
+            if (e.target === el && e.button === 0 && el.tagName !== 'TEXTAREA') {
+                dragStart(e);
+            }
         });
         el.addEventListener('click', () => {
             currentType = null;
@@ -319,7 +340,7 @@ export function initFormFieldsPlugin(translations, enabled = true) {
                 h: rect.height / contRect.height
             };
             if (type === 'checkbox') {
-                f.value = el.checked;
+                f.value = el.dataset.checked === 'true';
             } else if (type === 'signdraw' || type === 'signimg') {
                 f.value = el.style.backgroundImage ? el.style.backgroundImage.slice(5, -2) : null;
             } else {

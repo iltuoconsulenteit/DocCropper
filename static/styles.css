@@ -910,4 +910,5 @@ button:hover {
     border: 1px dashed #2563eb;
     background: rgba(255,255,255,0.8);
     resize: none;
+    box-sizing: border-box;
 }
