@@ -33,7 +33,27 @@ del "%TEMP%\_writetest.tmp" 2>NUL
 echo DOCROPPER_LICENSE_KEY=!LICENSE_KEY!>> "!ENVFILE!"
 echo DOCROPPER_LICENSE_NAME=!LICENSE_NAME!>> "!ENVFILE!"
 echo LICENSE_CHECK=false>> "!ENVFILE!"
+set "LICENSE_KEY=!LICENSE_KEY!"
+set "LICENSE_NAME=!LICENSE_NAME!"
+REM Update settings.json using a temporary Python script
+set "PYTMP=%TEMP%\update_license.py"
+>%PYTMP% echo import json,os
+>>%PYTMP% echo path="settings.json"
+>>%PYTMP% echo try:
+>>%PYTMP% echo^    f=open(path)
+>>%PYTMP% echo^    data=json.load(f)
+>>%PYTMP% echo^    f.close()
+>>%PYTMP% echo except Exception:
+>>%PYTMP% echo^    data={}
+>>%PYTMP% echo data['license_key']=os.environ['LICENSE_KEY']
+>>%PYTMP% echo data['license_name']=os.environ['LICENSE_NAME']
+>>%PYTMP% echo data['license_check']=False
+>>%PYTMP% echo f=open(path,'w')
+>>%PYTMP% echo json.dump(data,f)
+>>%PYTMP% echo f.close()
+python "%PYTMP%"
+del "%PYTMP%"
 
-echo Manual license saved to !ENVFILE!
+echo Manual license saved to !ENVFILE! and settings.json updated
 pause
 endlocal
