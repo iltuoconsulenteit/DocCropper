@@ -1,4 +1,4 @@
 {
-  "enable_scan": false,
+  "enable_scan": true,
   "scan_dev_only": true
 }

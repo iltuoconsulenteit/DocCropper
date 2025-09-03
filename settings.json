@@ -56,7 +56,7 @@
   "enable_colormode": true,
   "enable_imageeditor": true,
   "enable_formfields": true,
-  "enable_scan": false,
+  "enable_scan": true,
   "login_dev_only": true,
   "crop_dev_only": false,
   "sign_dev_only": false,

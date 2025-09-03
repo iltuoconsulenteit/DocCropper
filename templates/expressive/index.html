@@ -69,6 +69,9 @@
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('export')" x-text="t('export')"></button>
           </li>
+          <li x-show="scanEnabled">
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="openScan" x-text="t('scan')"></button>
+          </li>
           <li>
             <button id="mobileSignBtn" class="w-full text-left p-2 hover:bg-gray-700" @click="command('mobileSign')" x-text="t('mobileSign')"></button>
           </li>
