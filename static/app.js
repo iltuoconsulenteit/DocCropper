@@ -151,7 +151,6 @@ const sponsorBox = document.getElementById('sponsorBox');
 const settingsBox = document.getElementById('settingsBox');
 const loginArea = document.getElementById('loginArea');
 const layoutToggleBtn = document.getElementById('layoutToggleBtn');
-const formFieldsBtn = document.getElementById('formFieldsBtn');
 let galleryHorizontal = true;
 const brandBox = document.getElementById('brandBox');
 const versionBox = document.getElementById('versionBox');
@@ -313,7 +312,6 @@ let pageSelectEnabled = false;
 let colorModePluginEnabled = false;
 let imageEditorEnabled = false;
 let formFieldsEnabled = false;
-let formFieldMode = false;
 
 let translations = {};
 let currentLang = window.DC_LANG || 'it';
@@ -818,9 +816,6 @@ function applySettings(cfg) {
     colorModePluginEnabled = activePlugins.includes('colormode');
     imageEditorEnabled = activePlugins.includes('imageeditor');
     formFieldsEnabled = activePlugins.includes('formfields');
-    formFieldMode = false;
-    toggleFormFieldButtons();
-    if (formFieldsBtn) formFieldsBtn.style.display = formFieldsEnabled ? 'inline-block' : 'none';
     if (typeof initRemoveBgPlugin === 'function' && Object.keys(translations).length) {
         initRemoveBgPlugin(translations, removeBgEnabled);
     }
@@ -919,18 +914,6 @@ if (layoutToggleBtn) {
     });
 }
 
-if (formFieldsBtn) {
-    formFieldsBtn.addEventListener('click', () => {
-        formFieldMode = !formFieldMode;
-        toggleFormFieldButtons();
-    });
-}
-
-function toggleFormFieldButtons() {
-    document.querySelectorAll('.textFieldBtn, .checkFieldBtn, .selectFieldBtn').forEach(btn => {
-        btn.style.display = formFieldMode ? 'inline-block' : 'none';
-    });
-}
 
 function applyTranslations() {
     document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -1501,47 +1484,18 @@ function addThumbnail(src, index) {
     }
 
     if (formFieldsEnabled) {
-        const txtBtn = document.createElement('button');
-        txtBtn.className = 'thumbBtn textFieldBtn';
-        txtBtn.textContent = 'T';
-        txtBtn.title = t('addTextField');
-        txtBtn.style.display = formFieldMode ? 'inline-block' : 'none';
-        txtBtn.addEventListener('click', (e) => {
+        const ffBtn = document.createElement('button');
+        ffBtn.className = 'thumbBtn formFieldsBtn';
+        ffBtn.textContent = '📝';
+        ffBtn.title = t('formFields');
+        ffBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             const idx = parseInt(container.dataset.index);
-            if (typeof window.addFormField === 'function') {
-                window.addFormField(idx, 'text');
+            if (typeof window.openFormFieldsDialog === 'function') {
+                window.openFormFieldsDialog(idx);
             }
         });
-        actions.appendChild(txtBtn);
-
-        const cbBtn = document.createElement('button');
-        cbBtn.className = 'thumbBtn checkFieldBtn';
-        cbBtn.textContent = '☑';
-        cbBtn.title = t('addCheckbox');
-        cbBtn.style.display = formFieldMode ? 'inline-block' : 'none';
-        cbBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const idx = parseInt(container.dataset.index);
-            if (typeof window.addFormField === 'function') {
-                window.addFormField(idx, 'checkbox');
-            }
-        });
-        actions.appendChild(cbBtn);
-
-        const selBtn = document.createElement('button');
-        selBtn.className = 'thumbBtn selectFieldBtn';
-        selBtn.textContent = '▾';
-        selBtn.title = t('addDropdown');
-        selBtn.style.display = formFieldMode ? 'inline-block' : 'none';
-        selBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const idx = parseInt(container.dataset.index);
-            if (typeof window.addFormField === 'function') {
-                window.addFormField(idx, 'select');
-            }
-        });
-        actions.appendChild(selBtn);
+        actions.appendChild(ffBtn);
     }
 
     let thrWrap;
@@ -2346,6 +2300,9 @@ async function generatePdf() {
     }
     if (window.mergeAllWatermarks) {
         await window.mergeAllWatermarks();
+    }
+    if (window.mergeAllFormFields) {
+        await window.mergeAllFormFields();
     }
     await mergeAllSignatures();
     if (signedPdfLink) signedPdfLink.style.display = 'none';
