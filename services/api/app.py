@@ -663,11 +663,14 @@ app = FastAPI(
     docs_url="/docs",
     openapi_url="/openapi.json",
 )
-# Allow embedding the API in same-origin frames
+# Allow embedding the API in frames by clearing X-Frame-Options
 @app.middleware("http")
 async def set_frame_options(request, call_next):
     response = await call_next(request)
-    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    # Remove any default X-Frame-Options header so the frontend can
+    # display internal pages (like the guide) inside iframes without
+    # triggering browser frame-blocking errors.
+    response.headers.pop("X-Frame-Options", None)
     return response
 # Only enable authentication routes when license checking is active
 if load_settings().get("license_check", False):
