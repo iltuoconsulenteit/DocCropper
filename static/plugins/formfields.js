@@ -191,6 +191,38 @@ export function initFormFieldsPlugin(translations, enabled = true) {
             width: (f.w * 100) + '%',
             height: (f.h * 100) + '%'
         });
+        const handle = document.createElement('div');
+        Object.assign(handle.style, {
+            position: 'absolute',
+            left: '-4px',
+            top: '-4px',
+            width: '12px',
+            height: '12px',
+            background: 'rgba(37,99,235,0.8)',
+            cursor: 'move'
+        });
+        el.appendChild(handle);
+        handle.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const rect = parent.getBoundingClientRect();
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const initLeft = parseFloat(el.style.left);
+            const initTop = parseFloat(el.style.top);
+            function move(ev) {
+                const dx = (ev.clientX - startX) / rect.width * 100;
+                const dy = (ev.clientY - startY) / rect.height * 100;
+                el.style.left = (initLeft + dx) + '%';
+                el.style.top = (initTop + dy) + '%';
+            }
+            function up() {
+                window.removeEventListener('mousemove', move);
+                window.removeEventListener('mouseup', up);
+            }
+            window.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', up);
+        });
         parent.appendChild(el);
         if (f.type === 'sign') {
             requestAnimationFrame(resize);
@@ -210,7 +242,7 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         modal.style.display = 'block';
     }
 
-    function saveAndClose() {
+    async function saveAndClose() {
         const contRect = overlay.getBoundingClientRect();
         const pageFields = Array.from(overlay.querySelectorAll('.formField')).map(el => {
             const rect = el.getBoundingClientRect();
@@ -233,95 +265,71 @@ export function initFormFieldsPlugin(translations, enabled = true) {
             return f;
         });
         fields[currentPage] = pageFields;
-        renderFieldsToThumbnail(currentPage);
+        await mergeFieldsToThumbnail(currentPage);
         modal.style.display = 'none';
     }
-
-    function renderFieldsToThumbnail(page) {
-        const container = document.querySelector(`.thumbContainer[data-index="${page}"]`);
-        if (!container) return;
-        container.style.position = 'relative';
-        container.querySelectorAll('.formField').forEach(el => el.remove());
-        (fields[page] || []).forEach(f => {
-            const el = createFieldElement(container, f);
-            if (f.type === 'checkbox') {
-                el.checked = !!f.value;
-                el.addEventListener('change', () => { f.value = el.checked; });
-            } else if (f.type === 'sign') {
-                // value handled inside createFieldElement
-            } else {
-                el.value = f.value || '';
-                el.addEventListener('input', () => { f.value = el.value; });
+    async function mergeFieldsToThumbnail(page) {
+        const pageFields = fields[page];
+        if (!pageFields || pageFields.length === 0) return;
+        const imgs = typeof window.getProcessedImages === 'function' ? window.getProcessedImages() : (window.processedImages || []);
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        function loadImage(src) {
+            return new Promise(res => { const im = new Image(); im.onload = () => res(im); im.src = src; });
+        }
+        const baseSrc = imgs[page];
+        if (!baseSrc) return;
+        const base = await loadImage(baseSrc);
+        canvas.width = base.width;
+        canvas.height = base.height;
+        ctx.drawImage(base,0,0);
+        for (const f of pageFields) {
+            const x = f.x * canvas.width;
+            const y = f.y * canvas.height;
+            const w = f.w * canvas.width;
+            const h = f.h * canvas.height;
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x,y,w,h);
+            if (f.type === 'text') {
+                ctx.fillStyle = '#000';
+                ctx.font = `${Math.max(10, h*0.8)}px sans-serif`;
+                ctx.textBaseline = 'top';
+                ctx.fillText(f.value || '', x+2, y+2, w-4);
+            } else if (f.type === 'checkbox') {
+                if (f.value) {
+                    ctx.beginPath();
+                    ctx.moveTo(x+2, y+h/2);
+                    ctx.lineTo(x+w/3, y+h-2);
+                    ctx.lineTo(x+w-2, y+2);
+                    ctx.stroke();
+                }
+            } else if (f.type === 'select') {
+                ctx.fillStyle = '#000';
+                ctx.font = `${Math.max(10, h*0.8)}px sans-serif`;
+                ctx.textBaseline = 'top';
+                ctx.fillText(f.value || '', x+2, y+2, w-4);
+            } else if (f.type === 'sign' && f.value) {
+                const img = await loadImage(f.value);
+                ctx.drawImage(img, x, y, w, h);
             }
-        });
+        }
+        const url = canvas.toDataURL('image/png');
+        if (typeof window.setProcessedImage === 'function') {
+            window.setProcessedImage(page, url);
+        } else {
+            imgs[page] = url;
+        }
+        const imgEl = document.querySelector(`.thumbContainer[data-index="${page}"] img`);
+        if (imgEl) imgEl.src = url;
+        delete fields[page];
     }
 
     async function mergeAllFormFields() {
         const pages = Object.keys(fields);
-        if (pages.length === 0) return;
-        const imgs = typeof window.getProcessedImages === 'function' ? window.getProcessedImages() : (window.processedImages || []);
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-
-        function loadImage(src) {
-            return new Promise(res => { const im = new Image(); im.onload = () => res(im); im.src = src; });
-        }
-
         for (const p of pages) {
-            const page = parseInt(p, 10);
-            const baseSrc = imgs[page];
-            if (!baseSrc) continue;
-            const base = await loadImage(baseSrc);
-            canvas.width = base.width;
-            canvas.height = base.height;
-            ctx.drawImage(base,0,0);
-            for (const f of fields[page]) {
-                const x = f.x * canvas.width;
-                const y = f.y * canvas.height;
-                const w = f.w * canvas.width;
-                const h = f.h * canvas.height;
-                ctx.strokeStyle = '#000';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(x,y,w,h);
-                if (f.type === 'text') {
-                    ctx.fillStyle = '#000';
-                    ctx.font = `${Math.max(10, h*0.8)}px sans-serif`;
-                    ctx.textBaseline = 'top';
-                    ctx.fillText(f.value || '', x+2, y+2, w-4);
-                } else if (f.type === 'checkbox') {
-                    if (f.value) {
-                        ctx.beginPath();
-                        ctx.moveTo(x+2, y+h/2);
-                        ctx.lineTo(x+w/3, y+h-2);
-                        ctx.lineTo(x+w-2, y+2);
-                        ctx.stroke();
-                    }
-                } else if (f.type === 'select') {
-                    ctx.fillStyle = '#000';
-                    ctx.font = `${Math.max(10, h*0.8)}px sans-serif`;
-                    ctx.textBaseline = 'top';
-                    ctx.fillText(f.value || '', x+2, y+2, w-4);
-                } else if (f.type === 'sign' && f.value) {
-                    const img = await loadImage(f.value);
-                    ctx.drawImage(img, x, y, w, h);
-                }
-            }
-            const url = canvas.toDataURL('image/png');
-            if (typeof window.setProcessedImage === 'function') {
-                window.setProcessedImage(page, url);
-            } else {
-                imgs[page] = url;
-            }
-            const imgEl = document.querySelector(`.thumbContainer[data-index="${page}"] img`);
-            if (imgEl) imgEl.src = url;
+            await mergeFieldsToThumbnail(parseInt(p,10));
         }
-
-        // remove drawn fields after merge
-        Object.keys(fields).forEach(p => {
-            const container = document.querySelector(`.thumbContainer[data-index="${p}"]`);
-            if (container) container.querySelectorAll('.formField').forEach(el => el.remove());
-        });
-        for (const k in fields) delete fields[k];
     }
 
     window.openFormFieldsDialog = openFormFieldsDialog;
