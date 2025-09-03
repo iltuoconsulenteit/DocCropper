@@ -48,6 +48,7 @@ Configuration variables, environment files, and the `settings.json` options are 
 - 🔔 Notification bell checks for updates and lets licensed users trigger upgrades with a PIN
 - ⏪ Rollback command restores the previous version if an update causes issues
 - ⬇️ Optional plugin adds a per-thumbnail PNG download button
+- 📠 Experimental plugin initiates scanning via a locally installed helper to access USB or network scanners
 
 ---
 
@@ -244,6 +245,13 @@ the same options found in the settings panel and lists all registered users with
 the ability to create or remove them. It relies on the REST endpoints under
 `/settings/`, `/auth/` and `/users/`.
 
+On first launch the backend checks whether a superuser exists and creates one
+if necessary. The default credentials are `admin` / `admin`, but you can
+customise them by setting the `DJANGO_SUPERUSER_USERNAME` and
+`DJANGO_SUPERUSER_PASSWORD` environment variables (for example in a `.env`
+file in the project root). Once created you can change this user from the
+standard Django admin interface and the updated credentials will be preserved.
+
 ### Google Sign-In
 
 To enable optional Google authentication, set `google_client_id` in
@@ -273,6 +281,19 @@ DocCropper ships with three editions. A **Licenses** button in the header opens 
   When this license is active the **Purchase** button turns into a PayPal
   donation link that opens in a new tab.
 
+### Setting a license key
+
+Provide the license in `env/license.env`, a top‑level `.env`, or `settings.json`
+via the `DOCROPPER_LICENSE_KEY` entry. The key determines the active edition:
+
+- leave the value empty or set it to `FREE` for the basic demo
+- use `DEMO-FULL-DC` to unlock the **Demo Full** mode with all features but a
+  watermark
+- enter the developer key defined by `DOCROPPER_DEV_LICENSE` (default
+  `DEVELOPER`) to enable developer features and plugins
+- keys matching `DOCROPPER_MANUAL_LICENSE` or `DOCROPPER_ONLINE_LICENSE` trigger
+  manual or online validation respectively
+
 When the LAN plugin is active the `lan_user_limit` setting controls how many
 accounts may use DocCropper over the network. Licenses are typically sold in
 blocks of five users (5, 10, 15 and so on).
@@ -287,6 +308,9 @@ To activate Pro or Full editions:
     or the key ends with `-DEV`. Saving such a key through the Licenses panel now
      automatically sets the edition to **Full** and enables mobile signing. When a
      developer key is active the tray menu includes an **Update Branch** option.
+  - Manual keys unlock Full features when `DOCROPPER_MANUAL_LICENSE` matches the entered key
+  - A key matching `DOCROPPER_ONLINE_LICENSE` forces an online validation against the license server
+  - If no known key is found, DocCropper falls back to demo mode with logos and banners still visible
 - Mobile signing is enabled automatically when a developer key is used
 - Set `LICENSE_CHECK=true` in your `.env` to verify the key with a remote server. With `LICENSE_CHECK=false` (default) the app trusts the provided key.
 If the server response includes an `active_plugins` list, DocCropper automatically shows buttons for those modules and hides tools for any plugins that are disabled or unlicensed. Developer builds therefore see in-progress plugins while production installations do not.

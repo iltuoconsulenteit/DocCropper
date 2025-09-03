@@ -7,6 +7,9 @@ import { initDownloadPngPlugin } from './plugins/downloadpng.js';
 import { initPageSelectPlugin } from './plugins/pageselect.js';
 import { initColorPlugin } from './plugins/colormode.js';
 import { initImageEditorPlugin } from './plugins/imageeditor.js';
+import { initFormFieldsPlugin } from './plugins/formfields.js';
+import { initScanPlugin } from './plugins/scan.js';
+import { initCloudSavePlugin } from './plugins/cloudsave.js';
 
 let scaling_factor_w;
 let scaling_factor_h;
@@ -310,6 +313,9 @@ let downloadPngEnabled = false;
 let pageSelectEnabled = false;
 let colorModePluginEnabled = false;
 let imageEditorEnabled = false;
+let formFieldsEnabled = false;
+let scanEnabled = false;
+let cloudSaveEnabled = false;
 
 let translations = {};
 let currentLang = window.DC_LANG || 'it';
@@ -813,11 +819,17 @@ function applySettings(cfg) {
     pageSelectEnabled = activePlugins.includes('pageselect');
     colorModePluginEnabled = activePlugins.includes('colormode');
     imageEditorEnabled = activePlugins.includes('imageeditor');
+    formFieldsEnabled = activePlugins.includes('formfields');
+    scanEnabled = activePlugins.includes('scan');
+    cloudSaveEnabled = activePlugins.includes('cloudsave');
     if (typeof initRemoveBgPlugin === 'function' && Object.keys(translations).length) {
         initRemoveBgPlugin(translations, removeBgEnabled);
     }
     if (typeof initWatermarkPlugin === 'function' && Object.keys(translations).length) {
         initWatermarkPlugin(translations, watermarkEnabled);
+    }
+    if (typeof initScanPlugin === 'function' && Object.keys(translations).length) {
+        initScanPlugin(translations, scanEnabled);
     }
     if (typeof initDownloadPngPlugin === 'function' && Object.keys(translations).length) {
         initDownloadPngPlugin(translations, downloadPngEnabled);
@@ -830,6 +842,12 @@ function applySettings(cfg) {
     }
     if (typeof initImageEditorPlugin === 'function') {
         initImageEditorPlugin(translations, imageEditorEnabled);
+    }
+    if (typeof initFormFieldsPlugin === 'function') {
+        initFormFieldsPlugin(translations, formFieldsEnabled);
+    }
+    if (typeof initCloudSavePlugin === 'function') {
+        initCloudSavePlugin(translations, cloudSaveEnabled);
     }
     compressEnabled = activePlugins.includes('compresspdf');
     if (cfg.update_interval !== undefined) {
@@ -908,6 +926,7 @@ if (layoutToggleBtn) {
     });
 }
 
+
 function applyTranslations() {
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const k = el.getAttribute('data-i18n');
@@ -980,7 +999,10 @@ function updateWikiLinks() {
 function updateBannerImage() {
     if (!sloganImg || bannerImages.length === 0) return;
     let img = bannerImages[bannerIndex % bannerImages.length];
-    img = img.replace('{{lang}}', currentLang);
+    img = img
+        .replace(/^[a-z]{2}(?=DocCropper)/i, '')
+        .replace(/^\{\{lang\}\}/, '')
+        .replace(/\{\{lang\}\}/g, currentLang);
     sloganImg.src = `/static/slide/${img}`;
 }
 
@@ -1474,8 +1496,45 @@ function addThumbnail(src, index) {
         actions.appendChild(dlBtnEl);
     }
 
+    if (formFieldsEnabled) {
+        const ffBtn = document.createElement('button');
+        ffBtn.className = 'thumbBtn formFieldsBtn';
+        ffBtn.textContent = '📝';
+        ffBtn.title = t('formFields');
+        ffBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            if (typeof window.openFormFieldsDialog === 'function') {
+                window.openFormFieldsDialog(idx);
+            }
+        });
+        actions.appendChild(ffBtn);
+    }
+
     let thrWrap;
     if (removeBgEnabled) {
+        thrWrap = document.createElement('div');
+        thrWrap.className = 'thumbBgThreshold';
+        thrWrap.style.display = 'none';
+        const thrInput = document.createElement('input');
+        thrInput.type = 'range';
+        thrInput.min = '0';
+        thrInput.max = '100';
+        thrInput.value = '50';
+        thrInput.title = t('removeBgThresholdPrompt');
+        thrInput.addEventListener('input', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(container.dataset.index);
+            if (typeof window.removeBackground === 'function') {
+                window.removeBackground(idx, parseInt(e.target.value, 10));
+            }
+        });
+        thrInput.addEventListener('mousedown', (e) => e.stopPropagation());
+        thrInput.addEventListener('click', (e) => e.stopPropagation());
+        thrWrap.addEventListener('mousedown', (e) => e.stopPropagation());
+        thrWrap.addEventListener('click', (e) => e.stopPropagation());
+        thrWrap.appendChild(thrInput);
+
         const bgBtnEl = document.createElement('button');
         bgBtnEl.className = 'thumbBtn removeBgBtn';
         if (bgOriginals[index]) {
@@ -1488,27 +1547,19 @@ function addThumbnail(src, index) {
         bgBtnEl.addEventListener('click', (e) => {
             e.stopPropagation();
             const idx = parseInt(container.dataset.index);
-            if (typeof window.removeBackground === 'function') {
-                window.removeBackground(idx);
+            if (bgOriginals[idx]) {
+                if (typeof window.removeBackground === 'function') {
+                    window.removeBackground(idx);
+                }
+            } else {
+                thrWrap.style.display = 'block';
+                const val = parseInt(thrInput.value, 10);
+                if (typeof window.removeBackground === 'function') {
+                    window.removeBackground(idx, val);
+                }
             }
         });
         actions.appendChild(bgBtnEl);
-
-        thrWrap = document.createElement('div');
-        thrWrap.className = 'thumbBgThreshold';
-        const thrInput = document.createElement('input');
-        thrInput.type = 'range';
-        thrInput.min = '0';
-        thrInput.max = '100';
-        thrInput.value = '50';
-        thrInput.title = t('removeBgThresholdPrompt');
-        thrInput.addEventListener('input', (e) => {
-            e.stopPropagation();
-            if (typeof window.setRemoveBgThreshold === 'function') {
-                window.setRemoveBgThreshold(parseInt(e.target.value, 10));
-            }
-        });
-        thrWrap.appendChild(thrInput);
     }
 
     if (signEnabled) {
@@ -2262,6 +2313,9 @@ async function generatePdf() {
     }
     if (window.mergeAllWatermarks) {
         await window.mergeAllWatermarks();
+    }
+    if (window.mergeAllFormFields) {
+        await window.mergeAllFormFields();
     }
     await mergeAllSignatures();
     if (signedPdfLink) signedPdfLink.style.display = 'none';
@@ -3414,6 +3468,7 @@ function renderDevSettingsBox() {
         <label><input type="checkbox" id="enableImageEditorChk" ${currentSettings.enable_imageeditor?'checked':''}> ${t('enableImageEditor')}</label>
         <label><input type="checkbox" id="enablePageSelectChk" ${currentSettings.enable_pageselect?'checked':''}> ${t('enablePageSelect')}</label>
         <label><input type="checkbox" id="enableDownloadPngChk" ${currentSettings.enable_downloadpng?'checked':''}> ${t('enableDownloadPng')}</label>
+        <label><input type="checkbox" id="enableScanChk" ${currentSettings.enable_scan?'checked':''}> ${t('enableScan')}</label>
         <button id="saveDevSettingsBtn">${t('saveSettings')}</button>
     </div>`;
     devSettingsBox.innerHTML = html;
@@ -3422,7 +3477,8 @@ function renderDevSettingsBox() {
         const update = {
             enable_imageeditor: document.getElementById('enableImageEditorChk').checked,
             enable_pageselect: document.getElementById('enablePageSelectChk').checked,
-            enable_downloadpng: document.getElementById('enableDownloadPngChk').checked
+            enable_downloadpng: document.getElementById('enableDownloadPngChk').checked,
+            enable_scan: document.getElementById('enableScanChk').checked
         };
         await saveSettings(update);
         const cfg = await loadSettings();
@@ -3512,10 +3568,13 @@ loadSettings().then(async (cfg) => {
     initRemoveBgPlugin(translations, removeBgEnabled);
     initPdfCompressPlugin(translations, compressEnabled);
     initWatermarkPlugin(translations, watermarkEnabled);
+    initScanPlugin(translations, scanEnabled);
     initDownloadPngPlugin(translations, downloadPngEnabled);
     initPageSelectPlugin(pageSelectEnabled);
     initColorPlugin(translations, colorModePluginEnabled);
     initImageEditorPlugin(translations, imageEditorEnabled);
+    initFormFieldsPlugin(translations, formFieldsEnabled);
+    initCloudSavePlugin(translations, cloudSaveEnabled);
     renderPaymentBox(cfg);
     renderLicenseBox();
     renderLogin(cfg);

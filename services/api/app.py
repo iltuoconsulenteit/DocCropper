@@ -91,6 +91,8 @@ from plugin.core.login import register as register_login
 from plugin.core.downloadpng import register as register_downloadpng
 from plugin.core.pageselect import register as register_pageselect
 from plugin.core.colormode import register as register_colormode
+from plugin.core.scan import register as register_scan
+from plugin.core.cloudsave import register as register_cloudsave
 
 try:
     import stripe
@@ -113,10 +115,19 @@ SETTINGS_FILE = "settings.json"
 LICENSE_OVERRIDES_FILE = "license_overrides.json"
 # Load environment variables from any .env files in env/
 ENV_DIR = "env"
-if os.path.isdir(ENV_DIR):
-    for name in os.listdir(ENV_DIR):
-        if name.endswith(".env"):
-            load_dotenv(os.path.join(ENV_DIR, name), override=False)
+
+
+def load_env_files(override: bool = False) -> None:
+    """Load all .env files so license changes take effect without restart."""
+    if os.path.isdir(ENV_DIR):
+        for name in os.listdir(ENV_DIR):
+            if name.endswith(".env"):
+                load_dotenv(os.path.join(ENV_DIR, name), override=override)
+
+
+# Initial environment load
+load_env_files()
+
 # Directory containing per-user settings
 USERS_DIR = "users"
 
@@ -142,8 +153,10 @@ def save_license_overrides(update: dict) -> dict:
     return data
 
 # Developer license key for demonstration (case-insensitive)
-DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "")
+DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "DEVELOPER")
 DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
+MANUAL_LICENSE_KEY = os.environ.get("DOCROPPER_MANUAL_LICENSE", "").upper()
+ONLINE_LICENSE_KEY = os.environ.get("DOCROPPER_ONLINE_LICENSE", "").upper()
 DEMO_FULL_LICENSE_KEY = "DEMO-FULL-DC"
 DEFAULT_SPONSOR_FRAME = (
     "https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2F"
@@ -341,6 +354,13 @@ def get_lan_ip() -> str:
 
 
 def load_settings():
+    # Reload environment variables so license changes are picked up on each call
+    load_env_files(override=True)
+    global DEV_LICENSE_KEY, DEV_LICENSE_KEY_UPPER, MANUAL_LICENSE_KEY, ONLINE_LICENSE_KEY
+    DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", "DEVELOPER")
+    DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper().strip()
+    MANUAL_LICENSE_KEY = os.environ.get("DOCROPPER_MANUAL_LICENSE", "").upper().strip()
+    ONLINE_LICENSE_KEY = os.environ.get("DOCROPPER_ONLINE_LICENSE", "").upper().strip()
     if not os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "w") as fh:
             json.dump(DEFAULT_SETTINGS, fh)
@@ -350,7 +370,9 @@ def load_settings():
             base = json.load(fh)
         merged = DEFAULT_SETTINGS.copy()
         merged.update(base)
-        plugins_dir = os.path.join(os.path.dirname(__file__), "plugins")
+        plugins_dir = os.path.join(
+            os.path.dirname(__file__), "..", "..", "plugin", "core"
+        )
         try:
             for name in os.listdir(plugins_dir):
                 cfg_path = os.path.join(plugins_dir, name, "settings.json")
@@ -482,11 +504,14 @@ def load_settings():
             merged.update(overrides)
 
         dev_env = DEV_LICENSE_KEY_UPPER
+        manual_env = MANUAL_LICENSE_KEY
+        online_env = ONLINE_LICENSE_KEY
         key_upper = merged.get("license_key", "").strip().upper()
         is_demo = key_upper == DEMO_FULL_LICENSE_KEY
         is_dev = (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV")
         if is_demo:
             merged["license_level"] = "full"
+            merged["license_type"] = "demo"
             merged["demo_full_mode"] = True
             if not merged.get("license_name"):
                 merged["license_name"] = "Demo User"
@@ -497,9 +522,33 @@ def load_settings():
                 merged["public_url"] = "https://doccropper.iltuoconsulenteit.it"
         elif is_dev:
             merged["license_level"] = "full"
+            merged["license_type"] = "developer"
             if not merged.get("license_name"):
                 merged["license_name"] = "Developer"
             merged["enable_mobilesign"] = True
+        elif manual_env and key_upper == manual_env:
+            merged["license_level"] = "full"
+            merged["license_type"] = "manual"
+            if not merged.get("license_name"):
+                merged["license_name"] = "Manual License"
+        elif online_env and key_upper == online_env:
+            merged["license_level"] = "full"
+            merged["license_type"] = "online"
+            merged["license_check"] = True
+            if not merged.get("license_name"):
+                merged["license_name"] = "Online License"
+        else:
+            merged["license_level"] = "full"
+            merged["license_type"] = "demo"
+            merged["demo_full_mode"] = True
+            if not merged.get("license_name"):
+                merged["license_name"] = "Demo User"
+            merged["enable_mobilesign"] = True
+            if not merged.get("paypal_link"):
+                merged["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
+            if not merged.get("public_url"):
+                merged["public_url"] = "https://doccropper.iltuoconsulenteit.it"
+            is_demo = True
         if (is_demo or is_dev) and not merged.get("sponsor_frame"):
             merged["sponsor_frame"] = DEFAULT_SPONSOR_FRAME
         try:
@@ -514,6 +563,11 @@ def load_settings():
                 merged.update(sponsorframe.get_config(merged))
         except Exception:
             logger.exception("sponsor plugin failed")
+        logger.info(
+            "License key '%s' loaded (level: %s)",
+            merged.get("license_key", ""),
+            merged.get("license_level", ""),
+        )
         return merged
     except Exception:
         return DEFAULT_SETTINGS.copy()
@@ -532,7 +586,8 @@ def save_settings(update: dict):
         'pageselect': ['enable_pageselect', 'pageselect_dev_only'],
         'colormode': ['enable_colormode', 'colormode_dev_only'],
         'watermark': ['enable_watermark', 'watermark_dev_only'],
-        'imageeditor': ['enable_imageeditor', 'imageeditor_dev_only']
+        'imageeditor': ['enable_imageeditor', 'imageeditor_dev_only'],
+        'scan': ['enable_scan', 'scan_dev_only']
     }
     plugin_updates = {}
     for pname, keys in plugin_fields.items():
@@ -544,8 +599,11 @@ def save_settings(update: dict):
         data["public_url"] = os.getenv("DOCROPPER_PUBLIC_URL")
     key_upper = data.get("license_key", "").strip().upper()
     dev_env = DEV_LICENSE_KEY_UPPER
+    manual_env = MANUAL_LICENSE_KEY
+    online_env = ONLINE_LICENSE_KEY
     if key_upper == DEMO_FULL_LICENSE_KEY:
         data["license_level"] = "full"
+        data["license_type"] = "demo"
         data["demo_full_mode"] = True
         if not data.get("license_name"):
             data["license_name"] = "Demo User"
@@ -556,9 +614,32 @@ def save_settings(update: dict):
             data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
     elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
         data["license_level"] = "full"
+        data["license_type"] = "developer"
         if not data.get("license_name"):
             data["license_name"] = "Developer"
         data["enable_mobilesign"] = True
+    elif manual_env and key_upper == manual_env:
+        data["license_level"] = "full"
+        data["license_type"] = "manual"
+        if not data.get("license_name"):
+            data["license_name"] = "Manual License"
+    elif online_env and key_upper == online_env:
+        data["license_level"] = "full"
+        data["license_type"] = "online"
+        data["license_check"] = True
+        if not data.get("license_name"):
+            data["license_name"] = "Online License"
+    else:
+        data["license_level"] = "full"
+        data["license_type"] = "demo"
+        data["demo_full_mode"] = True
+        if not data.get("license_name"):
+            data["license_name"] = "Demo User"
+        data["enable_mobilesign"] = True
+        if not data.get("paypal_link"):
+            data["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
+        if not data.get("public_url"):
+            data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
     # Remove fields that are enforced by license
     license_locked = load_license_overrides()
     for key, val in license_locked.items():
@@ -659,6 +740,16 @@ app = FastAPI(
     docs_url="/docs",
     openapi_url="/openapi.json",
 )
+# Allow embedding the API in frames by forcing X-Frame-Options to SAMEORIGIN
+@app.middleware("http")
+async def set_frame_options(request, call_next):
+    response = await call_next(request)
+    # Some ASGI responses (e.g., from StaticFiles) may set a default
+    # `X-Frame-Options: DENY`. Explicitly override this so that
+    # documentation pages like the embedded guide can be displayed
+    # inside iframes served from the same origin.
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    return response
 # Only enable authentication routes when license checking is active
 if load_settings().get("license_check", False):
     app.include_router(auth_router)
@@ -811,6 +902,12 @@ enable_colormode = str(os.getenv('DOCROPPER_ENABLE_COLORMODE', settings.get('ena
 colormode_dev = str(os.getenv('DOCROPPER_COLORMODE_DEV_ONLY', settings.get('colormode_dev_only', False))).lower() == 'true'
 enable_imageeditor = str(os.getenv('DOCROPPER_ENABLE_IMAGEEDITOR', settings.get('enable_imageeditor', True))).lower() == 'true'
 imageeditor_dev = str(os.getenv('DOCROPPER_IMAGEEDITOR_DEV_ONLY', settings.get('imageeditor_dev_only', True))).lower() == 'true'
+enable_formfields = str(os.getenv('DOCROPPER_ENABLE_FORMFIELDS', settings.get('enable_formfields', False))).lower() == 'true'
+formfields_dev = str(os.getenv('DOCROPPER_FORMFIELDS_DEV_ONLY', settings.get('formfields_dev_only', True))).lower() == 'true'
+enable_scan = str(os.getenv('DOCROPPER_ENABLE_SCAN', settings.get('enable_scan', False))).lower() == 'true'
+scan_dev = str(os.getenv('DOCROPPER_SCAN_DEV_ONLY', settings.get('scan_dev_only', True))).lower() == 'true'
+enable_cloudsave = str(os.getenv('DOCROPPER_ENABLE_CLOUDSAVE', settings.get('enable_cloudsave', False))).lower() == 'true'
+cloudsave_dev = str(os.getenv('DOCROPPER_CLOUDSAVE_DEV_ONLY', settings.get('cloudsave_dev_only', True))).lower() == 'true'
 
 if enable_sign and (not sign_dev or is_dev_license):
     register_sign(app, plugin_utils)
@@ -846,6 +943,16 @@ if enable_imageeditor and (not imageeditor_dev or is_dev_license):
     from plugin.core.imageeditor import register as register_imageeditor
     register_imageeditor(app, plugin_utils)
     ACTIVE_PLUGINS.append('imageeditor')
+if enable_formfields and (not formfields_dev or is_dev_license):
+    from plugin.core.formfields import register as register_formfields
+    register_formfields(app, plugin_utils)
+    ACTIVE_PLUGINS.append('formfields')
+if enable_scan and (not scan_dev or is_dev_license):
+    register_scan(app, plugin_utils)
+    ACTIVE_PLUGINS.append('scan')
+if enable_cloudsave and (not cloudsave_dev or is_dev_license):
+    register_cloudsave(app, plugin_utils)
+    ACTIVE_PLUGINS.append('cloudsave')
 
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):
@@ -1125,6 +1232,8 @@ async def pdf_to_images(
             return JSONResponse(status_code=413, content={"message": "File too large"})
 
         session_id = request.cookies.get("session_id")
+        if not session_id:
+            session_id = uuid.uuid4().hex
         session_dir = get_session_dir(session_id)
         if session_dir:
             try:
@@ -1194,6 +1303,8 @@ async def create_pdf(
             if demo_key or (dev_key_valid and settings.get("developer_watermark", False)):
                 licensed = False
         session_id = request.cookies.get("session_id")
+        if not session_id:
+            session_id = uuid.uuid4().hex
         session_dir = get_session_dir(session_id)
         pil_images = []
         for img_b64 in images:
@@ -1441,7 +1552,9 @@ async def create_pdf(
             logger.exception("Failed to save PDF")
         pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
         cleanup_old_sessions()
-        return JSONResponse(content={"pdf": "data:application/pdf;base64," + pdf_base64})
+        response = JSONResponse(content={"pdf": "data:application/pdf;base64," + pdf_base64})
+        response.set_cookie("session_id", session_id, httponly=True)
+        return response
     except Exception as e:
         logger.exception("Failed to create PDF")
         return JSONResponse(status_code=500, content={"message": f"Could not create PDF: {str(e)}"})

@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DocCropper Expressive</title>
+    <link rel="icon" type="image/png" href="/static/logos/app_logo.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
@@ -68,6 +69,9 @@
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('export')" x-text="t('export')"></button>
           </li>
+          <li x-show="scanEnabled">
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="openScan" x-text="t('scan')"></button>
+          </li>
           <li>
             <button id="mobileSignBtn" class="w-full text-left p-2 hover:bg-gray-700" @click="command('mobileSign')" x-text="t('mobileSign')"></button>
           </li>
@@ -112,6 +116,7 @@
         <div class="flex-1"></div>
         <a href="/admin/" class="text-xs underline mr-2">Area amministratore</a>
         <a href="/api/docs" class="text-xs underline mr-2">Documentazione API</a>
+        <a href="#" @click="command('guide')" class="text-xs underline mr-2" x-text="t('guide')"></a>
         <span class="text-xs text-gray-600" x-text="licenseInfo()"></span>
         <button @click="licenseModal=true" class="text-xs underline" x-text="t('licenses')"></button>
         <select x-model="lang" @change="setLang" class="border rounded p-1 text-sm">
@@ -137,21 +142,31 @@
             <p class="text-gray-600" x-text="t('noFiles')"></p>
           </template>
           <div x-show="status" id="statusMessage" class="mb-2 p-2 bg-blue-100 text-blue-800 text-sm rounded" x-text="status"></div>
-          <div x-show="files.length > 0" class="flex items-center flex-wrap gap-4 mb-3">
-            <button id="addImportBtn" class="w-10 h-10 rounded bg-green-500 text-white text-2xl font-bold flex items-center justify-center" @click="$refs.imageUpload.click()" :title="t('addImport')">+</button>
-            <div class="flex items-center gap-2 mx-auto" id="removeBlankGroup">
+          <div class="flex items-center flex-wrap gap-4 mb-3">
+            <div id="addImportArea" class="w-32 h-20 rounded border-2 border-dashed border-green-500 text-green-600 flex flex-col items-center justify-center cursor-pointer" @click="$refs.imageUpload.click()" @dragover.prevent @drop.prevent="handleDrop" :title="t('addImport')">
+              <span class="text-2xl">+</span>
+              <span class="text-xs" x-text="t('addImport')"></span>
+            </div>
+            <div id="scanArea" x-show="scanEnabled" class="w-32 h-20 rounded border-2 border-dashed border-blue-500 text-blue-600 flex flex-col items-center justify-center cursor-pointer" @click="openScan" :title="t('scan')">
+              <span class="text-2xl">📠</span>
+              <span class="text-xs" x-text="t('scan')"></span>
+            </div>
+            <div class="flex items-center gap-2 mx-auto" id="removeBlankGroup" x-show="files.length > 0">
               <button id="removeBlankBtn" class="h-10 px-4 rounded bg-yellow-500 text-white flex items-center justify-center text-sm" @click="removeBlankPages" x-text="t('removeBlank')"></button>
               <label class="text-xs" for="blankThreshold" x-text="t('blankThreshold')"></label>
               <input id="blankThreshold" type="number" min="80" max="100" step="1" class="h-10 w-16 border rounded text-xs" x-model.number="blankThreshold">
             </div>
-            <button id="clearImagesBtn" class="w-10 h-10 rounded bg-red-500 text-white text-2xl flex items-center justify-center" @click="clearImages" :title="t('clearImages')">🧹</button>
-            <button id="layoutToggleBtn" class="w-10 h-10 rounded bg-blue-500 text-white text-2xl flex items-center justify-center" @click="toggleLayout" :title="layoutHorizontal ? t('verticalView') : t('horizontalView')" x-text="layoutHorizontal ? '↕' : '↔'"></button>
+            <button id="clearImagesBtn" class="w-10 h-10 rounded bg-red-500 text-white text-2xl flex items-center justify-center" @click="clearImages" :title="t('clearImages')" x-show="files.length > 0">🧹</button>
+            <button id="layoutToggleBtn" class="w-10 h-10 rounded bg-blue-500 text-white text-2xl flex items-center justify-center" @click="toggleLayout" :title="layoutHorizontal ? t('verticalView') : t('horizontalView')" x-text="layoutHorizontal ? '↕' : '↔'" x-show="files.length > 0"></button>
           </div>
           <div x-show="tab==='files'" x-ref="fileGrid" :class="layoutHorizontal ? 'flex overflow-x-auto space-x-4' : 'grid grid-cols-1 lg:grid-cols-2 gap-4'">
             <template x-for="(file, idx) in files" :key="file.id">
               <div class="mb-4 thumbContainer" :data-index="idx">
                 <p class="text-xs text-center mb-1 truncate" x-text="(idx+1)+' - '+file.name"></p>
                 <div class="border p-1">
+                  <div class="flex justify-center mb-1" x-show="pageSelectEnabled">
+                    <input type="checkbox" class="thumbSelect" x-model="file.selected" @click.stop :title="t('selectPage')">
+                  </div>
                   <div class="relative">
                     <button @click="crop(idx)" title="Crop" class="absolute top-0 left-0 m-1 bg-white/70 w-8 h-8 rounded flex items-center justify-center text-lg">✂</button>
                     <button @click="remove(idx)" title="Delete" class="absolute top-0 right-0 m-1 bg-white/70 w-8 h-8 rounded flex items-center justify-center text-lg">✖</button>
@@ -165,12 +180,14 @@
                     <button x-show="colorModeEnabled" @click="toBW(idx)" title="B/W" class="text-base">⬛</button>
                     <button x-show="colorModeEnabled" @click="toColor(idx)" title="Color" class="text-base">🎨</button>
                     <button x-show="watermarkEnabled" @click="watermark(idx)" :title="t('watermark')" class="text-base flex items-center justify-center"><img src="/static/icons/stamp.svg" alt="" class="h-4 w-4" /></button>
-                    <button x-show="removeBgEnabled" @click="removeBg(idx)" :title="file.bgOriginal ? t('restoreBg') : t('removeBg')" class="text-base" x-text="file.bgOriginal ? '↩' : '⌦'"></button>
+                    <button x-show="removeBgEnabled" @click="removeBg(idx, file.bgThreshold)" :title="file.bgOriginal ? t('restoreBg') : t('removeBg')" class="text-base" x-text="file.bgOriginal ? '↩' : '⌦'"></button>
+                    <button x-show="downloadPngEnabled" @click="downloadPng(idx)" :title="t('downloadPng')" class="text-base">⬇</button>
+                    <button x-show="formFieldsEnabled" @click="formFields(idx)" :title="t('formFields')" class="text-base">📝</button>
                     <button @click="signPage(idx)" title="Sign" class="text-base">✒</button>
                   </div>
-                  <div x-show="removeBgEnabled" class="flex flex-col items-center mt-1">
+                  <div x-show="removeBgEnabled && file.bgOriginal" class="flex flex-col items-center mt-1" @mousedown.stop @click.stop>
                     <label class="text-xs" x-text="t('removeBgThresholdPrompt')"></label>
-                    <input type="range" min="0" max="100" x-model.number="removeBgThreshold" @input="updateRemoveBgThreshold" class="w-24" />
+                    <input type="range" min="0" max="100" x-model.number="file.bgThreshold" @input="removeBg(idx, file.bgThreshold)" @mousedown.stop @click.stop class="w-24" />
                   </div>
                 </div>
               </div>
@@ -197,7 +214,7 @@
             <button class="px-2 py-1 border rounded text-xs" @click="openUpdateModal('rollback')" x-text="t('rollback')"></button>
           </div>
         </div>
-        <div x-show="tab==='sponsor'" class="p-4 space-y-4" x-data="{tiers:[], price(c){const t=this.tiers.find(x=>x.codice===c);return t&&t.prezzo_base?('€'+t.prezzo_base):'';}}" x-init="fetch('/index.php?option=com_fabrik&view=list&listid=XX&format=raw&format=json').then(r=>r.json()).then(d=>tiers=d)">
+        <div x-show="tab==='sponsor'" class="p-4 space-y-4" x-data="{tiers:[], price(c){const t=(Array.isArray(this.tiers)?this.tiers:[]).find(x=>x.codice===c);return t&&t.prezzo_base?('€'+t.prezzo_base):'';}}" x-init="fetch('/index.php?option=com_fabrik&view=list&listid=XX&format=raw&format=json').then(r=>r.json()).then(d=>this.tiers=Array.isArray(d)?d:[])">
           <h2 class="text-2xl font-bold" x-text="t('sponsorTitle')"></h2>
           <p x-text="t('sponsorIntro')"></p>
           <table class="w-full text-sm text-left border-collapse">
@@ -277,7 +294,7 @@
         <div x-show="tab!=='files' && tab!=='guide' && tab!=='updates' && tab!=='tutorials' && tab!=='purchase' && tab!=='sponsor'" class="text-gray-600" x-text="t('selectCommand')"></div>
       </main>
       <footer class="mt-auto py-1 px-4">
-        <div class="flex flex-col sm:flex-row items-center justify-between w-full space-y-2 sm:space-y-0">
+        <div :class="['flex flex-col sm:flex-row items-center w-full space-y-2 sm:space-y-0', (sponsorLogo || clientLogo) ? 'justify-between' : 'justify-center']">
           <a x-show="sponsorLogo" :href="sponsorUrl || '#'" target="_blank">
             <img :src="sponsorLogo" alt="Sponsor" :style="'height:'+displaySponsorHeight()+'px'" />
           </a>
@@ -455,6 +472,45 @@
       </div>
     </div>
 
+    <!-- Scan Modal -->
+    <div x-show="scanModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-white p-4 rounded w-80 space-y-3">
+        <h2 class="text-lg" x-text="t('scan')"></h2>
+        <div>
+          <label class="block text-sm" x-text="t('selectScanner')"></label>
+          <select class="border w-full p-1" x-model="selectedScanner">
+            <template x-for="s in scanners" :key="s"><option x-text="s"></option></template>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm" x-text="t('scanProfile')"></label>
+          <select class="border w-full p-1" x-model="selectedProfile">
+            <option value="" x-text="t('none')"></option>
+            <template x-for="p in scanProfiles" :key="p.name"><option :value="p.name" x-text="p.name"></option></template>
+          </select>
+        </div>
+        <div class="border-t pt-2 space-y-2">
+          <h3 class="text-sm font-semibold" x-text="t('newProfile')"></h3>
+          <input type="text" class="border w-full p-1" x-model="newProfile.name" :placeholder="t('profileName')">
+          <div class="flex gap-2">
+            <input type="number" class="border w-1/2 p-1" x-model.number="newProfile.dpi" :placeholder="t('dpi')">
+            <select class="border w-1/2 p-1" x-model="newProfile.color">
+              <option value="color" x-text="t('color')"></option>
+              <option value="gray" x-text="t('gray')"></option>
+              <option value="bw" x-text="t('bw')"></option>
+            </select>
+          </div>
+          <div class="text-right">
+            <button class="px-2 py-1 bg-blue-500 text-white rounded text-sm" @click="saveScanProfile" x-text="t('saveProfile')"></button>
+          </div>
+        </div>
+        <div class="text-right space-x-2 pt-2">
+          <button class="px-3 py-1 bg-gray-300 rounded" @click="scanModal=false" x-text="t('cancel')"></button>
+          <button class="px-3 py-1 bg-blue-500 text-white rounded" @click="startScan" x-text="t('startScan')"></button>
+        </div>
+      </div>
+    </div>
+
     <!-- Update PIN Modal -->
     <div x-show="showUpdateModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
       <div class="bg-white p-4 rounded w-64 space-y-2">
@@ -567,6 +623,18 @@
             restoreBg:'Restore BG',
             removeBgThresholdPrompt:'Background removal threshold (%)',
             removeBgFailed:'Background removal failed',
+            downloadPng:'Download PNG',
+            cloudSave:'Save to cloud',
+            localSave:'Save locally',
+            cloudSaveComingSoon:'Cloud saving coming soon',
+            localSaveComingSoon:'Local saving coming soon',
+            scan:'Scan',
+            selectPage:'Select page',
+            addTextField:'Text box',
+            addCheckbox:'Checkbox',
+            addDropdown:'Dropdown',
+            formFields:'Form fields',
+            fieldRemove:'Double-click to remove field',
             imagesPerPage:'Images per page',
             orientation:'Orientation',
             layout:'Layout',
@@ -679,6 +747,18 @@
             restoreBg:'Ripristina sfondo',
             removeBgThresholdPrompt:'Soglia rimozione sfondo (%)',
             removeBgFailed:'Rimozione sfondo fallita',
+            downloadPng:'Scarica PNG',
+            cloudSave:'Salva nel cloud',
+            localSave:'Salva in locale',
+            cloudSaveComingSoon:'Salvataggio nel cloud in arrivo',
+            localSaveComingSoon:'Salvataggio locale in arrivo',
+            scan:'Scanner',
+            selectPage:'Seleziona pagina',
+            addTextField:'Campo testo',
+            addCheckbox:'Casella',
+            addDropdown:'Lista',
+            formFields:'Campi modulo',
+            fieldRemove:'Doppio click per rimuovere',
             imagesPerPage:'Immagini per pagina',
             orientation:'Orientamento',
             layout:'Disposizione',
@@ -756,7 +836,17 @@
           removeBgEnabled:false,
           watermarkEnabled:false,
           colorModeEnabled:false,
-          removeBgThreshold:50,
+          pageSelectEnabled:false,
+          downloadPngEnabled:false,
+          formFieldsEnabled:false,
+          scanEnabled:false,
+          cloudSaveEnabled:false,
+          scanners:[],
+          scanProfiles:[],
+          selectedScanner:'',
+          selectedProfile:'',
+          scanModal:false,
+          newProfile:{name:'',dpi:300,color:'color'},
           sigScale:1,
           activeSig:null,
           signatureAspect:1,
@@ -822,8 +912,8 @@
             this.currentSlide = this.showSlides ? this.slides[this.lang][0] : '';
           },
           versionInfo(){
-            if(!this.version) return '';
-            const base = `${this.t('version')} ${this.version}`;
+            const v = this.version || 'unknown';
+            const base = `${this.t('version')} ${v}`;
             return this.versionDate ? `${base} - ${this.versionDate}` : base;
           },
           checkForUpdates(){
@@ -910,8 +1000,13 @@
               this.clientLogoHeight = this.settings.clientLogoHeight;
               this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
               if(Array.isArray(cfg.banner_images)){
-                this.slides.en = cfg.banner_images.map(img=>`/static/slide/${img.replace('{{lang}}','en')}`);
-                this.slides.it = cfg.banner_images.map(img=>`/static/slide/${img.replace('{{lang}}','it')}`);
+                const cleanse = (img, lang) =>
+                  `/static/slide/${img
+                    .replace(/^[a-z]{2}(?=DocCropper)/i,'')
+                    .replace(/^\{\{lang\}\}/,'')
+                    .replace(/\{\{lang\}\}/g,lang)}`;
+                this.slides.en = cfg.banner_images.map(img => cleanse(img,'en'));
+                this.slides.it = cfg.banner_images.map(img => cleanse(img,'it'));
               } else {
                 this.slides.en = ['/static/slide/DocCropper_slogan_main_en.png'];
                 this.slides.it = ['/static/slide/DocCropper_slogan_main_it.png'];
@@ -920,6 +1015,12 @@
               this.removeBgEnabled = !!cfg.enable_removebg;
               this.watermarkEnabled = !!cfg.enable_watermark;
               this.colorModeEnabled = !!cfg.enable_colormode && (cfg.license_level || '').toLowerCase() !== 'free';
+              this.pageSelectEnabled = !!cfg.enable_pageselect;
+              this.downloadPngEnabled = !!cfg.enable_downloadpng;
+              this.formFieldsEnabled = !!cfg.enable_formfields;
+              this.scanEnabled = !!cfg.enable_scan;
+              this.cloudSaveEnabled = !!cfg.enable_cloudsave;
+              if(this.scanEnabled) this.loadScanProfiles();
               this.maxUpload = parseInt(cfg.max_upload_files || 10);
               this.blankThreshold = parseInt(cfg.blank_threshold || 95);
               this.version = cfg.version || '';
@@ -947,7 +1048,10 @@
             window.startSign = () => {
               if (this.files.length > 0) this.signPage(0);
             };
-            window.getProcessedImages = () => this.files.map(f => f.url);
+            window.getProcessedImages = () =>
+              this.files
+                .filter(f => !this.pageSelectEnabled || f.selected !== false)
+                .map(f => f.url);
             window.setProcessedImage = (i, src) => {
               if (this.files[i]) {
                 this.files[i].url = src;
@@ -955,7 +1059,6 @@
                 this.files = [...this.files];
               }
             };
-            this.updateRemoveBgThreshold();
             this.adjustSponsor();
           },
           async command(action){
@@ -1074,7 +1177,7 @@
                     canvas.height = viewport.height;
                     await page.render({ canvasContext: ctx, viewport }).promise;
                     const data = canvas.toDataURL();
-                    loaded.push({ id: Date.now()+Math.random(), name: `${f.name} p${i}`, url: data, original: data });
+                    loaded.push({ id: Date.now()+Math.random(), name: `${f.name} p${i}`, url: data, original: data, bgThreshold:50, selected:true });
                   }
                 } catch (err) {
                   console.error('PDF import failed', err);
@@ -1086,7 +1189,7 @@
                   reader.onerror = reject;
                   reader.readAsDataURL(f);
                 });
-                loaded.push({ id: Date.now()+Math.random(), name: f.name, url: data, original: data });
+                loaded.push({ id: Date.now()+Math.random(), name: f.name, url: data, original: data, bgThreshold:50, selected:true });
               }
             }
             this.files.push(...loaded);
@@ -1094,6 +1197,11 @@
             this.tab = 'files';
             this.$nextTick(()=>{ this.initSortable(); this.adjustSponsor(); });
             e.target.value = '';
+          },
+          handleDrop(e){
+            if(e.dataTransfer && e.dataTransfer.files){
+              this.handleImport({ target:{ files:e.dataTransfer.files } });
+            }
           },
           rotate(idx){
             const img = new Image();
@@ -1147,27 +1255,64 @@
           toBW(idx){ this._convertColor(idx,'bw'); },
           toColor(idx){ this.files[idx].url = this.files[idx].original; this.files = [...this.files]; },
           watermark(idx){ if(typeof window.openWatermarkDialog==='function'){ window.openWatermarkDialog(idx); } },
-          async removeBg(idx){
+          downloadPng(idx){ if(typeof window.downloadPng==='function'){ window.downloadPng(idx); } },
+          formFields(idx){ if(typeof window.openFormFieldsDialog==='function'){ window.openFormFieldsDialog(idx); } },
+          openScan(){
+            if(!this.scanEnabled) return;
+            this.scanModal = true;
+            this.loadScanners();
+          },
+          startScan(){
+            if(typeof window.scanDocument==='function'){
+              const opts = {};
+              if(this.selectedScanner) opts.scanner = this.selectedScanner;
+              if(this.selectedProfile) opts.profile = this.selectedProfile;
+              window.scanDocument(opts);
+            }
+            this.scanModal = false;
+          },
+          loadScanners(){
+            if(typeof window.scanGetScanners==='function'){
+              window.scanGetScanners().then(list=>{
+                this.scanners = list || [];
+                if(!this.selectedScanner && this.scanners.length) this.selectedScanner = this.scanners[0];
+              });
+            }
+          },
+          saveScanProfile(){
+            if(!this.newProfile.name) return;
+            this.scanProfiles.push({...this.newProfile});
+            localStorage.setItem('scanProfiles', JSON.stringify(this.scanProfiles));
+            this.newProfile = {name:'',dpi:300,color:'color'};
+          },
+          loadScanProfiles(){
+            try{ this.scanProfiles = JSON.parse(localStorage.getItem('scanProfiles')||'[]'); }
+            catch(e){ this.scanProfiles = []; }
+          },
+          async removeBg(idx, thr){
             try{
               const f = this.files[idx];
-              if(f.bgOriginal){
+              const threshold = typeof thr === 'number' ? thr : (f.bgThreshold ?? 50);
+              if(f.bgOriginal && typeof thr !== 'number'){
                 f.url = f.bgOriginal;
                 f.original = f.bgOriginal;
                 f.bgOriginal = null;
                 this.files = [...this.files];
                 return;
               }
-              const resp = await fetch(f.url);
+              const src = f.bgOriginal || f.url;
+              const resp = await fetch(src);
               const blob = await resp.blob();
               const fd = new FormData();
               fd.append('image_file', blob, `image${idx}.png`);
-              const r = await fetch(`/remove-background/?threshold=${this.removeBgThreshold}`, {method:'POST', body:fd});
+              const r = await fetch(`/remove-background/?threshold=${threshold}`, {method:'POST', body:fd});
               if(!r.ok){ alert(this.t('removeBgFailed')); return; }
               const data = await r.json();
               if(data.image){
-                f.bgOriginal = f.url;
+                if(!f.bgOriginal) f.bgOriginal = f.url;
                 f.url = 'data:image/png;base64,' + data.image;
                 f.original = f.url;
+                f.bgThreshold = threshold;
                 this.files = [...this.files];
               } else {
                 alert(this.t('removeBgFailed'));
@@ -1175,11 +1320,6 @@
             }catch(e){
               console.error('remove background error', e);
               alert(this.t('removeBgFailed'));
-            }
-          },
-          updateRemoveBgThreshold(){
-            if (typeof window.setRemoveBgThreshold === 'function') {
-              window.setRemoveBgThreshold(this.removeBgThreshold);
             }
           },
           isBlankImage(src, thr){
@@ -1640,6 +1780,10 @@
         <button id="downloadPdfBtn" class="w-full px-2 py-1 bg-blue-500 text-white rounded text-sm" style="display:none;" x-text="t('downloadPdf')"></button>
         <button id="waShareBtn" class="w-full px-2 py-1 bg-green-500 text-white rounded text-sm" style="display:none;" x-text="t('whatsapp')"></button>
         <button id="emailShareBtn" class="w-full px-2 py-1 bg-gray-500 text-white rounded text-sm" style="display:none;" x-text="t('email')"></button>
+        <div x-show="cloudSaveEnabled" class="mt-2 space-y-2">
+          <button id="localSaveBtn" class="w-full px-2 py-1 bg-gray-500 text-white rounded text-sm" x-text="t('localSave')"></button>
+          <button id="cloudSaveBtn" class="w-full px-2 py-1 bg-purple-500 text-white rounded text-sm" x-text="t('cloudSave')"></button>
+        </div>
       </details>
     </div>
     <script type="module">
@@ -1647,12 +1791,22 @@
       import { initPdfCompressPlugin } from '/static/plugins/compresspdf.js';
       import { initPdfaPlugin } from '/static/plugins/pdfa.js';
       import { initWatermarkPlugin } from '/static/plugins/watermark.js';
+      import { initDownloadPngPlugin } from '/static/plugins/downloadpng.js';
+      import { initPageSelectPlugin } from '/static/plugins/pageselect.js';
+      import { initFormFieldsPlugin } from '/static/plugins/formfields.js';
+      import { initScanPlugin } from '/static/plugins/scan.js';
+      import { initCloudSavePlugin } from '/static/plugins/cloudsave.js';
       const lang = window.DC_LANG || document.documentElement.lang || 'en';
       const trans = (window.dcStrings && window.dcStrings[lang]) ? window.dcStrings[lang] : {};
       initSignaturePlugin(trans, true);
       initPdfCompressPlugin(trans, true);
       initPdfaPlugin(trans, true);
       initWatermarkPlugin(trans, true);
+      initDownloadPngPlugin(trans, true);
+      initPageSelectPlugin(true);
+      initFormFieldsPlugin(trans, true);
+      initScanPlugin(trans, true);
+      initCloudSavePlugin(trans, true);
 
       function calculateGrid() {
         const layout = parseInt(document.getElementById('layoutSelect')?.value || '1');
