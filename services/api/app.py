@@ -110,11 +110,12 @@ except Exception:
     pytesseract = None
 
 
-SETTINGS_FILE = "settings.json"
+BASE_DIR = Path(__file__).resolve().parents[2]
+SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
 # Additional file storing values enforced by a license check
-LICENSE_OVERRIDES_FILE = "license_overrides.json"
+LICENSE_OVERRIDES_FILE = os.path.join(BASE_DIR, "license_overrides.json")
 # Load environment variables from any .env files in env/
-ENV_DIR = "env"
+ENV_DIR = os.path.join(BASE_DIR, "env")
 
 
 def load_env_files(override: bool = False) -> None:
@@ -129,7 +130,7 @@ def load_env_files(override: bool = False) -> None:
 load_env_files()
 
 # Directory containing per-user settings
-USERS_DIR = "users"
+USERS_DIR = os.path.join(BASE_DIR, "users")
 
 DEFAULT_DEV_PASSWORD = os.getenv("DOCROPPER_DEV_PASSWORD", "87654321")
 DEFAULT_SETTINGS_PASSWORD = os.getenv("DOCROPPER_SETTINGS_PASSWORD", "12345678")
@@ -370,9 +371,7 @@ def load_settings():
             base = json.load(fh)
         merged = DEFAULT_SETTINGS.copy()
         merged.update(base)
-        plugins_dir = os.path.join(
-            os.path.dirname(__file__), "..", "..", "plugin", "core"
-        )
+        plugins_dir = os.path.join(BASE_DIR, "plugin", "core")
         try:
             for name in os.listdir(plugins_dir):
                 cfg_path = os.path.join(plugins_dir, name, "settings.json")
@@ -647,7 +646,7 @@ def save_settings(update: dict):
     with open(SETTINGS_FILE, "w") as fh:
         json.dump(data, fh)
     for pname, vals in plugin_updates.items():
-        cfg_path = os.path.join('plugins', pname, 'settings.json')
+        cfg_path = os.path.join(BASE_DIR, 'plugin', pname, 'settings.json')
         current = {}
         if os.path.exists(cfg_path):
             try:
