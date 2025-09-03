@@ -33,3 +33,6 @@ redis
 python-dotenv
 bcrypt==4.1.2
 setproctitle
+
+alembic
+psycopg2-binary
