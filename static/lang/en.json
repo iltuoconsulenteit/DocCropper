@@ -253,5 +253,7 @@
   "saveProfile": "Save profile",
   "none": "None",
   "cloudSave": "Save to cloud",
-  "localSave": "Save locally"
+  "localSave": "Save locally",
+  "localSaveComingSoon": "Local saving coming soon",
+  "cloudSaveComingSoon": "Cloud saving coming soon"
 }

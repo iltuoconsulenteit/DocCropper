@@ -3,36 +3,18 @@ export function initCloudSavePlugin(translations, enabled = true) {
         return;
     }
 
-    const exportOptions = document.getElementById('exportOptions');
-    if (!exportOptions) return;
+    const localBtn = document.getElementById('localSaveBtn');
+    const cloudBtn = document.getElementById('cloudSaveBtn');
 
-    function makeBtn(id, text, handler, extraClasses = '') {
-        const btn = document.createElement('button');
-        btn.id = id;
-        btn.textContent = text;
-        btn.className = 'w-full px-2 py-1 rounded text-sm text-white ' + extraClasses;
-        btn.addEventListener('click', handler);
-        return btn;
+    if (localBtn) {
+        localBtn.addEventListener('click', () => {
+            alert(translations.localSaveComingSoon || 'Local saving coming soon');
+        });
     }
 
-    const localBtn = makeBtn(
-        'localSaveBtn',
-        translations.localSave || 'Save locally',
-        () => {
-            alert(translations.localSaveComingSoon || 'Local saving coming soon');
-        },
-        'bg-gray-500'
-    );
-
-    const cloudBtn = makeBtn(
-        'cloudSaveBtn',
-        translations.cloudSave || 'Save to cloud',
-        () => {
+    if (cloudBtn) {
+        cloudBtn.addEventListener('click', () => {
             alert(translations.cloudSaveComingSoon || 'Cloud saving coming soon');
-        },
-        'bg-purple-500 mt-2'
-    );
-
-    exportOptions.appendChild(localBtn);
-    exportOptions.appendChild(cloudBtn);
+        });
+    }
 }

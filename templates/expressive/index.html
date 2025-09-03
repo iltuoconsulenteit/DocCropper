@@ -214,7 +214,7 @@
             <button class="px-2 py-1 border rounded text-xs" @click="openUpdateModal('rollback')" x-text="t('rollback')"></button>
           </div>
         </div>
-        <div x-show="tab==='sponsor'" class="p-4 space-y-4" x-data="{tiers:[], price(c){const t=this.tiers.find(x=>x.codice===c);return t&&t.prezzo_base?('€'+t.prezzo_base):'';}}" x-init="fetch('/index.php?option=com_fabrik&view=list&listid=XX&format=raw&format=json').then(r=>r.json()).then(d=>tiers=d)">
+        <div x-show="tab==='sponsor'" class="p-4 space-y-4" x-data="{tiers:[], price(c){const t=(Array.isArray(this.tiers)?this.tiers:[]).find(x=>x.codice===c);return t&&t.prezzo_base?('€'+t.prezzo_base):'';}}" x-init="fetch('/index.php?option=com_fabrik&view=list&listid=XX&format=raw&format=json').then(r=>r.json()).then(d=>this.tiers=Array.isArray(d)?d:[])">
           <h2 class="text-2xl font-bold" x-text="t('sponsorTitle')"></h2>
           <p x-text="t('sponsorIntro')"></p>
           <table class="w-full text-sm text-left border-collapse">
@@ -624,6 +624,10 @@
             removeBgThresholdPrompt:'Background removal threshold (%)',
             removeBgFailed:'Background removal failed',
             downloadPng:'Download PNG',
+            cloudSave:'Save to cloud',
+            localSave:'Save locally',
+            cloudSaveComingSoon:'Cloud saving coming soon',
+            localSaveComingSoon:'Local saving coming soon',
             scan:'Scan',
             selectPage:'Select page',
             addTextField:'Text box',
@@ -744,6 +748,10 @@
             removeBgThresholdPrompt:'Soglia rimozione sfondo (%)',
             removeBgFailed:'Rimozione sfondo fallita',
             downloadPng:'Scarica PNG',
+            cloudSave:'Salva nel cloud',
+            localSave:'Salva in locale',
+            cloudSaveComingSoon:'Salvataggio nel cloud in arrivo',
+            localSaveComingSoon:'Salvataggio locale in arrivo',
             scan:'Scanner',
             selectPage:'Seleziona pagina',
             addTextField:'Campo testo',
@@ -1771,6 +1779,10 @@
         <button id="downloadPdfBtn" class="w-full px-2 py-1 bg-blue-500 text-white rounded text-sm" style="display:none;" x-text="t('downloadPdf')"></button>
         <button id="waShareBtn" class="w-full px-2 py-1 bg-green-500 text-white rounded text-sm" style="display:none;" x-text="t('whatsapp')"></button>
         <button id="emailShareBtn" class="w-full px-2 py-1 bg-gray-500 text-white rounded text-sm" style="display:none;" x-text="t('email')"></button>
+        <div x-show="cloudSaveEnabled" class="mt-2 space-y-2">
+          <button id="localSaveBtn" class="w-full px-2 py-1 bg-gray-500 text-white rounded text-sm" x-text="t('localSave')"></button>
+          <button id="cloudSaveBtn" class="w-full px-2 py-1 bg-purple-500 text-white rounded text-sm" x-text="t('cloudSave')"></button>
+        </div>
       </details>
     </div>
     <script type="module">

@@ -253,6 +253,8 @@
   "saveProfile": "Salva profilo",
   "none": "Nessuno",
   "cloudSave": "Salva nel cloud",
-  "localSave": "Salva in locale"
+  "localSave": "Salva in locale",
+  "localSaveComingSoon": "Salvataggio locale in arrivo",
+  "cloudSaveComingSoon": "Salvataggio nel cloud in arrivo"
 }
 
