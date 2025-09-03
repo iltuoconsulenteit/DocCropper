@@ -7,6 +7,8 @@ import os
 import shutil
 import time
 import uuid
+import asyncio
+import httpx
 from pathlib import Path
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -93,6 +95,11 @@ from plugin.core.pageselect import register as register_pageselect
 from plugin.core.colormode import register as register_colormode
 from plugin.core.scan import register as register_scan
 from plugin.core.cloudsave import register as register_cloudsave
+
+import django
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "platform.config.settings")
+django.setup()
+from platform.apps.licenses.models import Customer, Product, License
 
 try:
     import stripe
@@ -1213,6 +1220,90 @@ async def stripe_checkout(level: str = Body(...)):
     except Exception as e:
         logger.exception("Stripe session creation failed")
         return JSONResponse(status_code=500, content={"message": str(e)})
+
+
+async def send_license_email(email: str, key: str) -> None:
+    """Send the generated license key to the customer via SendGrid."""
+    settings = load_settings()
+    sg_key = settings.get("sendgrid_api_key") or os.getenv("SENDGRID_API_KEY")
+    from_email = settings.get("sendgrid_from_email") or "noreply@example.com"
+    if not sg_key:
+        logger.warning("SendGrid API key missing")
+        return
+    data = {
+        "personalizations": [{"to": [{"email": email}]}],
+        "from": {"email": from_email},
+        "subject": "Your DocCropper license",
+        "content": [{"type": "text/plain", "value": f"License key: {key}"}],
+    }
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                "https://api.sendgrid.com/v3/mail/send",
+                headers={
+                    "Authorization": f"Bearer {sg_key}",
+                    "Content-Type": "application/json",
+                },
+                json=data,
+            )
+    except Exception:
+        logger.exception("Failed to send license email")
+
+
+def _create_license(email: str, product_name: str, key: str) -> None:
+    customer, _ = Customer.objects.get_or_create(
+        email=email, defaults={"name": email.split("@")[0]}
+    )
+    product, _ = Product.objects.get_or_create(name=product_name)
+    License.objects.create(key=key, customer=customer, product=product)
+
+
+@app.post("/licenses")
+async def license_webhook(request: Request):
+    """Webhook endpoint for Stripe and PayPal payments."""
+    payload = await request.body()
+    settings = load_settings()
+    email = None
+    product_name = None
+
+    if stripe and request.headers.get("stripe-signature"):
+        secret = settings.get("stripe_webhook_secret")
+        if not secret:
+            return JSONResponse(status_code=503, content={"message": "Stripe webhook not configured"})
+        sig = request.headers["stripe-signature"]
+        try:
+            event = stripe.Webhook.construct_event(payload, sig, secret)
+        except Exception:
+            logger.exception("Stripe webhook validation failed")
+            return JSONResponse(status_code=400, content={"message": "Invalid Stripe payload"})
+        if event.get("type") != "checkout.session.completed":
+            return {"message": "ignored"}
+        obj = event["data"]["object"]
+        email = obj.get("customer_details", {}).get("email")
+        product_name = obj.get("metadata", {}).get("license", "pro")
+    else:
+        try:
+            form = dict(await request.form())
+        except Exception:
+            form = await request.json()
+        async with httpx.AsyncClient() as client:
+            verify = await client.post(
+                "https://ipnpb.paypal.com/cgi-bin/webscr",
+                data={**form, "cmd": "_notify-validate"},
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+        if verify.text != "VERIFIED":
+            return JSONResponse(status_code=400, content={"message": "Invalid PayPal IPN"})
+        email = form.get("payer_email")
+        product_name = form.get("item_name")
+
+    if not email or not product_name:
+        return JSONResponse(status_code=400, content={"message": "Missing email or product"})
+
+    key = uuid.uuid4().hex.upper()
+    await asyncio.to_thread(_create_license, email, product_name, key)
+    await send_license_email(email, key)
+    return {"status": "created", "key": key}
 
 
 @app.post("/pdf-to-images/")

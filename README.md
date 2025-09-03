@@ -169,6 +169,24 @@ DOCROPPER_DEV_PASSWORD=87654321
 DOCROPPER_SETTINGS_PASSWORD=12345678
 ```
 
+### Payment webhook flow
+
+DocCropper può generare una licenza automaticamente dopo un acquisto.
+Configura Stripe o PayPal per inviare una richiesta webhook a `POST /licenses`.
+L'endpoint valida l'evento, crea il record `License` e invia via email la
+chiave generata al cliente tramite SendGrid.
+
+Esempio di webhook di prova Stripe:
+
+```bash
+curl -X POST https://il-tuo-server/licenses \
+     -H "Stripe-Signature: <sig>" \
+     -d '@event.json'
+```
+
+Le notifiche IPN di PayPal possono essere inoltrate allo stesso URL
+inviando i campi del modulo.
+
 ---
 
 ## ▶️ Running DocCropper
