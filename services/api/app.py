@@ -85,6 +85,7 @@ def get_fitz():
 from plugin.core.sign import register as register_sign
 from app.licensing.check import verify_license
 from jose import jwt, JWTError
+from app.licensing.fingerprint import get_machine_fingerprint
 import time
 from app.auth.routes import router as auth_router, fastapi_users
 from app.auth.models import User
@@ -521,7 +522,10 @@ def load_settings():
                 payload = jwt.decode(token, LICENSE_SECRET, algorithms=["HS256"])
                 exp = payload.get("expires_at")
                 now = int(time.time())
+                fp = payload.get("fingerprint")
                 if exp and exp < now:
+                    merged["license_level"] = "free"
+                elif not fp or fp != get_machine_fingerprint():
                     merged["license_level"] = "free"
                 else:
                     merged["license_type"] = payload.get("license_type", "manual")
@@ -836,7 +840,11 @@ async def require_valid_license(
 
     domain = request.url.hostname
     data = await verify_license(
-        user.email, user.license_type, user.license_token, domain
+        user.email,
+        user.license_type,
+        user.license_token,
+        domain,
+        get_machine_fingerprint(),
     )
     if not data.get("valid", False):
         raise HTTPException(status_code=403, detail="Licenza non valida")
@@ -1181,6 +1189,11 @@ async def upload_license(request: Request, file: UploadFile = File(...)):
         domain = request.client.host
         if allowed and domain not in allowed:
             raise HTTPException(status_code=403, detail="Domain not allowed")
+        fp = payload.get("fingerprint")
+        if not fp:
+            raise HTTPException(status_code=400, detail="Token missing fingerprint")
+        if fp != get_machine_fingerprint():
+            raise HTTPException(status_code=403, detail="Fingerprint mismatch")
     except JWTError as exc:
         raise HTTPException(status_code=400, detail=f"Invalid token: {exc}")
 
@@ -1231,7 +1244,13 @@ async def license_status(request: Request):
     if settings.get("license_check", False):
         domain = request.headers.get("host")
         try:
-            data = await verify_license("", settings.get("license_type", ""), settings.get("license_key", ""), domain)
+            data = await verify_license(
+                "",
+                settings.get("license_type", ""),
+                settings.get("license_key", ""),
+                domain,
+                get_machine_fingerprint(),
+            )
             valid = bool(data.get("valid"))
         except Exception:
             valid = False

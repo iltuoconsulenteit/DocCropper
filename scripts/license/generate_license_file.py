@@ -26,6 +26,8 @@ def main() -> None:
                         help="Comma-separated list of enabled plugins")
     parser.add_argument("--domains", default="",
                         help="Comma-separated list of allowed domains")
+    parser.add_argument("--fingerprint", default="",
+                        help="Bind license to this machine fingerprint")
     parser.add_argument("--out", default="license.dcl",
                         help="Output file path")
     args = parser.parse_args()
@@ -39,6 +41,8 @@ def main() -> None:
     }
     if args.domains:
         payload["allowed_domains"] = [d.strip() for d in args.domains.split(',') if d.strip()]
+    if args.fingerprint:
+        payload["fingerprint"] = args.fingerprint.strip()
 
     token = jwt.encode(payload, secret, algorithm="HS256")
     with open(args.out, "w", encoding="utf-8") as fh:

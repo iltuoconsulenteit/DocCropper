@@ -93,17 +93,26 @@ app.get('/logout', (req, res, next) => {
 });
 
 app.post('/license/token', requireHttps, checkDomain, (req, res) => {
-  const { license_type, expires_at, plugins, allowed_domains } = req.body;
+  const {
+    license_type,
+    expires_at,
+    plugins,
+    allowed_domains,
+    fingerprint,
+  } = req.body;
   const payload = { license_type, expires_at, plugins };
   if (Array.isArray(allowed_domains) && allowed_domains.length) {
     payload.allowed_domains = allowed_domains;
+  }
+  if (fingerprint) {
+    payload.fingerprint = fingerprint;
   }
   const token = jwt.sign(payload, LICENSE_SECRET);
   res.json({ token });
 });
 
 app.post('/license/verify', requireHttps, checkDomain, verifyLimiter, (req, res) => {
-  const { token, domain } = req.body;
+  const { token, domain, fingerprint } = req.body;
   try {
     const payload = jwt.verify(token, LICENSE_SECRET);
     const now = Math.floor(Date.now() / 1000);
@@ -117,6 +126,15 @@ app.post('/license/verify', requireHttps, checkDomain, verifyLimiter, (req, res)
       !payload.allowed_domains.includes(domain)
     ) {
       return res.status(403).json({ valid: false, error: 'domain not allowed', payload });
+    }
+    if (!payload.fingerprint) {
+      return res.status(400).json({ valid: false, error: 'missing fingerprint', payload });
+    }
+    if (
+      fingerprint &&
+      payload.fingerprint !== fingerprint
+    ) {
+      return res.status(403).json({ valid: false, error: 'fingerprint mismatch', payload });
     }
     res.json({ valid: true, payload });
   } catch (err) {

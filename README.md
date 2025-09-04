@@ -176,7 +176,7 @@ Run `scripts/license/setup_license.*` for your platform to interactively supply 
 The installers keep this file when pulling updates, so your license stays active after upgrading.
 
 ### Signed license files
-Generate a signed token with `python scripts/license/generate_license_file.py --type developer --name "Your Name"`. In the web UI open **License**, choose the file under *License File*, and click **Import** to activate it. The token is verified locally with `LICENSE_SECRET` and stored in `env/license.env` so the license remains after restarts.
+Generate a signed token with `python scripts/license/generate_license_file.py --type developer --name "Your Name"`. Include `--fingerprint $(python scripts/license/get_fingerprint.py)` to bind the license to a specific machine. In the web UI open **License**, choose the file under *License File*, and click **Import** to activate it. The token is verified locally with `LICENSE_SECRET` and stored in `env/license.env` so the license remains after restarts.
 
 ### 🗑️ Uninstall
 
