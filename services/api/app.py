@@ -80,6 +80,8 @@ from plugin.core.sign import register as register_sign
 from app.licensing.check import verify_license
 from app.auth.routes import router as auth_router, fastapi_users
 from app.auth.models import User
+from app.auth.database import async_session_maker
+from sqlalchemy import select
 from plugin.core.mobilesign import register as register_mobilesign
 from plugin.core.remotesign import register as register_remotesign
 from plugin.core.docuseal import register as register_docuseal
@@ -1189,7 +1191,9 @@ async def change_settings_password(data: dict = Body(...)):
 
 
 @app.post("/stripe-checkout/")
-async def stripe_checkout(level: str = Body(...)):
+async def stripe_checkout(data: dict = Body(...), user: User = Depends(fastapi_users.current_user())):
+    level = data.get("level")
+    max_sessions = data.get("max_sessions")
     settings = load_settings()
     if stripe is None:
         return JSONResponse(status_code=503, content={"message": "Stripe library missing"})
@@ -1202,17 +1206,90 @@ async def stripe_checkout(level: str = Body(...)):
     if not price_id:
         return JSONResponse(status_code=503, content={"message": "Price ID missing"})
     stripe.api_key = secret
+    metadata = {"user_id": str(user.id), "license_type": level}
+    if max_sessions is not None:
+        metadata["max_sessions"] = str(max_sessions)
     try:
         session = stripe.checkout.Session.create(
-            mode="payment",
+            mode="subscription",
             line_items=[{"price": price_id, "quantity": 1}],
             success_url=settings.get("stripe_success_url") or "https://example.com/success",
             cancel_url=settings.get("stripe_cancel_url") or "https://example.com/cancel",
+            metadata=metadata,
         )
         return {"session_url": session.url}
     except Exception as e:
         logger.exception("Stripe session creation failed")
         return JSONResponse(status_code=500, content={"message": str(e)})
+
+
+@app.post("/stripe-webhook/")
+async def stripe_webhook(request: Request):
+    if stripe is None:
+        raise HTTPException(status_code=503, detail="Stripe library missing")
+    payload = await request.body()
+    settings = load_settings()
+    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET") or settings.get("stripe_webhook_secret")
+    event = None
+    try:
+        if webhook_secret:
+            sig = request.headers.get("Stripe-Signature")
+            event = stripe.Webhook.construct_event(payload, sig, webhook_secret)
+        else:
+            event = json.loads(payload)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    secret = settings.get("stripe_secret_key")
+    if secret:
+        stripe.api_key = secret
+    etype = event.get("type")
+    data_obj = event.get("data", {}).get("object", {})
+    async with async_session_maker() as session:
+        if etype == "checkout.session.completed":
+            metadata = data_obj.get("metadata", {})
+            user_id = metadata.get("user_id")
+            if user_id:
+                user = await session.get(User, int(user_id))
+                if user:
+                    license_type = metadata.get("license_type") or user.license_type
+                    user.license_type = license_type
+                    max_sessions = metadata.get("max_sessions")
+                    user.max_sessions = int(max_sessions) if max_sessions else None
+                    sub_id = data_obj.get("subscription")
+                    if sub_id:
+                        user.subscription_id = sub_id
+                        try:
+                            sub = stripe.Subscription.retrieve(sub_id)
+                            user.subscription_ends_at = datetime.fromtimestamp(sub["current_period_end"])
+                        except Exception:
+                            pass
+                    await session.commit()
+        elif etype in ("customer.subscription.deleted", "invoice.payment_failed"):
+            sub_id = data_obj.get("id") if etype == "customer.subscription.deleted" else data_obj.get("subscription")
+            if sub_id:
+                result = await session.execute(select(User).where(User.subscription_id == sub_id))
+                user = result.scalar_one_or_none()
+                if user:
+                    user.license_type = "free"
+                    user.max_sessions = None
+                    user.subscription_id = None
+                    user.subscription_ends_at = None
+                    await session.commit()
+    return {"status": "ok"}
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard(user: User = Depends(fastapi_users.current_user())):
+    next_date = (
+        user.subscription_ends_at.strftime("%Y-%m-%d")
+        if user.subscription_ends_at
+        else "N/A"
+    )
+    html = (
+        f"<h1>Dashboard</h1><p>Current plan: {user.license_type}</p>"
+        f"<p>Next billing date: {next_date}</p>"
+    )
+    return HTMLResponse(content=html)
 
 
 @app.post("/pdf-to-images/")
