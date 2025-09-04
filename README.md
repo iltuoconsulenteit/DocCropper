@@ -170,11 +170,6 @@ DOCROPPER_DEV_PASSWORD=87654321
 DOCROPPER_SETTINGS_PASSWORD=12345678
 ```
 
-### Manual license setup
-
-Run `scripts/license/setup_license.*` for your platform to interactively supply a license name and key. The script stores them in `env/license.env`, updates `settings.json`, and disables remote checks so the app comes up licensed immediately. The same fields are also available in the web UI under **License**.
-The installers keep this file when pulling updates, so your license stays active after upgrading.
-
 ### Signed license files
 Generate a signed token with `python scripts/license/generate_license_file.py --type developer --name "Your Name"`. Include `--fingerprint $(python scripts/license/get_fingerprint.py)` to bind the license to a specific machine. In the web UI open **License**, choose the file under *License File*, and click **Import** to activate it. The token is verified locally with `LICENSE_SECRET` and stored in `env/license.env` so the license remains after restarts.
 
@@ -310,24 +305,21 @@ DocCropper ships with three editions. A **Licenses** button in the header opens 
   When this license is active the **Purchase** button turns into a PayPal
   donation link that opens in a new tab.
 
-### Setting a license key
+### Activating a license
 
-Provide the license in `env/license.env`, a top‑level `.env`, or `settings.json`
-via the `DOCROPPER_LICENSE_KEY` entry. The key determines the active edition:
-
-Licenses may also be entered from the web interface; the **Licenses** panel
-saves the values to `env/license.env` and applies them immediately.
-The running server exposes `/license/status` which returns the current license
-name, level, and a validity flag so you can verify the active edition after an
-update.
+Import a signed license file from the **Licenses** panel in the web interface.
+The token is stored in `env/license.env` and applied immediately so the
+page reflects the active edition without a restart. The running server
+exposes `/license/status` which returns the current license name, level,
+and a validity flag so you can verify the edition after an update.
 
 - leave the value empty or set it to `FREE` for the basic demo
 - use `DEMO-FULL-DC` to unlock the **Demo Full** mode with all features but a
   watermark
 - enter the developer key defined by `DOCROPPER_DEV_LICENSE` (default
   `DEVELOPER`) to enable developer features and plugins
-- keys matching `DOCROPPER_MANUAL_LICENSE` or `DOCROPPER_ONLINE_LICENSE` trigger
-  manual or online validation respectively
+ - keys matching `DOCROPPER_ONLINE_LICENSE` trigger
+  online validation
 
 When the LAN plugin is active the `lan_user_limit` setting controls how many
 accounts may use DocCropper over the network. Licenses are typically sold in
@@ -343,7 +335,6 @@ To activate Pro or Full editions:
     or the key ends with `-DEV`. Saving such a key through the Licenses panel now
      automatically sets the edition to **Full** and enables mobile signing. When a
      developer key is active the tray menu includes an **Update Branch** option.
-  - Manual keys unlock Full features when `DOCROPPER_MANUAL_LICENSE` matches the entered key
   - A key matching `DOCROPPER_ONLINE_LICENSE` forces an online validation against the license server
   - If no known key is found, DocCropper falls back to demo mode with logos and banners still visible
 - Mobile signing is enabled automatically when a developer key is used
