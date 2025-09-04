@@ -30,7 +30,8 @@ class NoCacheStaticFiles(StaticFiles):
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
             # Allow help pages like the wiki to be embedded in the UI
-            response.headers["X-Frame-Options"] = "SAMEORIGIN"
+            response.headers.pop("X-Frame-Options", None)
+            response.headers["Content-Security-Policy"] = "frame-ancestors *"
         return response
 from fastapi.middleware.cors import CORSMiddleware
 from cryptography.fernet import Fernet
