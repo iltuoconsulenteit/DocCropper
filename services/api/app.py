@@ -40,6 +40,7 @@ from pathlib import Path
 import importlib
 import importlib.util
 from types import SimpleNamespace
+import hashlib
 
 import bcrypt as _bcrypt
 if not hasattr(_bcrypt, "__about__"):
@@ -1059,6 +1060,22 @@ async def get_settings():
 @app.post("/settings/")
 async def update_settings(settings: dict = Body(...)):
     return save_settings(settings)
+
+
+@app.get("/license/fingerprint")
+def get_license_fingerprint():
+    raw = f"{platform.node()}-{uuid.getnode()}"
+    digest = hashlib.sha256(raw.encode()).hexdigest()
+    return {"fingerprint": digest}
+
+
+@app.post("/license/request")
+async def license_request(data: dict = Body(...)):
+    fingerprint = data.get("fingerprint") if isinstance(data, dict) else None
+    if not fingerprint:
+        raise HTTPException(status_code=400, detail="fingerprint required")
+    logger.info("License request for fingerprint %s", fingerprint)
+    return {"status": "ok"}
 
 
 @app.get("/user-settings/")

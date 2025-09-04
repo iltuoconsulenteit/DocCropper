@@ -414,6 +414,13 @@
           <option value="pro" x-text="t('licensePro')"></option>
           <option value="full" x-text="t('licenseFull')"></option>
         </select>
+        <div class="mb-2">
+          <button class="px-3 py-1 bg-green-500 text-white rounded" @click="calcFingerprint" x-text="t('calcFingerprint')"></button>
+        </div>
+        <div x-show="fingerprint" class="text-xs break-all mb-2">
+          <strong x-text="t('fingerprint') + ':'"></strong>
+          <span x-text="fingerprint"></span>
+        </div>
         <div class="text-right space-x-2">
           <button class="px-3 py-1 bg-gray-300 rounded" @click="licenseModal=false" x-text="t('cancel')"></button>
           <button class="px-3 py-1 bg-blue-500 text-white rounded" @click="saveLicense" x-text="t('saveLicense')"></button>
@@ -613,6 +620,11 @@
             licensePro:'Pro',
             licenseFull:'Full',
             licenseSaved:'License saved',
+            calcFingerprint:'Calculate fingerprint',
+            fingerprint:'Fingerprint',
+            fingerprintConfirm:'Send displayed fingerprint to request a license?',
+            fingerprintSent:'Fingerprint sent',
+            fingerprintFailed:'Unable to obtain fingerprint',
             brightness:'Brightness',
             contrast:'Contrast',
             scale:'Scale',
@@ -737,6 +749,11 @@
             licensePro:'Pro',
             licenseFull:'Completa',
             licenseSaved:'Licenza salvata',
+            calcFingerprint:'Calcola fingerprint',
+            fingerprint:'Fingerprint',
+            fingerprintConfirm:'Inviare la fingerprint visualizzata per richiedere una licenza?',
+            fingerprintSent:'Fingerprint inviata',
+            fingerprintFailed:'Impossibile ottenere la fingerprint',
             brightness:'Luminosità',
             contrast:'Contrasto',
             scale:'Scala',
@@ -875,6 +892,7 @@
           licenseNameInput:'',
           licenseLevel:'free',
           licenseModal:false,
+          fingerprint:'',
           lang: window.DC_LANG || 'it',
           strings,
           slides:{
@@ -1156,6 +1174,19 @@
             fetch('/settings/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
               .then(()=>{ this.licenseName = this.licenseNameInput; alert(this.t('licenseSaved')); this.licenseModal=false; })
               .catch(()=>{ this.licenseModal=false; });
+          },
+          async calcFingerprint(){
+            try {
+              const res = await fetch('/license/fingerprint');
+              const data = await res.json();
+              this.fingerprint = data.fingerprint || '';
+              if(this.fingerprint && confirm(this.t('fingerprintConfirm'))){
+                await fetch('/license/request', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fingerprint:this.fingerprint})});
+                alert(this.t('fingerprintSent'));
+              }
+            } catch(e){
+              alert(this.t('fingerprintFailed'));
+            }
           },
           async handleImport(e){
             let selected = Array.from(e.target.files || []);
