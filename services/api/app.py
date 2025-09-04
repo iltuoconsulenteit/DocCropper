@@ -91,6 +91,8 @@ from plugin.core.login import register as register_login
 from plugin.core.downloadpng import register as register_downloadpng
 from plugin.core.pageselect import register as register_pageselect
 from plugin.core.colormode import register as register_colormode
+import smtplib
+from email.message import EmailMessage
 from plugin.core.scan import register as register_scan
 from plugin.core.cloudsave import register as register_cloudsave
 
@@ -320,6 +322,40 @@ def cleanup_old_sessions(max_age: int = 600):
                 SESSION_KEYS.pop(name, None)
         except Exception:
             pass
+
+
+def send_license_email(to_addr: str, license_path: str) -> None:
+    """Send the generated license file via email."""
+    if not (to_addr and os.path.exists(license_path)):
+        return
+    settings = load_settings()
+    server = os.getenv("SMTP_SERVER") or settings.get("smtp_server")
+    user = os.getenv("SMTP_USER") or settings.get("smtp_user")
+    password = os.getenv("SMTP_PASS") or settings.get("smtp_pass")
+    port = int(os.getenv("SMTP_PORT") or settings.get("smtp_port", 587))
+    sender = os.getenv("SMTP_FROM") or settings.get("smtp_from", user)
+    if not (server and user and password and sender):
+        logger.warning("SMTP not configured")
+        return
+    msg = EmailMessage()
+    msg["Subject"] = "DocCropper License"
+    msg["From"] = sender
+    msg["To"] = to_addr
+    msg.set_content("Attached is your DocCropper license file.")
+    with open(license_path, "rb") as fh:
+        msg.add_attachment(
+            fh.read(),
+            maintype="application",
+            subtype="octet-stream",
+            filename=os.path.basename(license_path),
+        )
+    try:
+        with smtplib.SMTP(server, port) as s:
+            s.starttls()
+            s.login(user, password)
+            s.send_message(msg)
+    except Exception:
+        logger.exception("Email send failed")
 
 def encrypt_bytes(session_id: str, data: bytes) -> bytes:
     key = SESSION_KEYS.get(session_id)
@@ -1189,7 +1225,7 @@ async def change_settings_password(data: dict = Body(...)):
 
 
 @app.post("/stripe-checkout/")
-async def stripe_checkout(level: str = Body(...)):
+async def stripe_checkout(level: str = Body(...), fingerprint: str = Body("")):
     settings = load_settings()
     if stripe is None:
         return JSONResponse(status_code=503, content={"message": "Stripe library missing"})
@@ -1203,16 +1239,48 @@ async def stripe_checkout(level: str = Body(...)):
         return JSONResponse(status_code=503, content={"message": "Price ID missing"})
     stripe.api_key = secret
     try:
+        metadata = {"fingerprint": fingerprint} if fingerprint else None
         session = stripe.checkout.Session.create(
             mode="payment",
             line_items=[{"price": price_id, "quantity": 1}],
             success_url=settings.get("stripe_success_url") or "https://example.com/success",
             cancel_url=settings.get("stripe_cancel_url") or "https://example.com/cancel",
+            metadata=metadata,
         )
         return {"session_url": session.url}
     except Exception as e:
         logger.exception("Stripe session creation failed")
         return JSONResponse(status_code=500, content={"message": str(e)})
+
+
+@app.post("/stripe-webhook/")
+async def stripe_webhook(request: Request):
+    if stripe is None:
+        return JSONResponse(status_code=503, content={"message": "Stripe library missing"})
+    payload = await request.body()
+    try:
+        event = json.loads(payload.decode())
+    except Exception:
+        return JSONResponse(status_code=400, content={"message": "Invalid payload"})
+    if event.get("type") == "checkout.session.completed":
+        session = event.get("data", {}).get("object", {})
+        if session.get("payment_status") == "paid":
+            fingerprint = session.get("metadata", {}).get("fingerprint")
+            email = session.get("customer_details", {}).get("email")
+            if fingerprint:
+                try:
+                    result = subprocess.run(
+                        [sys.executable, "generate_license_file.py", "--fingerprint", fingerprint],
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                    )
+                    license_path = result.stdout.strip()
+                    if license_path:
+                        send_license_email(email, license_path)
+                except Exception:
+                    logger.exception("License generation failed")
+    return {"status": "ok"}
 
 
 @app.post("/pdf-to-images/")

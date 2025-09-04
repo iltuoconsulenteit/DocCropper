@@ -3262,7 +3262,9 @@ function renderPaymentBox(cfg) {
         return;
     }
     purchaseBox.style.display = 'block';
+    let storedFp = localStorage.getItem('fingerprint') || '';
     let html = `<h3>${t('purchaseInfo')}</h3><ul>`;
+    html += `<li>${t('fingerprint')}: <input id="fingerprintInput" type="text" value="${storedFp}" placeholder="${t('enterFingerprint')}"></li>`;
     let hasItem = false;
     if (mode === 'donation') {
         if (cfg.paypal_link) {
@@ -3309,10 +3311,16 @@ function renderPaymentBox(cfg) {
     const proBtn = document.getElementById('stripeProBtn');
     if (proBtn) {
         proBtn.addEventListener('click', async () => {
+            const fp = document.getElementById('fingerprintInput').value.trim();
+            if (!fp) {
+                alert(t('missingFingerprint'));
+                return;
+            }
+            localStorage.setItem('fingerprint', fp);
             const res = await fetch('/stripe-checkout/', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({level: 'pro'})
+                body: JSON.stringify({level: 'pro', fingerprint: fp})
             });
             if (res.ok) {
                 const data = await res.json();
@@ -3327,10 +3335,16 @@ function renderPaymentBox(cfg) {
     const fullBtn = document.getElementById('stripeFullBtn');
     if (fullBtn) {
         fullBtn.addEventListener('click', async () => {
+            const fp = document.getElementById('fingerprintInput').value.trim();
+            if (!fp) {
+                alert(t('missingFingerprint'));
+                return;
+            }
+            localStorage.setItem('fingerprint', fp);
             const res = await fetch('/stripe-checkout/', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({level: 'full'})
+                body: JSON.stringify({level: 'full', fingerprint: fp})
             });
             if (res.ok) {
                 const data = await res.json();
