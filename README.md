@@ -293,7 +293,7 @@ hidden Demo Full license is active the login button is hidden even if
 
 ## 🔓 Licensing
 
-DocCropper ships with three editions. A **Licenses** button in the header opens a panel where you can review the editions and enter your license key. Free users may paste a key here at any time to unlock Pro or Full features.
+DocCropper ships with three editions. A **Licenses** button in the header opens a panel where you can review the editions and enter your license key. Free users may paste a key here at any time to unlock Pro or Full features, or start a Stripe checkout directly from the panel to purchase a license.
 
 - **Free** – Watermark applied and up to five images per project
 - **Pro** – No watermark and unlimited images. A LAN plugin can add network

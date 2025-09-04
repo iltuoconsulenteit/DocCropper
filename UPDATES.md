@@ -325,3 +325,6 @@
 ## 2025-08-27
 - Preserve `env/license.env` during repository updates so manual licenses survive upgrades
 - Add `/license/status` endpoint and frontend refresh to confirm the active license
+
+## 2025-09-04
+- Allow purchasing licenses directly from the license panel with a Stripe checkout flow

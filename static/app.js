@@ -3404,7 +3404,13 @@ function renderLicenseBox() {
         <button id="saveLicenseBtn">${t('saveLicense')}</button><br><br>
         <label>License File</label>
         <input type="file" id="licenseFileInput" accept=".dcl,.lic,.txt"><br>
-        <button id="uploadLicenseBtn">Import</button>
+        <button id="uploadLicenseBtn">Import</button><br><br>
+        <label>${t('licenseType')}</label>
+        <select id="purchaseLevel">
+            <option value="pro">${t('proEdition')}</option>
+            <option value="full">${t('fullEdition')}</option>
+        </select>
+        <button id="purchaseLicenseBtn">${t('purchase')}</button>
     </div>`;
     }
     licenseBox.innerHTML = html;
@@ -3463,6 +3469,25 @@ function renderLicenseBox() {
             licenseBox.classList.remove('visible');
             setTimeout(() => { location.reload(); }, 1000);
         });
+        const buyBtn = document.getElementById('purchaseLicenseBtn');
+        if (buyBtn) {
+            buyBtn.addEventListener('click', async () => {
+                const level = document.getElementById('purchaseLevel').value;
+                const res = await fetch('/stripe-checkout/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({level})
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.session_url) {
+                        window.location.href = data.session_url;
+                    }
+                } else {
+                    alert('Stripe checkout failed');
+                }
+            });
+        }
     }
 }
 
