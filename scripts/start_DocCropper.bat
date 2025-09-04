@@ -106,6 +106,15 @@ if not exist "!DOC_EXE!" (
     powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\build_wrappers.ps1" "!PY_DIR!" >>"!LOG_FILE!" 2>&1
 )
 
+if not exist "!DOC_EXE!" (
+    echo [WARN] Wrapper DocCropper.exe mancante, uso python.exe >> "!LOG_FILE!"
+    set "DOC_EXE=!PY_DIR!\python.exe"
+)
+if not exist "!TRAY_EXE!" (
+    echo [WARN] Wrapper DocCropperTray.exe mancante, uso pythonw.exe >> "!LOG_FILE!"
+    set "TRAY_EXE=!PY_DIR!\pythonw.exe"
+)
+
 if "!START_TRAY!"=="1" (
     echo [INFO] Avvio tray helper >> "!LOG_FILE!"
     set "DOCROPPER_PROC=DocCropperTray"
