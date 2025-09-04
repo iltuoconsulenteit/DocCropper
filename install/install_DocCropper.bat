@@ -191,7 +191,7 @@ rem Remove cached Python bytecode so updates load correctly
 set "PYTMP=%TEMP%\clear_pyc.py"
 >"%PYTMP%" (
     echo import pathlib, shutil, sys
-    echo root = pathlib.Path(sys.argv[1])
+    echo root = pathlib.Path^(sys.argv[1]^)
     echo for p in root.rglob('__pycache__'):
     echo^    shutil.rmtree(p, ignore_errors=True)
     echo for p in root.rglob('*.pyc'):
