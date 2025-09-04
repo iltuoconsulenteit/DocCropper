@@ -9,10 +9,10 @@ import time
 import uuid
 from pathlib import Path
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import uvicorn
-from fastapi import FastAPI, File, Form, UploadFile, Body, Request, Depends, HTTPException
+from fastapi import FastAPI, File, Form, UploadFile, Body, Request, Depends, HTTPException, Response
 from PIL import Image, ImageDraw, ImageFont
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -78,8 +78,11 @@ def get_fitz():
     return _fitz
 from plugin.core.sign import register as register_sign
 from app.licensing.check import verify_license
-from app.auth.routes import router as auth_router, fastapi_users
-from app.auth.models import User
+from app.auth.routes import router as auth_router, fastapi_users, auth_backend
+from app.auth.models import User, UserSession
+from app.auth.database import async_session_maker
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy import select, func, delete
 from plugin.core.mobilesign import register as register_mobilesign
 from plugin.core.remotesign import register as register_remotesign
 from plugin.core.docuseal import register as register_docuseal
@@ -189,6 +192,10 @@ SESSION_KEYS: dict[str, bytes] = {}
 DEFAULT_MAX_UPLOAD_MB = 5
 MAX_UPLOAD_MB = int(os.getenv("DOCROPPER_MAX_UPLOAD_MB", str(DEFAULT_MAX_UPLOAD_MB)))
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
+
+# Session management configuration
+MAX_SESSIONS = int(os.getenv("DOCROPPER_MAX_SESSIONS", "3"))
+SESSION_TTL_SECONDS = int(os.getenv("DOCROPPER_SESSION_TTL", "3600"))
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -750,9 +757,62 @@ async def set_frame_options(request, call_next):
     # inside iframes served from the same origin.
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     return response
+
+
+@app.middleware("http")
+async def track_sessions(request: Request, call_next):
+    response = await call_next(request)
+    session_id = request.cookies.get("session_id")
+    expire_before = datetime.utcnow() - timedelta(seconds=SESSION_TTL_SECONDS)
+    async with async_session_maker() as session:
+        await session.execute(
+            delete(UserSession).where(UserSession.last_active < expire_before)
+        )
+        if session_id:
+            db_session = await session.get(UserSession, session_id)
+            if db_session:
+                db_session.last_active = datetime.utcnow()
+        await session.commit()
+    return response
 # Only enable authentication routes when license checking is active
 if load_settings().get("license_check", False):
+    # Remove default login route to enforce custom session logic
+    for route in list(auth_router.routes):
+        if getattr(route, "path", "") == "/auth/jwt/login" and "POST" in getattr(route, "methods", []):
+            auth_router.routes.remove(route)
     app.include_router(auth_router)
+
+    @app.post("/auth/jwt/login")
+    async def login(
+        request: Request,
+        response: Response,
+        credentials: OAuth2PasswordRequestForm = Depends(),
+        strategy=Depends(auth_backend.get_strategy),
+    ):
+        user = await fastapi_users.authenticate(credentials, strategy)
+        if user is None:
+            raise HTTPException(status_code=400, detail="Invalid credentials")
+        async with async_session_maker() as session:
+            expire_before = datetime.utcnow() - timedelta(seconds=SESSION_TTL_SECONDS)
+            await session.execute(delete(UserSession).where(UserSession.last_active < expire_before))
+            count = await session.scalar(
+                select(func.count()).where(UserSession.user_id == user.id)
+            )
+            if count >= MAX_SESSIONS:
+                raise HTTPException(status_code=403, detail="Too many active sessions")
+            session_id = str(uuid.uuid4())
+            session.add(
+                UserSession(
+                    user_id=user.id,
+                    session_id=session_id,
+                    last_active=datetime.utcnow(),
+                    ip=request.client.host if request.client else None,
+                )
+            )
+            await session.commit()
+        login_response = await auth_backend.get_login_response(user, response, strategy)
+        login_response.set_cookie("session_id", session_id, httponly=True)
+        return login_response
 
 # Enable cross-origin requests if needed
 origins = os.getenv("DOCROPPER_CORS_ORIGINS", "*")
