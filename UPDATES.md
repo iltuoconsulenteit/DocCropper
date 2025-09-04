@@ -1,5 +1,9 @@
 # Updates
 
+## 2025-09-05
+- Licenses panel can now persist manual keys to `env/license.env` and refresh the
+  server so the frontend reflects the new license immediately
+
 ## 2025-09-04
 - Add cross-platform uninstallation scripts that stop running instances and remove the installation directory even when files are locked
 

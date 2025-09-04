@@ -290,6 +290,9 @@ DocCropper ships with three editions. A **Licenses** button in the header opens 
 Provide the license in `env/license.env`, a top‑level `.env`, or `settings.json`
 via the `DOCROPPER_LICENSE_KEY` entry. The key determines the active edition:
 
+Licenses may also be entered from the web interface; the **Licenses** panel
+saves the values to `env/license.env` and applies them immediately.
+
 - leave the value empty or set it to `FREE` for the basic demo
 - use `DEMO-FULL-DC` to unlock the **Demo Full** mode with all features but a
   watermark

@@ -3401,7 +3401,11 @@ function renderLicenseBox() {
         btn.addEventListener('click', async () => {
             const key = document.getElementById('licenseKeyInput').value.trim();
             const name = document.getElementById('licenseNameInput').value.trim();
-            await saveSettings({license_key: key, license_name: name});
+            await fetch('/license/manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key, name })
+            });
             await refreshLicenseInfo();
             await fetch('/restart/', {method: 'POST'});
             if ('caches' in window) {
