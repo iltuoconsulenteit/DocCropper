@@ -165,22 +165,30 @@ DEFAULT_SPONSOR_FRAME = (
     "adapt_container_width=true&hide_cover=true&show_facepile=false"
 )
 
-try:
-    VERSION = subprocess.check_output(
-        ["git", "rev-parse", "--short", "HEAD"],
-        cwd=os.path.dirname(__file__),
-        stderr=subprocess.DEVNULL,
-    ).decode().strip()
-    VERSION_DATE = subprocess.check_output(
-        ["git", "log", "-1", "--format=%cd", "--date=short"],
-        cwd=os.path.dirname(__file__),
-        stderr=subprocess.DEVNULL,
-    ).decode().strip()
-except Exception:
-    VERSION = "unknown"
-    VERSION_DATE = ""
+def get_version_info() -> tuple[str, str]:
+    """Return the current Git commit hash and date."""
+    try:
+        version = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=BASE_DIR,
+            stderr=subprocess.DEVNULL,
+        ).decode().strip()
+        date = subprocess.check_output(
+            ["git", "log", "-1", "--format=%cd", "--date=short"],
+            cwd=BASE_DIR,
+            stderr=subprocess.DEVNULL,
+        ).decode().strip()
+    except Exception:
+        version = "unknown"
+        date = ""
+    return version, date
 
-CACHE_BUST = f"?v={VERSION}"
+def get_cache_bust() -> str:
+    version, _ = get_version_info()
+    return f"?v={version}" if version != "unknown" else ""
+
+VERSION, VERSION_DATE = get_version_info()
+CACHE_BUST = get_cache_bust()
 
 SESSIONS_ROOT = "sessions"
 SIGNATURES_DIR = "signatures"
@@ -990,17 +998,18 @@ def make_index_response(request: Request, lang: str) -> HTMLResponse:
             content = f.read()
         content = content.replace('<html lang="en">', f'<html lang="{lang}">')
         content = content.replace('</head>', f'<script>window.DC_LANG="{lang}";</script></head>')
-        if CACHE_BUST:
-            content = content.replace("styles.css", f"styles.css{CACHE_BUST}")
-            content = content.replace("app.js", f"app.js{CACHE_BUST}")
-            content = content.replace("mobilesign.js", f"mobilesign.js{CACHE_BUST}")
-            content = content.replace("app_logo.png", f"app_logo.png{CACHE_BUST}")
-            content = content.replace("header_logo.png", f"header_logo.png{CACHE_BUST}")
-            content = content.replace("footer_logo.png", f"footer_logo.png{CACHE_BUST}")
-            content = content.replace("DocCropper_slogan_main_en.png", f"DocCropper_slogan_main_en.png{CACHE_BUST}")
-            content = content.replace("DocCropper_slogan_main_it.png", f"DocCropper_slogan_main_it.png{CACHE_BUST}")
-            content = content.replace("DocCropper_slogan_sign_en.png", f"DocCropper_slogan_sign_en.png{CACHE_BUST}")
-            content = content.replace("DocCropper_slogan_sign_it.png", f"DocCropper_slogan_sign_it.png{CACHE_BUST}")
+        cache_bust = get_cache_bust()
+        if cache_bust:
+            content = content.replace("styles.css", f"styles.css{cache_bust}")
+            content = content.replace("app.js", f"app.js{cache_bust}")
+            content = content.replace("mobilesign.js", f"mobilesign.js{cache_bust}")
+            content = content.replace("app_logo.png", f"app_logo.png{cache_bust}")
+            content = content.replace("header_logo.png", f"header_logo.png{cache_bust}")
+            content = content.replace("footer_logo.png", f"footer_logo.png{cache_bust}")
+            content = content.replace("DocCropper_slogan_main_en.png", f"DocCropper_slogan_main_en.png{cache_bust}")
+            content = content.replace("DocCropper_slogan_main_it.png", f"DocCropper_slogan_main_it.png{cache_bust}")
+            content = content.replace("DocCropper_slogan_sign_en.png", f"DocCropper_slogan_sign_en.png{cache_bust}")
+            content = content.replace("DocCropper_slogan_sign_it.png", f"DocCropper_slogan_sign_it.png{cache_bust}")
     except FileNotFoundError:
         logger.error(f"{index_path} not found")
         return HTMLResponse(content="Frontend not found.", status_code=500)
@@ -1034,9 +1043,10 @@ async def admin_page(user: User = Depends(require_superuser)):
         path = os.path.join(os.path.dirname(__file__), "static", "admin.html")
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
-        if CACHE_BUST:
-            content = content.replace("styles.css", f"styles.css{CACHE_BUST}")
-            content = content.replace("admin.js", f"admin.js{CACHE_BUST}")
+        cache_bust = get_cache_bust()
+        if cache_bust:
+            content = content.replace("styles.css", f"styles.css{cache_bust}")
+            content = content.replace("admin.js", f"admin.js{cache_bust}")
     except FileNotFoundError:
         return HTMLResponse(content="Admin page not found", status_code=404)
     return HTMLResponse(content=content, status_code=200)
@@ -1049,8 +1059,9 @@ async def get_settings():
     if not data.get("license_check") and not data.get("license_key"):
         data["license_key"] = "FREE"
         data["license_name"] = "Free Edition"
-    data["version"] = VERSION
-    data["version_date"] = VERSION_DATE
+    version, version_date = get_version_info()
+    data["version"] = version
+    data["version_date"] = version_date
     data["active_plugins"] = ACTIVE_PLUGINS
     if "stripe_secret_key" in data:
         data.pop("stripe_secret_key")
@@ -1068,8 +1079,9 @@ async def get_user_settings_endpoint(request: Request):
     if not email:
         return JSONResponse(status_code=401, content={"message": "Not logged in"})
     data = load_user_settings(email)
-    data["version"] = VERSION
-    data["version_date"] = VERSION_DATE
+    version, version_date = get_version_info()
+    data["version"] = version
+    data["version_date"] = version_date
     return data
 
 
@@ -1079,8 +1091,9 @@ async def update_user_settings_endpoint(request: Request, settings: dict = Body(
     if not email:
         return JSONResponse(status_code=401, content={"message": "Not logged in"})
     data = save_user_settings(email, settings)
-    data["version"] = VERSION
-    data["version_date"] = VERSION_DATE
+    version, version_date = get_version_info()
+    data["version"] = version
+    data["version_date"] = version_date
     return data
 
 

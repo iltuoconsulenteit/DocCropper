@@ -267,7 +267,6 @@ def main():
 
     def start_action(icon, item):
         start_app()
-        open_browser()
         update(True)
 
     def stop_action(icon, item):
