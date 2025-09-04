@@ -24,8 +24,11 @@ class NoCacheStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope):
         response = await super().get_response(path, scope)
         if response.status_code == 200:
-            response.headers["Cache-Control"] = "no-cache"
+            # Prevent browsers from reusing cached assets so version updates
+            # are reflected immediately on refresh
+            response.headers["Cache-Control"] = "no-store, max-age=0"
             response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
         return response
 from fastapi.middleware.cors import CORSMiddleware
 from cryptography.fernet import Fernet
@@ -1014,8 +1017,10 @@ def make_index_response(request: Request, lang: str) -> HTMLResponse:
         logger.error(f"{index_path} not found")
         return HTMLResponse(content="Frontend not found.", status_code=500)
     response = HTMLResponse(content=content, status_code=200)
-    response.headers["Cache-Control"] = "no-cache"
+    # Ensure the HTML itself is never cached so new bundle versions load
+    response.headers["Cache-Control"] = "no-store, max-age=0"
     response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     response.set_cookie("session_id", session_id, httponly=True)
     return response
 
@@ -1065,12 +1070,13 @@ async def get_settings():
     data["active_plugins"] = ACTIVE_PLUGINS
     if "stripe_secret_key" in data:
         data.pop("stripe_secret_key")
-    return data
+    return JSONResponse(data, headers={"Cache-Control": "no-store, max-age=0"})
 
 
 @app.post("/settings/")
 async def update_settings(settings: dict = Body(...)):
-    return save_settings(settings)
+    data = save_settings(settings)
+    return JSONResponse(data, headers={"Cache-Control": "no-store, max-age=0"})
 
 
 @app.get("/user-settings/")
@@ -1082,7 +1088,7 @@ async def get_user_settings_endpoint(request: Request):
     version, version_date = get_version_info()
     data["version"] = version
     data["version_date"] = version_date
-    return data
+    return JSONResponse(data, headers={"Cache-Control": "no-store, max-age=0"})
 
 
 @app.post("/user-settings/")
@@ -1094,7 +1100,7 @@ async def update_user_settings_endpoint(request: Request, settings: dict = Body(
     version, version_date = get_version_info()
     data["version"] = version
     data["version_date"] = version_date
-    return data
+    return JSONResponse(data, headers={"Cache-Control": "no-store, max-age=0"})
 
 
 @app.post("/clear-session/")
