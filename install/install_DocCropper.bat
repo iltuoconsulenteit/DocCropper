@@ -215,6 +215,14 @@ if not "!commit_hash!"=="" (
     for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
 )
 
+rem Restore settings and license from backup
+set "BACKUP_DIR=%USERPROFILE%\DocCropperBackup"
+if exist "%BACKUP_DIR%\settings.json" copy /Y "%BACKUP_DIR%\settings.json" "!APP_DIR!\settings.json" >nul
+if exist "%BACKUP_DIR%\env\license.env" (
+    if not exist "!APP_DIR!\env" mkdir "!APP_DIR!\env"
+    copy /Y "%BACKUP_DIR%\env\license.env" "!APP_DIR!\env\license.env" >nul
+)
+
 rem Copy default environment files if missing
 if not exist "!APP_DIR!\.env" if exist "!APP_DIR!\.env.example" copy "!APP_DIR!\.env.example" "!APP_DIR!\.env" >nul
 if not exist "!APP_DIR!\env\auth.env" (

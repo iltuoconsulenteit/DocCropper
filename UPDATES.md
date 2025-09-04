@@ -4,6 +4,10 @@
 - On Windows, compile lightweight wrappers so Task Manager lists
   `DocCropper.exe` and `DocCropperTray.exe` instead of generic Python names
 
+## 2025-09-08
+- Uninstall scripts now back up `settings.json` and `env/license.env` to a `DocCropperBackup` folder under the current user before removing the installation
+- Installers restore these files on setup so licenses and preferences persist across clean reinstallations
+
 ## 2025-09-06
 - Add client-side scanner helper with FastAPI and wire the scan plugin to
   enumerate devices and trigger acquisitions through `http://127.0.0.1:28672`

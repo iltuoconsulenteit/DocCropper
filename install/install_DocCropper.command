@@ -135,6 +135,16 @@ fi
 
 printf '\xE2\x9C\x85 Operazione completata.\n'
 
+# Restore settings and license from user backup
+BACKUP_USER_DIR="$HOME/DocCropperBackup"
+if [ -f "$BACKUP_USER_DIR/settings.json" ]; then
+  cp "$BACKUP_USER_DIR/settings.json" "$TARGET_DIR/settings.json" 2>/dev/null || true
+fi
+if [ -f "$BACKUP_USER_DIR/env/license.env" ]; then
+  mkdir -p "$TARGET_DIR/env"
+  cp "$BACKUP_USER_DIR/env/license.env" "$TARGET_DIR/env/license.env" 2>/dev/null || true
+fi
+
 # Ensure default environment files
 if [ ! -f "$TARGET_DIR/.env" ] && [ -f "$TARGET_DIR/.env.example" ]; then
   cp "$TARGET_DIR/.env.example" "$TARGET_DIR/.env"
