@@ -97,12 +97,20 @@ if [ -d "$TARGET_DIR/.git" ]; then
       cp "$TARGET_DIR/$CONFIG_FILE" "$TARGET_DIR/$BACKUP_FILE"
       git -C "$TARGET_DIR" restore "$CONFIG_FILE" >/dev/null 2>&1 || true
     fi
+    LIC_BACKUP="$TARGET_DIR/license.env.bak"
+    if [ -f "$TARGET_DIR/env/license.env" ]; then
+      cp "$TARGET_DIR/env/license.env" "$LIC_BACKUP"
+    fi
     echo "📥 Aggiornamento repository..."
     git -C "$TARGET_DIR" merge --abort >/dev/null 2>&1 || true
     git -C "$TARGET_DIR" rebase --abort >/dev/null 2>&1 || true
     git -C "$TARGET_DIR" fetch --all --prune
     git -C "$TARGET_DIR" reset --hard "origin/$BRANCH"
     git -C "$TARGET_DIR" clean -ffdx
+    if [ -f "$LIC_BACKUP" ]; then
+      mkdir -p "$TARGET_DIR/env"
+      mv "$LIC_BACKUP" "$TARGET_DIR/env/license.env"
+    fi
     git -C "$TARGET_DIR" rev-parse HEAD > "$LAST_FILE" 2>/dev/null || true
   fi
 else

@@ -1146,6 +1146,27 @@ async def set_manual_license(data: dict = Body(...)):
     )
 
 
+@app.get("/license/status")
+async def license_status(request: Request):
+    settings = load_settings()
+    valid = True
+    if settings.get("license_check", False):
+        domain = request.headers.get("host")
+        try:
+            data = await verify_license("", settings.get("license_type", ""), settings.get("license_key", ""), domain)
+            valid = bool(data.get("valid"))
+        except Exception:
+            valid = False
+    info = {
+        "license_key": settings.get("license_key", ""),
+        "license_name": settings.get("license_name", ""),
+        "license_level": settings.get("license_level", "free"),
+        "license_type": settings.get("license_type", "free"),
+        "valid": valid,
+    }
+    return JSONResponse(info, headers={"Cache-Control": "no-store, max-age=0"})
+
+
 @app.post("/clear-session/")
 async def clear_session(request: Request):
     session_id = request.cookies.get("session_id")

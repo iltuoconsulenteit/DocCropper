@@ -177,6 +177,8 @@ if not exist "!APP_DIR!\.git" (
                 git restore "!CONFIG_FILE!"
             )
         )
+        set "LIC_BACKUP=%TEMP%\license.env"
+        if exist "env\license.env" copy /Y "env\license.env" "%LIC_BACKUP%" >nul
         call :log "Updating repository..."
         git fetch --all --prune >>"%LOG_FILE%" 2>&1 || (
             call :log "Failed to fetch updates from origin"
@@ -188,6 +190,10 @@ if not exist "!APP_DIR!\.git" (
         git reset --hard origin/!BRANCH! >>"%LOG_FILE%" 2>&1
         git clean -ffdx >>"%LOG_FILE%" 2>&1
         for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
+        if exist "%LIC_BACKUP%" (
+            if not exist "env" mkdir "env"
+            copy /Y "%LIC_BACKUP%" "env\license.env" >nul
+        )
         if exist "!BACKUP_FILE!" (
             call :log "Merge !BACKUP_FILE! in !CONFIG_FILE! (manual merge suggested)"
             del "!BACKUP_FILE!" >>"%LOG_FILE%" 2>&1

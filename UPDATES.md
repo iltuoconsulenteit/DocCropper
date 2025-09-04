@@ -317,3 +317,7 @@
 
 ## 2025-08-26
 - Allow embedded help pages by removing X-Frame-Options from static wiki responses
+
+## 2025-08-27
+- Preserve `env/license.env` during repository updates so manual licenses survive upgrades
+- Add `/license/status` endpoint and frontend refresh to confirm the active license

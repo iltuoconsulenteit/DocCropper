@@ -601,6 +601,16 @@ function saveSettings(data) {
 async function refreshLicenseInfo() {
     const cfg = await loadSettings();
     applySettings(cfg);
+    try {
+        const resp = await fetch('/license/status?t=' + Date.now(), { cache: 'no-store' });
+        if (resp.ok) {
+            const info = await resp.json();
+            isLicensed = info.valid && !!info.license_key;
+            licenseName = info.license_name || '';
+        }
+    } catch (e) {
+        console.error('Failed to refresh license status', e);
+    }
     if (licenseInfo) {
         licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
     }

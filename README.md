@@ -173,6 +173,7 @@ DOCROPPER_SETTINGS_PASSWORD=12345678
 ### Manual license setup
 
 Run `scripts/setup_license.*` for your platform to interactively supply a license name and key. The script stores them in `env/license.env`, updates `settings.json`, and disables remote checks so the app comes up licensed immediately. The same fields are also available in the web UI under **License**.
+The installers keep this file when pulling updates, so your license stays active after upgrading.
 
 ### 🗑️ Uninstall
 
@@ -313,6 +314,9 @@ via the `DOCROPPER_LICENSE_KEY` entry. The key determines the active edition:
 
 Licenses may also be entered from the web interface; the **Licenses** panel
 saves the values to `env/license.env` and applies them immediately.
+The running server exposes `/license/status` which returns the current license
+name, level, and a validity flag so you can verify the active edition after an
+update.
 
 - leave the value empty or set it to `FREE` for the basic demo
 - use `DEMO-FULL-DC` to unlock the **Demo Full** mode with all features but a
