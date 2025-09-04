@@ -1113,15 +1113,18 @@ async def set_manual_license(data: dict = Body(...)):
         raise HTTPException(status_code=400, detail="Missing key")
     os.makedirs(ENV_DIR, exist_ok=True)
     env_path = os.path.join(ENV_DIR, "license.env")
-    with open(env_path, "w", encoding="utf-8") as fh:
-        fh.write(
-            f"DOCROPPER_MANUAL_LICENSE={key}\n"
-            f"DOCROPPER_LICENSE_KEY={key}\n"
-            f"DOCROPPER_LICENSE_NAME={name}\n"
-            "LICENSE_CHECK=false\n"
-        )
+    try:
+        with open(env_path, "w", encoding="utf-8") as fh:
+            fh.write(
+                f"DOCROPPER_MANUAL_LICENSE={key}\n"
+                f"DOCROPPER_LICENSE_KEY={key}\n"
+                f"DOCROPPER_LICENSE_NAME={name}\n"
+                "LICENSE_CHECK=false\n"
+            )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to write license: {exc}")
     load_env_files(override=True)
-    save_settings({"license_key": key, "license_name": name, "license_check": False})
+    saved = save_settings({"license_key": key, "license_name": name, "license_check": False})
     for p in Path(BASE_DIR).rglob("__pycache__"):
         shutil.rmtree(p, ignore_errors=True)
     for p in Path(BASE_DIR).rglob("*.pyc"):
@@ -1129,7 +1132,10 @@ async def set_manual_license(data: dict = Body(...)):
             p.unlink()
         except Exception:
             pass
-    return {"status": "saved", "license_key": key, "license_name": name}
+    return JSONResponse(
+        {"status": "saved", "license_key": key, "license_name": name},
+        headers={"Cache-Control": "no-store, max-age=0"},
+    )
 
 
 @app.post("/clear-session/")

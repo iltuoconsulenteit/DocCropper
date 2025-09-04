@@ -3401,11 +3401,16 @@ function renderLicenseBox() {
         btn.addEventListener('click', async () => {
             const key = document.getElementById('licenseKeyInput').value.trim();
             const name = document.getElementById('licenseNameInput').value.trim();
-            await fetch('/license/manual', {
+            const resp = await fetch('/license/manual', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ key, name })
             });
+            if (!resp.ok) {
+                const txt = await resp.text();
+                alert('License save failed: ' + txt);
+                return;
+            }
             await refreshLicenseInfo();
             await fetch('/restart/', {method: 'POST'});
             if ('caches' in window) {
