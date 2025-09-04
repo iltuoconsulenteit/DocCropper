@@ -94,13 +94,17 @@ if errorlevel 1 (
     exit /b
 )
 
-:: Ensure named executables for clearer Task Manager entries
-set "PY_EXE=venv\Scripts\python.exe"
-set "PYW_EXE=venv\Scripts\pythonw.exe"
-set "DOC_EXE=venv\Scripts\DocCropper.exe"
-set "TRAY_EXE=venv\Scripts\DocCropperTray.exe"
-if not exist "!DOC_EXE!" copy "!PY_EXE!" "!DOC_EXE!" >nul 2>&1
-if not exist "!TRAY_EXE!" copy "!PYW_EXE!" "!TRAY_EXE!" >nul 2>&1
+:: Ensure compiled wrappers for clearer Task Manager entries
+set "PY_DIR=venv\Scripts"
+set "DOC_EXE=!PY_DIR!\DocCropper.exe"
+set "TRAY_EXE=!PY_DIR!\DocCropperTray.exe"
+if not exist "!DOC_EXE!" (
+    echo [INFO] Compilo wrapper eseguibili >> "!LOG_FILE!"
+    powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\build_wrappers.ps1" "!PY_DIR!" >>"!LOG_FILE!" 2>&1
+) else if not exist "!TRAY_EXE!" (
+    echo [INFO] Compilo wrapper eseguibili >> "!LOG_FILE!"
+    powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\build_wrappers.ps1" "!PY_DIR!" >>"!LOG_FILE!" 2>&1
+)
 
 if "!START_TRAY!"=="1" (
     echo [INFO] Avvio tray helper >> "!LOG_FILE!"

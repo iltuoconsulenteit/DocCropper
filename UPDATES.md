@@ -1,7 +1,7 @@
 # Updates
 
 ## 2025-09-07
-- On Windows, renamed virtualenv executables allow Task Manager to show
+- On Windows, compile lightweight wrappers so Task Manager lists
   `DocCropper.exe` and `DocCropperTray.exe` instead of generic Python names
 
 ## 2025-09-06
