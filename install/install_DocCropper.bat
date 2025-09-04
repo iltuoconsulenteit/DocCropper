@@ -188,18 +188,10 @@ if not exist "!APP_DIR!\.git" (
 )
 
 rem Remove cached Python bytecode so updates load correctly
-set "PYTMP=%TEMP%\clear_pyc.py"
->"%PYTMP%" (
-    echo import pathlib, shutil, sys
-    echo root = pathlib.Path^(sys.argv[1]^)
-    echo for p in root.rglob('__pycache__'):
-    echo^    shutil.rmtree(p, ignore_errors=True)
-    echo for p in root.rglob('*.pyc'):
-    echo^    try: p.unlink()
-    echo^    except Exception: pass
-)
-python "%PYTMP%" "!APP_DIR!"
-del "%PYTMP%" >nul 2>&1
+powershell -NoProfile -Command "
+    Get-ChildItem -Path '!APP_DIR!' -Recurse -Filter '__pycache__' | Remove-Item -Recurse -Force; 
+    Get-ChildItem -Path '!APP_DIR!' -Recurse -Filter '*.pyc' | Remove-Item -Force
+" >nul 2>&1
 
 cd /d "!APP_DIR!"
 
