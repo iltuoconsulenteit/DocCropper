@@ -178,17 +178,16 @@ if not exist "!APP_DIR!\.git" (
             )
         )
         call :log "Updating repository..."
-        git fetch origin !BRANCH! >>"%LOG_FILE%" 2>&1 || (
-            call :log "Failed to fetch branch !BRANCH! from origin"
+        git fetch --all --prune >>"%LOG_FILE%" 2>&1 || (
+            call :log "Failed to fetch updates from origin"
             exit /b 1
         )
         git merge --abort >nul 2>&1
         git rebase --abort >nul 2>&1
         git checkout !BRANCH! >>"%LOG_FILE%" 2>&1 || git checkout -B !BRANCH! origin/!BRANCH! >>"%LOG_FILE%" 2>&1
         git reset --hard origin/!BRANCH! >>"%LOG_FILE%" 2>&1
-        git clean -fd >>"%LOG_FILE%" 2>&1
+        git clean -ffdx >>"%LOG_FILE%" 2>&1
         for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
-        git pull --ff-only >>"%LOG_FILE%" 2>&1
         if exist "!BACKUP_FILE!" (
             call :log "Merge !BACKUP_FILE! in !CONFIG_FILE! (manual merge suggested)"
             del "!BACKUP_FILE!" >>"%LOG_FILE%" 2>&1

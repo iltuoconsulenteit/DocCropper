@@ -99,9 +99,9 @@ if [ -d "$TARGET_DIR/.git" ]; then
     echo "📥 Aggiornamento repository..."
     git -C "$TARGET_DIR" merge --abort >/dev/null 2>&1 || true
     git -C "$TARGET_DIR" rebase --abort >/dev/null 2>&1 || true
-    git -C "$TARGET_DIR" fetch origin "$BRANCH"
+    git -C "$TARGET_DIR" fetch --all --prune
     git -C "$TARGET_DIR" reset --hard "origin/$BRANCH"
-    git -C "$TARGET_DIR" clean -fd
+    git -C "$TARGET_DIR" clean -ffdx
     git -C "$TARGET_DIR" rev-parse HEAD > "$LAST_FILE" 2>/dev/null || true
   fi
 else
@@ -214,7 +214,7 @@ PY
       git -C "$TARGET_DIR" merge --abort >/dev/null 2>&1 || true
       git -C "$TARGET_DIR" rebase --abort >/dev/null 2>&1 || true
       git -C "$TARGET_DIR" reset --hard
-      git -C "$TARGET_DIR" clean -fd
+      git -C "$TARGET_DIR" clean -ffdx
       git -C "$TARGET_DIR" pull --rebase --autostash origin "$DEV_BRANCH"
     fi
   else
