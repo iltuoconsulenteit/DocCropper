@@ -120,6 +120,10 @@ else
   git -C "$TARGET_DIR" rev-parse HEAD > "$LAST_FILE" 2>/dev/null || true
 fi
 
+# Remove any cached bytecode so the updated code loads correctly
+find "$TARGET_DIR" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null
+find "$TARGET_DIR" -name "*.pyc" -delete 2>/dev/null
+
 echo "📜 Ultimi 10 commit:" | tee -a "$LOG_FILE"
 git -C "$TARGET_DIR" log -n 10 --pretty=format:"%h | %ad | %s" --date=short | tee -a "$LOG_FILE"
 read -r -p "Vuoi ripristinare un commit specifico? (lascia vuoto per continuare): " COMMIT_HASH
