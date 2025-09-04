@@ -29,6 +29,8 @@ class NoCacheStaticFiles(StaticFiles):
             response.headers["Cache-Control"] = "no-store, max-age=0"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
+            # Allow help pages like the wiki to be embedded in the UI
+            response.headers["X-Frame-Options"] = "SAMEORIGIN"
         return response
 from fastapi.middleware.cors import CORSMiddleware
 from cryptography.fernet import Fernet
