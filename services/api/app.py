@@ -191,8 +191,6 @@ DEFAULT_MAX_UPLOAD_MB = 5
 MAX_UPLOAD_MB = int(os.getenv("DOCROPPER_MAX_UPLOAD_MB", str(DEFAULT_MAX_UPLOAD_MB)))
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 
-BASE_DIR = Path(__file__).resolve().parent
-
 def repo_has_updates() -> bool:
     """Check if remote Git repository has new commits."""
     try:
