@@ -46,6 +46,7 @@ Configuration variables, environment files, and the `settings.json` options are 
 - 📁 Limit simultaneous uploads with the `max_upload_files` setting (10 by default)
 - 🚀 Cache busting (`?v=<commit>`) ensures browsers fetch updated files
 - 🔔 Notification bell checks for updates and lets licensed users trigger upgrades with a PIN
+- 🪪 Enter and activate license keys directly from the web UI
 - ⏪ Rollback command restores the previous version if an update causes issues
 - ⬇️ Optional plugin adds a per-thumbnail PNG download button
 - 📠 Experimental plugin initiates scanning via a locally installed helper to access USB or network scanners
@@ -169,9 +170,13 @@ DOCROPPER_DEV_PASSWORD=87654321
 DOCROPPER_SETTINGS_PASSWORD=12345678
 ```
 
+### Manual license setup
+
+Run `scripts/setup_license.*` for your platform to interactively supply a license name and key. The script stores them in `env/license.env`, updates `settings.json`, and disables remote checks so the app comes up licensed immediately. The same fields are also available in the web UI under **License**.
+
 ### 🗑️ Uninstall
 
-Run the script `scripts/uninstall_DocCropper.*` for your platform to stop DocCropper and remove its files. Run it with administrative privileges to avoid permission errors. The script saves `settings.json` and `env/license.env` to a `DocCropperBackup` folder in your profile so they can be restored on the next installation.
+Run the script `scripts/uninstall_DocCropper.*` for your platform to stop DocCropper and remove its files. Run it with administrative privileges to avoid permission errors. The script saves `settings.json` and `env/license.env` to a `DocCropperBackup` folder in your profile, and future installers automatically restore these files if present.
 
 ---
 

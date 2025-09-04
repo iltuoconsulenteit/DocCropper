@@ -17,7 +17,9 @@ fi
 if [ -f "$APP_DIR/env/license.env" ]; then
   cp "$APP_DIR/env/license.env" "$BACKUP_DIR/env/license.env" 2>/dev/null || true
 fi
+echo "Config and license backed up to $BACKUP_DIR"
 
+cd / >/dev/null 2>&1
 sudo rm -rf "$APP_DIR"
 
 echo "Uninstallation complete."

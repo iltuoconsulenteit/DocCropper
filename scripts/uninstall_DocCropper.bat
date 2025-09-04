@@ -1,7 +1,16 @@
 @echo off
-cd /d "%~dp0"
-setlocal
+setlocal EnableDelayedExpansion
 
+:: Relaunch from %TEMP% so we can delete the install directory
+set "TMPDIR=%TEMP%\"
+if /I not "%~dp0"=="%TMPDIR%" (
+    copy "%~f0" "%TMPDIR%uninstall_DocCropper.bat" >nul
+    start "" "%TMPDIR%uninstall_DocCropper.bat" %*
+    exit /b
+)
+set "SELF=%~f0"
+
+:: Determine installation path
 if defined DOCROPPER_HOME (
     set "APP_DIR=%DOCROPPER_HOME%"
 ) else (
@@ -22,6 +31,7 @@ if exist "%APP_DIR%\env\license.env" (
     if not exist "%BACKUP_DIR%\env" mkdir "%BACKUP_DIR%\env" >nul 2>&1
     copy /Y "%APP_DIR%\env\license.env" "%BACKUP_DIR%\env\license.env" >nul
 )
+echo Config and license backed up to %BACKUP_DIR%
 
 :: Take ownership and grant permissions to avoid access denied
 if exist "%APP_DIR%" (
@@ -39,5 +49,6 @@ if exist "%APP_DIR%" (
     exit /b 1
 )
 
-echo Uninstallation complete.
+echo Uninstallation complete. Backup saved to %BACKUP_DIR%.
+del "%SELF%" >nul 2>&1
 exit /b 0
