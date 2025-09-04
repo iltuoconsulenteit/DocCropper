@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-09-04
+- Add cross-platform uninstallation scripts that stop running instances and remove the installation directory even when files are locked
+
 ## 2025-08-19
 - Enable DocuSeal and remote signing plugins by default so developer licenses reveal them immediately
 - Add a Settings button for developer builds and wire it into the Expressive template

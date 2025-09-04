@@ -169,6 +169,10 @@ DOCROPPER_DEV_PASSWORD=87654321
 DOCROPPER_SETTINGS_PASSWORD=12345678
 ```
 
+### 🗑️ Uninstall
+
+Run the script `scripts/uninstall_DocCropper.*` for your platform to stop DocCropper and remove its files. Run it with administrative privileges to avoid permission errors.
+
 ---
 
 ## ▶️ Running DocCropper
