@@ -192,6 +192,18 @@ MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 
 BASE_DIR = Path(__file__).resolve().parent
 
+
+def active_session_count() -> int:
+    """Return the number of active session directories."""
+    if not os.path.isdir(SESSIONS_ROOT):
+        return 0
+    total = 0
+    for name in os.listdir(SESSIONS_ROOT):
+        path = os.path.join(SESSIONS_ROOT, name)
+        if os.path.isdir(path):
+            total += 1
+    return total
+
 def repo_has_updates() -> bool:
     """Check if remote Git repository has new commits."""
     try:
@@ -963,8 +975,11 @@ async def favicon():
     icon_path = os.path.join(os.path.dirname(__file__), 'static', 'logos', 'app_logo.png')
     return FileResponse(icon_path, headers={"Cache-Control": "no-cache"})
 
-def make_index_response(request: Request, lang: str) -> HTMLResponse:
+def make_index_response(request: Request, lang: str, user: User | None = None) -> HTMLResponse:
     cleanup_old_sessions()
+    if user and user.max_sessions:
+        if active_session_count() >= user.max_sessions:
+            raise HTTPException(status_code=403, detail="Session limit exceeded")
     session_id = request.cookies.get("session_id")
     if not session_id:
         session_id = uuid.uuid4().hex
@@ -1011,14 +1026,14 @@ def make_index_response(request: Request, lang: str) -> HTMLResponse:
 
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
+async def read_root(request: Request, user: User | None = Depends(fastapi_users.current_user(optional=True))):
     lang = load_settings().get("language", "it")
-    return make_index_response(request, lang)
+    return make_index_response(request, lang, user)
 
 
 @app.get("/{lang:en|it}", response_class=HTMLResponse)
-async def read_root_lang(lang: str, request: Request):
-    return make_index_response(request, lang)
+async def read_root_lang(lang: str, request: Request, user: User | None = Depends(fastapi_users.current_user(optional=True))):
+    return make_index_response(request, lang, user)
 
 
 async def require_superuser(user: User = Depends(fastapi_users.current_user())):
