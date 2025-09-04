@@ -5,7 +5,7 @@ cd /d "%~dp0"
 net session >nul 2>&1
 if %errorlevel% neq 0 (
     echo Elevating privileges...
-    powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
+    powershell -NoProfile -Command "Start-Process cmd -ArgumentList '/c','""%~f0""' -Verb RunAs -WindowStyle Normal -Wait"
     exit /b
 )
 
@@ -72,13 +72,23 @@ if not exist "!APP_DIR!" (
     mkdir "!APP_DIR!" >nul 2>&1
     if errorlevel 1 (
         call :log "Unable to create !APP_DIR!. Run this script as Administrator."
+        endlocal
+        pause
         exit /b 1
     )
 )
 
 call :main
+set "MAIN_ERR=%ERRORLEVEL%"
+if not "%MAIN_ERR%"=="0" (
+    echo Installazione fallita. Vedi %LOG_FILE% per i dettagli.
+    endlocal
+    pause
+    exit /b %MAIN_ERR%
+)
+
 endlocal
-exit /b
+exit /b 0
 
 :log
 set MSG=%*
