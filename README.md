@@ -551,6 +551,10 @@ setup.
 - `http://localhost:8000/admin/` – Django admin
 - `http://localhost:8000/api` – FastAPI endpoints
 
+### Support and Bug Reports
+
+Problems or suggestions? Open an issue on [GitHub](https://github.com/iltuoconsulenteit/DocCropper/issues) or write to [doccropper@iltuoconsulenteit.it](mailto:doccropper@iltuoconsulenteit.it).
+
 ### Simple License Webapp
 
 A lightweight FastAPI application is available for quick license management.
