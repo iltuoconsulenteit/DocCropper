@@ -1407,9 +1407,16 @@ async def stripe_webhook(request: Request):
         return JSONResponse(status_code=503, content={"message": "Stripe not configured"})
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
+    if not sig_header:
+        return JSONResponse(status_code=400, content={"message": "Missing signature"})
     try:
-        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
-    except Exception:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, webhook_secret
+        )
+    except stripe.error.SignatureVerificationError:
+        logger.warning("Stripe signature verification failed")
+        return JSONResponse(status_code=400, content={"message": "Invalid signature"})
+    except ValueError:
         return JSONResponse(status_code=400, content={"message": "Invalid payload"})
     if event.get("type") == "checkout.session.completed":
         session = event.get("data", {}).get("object", {})
