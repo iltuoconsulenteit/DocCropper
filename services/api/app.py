@@ -84,6 +84,8 @@ def get_fitz():
     return _fitz
 from plugin.core.sign import register as register_sign
 from app.licensing.check import verify_license
+from jose import jwt, JWTError
+import time
 from app.auth.routes import router as auth_router, fastapi_users
 from app.auth.models import User
 from plugin.core.mobilesign import register as register_mobilesign
@@ -165,6 +167,7 @@ DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
 MANUAL_LICENSE_KEY = os.environ.get("DOCROPPER_MANUAL_LICENSE", "").upper()
 ONLINE_LICENSE_KEY = os.environ.get("DOCROPPER_ONLINE_LICENSE", "").upper()
 DEMO_FULL_LICENSE_KEY = "DEMO-FULL-DC"
+LICENSE_SECRET = os.environ.get("LICENSE_SECRET", "change-me")
 DEFAULT_SPONSOR_FRAME = (
     "https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2F"
     "iltuoconsulenteit%3Flocale%3Dit_IT&tabs=timeline&width=340&height=500&small_header=true&"
@@ -255,6 +258,7 @@ DEFAULT_SETTINGS = {
     "port": 8765,
     "license_key": "",
     "license_name": "",
+    "license_token": "",
     "payment_mode": "donation",
     "paypal_link": "",
     "stripe_link": "",
@@ -397,6 +401,7 @@ def load_settings():
             merged["max_upload_mb"] = int(max_mb_env)
         env_key = os.getenv("DOCROPPER_LICENSE_KEY")
         env_name = os.getenv("DOCROPPER_LICENSE_NAME")
+        env_token = os.getenv("DOCROPPER_LICENSE_TOKEN")
         google_id = os.getenv("DOCROPPER_GOOGLE_CLIENT_ID")
         env_check = os.getenv("LICENSE_CHECK")
         env_level = os.getenv("DOCROPPER_LICENSE_LEVEL")
@@ -416,6 +421,8 @@ def load_settings():
             merged["license_key"] = env_key
         if env_name:
             merged["license_name"] = env_name
+        if env_token:
+            merged["license_token"] = env_token
         if google_id:
             merged["google_client_id"] = google_id
         if env_check is not None:
@@ -508,6 +515,21 @@ def load_settings():
             merged["developer_password_hash"] = bcrypt.hash(DEFAULT_DEV_PASSWORD)
         if "settings_password_hash" not in merged:
             merged["settings_password_hash"] = bcrypt.hash(DEFAULT_SETTINGS_PASSWORD)
+        token = merged.get("license_token")
+        if token:
+            try:
+                payload = jwt.decode(token, LICENSE_SECRET, algorithms=["HS256"])
+                exp = payload.get("expires_at")
+                now = int(time.time())
+                if exp and exp < now:
+                    merged["license_level"] = "free"
+                else:
+                    merged["license_type"] = payload.get("license_type", "manual")
+                    merged["license_name"] = payload.get("license_name", merged.get("license_name", ""))
+                    merged["license_level"] = "full"
+                    merged["license_key"] = token
+            except JWTError:
+                merged["license_level"] = "free"
 
         # Apply values enforced by a previous license check
         overrides = load_license_overrides()
@@ -1146,6 +1168,62 @@ async def set_manual_license(data: dict = Body(...)):
     )
 
 
+@app.post("/license/upload")
+async def upload_license(request: Request, file: UploadFile = File(...)):
+    token = (await file.read()).decode("utf-8").strip()
+    try:
+        payload = jwt.decode(token, LICENSE_SECRET, algorithms=["HS256"])
+        now = int(time.time())
+        exp = payload.get("expires_at")
+        if exp and exp < now:
+            raise HTTPException(status_code=400, detail="Token expired")
+        allowed = payload.get("allowed_domains")
+        domain = request.client.host
+        if allowed and domain not in allowed:
+            raise HTTPException(status_code=403, detail="Domain not allowed")
+    except JWTError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid token: {exc}")
+
+    name = payload.get("license_name", "")
+    ltype = payload.get("license_type", "manual")
+    os.makedirs(ENV_DIR, exist_ok=True)
+    env_path = os.path.join(ENV_DIR, "license.env")
+    try:
+        with open(env_path, "w", encoding="utf-8") as fh:
+            fh.write(
+                f"DOCROPPER_LICENSE_TOKEN={token}\n"
+                f"DOCROPPER_LICENSE_NAME={name}\n"
+                f"DOCROPPER_LICENSE_TYPE={ltype}\n"
+                "LICENSE_CHECK=false\n"
+            )
+            fh.flush()
+            os.fsync(fh.fileno())
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to write license: {exc}")
+
+    load_env_files(override=True)
+    saved = save_settings(
+        {
+            "license_token": token,
+            "license_name": name,
+            "license_type": ltype,
+            "license_level": "full",
+            "license_check": False,
+        }
+    )
+    for p in Path(BASE_DIR).rglob("__pycache__"):
+        shutil.rmtree(p, ignore_errors=True)
+    for p in Path(BASE_DIR).rglob("*.pyc"):
+        try:
+            p.unlink()
+        except Exception:
+            pass
+    return JSONResponse(
+        {"status": "saved", "license_name": name, "license_type": ltype},
+        headers={"Cache-Control": "no-store, max-age=0"},
+    )
+
+
 @app.get("/license/status")
 async def license_status(request: Request):
     settings = load_settings()
@@ -1160,6 +1238,7 @@ async def license_status(request: Request):
     info = {
         "license_key": settings.get("license_key", ""),
         "license_name": settings.get("license_name", ""),
+        "license_token": settings.get("license_token", ""),
         "license_level": settings.get("license_level", "free"),
         "license_type": settings.get("license_type", "free"),
         "valid": valid,

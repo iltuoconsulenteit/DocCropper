@@ -175,6 +175,9 @@ DOCROPPER_SETTINGS_PASSWORD=12345678
 Run `scripts/setup_license.*` for your platform to interactively supply a license name and key. The script stores them in `env/license.env`, updates `settings.json`, and disables remote checks so the app comes up licensed immediately. The same fields are also available in the web UI under **License**.
 The installers keep this file when pulling updates, so your license stays active after upgrading.
 
+### Signed license files
+Generate a signed token with `python scripts/generate_license_file.py --type developer --name "Your Name"`. In the web UI open **License**, choose the file under *License File*, and click **Import** to activate it. The token is verified locally with `LICENSE_SECRET` and stored in `env/license.env` so the license remains after restarts.
+
 ### 🗑️ Uninstall
 
 Run the script `scripts/uninstall_DocCropper.*` for your platform to stop DocCropper and remove its files. Run it with administrative privileges to avoid permission errors. The script saves `settings.json` and `env/license.env` to a `DocCropperBackup` folder in your profile, and future installers automatically restore these files if present.

@@ -3401,7 +3401,10 @@ function renderLicenseBox() {
         <input type="text" id="licenseKeyInput" value="${currentSettings.license_key || ''}"><br>
         <label>${t('licenseName')}</label>
         <input type="text" id="licenseNameInput" value="${currentSettings.license_name || ''}"><br>
-        <button id="saveLicenseBtn">${t('saveLicense')}</button>
+        <button id="saveLicenseBtn">${t('saveLicense')}</button><br><br>
+        <label>License File</label>
+        <input type="file" id="licenseFileInput" accept=".dcl,.lic,.txt"><br>
+        <button id="uploadLicenseBtn">Import</button>
     </div>`;
     }
     licenseBox.innerHTML = html;
@@ -3416,6 +3419,33 @@ function renderLicenseBox() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ key, name })
             });
+            if (!resp.ok) {
+                const txt = await resp.text();
+                alert('License save failed: ' + txt);
+                return;
+            }
+            await refreshLicenseInfo();
+            await fetch('/restart/', {method: 'POST'});
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                for (const k of keys) {
+                    await caches.delete(k);
+                }
+            }
+            alert(t('licenseSaved'));
+            licenseBox.classList.remove('visible');
+            setTimeout(() => { location.reload(); }, 1000);
+        });
+        const uploadBtn = document.getElementById('uploadLicenseBtn');
+        uploadBtn.addEventListener('click', async () => {
+            const f = document.getElementById('licenseFileInput').files[0];
+            if (!f) {
+                alert('Select a file');
+                return;
+            }
+            const fd = new FormData();
+            fd.append('file', f);
+            const resp = await fetch('/license/upload', { method: 'POST', body: fd });
             if (!resp.ok) {
                 const txt = await resp.text();
                 alert('License save failed: ' + txt);
