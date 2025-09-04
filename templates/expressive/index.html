@@ -414,8 +414,11 @@
           <option value="pro" x-text="t('licensePro')"></option>
           <option value="full" x-text="t('licenseFull')"></option>
         </select>
+        <label class="block text-sm">License File</label>
+        <input type="file" class="border w-full mb-4 p-1" x-ref="licenseFile" accept=".dcl,.lic,.txt" />
         <div class="text-right space-x-2">
           <button class="px-3 py-1 bg-gray-300 rounded" @click="licenseModal=false" x-text="t('cancel')"></button>
+          <button class="px-3 py-1 bg-green-500 text-white rounded" @click="uploadLicense">Import</button>
           <button class="px-3 py-1 bg-blue-500 text-white rounded" @click="saveLicense" x-text="t('saveLicense')"></button>
         </div>
       </div>
@@ -1156,6 +1159,24 @@
             fetch('/settings/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
               .then(()=>{ this.licenseName = this.licenseNameInput; alert(this.t('licenseSaved')); this.licenseModal=false; })
               .catch(()=>{ this.licenseModal=false; });
+          },
+          uploadLicense(){
+            const f = this.$refs.licenseFile.files[0];
+            if(!f){ alert('Select a file'); return; }
+            const fd = new FormData();
+            fd.append('file', f);
+            fetch('/license/upload', {method:'POST', body:fd})
+              .then(res=>{
+                if(!res.ok) return res.text().then(t=>{throw new Error(t);});
+              })
+              .then(()=>fetch('/restart/', {method:'POST'}))
+              .then(async ()=>{
+                if('caches' in window){
+                  const keys = await caches.keys();
+                  for(const k of keys){ await caches.delete(k);} }
+                location.reload();
+              })
+              .catch(err=>{ alert('License save failed: '+err.message); });
           },
           async handleImport(e){
             let selected = Array.from(e.target.files || []);

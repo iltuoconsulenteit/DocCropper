@@ -2,7 +2,7 @@
 """Generate a signed DocCropper license token file.
 
 Usage:
-  python scripts/generate_license_file.py --type developer --name "Your Name" --out license.dcl
+  python scripts/license/generate_license_file.py --type developer --name "Your Name" --out license.dcl
 
 The script reads the LICENSE_SECRET environment variable to sign the token.
 """

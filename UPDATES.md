@@ -2,7 +2,7 @@
 
 ## 2025-09-09
 - Licenses can be activated by uploading a signed token file from the web UI
-- Added `generate_license_file.py` helper to create signed license files with `LICENSE_SECRET`
+- Added `scripts/license/generate_license_file.py` helper to create signed license files with `LICENSE_SECRET`
 
 ## 2025-09-07
 - On Windows, compile lightweight wrappers so Task Manager lists
