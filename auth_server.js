@@ -3,9 +3,12 @@ const session = require('express-session');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const path = require('path');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
+
+app.use(express.json());
 
 app.use(session({
   secret: 'doccropper-secret',
@@ -52,6 +55,19 @@ app.get('/logout', (req, res, next) => {
       res.redirect('/');
     });
   });
+});
+
+app.post('/verify-token', (req, res) => {
+  const { token } = req.body || {};
+  if (!token) {
+    return res.status(400).json({ valid: false, message: 'Token required' });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    res.json({ valid: true, max_sessions: decoded.max_sessions });
+  } catch (err) {
+    res.status(401).json({ valid: false, message: 'Invalid token' });
+  }
 });
 
 app.use(express.static(path.join(__dirname, 'static')));

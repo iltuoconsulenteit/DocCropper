@@ -4,11 +4,14 @@ from typing import Optional
 class UserRead(schemas.BaseUser[int]):
     license_type: str
     license_token: Optional[str] = None
+    max_sessions: Optional[int] = None
 
 class UserCreate(schemas.BaseUserCreate):
     license_type: str = "free"
     license_token: Optional[str] = None
+    max_sessions: Optional[int] = None
 
 class UserUpdate(schemas.BaseUserUpdate):
     license_type: Optional[str] = None
     license_token: Optional[str] = None
+    max_sessions: Optional[int] = None
