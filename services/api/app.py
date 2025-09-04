@@ -1121,9 +1121,16 @@ async def set_manual_license(data: dict = Body(...)):
                 f"DOCROPPER_LICENSE_NAME={name}\n"
                 "LICENSE_CHECK=false\n"
             )
+            fh.flush()
+            os.fsync(fh.fileno())
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to write license: {exc}")
     load_env_files(override=True)
+    global DEV_LICENSE_KEY, DEV_LICENSE_KEY_UPPER, MANUAL_LICENSE_KEY, ONLINE_LICENSE_KEY
+    DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", DEV_LICENSE_KEY)
+    DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
+    MANUAL_LICENSE_KEY = os.environ.get("DOCROPPER_MANUAL_LICENSE", MANUAL_LICENSE_KEY).upper()
+    ONLINE_LICENSE_KEY = os.environ.get("DOCROPPER_ONLINE_LICENSE", ONLINE_LICENSE_KEY).upper()
     saved = save_settings({"license_key": key, "license_name": name, "license_check": False})
     for p in Path(BASE_DIR).rglob("__pycache__"):
         shutil.rmtree(p, ignore_errors=True)

@@ -14,11 +14,11 @@ if exist "!SCRIPT_DIR!main.py" (
 cd /d "!APP_DIR!"
 
 rem Copy default environment files if missing
-if not exist "!APP_DIR!\.env" if exist "!APP_DIR!\.env.example" copy "!APP_DIR!\.env.example" "!APP_DIR!\.env" >nul
+if not exist "!APP_DIR!\.env" if exist "!APP_DIR!\.env.example" copy "!APP_DIR!\.env.example" "!APP_DIR!\.env" >nul 2>&1
 if not exist "!APP_DIR!\env\auth.env" (
     if exist "!APP_DIR!\env\auth.env.example" (
         if not exist "!APP_DIR!\env" mkdir "!APP_DIR!\env"
-        copy "!APP_DIR!\env\auth.env.example" "!APP_DIR!\env\auth.env" >nul
+        copy "!APP_DIR!\env\auth.env.example" "!APP_DIR!\env\auth.env" >nul 2>&1
     )
 )
 
@@ -47,6 +47,7 @@ set "TRAY_RUNNING=0"
 if exist "!TRAY_PID_FILE!" (
     for /f %%p in (!TRAY_PID_FILE!) do set "TRAY_PID=%%p"
     tasklist /FI "PID eq !TRAY_PID!" | find "!TRAY_PID!" >nul && set "TRAY_RUNNING=1"
+    if "!TRAY_RUNNING!"=="0" del /f /q "!TRAY_PID_FILE!" >nul 2>&1
 )
 
 :: Check if server already running using PID file
