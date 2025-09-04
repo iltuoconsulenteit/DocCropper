@@ -58,10 +58,9 @@ if exist "!PID_FILE!" (
     tasklist /FI "PID eq !PID!" | find "!PID!" >nul && set "SERVER_RUNNING=1"
 )
 
+set "START_TRAY=0"
 if "!TRAY_RUNNING!"=="0" (
-    echo [INFO] Avvio tray helper >> "!LOG_FILE!"
-    start "" cmd /c "set DOCROPPER_PROC=DocCropperTray && pythonw doccropper_tray.pyw" >> "!LOG_FILE!" 2>&1
-    timeout /t 2 >nul
+    set "START_TRAY=1"
 )
 
 rem refresh server status after possible tray launch
@@ -95,6 +94,22 @@ if errorlevel 1 (
     exit /b
 )
 
+:: Ensure named executables for clearer Task Manager entries
+set "PY_EXE=venv\Scripts\python.exe"
+set "PYW_EXE=venv\Scripts\pythonw.exe"
+set "DOC_EXE=venv\Scripts\DocCropper.exe"
+set "TRAY_EXE=venv\Scripts\DocCropperTray.exe"
+if not exist "!DOC_EXE!" copy "!PY_EXE!" "!DOC_EXE!" >nul 2>&1
+if not exist "!TRAY_EXE!" copy "!PYW_EXE!" "!TRAY_EXE!" >nul 2>&1
+
+if "!START_TRAY!"=="1" (
+    echo [INFO] Avvio tray helper >> "!LOG_FILE!"
+    set "DOCROPPER_PROC=DocCropperTray"
+    start "" "!TRAY_EXE!" doccropper_tray.pyw >> "!LOG_FILE!" 2>&1
+    set "DOCROPPER_PROC="
+    timeout /t 2 >nul
+)
+
 :: Install or update dependencies
 if exist requirements.txt (
     echo [INFO] Aggiornamento dipendenze Python >> "!LOG_FILE!"
@@ -107,7 +122,9 @@ python main.py --stop >> "!LOG_FILE!" 2>&1
 
 :: Launch application
 echo [INFO] Avvio DocCropper sulla porta %PORT% >> "!LOG_FILE!"
-start "" /b cmd /c "set DOCROPPER_PROC=DocCropper && python main.py --port %PORT%" >> "!LOG_FILE!" 2>&1
+set "DOCROPPER_PROC=DocCropper"
+start "" /b "!DOC_EXE!" main.py --port %PORT% >> "!LOG_FILE!" 2>&1
+set "DOCROPPER_PROC="
 if "%DOCROPPER_TUNNEL%"=="true" (
     where cloudflared >nul 2>&1 && (
         echo Starting Cloudflare Tunnel... >> "!LOG_FILE!"

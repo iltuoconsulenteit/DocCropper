@@ -17,12 +17,15 @@ if not hasattr(bcrypt, "__about__"):
 
 # Try to label the running process so it is easier to spot in task managers.
 _title = os.getenv("DOCROPPER_PROC", "DocCropper")
-try:  # pragma: no cover - platform specific
-    import setproctitle
+if os.name != "nt":  # pragma: no cover - platform specific
+    try:
+        import setproctitle
 
-    setproctitle.setproctitle(_title)
-except Exception:  # noqa: BLE001
-    try:  # Fallback for Windows without setproctitle
+        setproctitle.setproctitle(_title)
+    except Exception:  # noqa: BLE001
+        pass
+else:
+    try:  # Fallback for Windows where setproctitle is unavailable
         import ctypes
 
         ctypes.windll.kernel32.SetConsoleTitleW(_title)

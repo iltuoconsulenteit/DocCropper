@@ -38,12 +38,20 @@ logging.basicConfig(
 )
 
 # Try to label this process so it is easier to spot in task managers
-try:  # pragma: no cover - best effort only
-    import setproctitle
+if os.name != 'nt':  # pragma: no cover - best effort only
+    try:
+        import setproctitle
 
-    setproctitle.setproctitle("DocCropper Tray")
-except Exception:  # noqa: BLE001
-    pass
+        setproctitle.setproctitle("DocCropper Tray")
+    except Exception:  # noqa: BLE001
+        pass
+else:
+    try:
+        import ctypes
+
+        ctypes.windll.kernel32.SetConsoleTitleW("DocCropper Tray")
+    except Exception:  # noqa: BLE001
+        pass
 
 # Load environment variables from env/*.env files
 ENV_DIR = BASE_DIR / 'env'

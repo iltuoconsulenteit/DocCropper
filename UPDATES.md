@@ -1,5 +1,9 @@
 # Updates
 
+## 2025-09-07
+- On Windows, renamed virtualenv executables allow Task Manager to show
+  `DocCropper.exe` and `DocCropperTray.exe` instead of generic Python names
+
 ## 2025-09-06
 - Add client-side scanner helper with FastAPI and wire the scan plugin to
   enumerate devices and trigger acquisitions through `http://127.0.0.1:28672`
