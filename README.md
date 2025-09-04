@@ -202,6 +202,22 @@ tray helper manually.
 If the tray cannot be shown, the script automatically launches the server
 without it.
 
+### Scanner helper (experimental)
+
+DocCropper's scanning plugin relies on a small helper service that runs on the
+client machine and communicates with locally attached scanners. Install the
+extra dependency and start the service with:
+
+```bash
+pip install pyinsane2
+python scripts/scanner_helper.py
+```
+
+The helper listens on `http://127.0.0.1:28672` and exposes two endpoints:
+`/scanners` returns the list of detected devices and `/scan` performs an
+acquisition and returns the image as PNG data. The frontend queries these
+endpoints to populate the scanner list and to trigger scans.
+
 ### Docker
 
 A sample Dockerfile and compose file are provided under `docker/`. The Docker

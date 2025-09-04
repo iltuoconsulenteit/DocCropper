@@ -5,16 +5,31 @@ export function initScanPlugin(translations, enabled = true) {
         return;
     }
 
+    const helperUrl = 'http://127.0.0.1:28672';
+
     window.scanGetScanners = async () => {
-        // Placeholder list – real implementation should query a helper app
-        return ['Default Scanner'];
+        try {
+            const resp = await fetch(`${helperUrl}/scanners`);
+            if (!resp.ok) throw new Error('request failed');
+            const data = await resp.json();
+            return Array.isArray(data.scanners) ? data.scanners : [];
+        } catch (err) {
+            console.warn('scanGetScanners', err);
+            return [];
+        }
     };
 
-    window.scanDocument = (opts = {}) => {
+    window.scanDocument = async (opts = {}) => {
         try {
-            const params = new URLSearchParams(opts).toString();
-            const url = 'doccropper-scan://start' + (params ? '?' + params : '');
-            window.location.href = url;
+            const resp = await fetch(`${helperUrl}/scan`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(opts)
+            });
+            if (!resp.ok) throw new Error('request failed');
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
         } catch (err) {
             alert(translations.installScanner || 'Scanner helper not installed');
         }

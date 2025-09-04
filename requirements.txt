@@ -33,3 +33,4 @@ redis
 python-dotenv
 bcrypt==4.1.2
 setproctitle
+pyinsane2

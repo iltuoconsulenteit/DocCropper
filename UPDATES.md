@@ -1,5 +1,9 @@
 # Updates
 
+## 2025-09-06
+- Add client-side scanner helper with FastAPI and wire the scan plugin to
+  enumerate devices and trigger acquisitions through `http://127.0.0.1:28672`
+
 ## 2025-09-05
 - Licenses panel can now persist manual keys to `env/license.env` and refresh the
   server so the frontend reflects the new license immediately
