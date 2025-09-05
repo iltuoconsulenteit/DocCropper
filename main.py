@@ -27,12 +27,17 @@ platform_pkg = importlib.util.module_from_spec(spec)
 sys.modules["platform"] = platform_pkg
 spec.loader.exec_module(platform_pkg)
 
-try:
-    import setproctitle
-    setproctitle.setproctitle("DocCropper")
-except Exception:
-    try:  # Fallback for platforms where setproctitle is unavailable
+if os.name != "nt":
+    try:
+        import setproctitle
+
+        setproctitle.setproctitle("DocCropper")
+    except Exception:
+        pass
+else:
+    try:  # Fallback for Windows where setproctitle is unavailable
         import ctypes
+
         ctypes.windll.kernel32.SetConsoleTitleW("DocCropper")
     except Exception:
         pass

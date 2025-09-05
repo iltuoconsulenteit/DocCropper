@@ -97,12 +97,20 @@ if [ -d "$TARGET_DIR/.git" ]; then
       cp "$TARGET_DIR/$CONFIG_FILE" "$TARGET_DIR/$BACKUP_FILE"
       git -C "$TARGET_DIR" restore "$CONFIG_FILE" >/dev/null 2>&1 || true
     fi
+    LIC_BACKUP="$TARGET_DIR/license.env.bak"
+    if [ -f "$TARGET_DIR/env/license.env" ]; then
+      cp "$TARGET_DIR/env/license.env" "$LIC_BACKUP"
+    fi
     echo "📥 Aggiornamento repository..."
     git -C "$TARGET_DIR" merge --abort >/dev/null 2>&1 || true
     git -C "$TARGET_DIR" rebase --abort >/dev/null 2>&1 || true
-    git -C "$TARGET_DIR" fetch origin "$BRANCH"
+    git -C "$TARGET_DIR" fetch --all --prune
     git -C "$TARGET_DIR" reset --hard "origin/$BRANCH"
-    git -C "$TARGET_DIR" clean -fd
+    git -C "$TARGET_DIR" clean -ffdx
+    if [ -f "$LIC_BACKUP" ]; then
+      mkdir -p "$TARGET_DIR/env"
+      mv "$LIC_BACKUP" "$TARGET_DIR/env/license.env"
+    fi
     git -C "$TARGET_DIR" rev-parse HEAD > "$LAST_FILE" 2>/dev/null || true
   fi
 else
@@ -121,6 +129,10 @@ else
   git -C "$TARGET_DIR" rev-parse HEAD > "$LAST_FILE" 2>/dev/null || true
 fi
 
+# Purge any stale Python bytecode so updated sources are used
+find "$TARGET_DIR" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null
+find "$TARGET_DIR" -name "*.pyc" -delete 2>/dev/null
+
 echo "📜 Ultimi 10 commit:" | tee -a "$LOG_FILE"
 git -C "$TARGET_DIR" log -n 10 --pretty=format:"%h | %ad | %s" --date=short | tee -a "$LOG_FILE"
 read -r -p "Vuoi ripristinare un commit specifico? (lascia vuoto per continuare): " COMMIT_HASH
@@ -131,6 +143,16 @@ if [ -n "$COMMIT_HASH" ]; then
 fi
 
 printf '\xE2\x9C\x85 Operazione completata.\n'
+
+# Restore settings and license from user backup
+BACKUP_USER_DIR="$HOME/DocCropperBackup"
+if [ -f "$BACKUP_USER_DIR/settings.json" ]; then
+  cp "$BACKUP_USER_DIR/settings.json" "$TARGET_DIR/settings.json" 2>/dev/null || true
+fi
+if [ -f "$BACKUP_USER_DIR/env/license.env" ]; then
+  mkdir -p "$TARGET_DIR/env"
+  cp "$BACKUP_USER_DIR/env/license.env" "$TARGET_DIR/env/license.env" 2>/dev/null || true
+fi
 
 # merge backed-up settings if present
 if [ -f "$TARGET_DIR/$BACKUP_FILE" ]; then

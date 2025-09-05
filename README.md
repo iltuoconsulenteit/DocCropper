@@ -46,6 +46,7 @@ Configuration variables, environment files, and the `settings.json` options are 
 - 📁 Limit simultaneous uploads with the `max_upload_files` setting (10 by default)
 - 🚀 Cache busting (`?v=<commit>`) ensures browsers fetch updated files
 - 🔔 Notification bell checks for updates and lets licensed users trigger upgrades with a PIN
+- 🪪 Enter and activate license keys directly from the web UI
 - ⏪ Rollback command restores the previous version if an update causes issues
 - ⬇️ Optional plugin adds a per-thumbnail PNG download button
 - 📠 Experimental plugin initiates scanning via a locally installed helper to access USB or network scanners
@@ -169,6 +170,13 @@ DOCROPPER_DEV_PASSWORD=87654321
 DOCROPPER_SETTINGS_PASSWORD=12345678
 ```
 
+### Signed license files
+Generate a signed token with `python scripts/license/generate_license_file.py --type developer --name "Your Name"`. Include `--fingerprint $(python scripts/license/get_fingerprint.py)` to bind the license to a specific machine. In the web UI open **License**, choose the file under *License File*, and click **Import** to activate it. The token is verified locally with `LICENSE_SECRET` and stored in `env/license.env` so the license remains after restarts.
+
+### 🗑️ Uninstall
+
+Run the script `scripts/uninstall_DocCropper.*` for your platform to stop DocCropper and remove its files. Run it with administrative privileges to avoid permission errors. The script saves `settings.json` and `env/license.env` to a `DocCropperBackup` folder in your profile, and future installers automatically restore these files if present.
+
 ---
 
 ## ▶️ Running DocCropper
@@ -197,6 +205,22 @@ Use the `--auto-start` flag to start the server automatically when launching the
 tray helper manually.
 If the tray cannot be shown, the script automatically launches the server
 without it.
+
+### Scanner helper (experimental)
+
+DocCropper's scanning plugin relies on a small helper service that runs on the
+client machine and communicates with locally attached scanners. Install the
+extra dependency and start the service with:
+
+```bash
+pip install pyinsane2
+python scripts/scanner_helper.py
+```
+
+The helper listens on `http://127.0.0.1:28672` and exposes two endpoints:
+`/scanners` returns the list of detected devices and `/scan` performs an
+acquisition and returns the image as PNG data. The frontend queries these
+endpoints to populate the scanner list and to trigger scans.
 
 ### Docker
 
@@ -269,7 +293,7 @@ hidden Demo Full license is active the login button is hidden even if
 
 ## 🔓 Licensing
 
-DocCropper ships with three editions. A **Licenses** button in the header opens a panel where you can review the editions and enter your license key. Free users may paste a key here at any time to unlock Pro or Full features.
+DocCropper ships with three editions. A **Licenses** button in the header opens a panel where you can review the editions and enter your license key. Free users may paste a key here at any time to unlock Pro or Full features, or start a Stripe checkout directly from the panel to purchase a license.
 
 - **Free** – Watermark applied and up to five images per project
 - **Pro** – No watermark and unlimited images. A LAN plugin can add network
@@ -281,18 +305,21 @@ DocCropper ships with three editions. A **Licenses** button in the header opens 
   When this license is active the **Purchase** button turns into a PayPal
   donation link that opens in a new tab.
 
-### Setting a license key
+### Activating a license
 
-Provide the license in `env/license.env`, a top‑level `.env`, or `settings.json`
-via the `DOCROPPER_LICENSE_KEY` entry. The key determines the active edition:
+Import a signed license file from the **Licenses** panel in the web interface.
+The token is stored in `env/license.env` and applied immediately so the
+page reflects the active edition without a restart. The running server
+exposes `/license/status` which returns the current license name, level,
+and a validity flag so you can verify the edition after an update.
 
 - leave the value empty or set it to `FREE` for the basic demo
 - use `DEMO-FULL-DC` to unlock the **Demo Full** mode with all features but a
   watermark
 - enter the developer key defined by `DOCROPPER_DEV_LICENSE` (default
   `DEVELOPER`) to enable developer features and plugins
-- keys matching `DOCROPPER_MANUAL_LICENSE` or `DOCROPPER_ONLINE_LICENSE` trigger
-  manual or online validation respectively
+ - keys matching `DOCROPPER_ONLINE_LICENSE` trigger
+  online validation
 
 When the LAN plugin is active the `lan_user_limit` setting controls how many
 accounts may use DocCropper over the network. Licenses are typically sold in
@@ -308,7 +335,6 @@ To activate Pro or Full editions:
     or the key ends with `-DEV`. Saving such a key through the Licenses panel now
      automatically sets the edition to **Full** and enables mobile signing. When a
      developer key is active the tray menu includes an **Update Branch** option.
-  - Manual keys unlock Full features when `DOCROPPER_MANUAL_LICENSE` matches the entered key
   - A key matching `DOCROPPER_ONLINE_LICENSE` forces an online validation against the license server
   - If no known key is found, DocCropper falls back to demo mode with logos and banners still visible
 - Mobile signing is enabled automatically when a developer key is used
@@ -521,9 +547,14 @@ setup.
 
 ### URLs
 
- - `http://localhost:8000/` – DocCropper Portal
+- `http://localhost:8000/` – DocCropper Portal
 - `http://localhost:8000/admin/` – Django admin
 - `http://localhost:8000/api` – FastAPI endpoints
+- `http://localhost:8000/api/docs` – Interactive API documentation
+
+### Support and Bug Reports
+
+Problems or suggestions? Open an issue on [GitHub](https://github.com/iltuoconsulenteit/DocCropper/issues) or write to [doccropper@iltuoconsulenteit.it](mailto:doccropper@iltuoconsulenteit.it).
 
 ### Simple License Webapp
 

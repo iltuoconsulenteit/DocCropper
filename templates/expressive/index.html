@@ -114,11 +114,12 @@
         <button class="mr-2" @click="pinned ? (pinned=false, drawer=false) : drawer=!drawer">☰</button>
         <img src="/static/logos/header_logo.png" alt="IlTuoConsulenteIT" class="h-8 cursor-pointer" @click="command('files')" />
         <div class="flex-1"></div>
-        <a href="/admin/" class="text-xs underline mr-2">Area amministratore</a>
-        <a href="/api/docs" class="text-xs underline mr-2">Documentazione API</a>
-        <a href="#" @click="command('guide')" class="text-xs underline mr-2" x-text="t('guide')"></a>
+        <div id="loginArea" class="text-xs mr-2"></div>
+        <a href="/purchase" class="text-xs underline mr-2" x-text="t('purchase')"></a>
+        <a href="https://github.com/iltuoconsulenteit/DocCropper/issues" target="_blank" class="text-xs underline mr-2" x-text="t('reportBug')"></a>
+        <a href="mailto:doccropper@iltuoconsulenteit.it" class="text-xs underline mr-2" x-text="t('support')"></a>
         <span class="text-xs text-gray-600" x-text="licenseInfo()"></span>
-        <button @click="licenseModal=true" class="text-xs underline" x-text="t('licenses')"></button>
+        <button @click="licenseModal=true" class="text-xs underline mr-2" x-text="t('licenses')"></button>
         <select x-model="lang" @change="setLang" class="border rounded p-1 text-sm">
           <option value="en">EN</option>
           <option value="it" selected>IT</option>
@@ -201,9 +202,6 @@
               </template>
             </div>
           </div>
-        </div>
-        <div x-show="tab==='guide'" class="w-full h-full">
-          <iframe :src="`/wiki/${lang}/index.html`" class="w-full h-[80vh]"></iframe>
         </div>
         <div x-show="tab==='updates'" class="p-4 space-y-2">
           <template x-for="(note, idx) in updates[lang]" :key="idx">
@@ -291,7 +289,7 @@
             <button @click="donate()" class="bg-yellow-400 text-black px-4 py-2 rounded text-sm" x-text="t('donate')"></button>
           </div>
         </div>
-        <div x-show="tab!=='files' && tab!=='guide' && tab!=='updates' && tab!=='tutorials' && tab!=='purchase' && tab!=='sponsor'" class="text-gray-600" x-text="t('selectCommand')"></div>
+        <div x-show="tab!=='files' && tab!=='updates' && tab!=='tutorials' && tab!=='purchase' && tab!=='sponsor'" class="text-gray-600" x-text="t('selectCommand')"></div>
       </main>
       <footer class="mt-auto py-1 px-4">
         <div :class="['flex flex-col sm:flex-row items-center w-full space-y-2 sm:space-y-0', (sponsorLogo || clientLogo) ? 'justify-between' : 'justify-center']">
@@ -414,8 +412,11 @@
           <option value="pro" x-text="t('licensePro')"></option>
           <option value="full" x-text="t('licenseFull')"></option>
         </select>
+        <label class="block text-sm">License File</label>
+        <input type="file" class="border w-full mb-4 p-1" x-ref="licenseFile" accept=".dcl,.lic,.txt" />
         <div class="text-right space-x-2">
           <button class="px-3 py-1 bg-gray-300 rounded" @click="licenseModal=false" x-text="t('cancel')"></button>
+          <button class="px-3 py-1 bg-green-500 text-white rounded" @click="uploadLicense">Import</button>
           <button class="px-3 py-1 bg-blue-500 text-white rounded" @click="saveLicense" x-text="t('saveLicense')"></button>
         </div>
       </div>
@@ -1080,8 +1081,7 @@
                 await window.DC.mobileSign();
                 break;
               case 'guide':
-                this.tab='guide';
-                this.showSlides=false;
+                window.open(`/wiki/${this.lang}/index.html`, '_blank');
                 break;
               case 'updates':
                 this.tab='updates';
@@ -1156,6 +1156,24 @@
             fetch('/settings/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
               .then(()=>{ this.licenseName = this.licenseNameInput; alert(this.t('licenseSaved')); this.licenseModal=false; })
               .catch(()=>{ this.licenseModal=false; });
+          },
+          uploadLicense(){
+            const f = this.$refs.licenseFile.files[0];
+            if(!f){ alert('Select a file'); return; }
+            const fd = new FormData();
+            fd.append('file', f);
+            fetch('/license/upload', {method:'POST', body:fd})
+              .then(res=>{
+                if(!res.ok) return res.text().then(t=>{throw new Error(t);});
+              })
+              .then(()=>fetch('/restart/', {method:'POST'}))
+              .then(async ()=>{
+                if('caches' in window){
+                  const keys = await caches.keys();
+                  for(const k of keys){ await caches.delete(k);} }
+                location.reload();
+              })
+              .catch(err=>{ alert('License save failed: '+err.message); });
           },
           async handleImport(e){
             let selected = Array.from(e.target.files || []);

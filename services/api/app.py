@@ -24,8 +24,14 @@ class NoCacheStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope):
         response = await super().get_response(path, scope)
         if response.status_code == 200:
-            response.headers["Cache-Control"] = "no-cache"
+            # Prevent browsers from reusing cached assets so version updates
+            # are reflected immediately on refresh
+            response.headers["Cache-Control"] = "no-store, max-age=0"
             response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+            # Allow help pages like the wiki to be embedded in the UI
+            response.headers.pop("X-Frame-Options", None)
+            response.headers["Content-Security-Policy"] = "frame-ancestors *"
         return response
 from fastapi.middleware.cors import CORSMiddleware
 from cryptography.fernet import Fernet
@@ -78,6 +84,9 @@ def get_fitz():
     return _fitz
 from plugin.core.sign import register as register_sign
 from app.licensing.check import verify_license
+from jose import jwt, JWTError
+from app.licensing.fingerprint import get_machine_fingerprint
+import time
 from app.auth.routes import router as auth_router, fastapi_users
 from app.auth.models import User
 from plugin.core.mobilesign import register as register_mobilesign
@@ -110,11 +119,12 @@ except Exception:
     pytesseract = None
 
 
-SETTINGS_FILE = "settings.json"
+BASE_DIR = Path(__file__).resolve().parents[2]
+SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
 # Additional file storing values enforced by a license check
-LICENSE_OVERRIDES_FILE = "license_overrides.json"
+LICENSE_OVERRIDES_FILE = os.path.join(BASE_DIR, "license_overrides.json")
 # Load environment variables from any .env files in env/
-ENV_DIR = "env"
+ENV_DIR = os.path.join(BASE_DIR, "env")
 
 
 def load_env_files(override: bool = False) -> None:
@@ -129,7 +139,7 @@ def load_env_files(override: bool = False) -> None:
 load_env_files()
 
 # Directory containing per-user settings
-USERS_DIR = "users"
+USERS_DIR = os.path.join(BASE_DIR, "users")
 
 DEFAULT_DEV_PASSWORD = os.getenv("DOCROPPER_DEV_PASSWORD", "87654321")
 DEFAULT_SETTINGS_PASSWORD = os.getenv("DOCROPPER_SETTINGS_PASSWORD", "12345678")
@@ -158,28 +168,37 @@ DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
 MANUAL_LICENSE_KEY = os.environ.get("DOCROPPER_MANUAL_LICENSE", "").upper()
 ONLINE_LICENSE_KEY = os.environ.get("DOCROPPER_ONLINE_LICENSE", "").upper()
 DEMO_FULL_LICENSE_KEY = "DEMO-FULL-DC"
+LICENSE_SECRET = os.environ.get("LICENSE_SECRET", "change-me")
 DEFAULT_SPONSOR_FRAME = (
     "https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2F"
     "iltuoconsulenteit%3Flocale%3Dit_IT&tabs=timeline&width=340&height=500&small_header=true&"
     "adapt_container_width=true&hide_cover=true&show_facepile=false"
 )
 
-try:
-    VERSION = subprocess.check_output(
-        ["git", "rev-parse", "--short", "HEAD"],
-        cwd=os.path.dirname(__file__),
-        stderr=subprocess.DEVNULL,
-    ).decode().strip()
-    VERSION_DATE = subprocess.check_output(
-        ["git", "log", "-1", "--format=%cd", "--date=short"],
-        cwd=os.path.dirname(__file__),
-        stderr=subprocess.DEVNULL,
-    ).decode().strip()
-except Exception:
-    VERSION = "unknown"
-    VERSION_DATE = ""
+def get_version_info() -> tuple[str, str]:
+    """Return the current Git commit hash and date."""
+    try:
+        version = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=BASE_DIR,
+            stderr=subprocess.DEVNULL,
+        ).decode().strip()
+        date = subprocess.check_output(
+            ["git", "log", "-1", "--format=%cd", "--date=short"],
+            cwd=BASE_DIR,
+            stderr=subprocess.DEVNULL,
+        ).decode().strip()
+    except Exception:
+        version = "unknown"
+        date = ""
+    return version, date
 
-CACHE_BUST = f"?v={VERSION}"
+def get_cache_bust() -> str:
+    version, _ = get_version_info()
+    return f"?v={version}" if version != "unknown" else ""
+
+VERSION, VERSION_DATE = get_version_info()
+CACHE_BUST = get_cache_bust()
 
 SESSIONS_ROOT = "sessions"
 SIGNATURES_DIR = "signatures"
@@ -189,8 +208,6 @@ SESSION_KEYS: dict[str, bytes] = {}
 DEFAULT_MAX_UPLOAD_MB = 5
 MAX_UPLOAD_MB = int(os.getenv("DOCROPPER_MAX_UPLOAD_MB", str(DEFAULT_MAX_UPLOAD_MB)))
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
-
-BASE_DIR = Path(__file__).resolve().parent
 
 def repo_has_updates() -> bool:
     """Check if remote Git repository has new commits."""
@@ -242,6 +259,7 @@ DEFAULT_SETTINGS = {
     "port": 8765,
     "license_key": "",
     "license_name": "",
+    "license_token": "",
     "payment_mode": "donation",
     "paypal_link": "",
     "stripe_link": "",
@@ -370,9 +388,7 @@ def load_settings():
             base = json.load(fh)
         merged = DEFAULT_SETTINGS.copy()
         merged.update(base)
-        plugins_dir = os.path.join(
-            os.path.dirname(__file__), "..", "..", "plugin", "core"
-        )
+        plugins_dir = os.path.join(BASE_DIR, "plugin", "core")
         try:
             for name in os.listdir(plugins_dir):
                 cfg_path = os.path.join(plugins_dir, name, "settings.json")
@@ -386,6 +402,7 @@ def load_settings():
             merged["max_upload_mb"] = int(max_mb_env)
         env_key = os.getenv("DOCROPPER_LICENSE_KEY")
         env_name = os.getenv("DOCROPPER_LICENSE_NAME")
+        env_token = os.getenv("DOCROPPER_LICENSE_TOKEN")
         google_id = os.getenv("DOCROPPER_GOOGLE_CLIENT_ID")
         env_check = os.getenv("LICENSE_CHECK")
         env_level = os.getenv("DOCROPPER_LICENSE_LEVEL")
@@ -405,6 +422,8 @@ def load_settings():
             merged["license_key"] = env_key
         if env_name:
             merged["license_name"] = env_name
+        if env_token:
+            merged["license_token"] = env_token
         if google_id:
             merged["google_client_id"] = google_id
         if env_check is not None:
@@ -497,6 +516,24 @@ def load_settings():
             merged["developer_password_hash"] = bcrypt.hash(DEFAULT_DEV_PASSWORD)
         if "settings_password_hash" not in merged:
             merged["settings_password_hash"] = bcrypt.hash(DEFAULT_SETTINGS_PASSWORD)
+        token = merged.get("license_token")
+        if token:
+            try:
+                payload = jwt.decode(token, LICENSE_SECRET, algorithms=["HS256"])
+                exp = payload.get("expires_at")
+                now = int(time.time())
+                fp = payload.get("fingerprint")
+                if exp and exp < now:
+                    merged["license_level"] = "free"
+                elif not fp or fp != get_machine_fingerprint():
+                    merged["license_level"] = "free"
+                else:
+                    merged["license_type"] = payload.get("license_type", "manual")
+                    merged["license_name"] = payload.get("license_name", merged.get("license_name", ""))
+                    merged["license_level"] = "full"
+                    merged["license_key"] = token
+            except JWTError:
+                merged["license_level"] = "free"
 
         # Apply values enforced by a previous license check
         overrides = load_license_overrides()
@@ -647,7 +684,7 @@ def save_settings(update: dict):
     with open(SETTINGS_FILE, "w") as fh:
         json.dump(data, fh)
     for pname, vals in plugin_updates.items():
-        cfg_path = os.path.join('plugins', pname, 'settings.json')
+        cfg_path = os.path.join(BASE_DIR, 'plugin', pname, 'settings.json')
         current = {}
         if os.path.exists(cfg_path):
             try:
@@ -789,6 +826,7 @@ async def root_redirect_empty() -> RedirectResponse:
 
 # Dependency used to enforce that the configured license is valid
 async def require_valid_license(
+    request: Request,
     user: User | None = Depends(fastapi_users.current_user(optional=True)),
 ):
     settings = load_settings()
@@ -800,7 +838,14 @@ async def require_valid_license(
     if not user.license_token:
         raise HTTPException(status_code=403, detail="Token licenza mancante")
 
-    data = await verify_license(user.email, user.license_type, user.license_token)
+    domain = request.url.hostname
+    data = await verify_license(
+        user.email,
+        user.license_type,
+        user.license_token,
+        domain,
+        get_machine_fingerprint(),
+    )
     if not data.get("valid", False):
         raise HTTPException(status_code=403, detail="Licenza non valida")
 
@@ -989,23 +1034,26 @@ def make_index_response(request: Request, lang: str) -> HTMLResponse:
             content = f.read()
         content = content.replace('<html lang="en">', f'<html lang="{lang}">')
         content = content.replace('</head>', f'<script>window.DC_LANG="{lang}";</script></head>')
-        if CACHE_BUST:
-            content = content.replace("styles.css", f"styles.css{CACHE_BUST}")
-            content = content.replace("app.js", f"app.js{CACHE_BUST}")
-            content = content.replace("mobilesign.js", f"mobilesign.js{CACHE_BUST}")
-            content = content.replace("app_logo.png", f"app_logo.png{CACHE_BUST}")
-            content = content.replace("header_logo.png", f"header_logo.png{CACHE_BUST}")
-            content = content.replace("footer_logo.png", f"footer_logo.png{CACHE_BUST}")
-            content = content.replace("DocCropper_slogan_main_en.png", f"DocCropper_slogan_main_en.png{CACHE_BUST}")
-            content = content.replace("DocCropper_slogan_main_it.png", f"DocCropper_slogan_main_it.png{CACHE_BUST}")
-            content = content.replace("DocCropper_slogan_sign_en.png", f"DocCropper_slogan_sign_en.png{CACHE_BUST}")
-            content = content.replace("DocCropper_slogan_sign_it.png", f"DocCropper_slogan_sign_it.png{CACHE_BUST}")
+        cache_bust = get_cache_bust()
+        if cache_bust:
+            content = content.replace("styles.css", f"styles.css{cache_bust}")
+            content = content.replace("app.js", f"app.js{cache_bust}")
+            content = content.replace("mobilesign.js", f"mobilesign.js{cache_bust}")
+            content = content.replace("app_logo.png", f"app_logo.png{cache_bust}")
+            content = content.replace("header_logo.png", f"header_logo.png{cache_bust}")
+            content = content.replace("footer_logo.png", f"footer_logo.png{cache_bust}")
+            content = content.replace("DocCropper_slogan_main_en.png", f"DocCropper_slogan_main_en.png{cache_bust}")
+            content = content.replace("DocCropper_slogan_main_it.png", f"DocCropper_slogan_main_it.png{cache_bust}")
+            content = content.replace("DocCropper_slogan_sign_en.png", f"DocCropper_slogan_sign_en.png{cache_bust}")
+            content = content.replace("DocCropper_slogan_sign_it.png", f"DocCropper_slogan_sign_it.png{cache_bust}")
     except FileNotFoundError:
         logger.error(f"{index_path} not found")
         return HTMLResponse(content="Frontend not found.", status_code=500)
     response = HTMLResponse(content=content, status_code=200)
-    response.headers["Cache-Control"] = "no-cache"
+    # Ensure the HTML itself is never cached so new bundle versions load
+    response.headers["Cache-Control"] = "no-store, max-age=0"
     response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     response.set_cookie("session_id", session_id, httponly=True)
     return response
 
@@ -1033,9 +1081,10 @@ async def admin_page(user: User = Depends(require_superuser)):
         path = os.path.join(os.path.dirname(__file__), "static", "admin.html")
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
-        if CACHE_BUST:
-            content = content.replace("styles.css", f"styles.css{CACHE_BUST}")
-            content = content.replace("admin.js", f"admin.js{CACHE_BUST}")
+        cache_bust = get_cache_bust()
+        if cache_bust:
+            content = content.replace("styles.css", f"styles.css{cache_bust}")
+            content = content.replace("admin.js", f"admin.js{cache_bust}")
     except FileNotFoundError:
         return HTMLResponse(content="Admin page not found", status_code=404)
     return HTMLResponse(content=content, status_code=200)
@@ -1048,17 +1097,19 @@ async def get_settings():
     if not data.get("license_check") and not data.get("license_key"):
         data["license_key"] = "FREE"
         data["license_name"] = "Free Edition"
-    data["version"] = VERSION
-    data["version_date"] = VERSION_DATE
+    version, version_date = get_version_info()
+    data["version"] = version
+    data["version_date"] = version_date
     data["active_plugins"] = ACTIVE_PLUGINS
     if "stripe_secret_key" in data:
         data.pop("stripe_secret_key")
-    return data
+    return JSONResponse(data, headers={"Cache-Control": "no-store, max-age=0"})
 
 
 @app.post("/settings/")
 async def update_settings(settings: dict = Body(...)):
-    return save_settings(settings)
+    data = save_settings(settings)
+    return JSONResponse(data, headers={"Cache-Control": "no-store, max-age=0"})
 
 
 @app.get("/user-settings/")
@@ -1067,9 +1118,10 @@ async def get_user_settings_endpoint(request: Request):
     if not email:
         return JSONResponse(status_code=401, content={"message": "Not logged in"})
     data = load_user_settings(email)
-    data["version"] = VERSION
-    data["version_date"] = VERSION_DATE
-    return data
+    version, version_date = get_version_info()
+    data["version"] = version
+    data["version_date"] = version_date
+    return JSONResponse(data, headers={"Cache-Control": "no-store, max-age=0"})
 
 
 @app.post("/user-settings/")
@@ -1078,9 +1130,139 @@ async def update_user_settings_endpoint(request: Request, settings: dict = Body(
     if not email:
         return JSONResponse(status_code=401, content={"message": "Not logged in"})
     data = save_user_settings(email, settings)
-    data["version"] = VERSION
-    data["version_date"] = VERSION_DATE
-    return data
+    version, version_date = get_version_info()
+    data["version"] = version
+    data["version_date"] = version_date
+    return JSONResponse(data, headers={"Cache-Control": "no-store, max-age=0"})
+
+
+@app.post("/license/manual")
+async def set_manual_license(data: dict = Body(...)):
+    key = (data.get("key") or "").strip()
+    name = (data.get("name") or "").strip()
+    if not key:
+        raise HTTPException(status_code=400, detail="Missing key")
+    os.makedirs(ENV_DIR, exist_ok=True)
+    env_path = os.path.join(ENV_DIR, "license.env")
+    try:
+        with open(env_path, "w", encoding="utf-8") as fh:
+            fh.write(
+                f"DOCROPPER_MANUAL_LICENSE={key}\n"
+                f"DOCROPPER_LICENSE_KEY={key}\n"
+                f"DOCROPPER_LICENSE_NAME={name}\n"
+                "LICENSE_CHECK=false\n"
+            )
+            fh.flush()
+            os.fsync(fh.fileno())
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to write license: {exc}")
+    load_env_files(override=True)
+    global DEV_LICENSE_KEY, DEV_LICENSE_KEY_UPPER, MANUAL_LICENSE_KEY, ONLINE_LICENSE_KEY
+    DEV_LICENSE_KEY = os.environ.get("DOCROPPER_DEV_LICENSE", DEV_LICENSE_KEY)
+    DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
+    MANUAL_LICENSE_KEY = os.environ.get("DOCROPPER_MANUAL_LICENSE", MANUAL_LICENSE_KEY).upper()
+    ONLINE_LICENSE_KEY = os.environ.get("DOCROPPER_ONLINE_LICENSE", ONLINE_LICENSE_KEY).upper()
+    saved = save_settings({"license_key": key, "license_name": name, "license_check": False})
+    for p in Path(BASE_DIR).rglob("__pycache__"):
+        shutil.rmtree(p, ignore_errors=True)
+    for p in Path(BASE_DIR).rglob("*.pyc"):
+        try:
+            p.unlink()
+        except Exception:
+            pass
+    return JSONResponse(
+        {"status": "saved", "license_key": key, "license_name": name},
+        headers={"Cache-Control": "no-store, max-age=0"},
+    )
+
+
+@app.post("/license/upload")
+async def upload_license(request: Request, file: UploadFile = File(...)):
+    token = (await file.read()).decode("utf-8").strip()
+    try:
+        payload = jwt.decode(token, LICENSE_SECRET, algorithms=["HS256"])
+        now = int(time.time())
+        exp = payload.get("expires_at")
+        if exp and exp < now:
+            raise HTTPException(status_code=400, detail="Token expired")
+        allowed = payload.get("allowed_domains")
+        domain = request.client.host
+        if allowed and domain not in allowed:
+            raise HTTPException(status_code=403, detail="Domain not allowed")
+        fp = payload.get("fingerprint")
+        if not fp:
+            raise HTTPException(status_code=400, detail="Token missing fingerprint")
+        if fp != get_machine_fingerprint():
+            raise HTTPException(status_code=403, detail="Fingerprint mismatch")
+    except JWTError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid token: {exc}")
+
+    name = payload.get("license_name", "")
+    ltype = payload.get("license_type", "manual")
+    os.makedirs(ENV_DIR, exist_ok=True)
+    env_path = os.path.join(ENV_DIR, "license.env")
+    try:
+        with open(env_path, "w", encoding="utf-8") as fh:
+            fh.write(
+                f"DOCROPPER_LICENSE_TOKEN={token}\n"
+                f"DOCROPPER_LICENSE_NAME={name}\n"
+                f"DOCROPPER_LICENSE_TYPE={ltype}\n"
+                "LICENSE_CHECK=false\n"
+            )
+            fh.flush()
+            os.fsync(fh.fileno())
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to write license: {exc}")
+
+    load_env_files(override=True)
+    saved = save_settings(
+        {
+            "license_token": token,
+            "license_name": name,
+            "license_type": ltype,
+            "license_level": "full",
+            "license_check": False,
+        }
+    )
+    for p in Path(BASE_DIR).rglob("__pycache__"):
+        shutil.rmtree(p, ignore_errors=True)
+    for p in Path(BASE_DIR).rglob("*.pyc"):
+        try:
+            p.unlink()
+        except Exception:
+            pass
+    return JSONResponse(
+        {"status": "saved", "license_name": name, "license_type": ltype},
+        headers={"Cache-Control": "no-store, max-age=0"},
+    )
+
+
+@app.get("/license/status")
+async def license_status(request: Request):
+    settings = load_settings()
+    valid = True
+    if settings.get("license_check", False):
+        domain = request.headers.get("host")
+        try:
+            data = await verify_license(
+                "",
+                settings.get("license_type", ""),
+                settings.get("license_key", ""),
+                domain,
+                get_machine_fingerprint(),
+            )
+            valid = bool(data.get("valid"))
+        except Exception:
+            valid = False
+    info = {
+        "license_key": settings.get("license_key", ""),
+        "license_name": settings.get("license_name", ""),
+        "license_token": settings.get("license_token", ""),
+        "license_level": settings.get("license_level", "free"),
+        "license_type": settings.get("license_type", "free"),
+        "valid": valid,
+    }
+    return JSONResponse(info, headers={"Cache-Control": "no-store, max-age=0"})
 
 
 @app.post("/clear-session/")
@@ -1213,6 +1395,35 @@ async def stripe_checkout(level: str = Body(...)):
     except Exception as e:
         logger.exception("Stripe session creation failed")
         return JSONResponse(status_code=500, content={"message": str(e)})
+
+
+@app.post("/stripe-webhook/")
+async def stripe_webhook(request: Request):
+    if stripe is None:
+        return JSONResponse(status_code=503, content={"message": "Stripe library missing"})
+    settings = load_settings()
+    webhook_secret = settings.get("stripe_webhook_secret")
+    if not webhook_secret:
+        return JSONResponse(status_code=503, content={"message": "Stripe not configured"})
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+    if not sig_header:
+        return JSONResponse(status_code=400, content={"message": "Missing signature"})
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, webhook_secret
+        )
+    except stripe.error.SignatureVerificationError:
+        logger.warning("Stripe signature verification failed")
+        return JSONResponse(status_code=400, content={"message": "Invalid signature"})
+    except ValueError:
+        return JSONResponse(status_code=400, content={"message": "Invalid payload"})
+    if event.get("type") == "checkout.session.completed":
+        session = event.get("data", {}).get("object", {})
+        if session.get("payment_status") != "paid":
+            return JSONResponse(status_code=400, content={"message": "Payment not completed"})
+        # License generation would occur here
+    return {"received": True}
 
 
 @app.post("/pdf-to-images/")
@@ -1467,6 +1678,27 @@ async def create_pdf(
                     ty = fy + (fl.height - th) // 2
                     draw.text((tx, ty), text, fill="black", font=font)
                     page.paste(fl, (fx, fy), fl)
+            if not licensed:
+                try:
+                    wm_text = "DocCropper Demo"
+                    wm_font_size = max(page_w, page_h) // 6
+                    try:
+                        wm_font = ImageFont.truetype("DejaVuSans.ttf", wm_font_size)
+                    except Exception:
+                        wm_font = ImageFont.load_default()
+                    txt_layer = Image.new("RGBA", page.size, (0, 0, 0, 0))
+                    draw_txt = ImageDraw.Draw(txt_layer)
+                    tw, th = draw_txt.textsize(wm_text, font=wm_font)
+                    tmp = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
+                    draw_tmp = ImageDraw.Draw(tmp)
+                    draw_tmp.text((0, 0), wm_text, fill=(200, 200, 200, 100), font=wm_font)
+                    tmp = tmp.rotate(45, expand=True)
+                    x = (page_w - tmp.width) // 2
+                    y = (page_h - tmp.height) // 2
+                    txt_layer.alpha_composite(tmp, dest=(x, y))
+                    page = Image.alpha_composite(page.convert("RGBA"), txt_layer).convert("RGB")
+                except Exception:
+                    logger.exception("Watermark overlay failed")
             if sig_img and signatures and placements:
                 footer_h = fl.height if (not licensed and fl) else 0
                 img_off_x, img_off_y, img_w, img_h = placements[0]

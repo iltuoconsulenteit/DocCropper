@@ -16,6 +16,8 @@ def register(app, utils: dict[str, Any]):
                 "deflate_images": True,
                 "deflate_fonts": True,
                 "recompress": True,
+                # convert images to JPEG so quality settings actually impact size
+                "image_compression": "jpeg",
                 "image_quality": 95,
             }
             lvl = (level or "").lower()

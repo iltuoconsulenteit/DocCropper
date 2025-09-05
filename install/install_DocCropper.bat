@@ -5,7 +5,7 @@ cd /d "%~dp0"
 net session >nul 2>&1
 if %errorlevel% neq 0 (
     echo Elevating privileges...
-    powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
+    powershell -NoProfile -Command "Start-Process cmd -ArgumentList '/c','""%~f0""' -Verb RunAs -WindowStyle Normal -Wait"
     exit /b
 )
 
@@ -72,13 +72,23 @@ if not exist "!APP_DIR!" (
     mkdir "!APP_DIR!" >nul 2>&1
     if errorlevel 1 (
         call :log "Unable to create !APP_DIR!. Run this script as Administrator."
+        endlocal
+        pause
         exit /b 1
     )
 )
 
 call :main
+set "MAIN_ERR=%ERRORLEVEL%"
+if not "%MAIN_ERR%"=="0" (
+    echo Installazione fallita. Vedi %LOG_FILE% per i dettagli.
+    endlocal
+    pause
+    exit /b %MAIN_ERR%
+)
+
 endlocal
-exit /b
+exit /b 0
 
 :log
 set MSG=%*
@@ -167,18 +177,23 @@ if not exist "!APP_DIR!\.git" (
                 git restore "!CONFIG_FILE!"
             )
         )
+        set "LIC_BACKUP=%TEMP%\license.env"
+        if exist "env\license.env" copy /Y "env\license.env" "%LIC_BACKUP%" >nul
         call :log "Updating repository..."
-        git fetch origin !BRANCH! >>"%LOG_FILE%" 2>&1 || (
-            call :log "Failed to fetch branch !BRANCH! from origin"
+        git fetch --all --prune >>"%LOG_FILE%" 2>&1 || (
+            call :log "Failed to fetch updates from origin"
             exit /b 1
         )
         git merge --abort >nul 2>&1
         git rebase --abort >nul 2>&1
         git checkout !BRANCH! >>"%LOG_FILE%" 2>&1 || git checkout -B !BRANCH! origin/!BRANCH! >>"%LOG_FILE%" 2>&1
         git reset --hard origin/!BRANCH! >>"%LOG_FILE%" 2>&1
-        git clean -fd >>"%LOG_FILE%" 2>&1
+        git clean -ffdx >>"%LOG_FILE%" 2>&1
         for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
-        git pull --ff-only >>"%LOG_FILE%" 2>&1
+        if exist "%LIC_BACKUP%" (
+            if not exist "env" mkdir "env"
+            copy /Y "%LIC_BACKUP%" "env\license.env" >nul
+        )
         if exist "!BACKUP_FILE!" (
             call :log "Merge !BACKUP_FILE! in !CONFIG_FILE! (manual merge suggested)"
             del "!BACKUP_FILE!" >>"%LOG_FILE%" 2>&1
@@ -186,6 +201,12 @@ if not exist "!APP_DIR!\.git" (
         cd /d "%~dp0"
     )
 )
+
+rem Remove cached Python bytecode so updates load correctly
+powershell -NoProfile -Command "
+    Get-ChildItem -Path '!APP_DIR!' -Recurse -Filter '__pycache__' | Remove-Item -Recurse -Force; 
+    Get-ChildItem -Path '!APP_DIR!' -Recurse -Filter '*.pyc' | Remove-Item -Force
+" >nul 2>&1
 
 cd /d "!APP_DIR!"
 
@@ -198,6 +219,14 @@ if not "!commit_hash!"=="" (
     call :log "Checkout del commit !commit_hash!..."
     git checkout !commit_hash! >>"%LOG_FILE%" 2>&1
     for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
+)
+
+rem Restore settings and license from backup
+set "BACKUP_DIR=%USERPROFILE%\DocCropperBackup"
+if exist "%BACKUP_DIR%\settings.json" copy /Y "%BACKUP_DIR%\settings.json" "!APP_DIR!\settings.json" >nul
+if exist "%BACKUP_DIR%\env\license.env" (
+    if not exist "!APP_DIR!\env" mkdir "!APP_DIR!\env"
+    copy /Y "%BACKUP_DIR%\env\license.env" "!APP_DIR!\env\license.env" >nul
 )
 
 rem Copy default environment files if missing

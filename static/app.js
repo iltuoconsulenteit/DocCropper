@@ -579,7 +579,7 @@ async function importPdfPages(file) {
 async function loadSettings() {
     const url = userInfo ? '/user-settings/' : '/settings/';
     try {
-        const resp = await fetch(url);
+        const resp = await fetch(url + `?t=${Date.now()}` , { cache: 'no-store' });
         if (resp.ok) {
             return await resp.json();
         }
@@ -596,6 +596,24 @@ function saveSettings(data) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     }).catch(e => console.error('Save settings error', e));
+}
+
+async function refreshLicenseInfo() {
+    const cfg = await loadSettings();
+    applySettings(cfg);
+    try {
+        const resp = await fetch('/license/status?t=' + Date.now(), { cache: 'no-store' });
+        if (resp.ok) {
+            const info = await resp.json();
+            isLicensed = info.valid && !!info.license_key;
+            licenseName = info.license_name || '';
+        }
+    } catch (e) {
+        console.error('Failed to refresh license status', e);
+    }
+    if (licenseInfo) {
+        licenseInfo.textContent = isLicensed ? `${t('licensedTo')} ${licenseName}` : t('demoVersion');
+    }
 }
 
 function initSponsorPreview(cfg) {
@@ -3213,9 +3231,10 @@ function updateSignatureTargetOptions() {
 }
 
 function applyProStatus() {
-    // In demo mode features remain usable but PDF pages beyond the first
-    // will include a DEMO watermark. We simply update the button style
-    // to reflect the license status without disabling functionality.
+    // In demo or free mode features remain usable but exported PDFs
+    // include a DEMO watermark on all pages. We simply update the
+    // button style to reflect the license status without disabling
+    // functionality.
     if (!isLicensed || currentLicenseLevel === 'free') {
         exportPdfBtn.classList.remove('pro-disabled');
         imageUploadElement.multiple = true;
@@ -3383,7 +3402,16 @@ function renderLicenseBox() {
         <input type="text" id="licenseKeyInput" value="${currentSettings.license_key || ''}"><br>
         <label>${t('licenseName')}</label>
         <input type="text" id="licenseNameInput" value="${currentSettings.license_name || ''}"><br>
-        <button id="saveLicenseBtn">${t('saveLicense')}</button>
+        <button id="saveLicenseBtn">${t('saveLicense')}</button><br><br>
+        <label>License File</label>
+        <input type="file" id="licenseFileInput" accept=".dcl,.lic,.txt"><br>
+        <button id="uploadLicenseBtn">Import</button><br><br>
+        <label>${t('licenseType')}</label>
+        <select id="purchaseLevel">
+            <option value="pro">${t('proEdition')}</option>
+            <option value="full">${t('fullEdition')}</option>
+        </select>
+        <button id="purchaseLicenseBtn">${t('purchase')}</button>
     </div>`;
     }
     licenseBox.innerHTML = html;
@@ -3393,12 +3421,74 @@ function renderLicenseBox() {
         btn.addEventListener('click', async () => {
             const key = document.getElementById('licenseKeyInput').value.trim();
             const name = document.getElementById('licenseNameInput').value.trim();
-            await saveSettings({license_key: key, license_name: name});
+            const resp = await fetch('/license/manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key, name })
+            });
+            if (!resp.ok) {
+                const txt = await resp.text();
+                alert('License save failed: ' + txt);
+                return;
+            }
+            await refreshLicenseInfo();
             await fetch('/restart/', {method: 'POST'});
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                for (const k of keys) {
+                    await caches.delete(k);
+                }
+            }
             alert(t('licenseSaved'));
             licenseBox.classList.remove('visible');
             setTimeout(() => { location.reload(); }, 1000);
         });
+        const uploadBtn = document.getElementById('uploadLicenseBtn');
+        uploadBtn.addEventListener('click', async () => {
+            const f = document.getElementById('licenseFileInput').files[0];
+            if (!f) {
+                alert('Select a file');
+                return;
+            }
+            const fd = new FormData();
+            fd.append('file', f);
+            const resp = await fetch('/license/upload', { method: 'POST', body: fd });
+            if (!resp.ok) {
+                const txt = await resp.text();
+                alert('License save failed: ' + txt);
+                return;
+            }
+            await refreshLicenseInfo();
+            await fetch('/restart/', {method: 'POST'});
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                for (const k of keys) {
+                    await caches.delete(k);
+                }
+            }
+            alert(t('licenseSaved'));
+            licenseBox.classList.remove('visible');
+            setTimeout(() => { location.reload(); }, 1000);
+        });
+        const buyBtn = document.getElementById('purchaseLicenseBtn');
+        if (buyBtn) {
+            buyBtn.addEventListener('click', async () => {
+                const level = document.getElementById('purchaseLevel').value;
+                const res = await fetch('/stripe-checkout/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({level})
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.session_url) {
+                        window.location.href = data.session_url;
+                    }
+                } else {
+                    alert('Stripe checkout failed');
+                }
+            });
+        }
     }
 }
 
