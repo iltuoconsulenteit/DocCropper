@@ -166,7 +166,16 @@ DEFAULT_SPONSOR_FRAME = (
     "adapt_container_width=true&hide_cover=true&show_facepile=false"
 )
 
-ROOT_DIR = Path(__file__).resolve().parents[2]
+try:
+    ROOT_DIR = Path(
+        subprocess.check_output(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=Path(__file__).resolve().parent,
+            stderr=subprocess.DEVNULL,
+        ).decode().strip()
+    )
+except Exception:
+    ROOT_DIR = Path(__file__).resolve().parents[2]
 
 try:
     VERSION = subprocess.check_output(
