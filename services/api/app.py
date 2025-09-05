@@ -166,15 +166,17 @@ DEFAULT_SPONSOR_FRAME = (
     "adapt_container_width=true&hide_cover=true&show_facepile=false"
 )
 
+ROOT_DIR = Path(__file__).resolve().parents[2]
+
 try:
     VERSION = subprocess.check_output(
         ["git", "rev-parse", "--short", "HEAD"],
-        cwd=os.path.dirname(__file__),
+        cwd=ROOT_DIR,
         stderr=subprocess.DEVNULL,
     ).decode().strip()
     VERSION_DATE = subprocess.check_output(
         ["git", "log", "-1", "--format=%cd", "--date=short"],
-        cwd=os.path.dirname(__file__),
+        cwd=ROOT_DIR,
         stderr=subprocess.DEVNULL,
     ).decode().strip()
 except Exception:
@@ -192,7 +194,7 @@ DEFAULT_MAX_UPLOAD_MB = 5
 MAX_UPLOAD_MB = int(os.getenv("DOCROPPER_MAX_UPLOAD_MB", str(DEFAULT_MAX_UPLOAD_MB)))
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = ROOT_DIR
 
 def repo_has_updates() -> bool:
     """Check if remote Git repository has new commits."""
