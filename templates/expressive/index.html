@@ -203,9 +203,6 @@
             </div>
           </div>
         </div>
-        <div x-show="tab==='guide'" class="w-full h-full">
-          <iframe :src="`/wiki/${lang}/index.html`" class="w-full h-[80vh]"></iframe>
-        </div>
         <div x-show="tab==='updates'" class="p-4 space-y-2">
           <template x-for="(note, idx) in updates[lang]" :key="idx">
             <div class="border-b pb-2" x-text="note"></div>
@@ -292,7 +289,7 @@
             <button @click="donate()" class="bg-yellow-400 text-black px-4 py-2 rounded text-sm" x-text="t('donate')"></button>
           </div>
         </div>
-        <div x-show="tab!=='files' && tab!=='guide' && tab!=='updates' && tab!=='tutorials' && tab!=='purchase' && tab!=='sponsor'" class="text-gray-600" x-text="t('selectCommand')"></div>
+        <div x-show="tab!=='files' && tab!=='updates' && tab!=='tutorials' && tab!=='purchase' && tab!=='sponsor'" class="text-gray-600" x-text="t('selectCommand')"></div>
       </main>
       <footer class="mt-auto py-1 px-4">
         <div :class="['flex flex-col sm:flex-row items-center w-full space-y-2 sm:space-y-0', (sponsorLogo || clientLogo) ? 'justify-between' : 'justify-center']">
@@ -1084,8 +1081,7 @@
                 await window.DC.mobileSign();
                 break;
               case 'guide':
-                this.tab='guide';
-                this.showSlides=false;
+                window.open(`/wiki/${this.lang}/index.html`, '_blank');
                 break;
               case 'updates':
                 this.tab='updates';
