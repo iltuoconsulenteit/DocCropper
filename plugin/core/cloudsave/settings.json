@@ -1,4 +1,4 @@
 {
-  "enable_cloudsave": true,
-  "cloudsave_dev_only": true
+  "enable_cloudsave": false,
+  "cloudsave_dev_only": false
 }

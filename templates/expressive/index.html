@@ -625,10 +625,6 @@
             removeBgThresholdPrompt:'Background removal threshold (%)',
             removeBgFailed:'Background removal failed',
             downloadPng:'Download PNG',
-            cloudSave:'Save to cloud',
-            localSave:'Save locally',
-            cloudSaveComingSoon:'Cloud saving coming soon',
-            localSaveComingSoon:'Local saving coming soon',
             scan:'Scan',
             selectPage:'Select page',
             addTextField:'Text box',
@@ -749,10 +745,6 @@
             removeBgThresholdPrompt:'Soglia rimozione sfondo (%)',
             removeBgFailed:'Rimozione sfondo fallita',
             downloadPng:'Scarica PNG',
-            cloudSave:'Salva nel cloud',
-            localSave:'Salva in locale',
-            cloudSaveComingSoon:'Salvataggio nel cloud in arrivo',
-            localSaveComingSoon:'Salvataggio locale in arrivo',
             scan:'Scanner',
             selectPage:'Seleziona pagina',
             addTextField:'Campo testo',
@@ -841,7 +833,6 @@
           downloadPngEnabled:false,
           formFieldsEnabled:false,
           scanEnabled:false,
-          cloudSaveEnabled:false,
           scanners:[],
           scanProfiles:[],
           selectedScanner:'',
@@ -1020,7 +1011,6 @@
               this.downloadPngEnabled = !!cfg.enable_downloadpng;
               this.formFieldsEnabled = !!cfg.enable_formfields;
               this.scanEnabled = !!cfg.enable_scan;
-              this.cloudSaveEnabled = !!cfg.enable_cloudsave;
               if(this.scanEnabled) this.loadScanProfiles();
               this.maxUpload = parseInt(cfg.max_upload_files || 10);
               this.blankThreshold = parseInt(cfg.blank_threshold || 95);
@@ -1798,10 +1788,6 @@
         <button id="downloadPdfBtn" class="w-full px-2 py-1 bg-blue-500 text-white rounded text-sm" style="display:none;" x-text="t('downloadPdf')"></button>
         <button id="waShareBtn" class="w-full px-2 py-1 bg-green-500 text-white rounded text-sm" style="display:none;" x-text="t('whatsapp')"></button>
         <button id="emailShareBtn" class="w-full px-2 py-1 bg-gray-500 text-white rounded text-sm" style="display:none;" x-text="t('email')"></button>
-        <div x-show="cloudSaveEnabled" class="mt-2 space-y-2">
-          <button id="localSaveBtn" class="w-full px-2 py-1 bg-gray-500 text-white rounded text-sm" x-text="t('localSave')"></button>
-          <button id="cloudSaveBtn" class="w-full px-2 py-1 bg-purple-500 text-white rounded text-sm" x-text="t('cloudSave')"></button>
-        </div>
       </details>
     </div>
     <script type="module">
@@ -1813,7 +1799,6 @@
       import { initPageSelectPlugin } from '/static/plugins/pageselect.js';
       import { initFormFieldsPlugin } from '/static/plugins/formfields.js';
       import { initScanPlugin } from '/static/plugins/scan.js';
-      import { initCloudSavePlugin } from '/static/plugins/cloudsave.js';
       const lang = window.DC_LANG || document.documentElement.lang || 'en';
       const trans = (window.dcStrings && window.dcStrings[lang]) ? window.dcStrings[lang] : {};
       initSignaturePlugin(trans, true);
@@ -1824,7 +1809,6 @@
       initPageSelectPlugin(true);
       initFormFieldsPlugin(trans, true);
       initScanPlugin(trans, true);
-      initCloudSavePlugin(trans, true);
 
       function calculateGrid() {
         const layout = parseInt(document.getElementById('layoutSelect')?.value || '1');
