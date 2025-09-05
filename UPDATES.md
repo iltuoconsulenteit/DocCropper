@@ -337,3 +337,7 @@
 
 ## 2025-09-07
 - Fix PDF compression levels by applying JPEG quality settings so file size reflects chosen compression
+
+## 2025-09-08
+- Enable moving any form field type, including on touch devices
+- Add signature modal with double-click placement and preview integration
