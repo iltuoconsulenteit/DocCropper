@@ -94,6 +94,12 @@
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('tutorials')" x-text="t('tutorials')"></button>
           </li>
           <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('support')" x-text="t('support')"></button>
+          </li>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('bug')" x-text="t('bug')"></button>
+          </li>
+          <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('purchase')" x-text="t('purchase')"></button>
           </li>
           <li>
@@ -564,6 +570,8 @@
             guide:'Guide',
             updates:'Updates',
             tutorials:'Tutorials',
+            support:'Support',
+            bug:'Report bug',
             purchase:'Purchase',
             sponsor:'Sponsor',
             subscriptions:'Subscriptions',
@@ -686,6 +694,8 @@
             guide:'Guida',
             updates:'Aggiornamenti',
             tutorials:'Tutorial',
+            support:'Supporto',
+            bug:'Segnala bug',
             purchase:'Acquisto',
             sponsor:'Sponsor',
             subscriptions:'Abbonamenti',
@@ -799,6 +809,8 @@
         // Expose translations so external plugins (e.g., mobile sign) can reuse them
         window.dcStrings = strings;
         const DEFAULT_PAYPAL = 'https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY';
+        const DEFAULT_BUG_URL = 'https://github.com/DocCropper/DocCropper/issues';
+        const DEFAULT_SUPPORT_URL = 'https://github.com/DocCropper/DocCropper/discussions';
         return {
           drawer:false,
           pinned: window.innerWidth >= 768,
@@ -852,6 +864,8 @@
           clientLogo:null,
           sponsorLogo:null,
           donateLink:null,
+          bugLink:null,
+          supportLink:null,
           settingsModal:false,
           passwordModal:false,
           passwordInput:'',
@@ -1028,7 +1042,9 @@
               this.updateInterval = parseInt(cfg.update_interval || 3600000);
               const mode = cfg.payment_mode && cfg.payment_mode.toLowerCase();
               if(mode==='donation'){
-                this.donateLink = cfg.paypal_link || DEFAULT_PAYPAL;
+              this.donateLink = cfg.paypal_link || DEFAULT_PAYPAL;
+              this.bugLink = cfg.bug_link || DEFAULT_BUG_URL;
+              this.supportLink = cfg.support_link || DEFAULT_SUPPORT_URL;
                 window.DC_DONATE_URL = this.donateLink;
               }
             }).catch(()=>{});
@@ -1086,6 +1102,12 @@
               case 'tutorials':
                 this.tab='tutorials';
                 this.showSlides=false;
+                break;
+              case 'support':
+                window.open(this.supportLink || DEFAULT_SUPPORT_URL, '_blank');
+                break;
+              case 'bug':
+                window.open(this.bugLink || DEFAULT_BUG_URL, '_blank');
                 break;
               case 'purchase':
                 this.tab='purchase';
