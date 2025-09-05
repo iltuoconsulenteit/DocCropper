@@ -334,3 +334,6 @@
 
 ## 2025-09-06
 - Restore watermark overlay on exported PDFs for Free and Demo editions
+
+## 2025-09-07
+- Fix PDF compression levels by applying JPEG quality settings so file size reflects chosen compression
