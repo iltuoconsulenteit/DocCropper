@@ -3231,9 +3231,10 @@ function updateSignatureTargetOptions() {
 }
 
 function applyProStatus() {
-    // In demo mode features remain usable but PDF pages beyond the first
-    // will include a DEMO watermark. We simply update the button style
-    // to reflect the license status without disabling functionality.
+    // In demo or free mode features remain usable but exported PDFs
+    // include a DEMO watermark on all pages. We simply update the
+    // button style to reflect the license status without disabling
+    // functionality.
     if (!isLicensed || currentLicenseLevel === 'free') {
         exportPdfBtn.classList.remove('pro-disabled');
         imageUploadElement.multiple = true;

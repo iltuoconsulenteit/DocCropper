@@ -1678,6 +1678,27 @@ async def create_pdf(
                     ty = fy + (fl.height - th) // 2
                     draw.text((tx, ty), text, fill="black", font=font)
                     page.paste(fl, (fx, fy), fl)
+            if not licensed:
+                try:
+                    wm_text = "DocCropper Demo"
+                    wm_font_size = max(page_w, page_h) // 6
+                    try:
+                        wm_font = ImageFont.truetype("DejaVuSans.ttf", wm_font_size)
+                    except Exception:
+                        wm_font = ImageFont.load_default()
+                    txt_layer = Image.new("RGBA", page.size, (0, 0, 0, 0))
+                    draw_txt = ImageDraw.Draw(txt_layer)
+                    tw, th = draw_txt.textsize(wm_text, font=wm_font)
+                    tmp = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
+                    draw_tmp = ImageDraw.Draw(tmp)
+                    draw_tmp.text((0, 0), wm_text, fill=(200, 200, 200, 100), font=wm_font)
+                    tmp = tmp.rotate(45, expand=True)
+                    x = (page_w - tmp.width) // 2
+                    y = (page_h - tmp.height) // 2
+                    txt_layer.alpha_composite(tmp, dest=(x, y))
+                    page = Image.alpha_composite(page.convert("RGBA"), txt_layer).convert("RGB")
+                except Exception:
+                    logger.exception("Watermark overlay failed")
             if sig_img and signatures and placements:
                 footer_h = fl.height if (not licensed and fl) else 0
                 img_off_x, img_off_y, img_w, img_h = placements[0]

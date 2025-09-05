@@ -331,3 +331,6 @@
 
 ## 2025-09-05
 - Convert images to JPEG during PDF compression so selected levels actually reduce file size
+
+## 2025-09-06
+- Restore watermark overlay on exported PDFs for Free and Demo editions
