@@ -61,21 +61,6 @@
         <img src="/static/logos/app_logo.png" alt="DocCropper" class="h-8 cursor-pointer" @click="command('files')" />
       </div>
       <nav class="flex-1 overflow-y-auto">
-        <h2 class="px-4 text-xs uppercase text-gray-400" x-text="t('commands')"></h2>
-        <ul>
-          <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('import')" x-text="t('import')"></button>
-          </li>
-          <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('export')" x-text="t('export')"></button>
-          </li>
-          <li x-show="scanEnabled">
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="openScan" x-text="t('scan')"></button>
-          </li>
-          <li>
-            <button id="mobileSignBtn" class="w-full text-left p-2 hover:bg-gray-700" @click="command('mobileSign')" x-text="t('mobileSign')"></button>
-          </li>
-        </ul>
         <h2 class="px-4 mt-4 text-xs uppercase text-gray-400" x-text="t('navigation')"></h2>
         <ul>
           <li>
@@ -97,6 +82,12 @@
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('purchase')" x-text="t('purchase')"></button>
           </li>
           <li>
+            <a href="https://github.com/iltuoconsulenteit/DocCropper/issues" target="_blank" class="block w-full text-left p-2 hover:bg-gray-700" x-text="t('reportBug')"></a>
+          </li>
+          <li>
+            <a href="mailto:doccropper@iltuoconsulenteit.it" class="block w-full text-left p-2 hover:bg-gray-700" x-text="t('support')"></a>
+          </li>
+          <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('settings')" x-text="t('settings')"></button>
           </li>
         </ul>
@@ -115,9 +106,6 @@
         <img src="/static/logos/header_logo.png" alt="IlTuoConsulenteIT" class="h-8 cursor-pointer" @click="command('files')" />
         <div class="flex-1"></div>
         <div id="loginArea" class="text-xs mr-2"></div>
-        <a href="/purchase" class="text-xs underline mr-2" x-text="t('purchase')"></a>
-        <a href="https://github.com/iltuoconsulenteit/DocCropper/issues" target="_blank" class="text-xs underline mr-2" x-text="t('reportBug')"></a>
-        <a href="mailto:doccropper@iltuoconsulenteit.it" class="text-xs underline mr-2" x-text="t('support')"></a>
         <span class="text-xs text-gray-600" x-text="licenseInfo()"></span>
         <button @click="licenseModal=true" class="text-xs underline mr-2" x-text="t('licenses')"></button>
         <select x-model="lang" @change="setLang" class="border rounded p-1 text-sm">
@@ -151,6 +139,14 @@
             <div id="scanArea" x-show="scanEnabled" class="w-32 h-20 rounded border-2 border-dashed border-blue-500 text-blue-600 flex flex-col items-center justify-center cursor-pointer" @click="openScan" :title="t('scan')">
               <span class="text-2xl">📠</span>
               <span class="text-xs" x-text="t('scan')"></span>
+            </div>
+            <div id="mobileSignBtn" x-show="files.length > 0" class="w-32 h-20 rounded border-2 border-dashed border-purple-500 text-purple-600 flex flex-col items-center justify-center cursor-pointer" @click="command('mobileSign')" :title="t('mobileSign')">
+              <span class="text-2xl">📱</span>
+              <span class="text-xs" x-text="t('mobileSign')"></span>
+            </div>
+            <div id="exportArea" x-show="files.length > 0" class="w-32 h-20 rounded border-2 border-dashed border-red-500 text-red-600 flex flex-col items-center justify-center cursor-pointer" @click="command('export')" :title="t('export')">
+              <span class="text-2xl">⬇</span>
+              <span class="text-xs" x-text="t('export')"></span>
             </div>
             <div class="flex items-center gap-2 mx-auto" id="removeBlankGroup" x-show="files.length > 0">
               <button id="removeBlankBtn" class="h-10 px-4 rounded bg-yellow-500 text-white flex items-center justify-center text-sm" @click="removeBlankPages" x-text="t('removeBlank')"></button>

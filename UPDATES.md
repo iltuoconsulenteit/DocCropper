@@ -1,5 +1,9 @@
 # Updates
 
+## 2025-09-10
+- Move purchase, bug, and support links from the header to the sidebar navigation
+- Replace sidebar command menu with home-screen buttons for export and mobile signing
+
 ## 2025-09-09
 - Licenses can be activated by uploading a signed token file from the web UI
 - Added `scripts/license/generate_license_file.py` helper to create signed license files with `LICENSE_SECRET`
