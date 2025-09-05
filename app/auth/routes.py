@@ -65,9 +65,10 @@ router.include_router(
 async def active_session_count(user_id: int) -> int:
     """Return the number of active sessions for the given user."""
     async with async_session_maker() as session:
-        return await session.scalar(
-            select(func.count()).select_from(UserSession).where(UserSession.user_id == user_id)
-        ) or 0
+        result = await session.execute(
+            select(func.count(UserSession.id)).where(UserSession.user_id == user_id)
+        )
+        return result.scalar() or 0
 
 
 @router.post("/auth/jwt/login")
