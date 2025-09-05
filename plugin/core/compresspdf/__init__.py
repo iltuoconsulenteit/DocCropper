@@ -15,19 +15,20 @@ def register(app, utils: dict[str, Any]):
                 "deflate": True,
                 "deflate_images": True,
                 "deflate_fonts": True,
+                "clean": True,
                 "recompress": True,
-                "image_quality": 95,
+                "jpeg_quality": 75,
             }
             lvl = (level or "").lower()
             if lvl == "low":
                 save_args["garbage"] = 1
-                save_args["image_quality"] = 85
+                save_args["jpeg_quality"] = 85
             elif lvl == "medium":
                 save_args["garbage"] = 2
-                save_args["image_quality"] = 60
+                save_args["jpeg_quality"] = 60
             elif lvl == "extreme":
                 save_args["garbage"] = 4
-                save_args["image_quality"] = max(10, min(95, int(jpeg_quality)))
+                save_args["jpeg_quality"] = max(10, min(95, int(jpeg_quality)))
             out = io.BytesIO()
             doc.save(out, **save_args)
             return out.getvalue()

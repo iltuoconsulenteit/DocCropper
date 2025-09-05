@@ -1595,7 +1595,21 @@ async def create_pdf(
             pages.append(log_page)
 
         pdf_bytes_io = io.BytesIO()
-        pages[0].save(pdf_bytes_io, format="PDF", save_all=True, append_images=pages[1:])
+        pdf_save_kwargs = {}
+        comp_lvl = (compression or "").lower()
+        if comp_lvl == "low":
+            pdf_save_kwargs["quality"] = 85
+        elif comp_lvl == "medium":
+            pdf_save_kwargs["quality"] = 60
+        elif comp_lvl == "extreme":
+            pdf_save_kwargs["quality"] = max(10, min(95, int(jpeg_quality)))
+        pages[0].save(
+            pdf_bytes_io,
+            format="PDF",
+            save_all=True,
+            append_images=pages[1:],
+            **pdf_save_kwargs,
+        )
         pdf_bytes = pdf_bytes_io.getvalue()
 
         cert_path = os.environ.get("DOCROPPER_SIGN_CERT")
