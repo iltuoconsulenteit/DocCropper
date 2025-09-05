@@ -328,3 +328,6 @@
 
 ## 2025-09-04
 - Allow purchasing licenses directly from the license panel with a Stripe checkout flow
+
+## 2025-09-05
+- Convert images to JPEG during PDF compression so selected levels actually reduce file size
