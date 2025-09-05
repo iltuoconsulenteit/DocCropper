@@ -196,9 +196,18 @@ def main():
 
     developer = os.environ.get('DOCROPPER_DEVELOPER') == '1' or is_developer()
     try:
+        repo_root = subprocess.check_output(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=BASE_DIR,
+            stderr=subprocess.DEVNULL,
+        ).decode().strip()
+    except Exception:
+        repo_root = str(BASE_DIR)
+    try:
         BUILD = subprocess.check_output(
             ["git", "rev-parse", "--short", "HEAD"],
-            cwd=BASE_DIR,
+            cwd=repo_root,
+            stderr=subprocess.DEVNULL,
         ).decode().strip()
     except Exception:
         BUILD = "unknown"

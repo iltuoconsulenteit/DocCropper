@@ -61,25 +61,19 @@
         <img src="/static/logos/app_logo.png" alt="DocCropper" class="h-8 cursor-pointer" @click="command('files')" />
       </div>
       <nav class="flex-1 overflow-y-auto">
-        <h2 class="px-4 text-xs uppercase text-gray-400" x-text="t('commands')"></h2>
-        <ul>
-          <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('import')" x-text="t('import')"></button>
-          </li>
-          <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('export')" x-text="t('export')"></button>
-          </li>
-          <li x-show="scanEnabled">
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="openScan" x-text="t('scan')"></button>
-          </li>
-          <li>
-            <button id="mobileSignBtn" class="w-full text-left p-2 hover:bg-gray-700" @click="command('mobileSign')" x-text="t('mobileSign')"></button>
-          </li>
-        </ul>
-        <h2 class="px-4 mt-4 text-xs uppercase text-gray-400" x-text="t('navigation')"></h2>
+        <h2 class="px-4 text-xs uppercase text-gray-400" x-text="t('navigation')"></h2>
         <ul>
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('files')" x-text="t('files')"></button>
+          </li>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('support')" x-text="t('support')"></button>
+          </li>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('bug')" x-text="t('bug')"></button>
+          </li>
+          <li>
+            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('purchase')" x-text="t('purchase')"></button>
           </li>
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700 text-yellow-400 font-semibold" @click="command('sponsor')" x-text="t('sponsor')"></button>
@@ -92,9 +86,6 @@
           </li>
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('tutorials')" x-text="t('tutorials')"></button>
-          </li>
-          <li>
-            <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('purchase')" x-text="t('purchase')"></button>
           </li>
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('settings')" x-text="t('settings')"></button>
@@ -150,6 +141,14 @@
             <div id="scanArea" x-show="scanEnabled" class="w-32 h-20 rounded border-2 border-dashed border-blue-500 text-blue-600 flex flex-col items-center justify-center cursor-pointer" @click="openScan" :title="t('scan')">
               <span class="text-2xl">📠</span>
               <span class="text-xs" x-text="t('scan')"></span>
+            </div>
+            <div id="exportBtn" x-show="files.length > 0" class="w-32 h-20 rounded border-2 border-dashed border-yellow-500 text-yellow-600 flex flex-col items-center justify-center cursor-pointer" @click="command('export')" :title="t('export')">
+              <span class="text-2xl">📤</span>
+              <span class="text-xs" x-text="t('export')"></span>
+            </div>
+            <div id="mobileSignBtn" x-show="files.length > 0" style="display:none" class="w-32 h-20 rounded border-2 border-dashed border-purple-500 text-purple-600 flex flex-col items-center justify-center cursor-pointer" @click="command('mobileSign')" :title="t('mobileSign')">
+              <span class="text-2xl">📱</span>
+              <span class="text-xs" x-text="t('mobileSign')"></span>
             </div>
             <div class="flex items-center gap-2 mx-auto" id="removeBlankGroup" x-show="files.length > 0">
               <button id="removeBlankBtn" class="h-10 px-4 rounded bg-yellow-500 text-white flex items-center justify-center text-sm" @click="removeBlankPages" x-text="t('removeBlank')"></button>
@@ -564,6 +563,8 @@
             guide:'Guide',
             updates:'Updates',
             tutorials:'Tutorials',
+            support:'Support',
+            bug:'Report bug',
             purchase:'Purchase',
             sponsor:'Sponsor',
             subscriptions:'Subscriptions',
@@ -625,9 +626,7 @@
             removeBgFailed:'Background removal failed',
             downloadPng:'Download PNG',
             cloudSave:'Save to cloud',
-            localSave:'Save locally',
             cloudSaveComingSoon:'Cloud saving coming soon',
-            localSaveComingSoon:'Local saving coming soon',
             scan:'Scan',
             selectPage:'Select page',
             addTextField:'Text box',
@@ -688,6 +687,8 @@
             guide:'Guida',
             updates:'Aggiornamenti',
             tutorials:'Tutorial',
+            support:'Supporto',
+            bug:'Segnala bug',
             purchase:'Acquisto',
             sponsor:'Sponsor',
             subscriptions:'Abbonamenti',
@@ -749,9 +750,7 @@
             removeBgFailed:'Rimozione sfondo fallita',
             downloadPng:'Scarica PNG',
             cloudSave:'Salva nel cloud',
-            localSave:'Salva in locale',
             cloudSaveComingSoon:'Salvataggio nel cloud in arrivo',
-            localSaveComingSoon:'Salvataggio locale in arrivo',
             scan:'Scanner',
             selectPage:'Seleziona pagina',
             addTextField:'Campo testo',
@@ -803,6 +802,8 @@
         // Expose translations so external plugins (e.g., mobile sign) can reuse them
         window.dcStrings = strings;
         const DEFAULT_PAYPAL = 'https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY';
+        const DEFAULT_BUG_URL = 'https://github.com/DocCropper/DocCropper/issues';
+        const DEFAULT_SUPPORT_URL = 'https://github.com/DocCropper/DocCropper/discussions';
         return {
           drawer:false,
           pinned: window.innerWidth >= 768,
@@ -856,6 +857,8 @@
           clientLogo:null,
           sponsorLogo:null,
           donateLink:null,
+          bugLink:null,
+          supportLink:null,
           settingsModal:false,
           passwordModal:false,
           passwordInput:'',
@@ -1032,7 +1035,9 @@
               this.updateInterval = parseInt(cfg.update_interval || 3600000);
               const mode = cfg.payment_mode && cfg.payment_mode.toLowerCase();
               if(mode==='donation'){
-                this.donateLink = cfg.paypal_link || DEFAULT_PAYPAL;
+              this.donateLink = cfg.paypal_link || DEFAULT_PAYPAL;
+              this.bugLink = cfg.bug_link || DEFAULT_BUG_URL;
+              this.supportLink = cfg.support_link || DEFAULT_SUPPORT_URL;
                 window.DC_DONATE_URL = this.donateLink;
               }
             }).catch(()=>{});
@@ -1090,6 +1095,12 @@
               case 'tutorials':
                 this.tab='tutorials';
                 this.showSlides=false;
+                break;
+              case 'support':
+                window.open(this.supportLink || DEFAULT_SUPPORT_URL, '_blank');
+                break;
+              case 'bug':
+                window.open(this.bugLink || DEFAULT_BUG_URL, '_blank');
                 break;
               case 'purchase':
                 this.tab='purchase';
@@ -1780,8 +1791,7 @@
         <button id="downloadPdfBtn" class="w-full px-2 py-1 bg-blue-500 text-white rounded text-sm" style="display:none;" x-text="t('downloadPdf')"></button>
         <button id="waShareBtn" class="w-full px-2 py-1 bg-green-500 text-white rounded text-sm" style="display:none;" x-text="t('whatsapp')"></button>
         <button id="emailShareBtn" class="w-full px-2 py-1 bg-gray-500 text-white rounded text-sm" style="display:none;" x-text="t('email')"></button>
-        <div x-show="cloudSaveEnabled" class="mt-2 space-y-2">
-          <button id="localSaveBtn" class="w-full px-2 py-1 bg-gray-500 text-white rounded text-sm" x-text="t('localSave')"></button>
+        <div x-show="false" class="mt-2 space-y-2">
           <button id="cloudSaveBtn" class="w-full px-2 py-1 bg-purple-500 text-white rounded text-sm" x-text="t('cloudSave')"></button>
         </div>
       </details>

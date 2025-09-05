@@ -20,7 +20,7 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         }
     }
 
-    let signModal, signCanvas, signCtx, signOk, signCancel, signClear;
+    let signModal, signCanvas, signCtx, signOk, signCancel, signClear, signUpload;
 
     function ensureSignModal() {
         if (signModal) return;
@@ -30,7 +30,8 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         signModal.innerHTML = `
             <div class="modal-content" style="padding:10px;">
                 <canvas id="ffSignCanvas" width="400" height="200" style="border:1px solid #000;width:400px;height:200px;"></canvas>
-                <div style="text-align:right;margin-top:8px;">
+                <div style="text-align:right;margin-top:8px;display:flex;gap:4px;justify-content:flex-end;">
+                    <button id="ffSignUpload">${translations.upload || 'Upload'}</button>
                     <button id="ffSignClear">${translations.clear || 'Clear'}</button>
                     <button id="ffSignCancel">${translations.cancel || 'Cancel'}</button>
                     <button id="ffSignOk">${translations.ok || 'OK'}</button>
@@ -60,8 +61,19 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         signClear = document.getElementById('ffSignClear');
         signCancel = document.getElementById('ffSignCancel');
         signOk = document.getElementById('ffSignOk');
+        signUpload = document.getElementById('ffSignUpload');
         signClear.onclick = () => { signCtx.clearRect(0,0,signCanvas.width,signCanvas.height); };
         signCancel.onclick = () => { signModal.style.display = 'none'; };
+        signUpload.onclick = () => {
+            pickSignImage((data) => {
+                const img = new Image();
+                img.onload = () => {
+                    signCtx.clearRect(0,0,signCanvas.width,signCanvas.height);
+                    signCtx.drawImage(img,0,0,signCanvas.width,signCanvas.height);
+                };
+                img.src = data;
+            });
+        };
     }
 
     function openSignDrawModal(callback){
@@ -136,6 +148,22 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         document.getElementById('ffOk').onclick = saveAndClose;
         overlay = document.getElementById('ffOverlay');
         overlay.addEventListener('mousedown', startDraw);
+        overlay.addEventListener('dblclick', (e) => {
+            if (e.target !== overlay) return;
+            const rect = overlay.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width;
+            const y = (e.clientY - rect.top) / rect.height;
+            const w = 150 / rect.width;
+            const h = 60 / rect.height;
+            const f = { type: 'signdraw', x: x - w/2, y: y - h/2, w, h, border: false };
+            openSignDrawModal((data) => {
+                f.value = data;
+                createFieldElement(overlay, f);
+                fields[currentPage] = fields[currentPage] || [];
+                fields[currentPage].push(f);
+                mergeFieldsToThumbnail(currentPage);
+            });
+        });
         colorInput = document.getElementById('ffColor');
         sizeInput = document.getElementById('ffSize');
         borderInput = document.getElementById('ffBorder');
@@ -269,29 +297,41 @@ export function initFormFieldsPlugin(translations, enabled = true) {
             e.preventDefault();
             e.stopPropagation();
             const rect = parent.getBoundingClientRect();
-            const startX = e.clientX;
-            const startY = e.clientY;
+            const startX = e.touches ? e.touches[0].clientX : e.clientX;
+            const startY = e.touches ? e.touches[0].clientY : e.clientY;
             const initLeft = parseFloat(el.style.left);
             const initTop = parseFloat(el.style.top);
             function move(ev) {
-                const dx = (ev.clientX - startX) / rect.width * 100;
-                const dy = (ev.clientY - startY) / rect.height * 100;
+                const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+                const clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+                const dx = (clientX - startX) / rect.width * 100;
+                const dy = (clientY - startY) / rect.height * 100;
                 el.style.left = (initLeft + dx) + '%';
                 el.style.top = (initTop + dy) + '%';
             }
             function up() {
                 window.removeEventListener('mousemove', move);
                 window.removeEventListener('mouseup', up);
+                window.removeEventListener('touchmove', move);
+                window.removeEventListener('touchend', up);
             }
             window.addEventListener('mousemove', move);
             window.addEventListener('mouseup', up);
+            window.addEventListener('touchmove', move, {passive:false});
+            window.addEventListener('touchend', up);
         };
         handle.addEventListener('mousedown', dragStart);
+        handle.addEventListener('touchstart', dragStart, {passive:false});
         el.addEventListener('mousedown', (e) => {
-            if (e.target === el && e.button === 0 && el.tagName !== 'TEXTAREA') {
+            if (e.target === el && e.button === 0) {
                 dragStart(e);
             }
         });
+        el.addEventListener('touchstart', (e) => {
+            if (e.target === el) {
+                dragStart(e);
+            }
+        }, {passive:false});
         el.addEventListener('click', () => {
             currentType = null;
             currentField = el;

@@ -77,6 +77,7 @@
   "demoTestPage": "Sito sperimentale gratuito: sostieni lo sviluppo con una donazione",
   "licensedTo": "Licenziato a",
   "support": "Supporto",
+  "bug": "Segnala bug",
   "donatePaypal": "Dona con PayPal",
   "payPaypal": "Paga con PayPal",
   "payStripe": "Paga con Stripe",
@@ -241,7 +242,7 @@
   "enablePageSelect": "Abilita selezione pagine",
   "enableDownloadPng": "Abilita download PNG",
   "enableScan": "Abilita scansione",
-  "enableCloudSave": "Abilita salvataggio cloud/local",
+  "enableCloudSave": "Abilita salvataggio cloud",
   "installScanner": "Installa il componente scanner",
   "selectScanner": "Seleziona scanner",
   "scanProfile": "Profilo",
@@ -252,8 +253,6 @@
   "saveProfile": "Salva profilo",
   "none": "Nessuno",
   "cloudSave": "Salva nel cloud",
-  "localSave": "Salva in locale",
-  "localSaveComingSoon": "Salvataggio locale in arrivo",
   "cloudSaveComingSoon": "Salvataggio nel cloud in arrivo"
 }
 

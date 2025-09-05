@@ -18,6 +18,8 @@
   "stripe_price_full": "",
   "stripe_success_url": "",
   "stripe_cancel_url": "",
+  "bug_link": "",
+  "support_link": "",
   "bank_info": "",
   "google_client_id": "",
   "brand_html": "",

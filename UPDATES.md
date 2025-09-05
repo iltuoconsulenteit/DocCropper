@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-09-06
+- fix: detect repository root with git so web template and tray icon share build version
+
 ## 2025-08-19
 - Enable DocuSeal and remote signing plugins by default so developer licenses reveal them immediately
 - Add a Settings button for developer builds and wire it into the Expressive template

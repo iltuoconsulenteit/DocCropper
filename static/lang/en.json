@@ -77,6 +77,7 @@
   "demoTestPage": "Experimental site – enjoy DocCropper for free and consider donating to improve it",
   "licensedTo": "Licensed to",
   "support": "Support",
+  "bug": "Report bug",
   "donatePaypal": "Donate with PayPal",
   "payPaypal": "Pay with PayPal",
   "payStripe": "Pay with Stripe",
@@ -241,7 +242,7 @@
   "enablePageSelect": "Enable page selection",
   "enableDownloadPng": "Enable PNG download",
   "enableScan": "Enable scanning",
-  "enableCloudSave": "Enable cloud/local save",
+  "enableCloudSave": "Enable cloud save",
   "installScanner": "Install the scanner helper",
   "selectScanner": "Select scanner",
   "scanProfile": "Profile",
@@ -252,7 +253,5 @@
   "saveProfile": "Save profile",
   "none": "None",
   "cloudSave": "Save to cloud",
-  "localSave": "Save locally",
-  "localSaveComingSoon": "Local saving coming soon",
   "cloudSaveComingSoon": "Cloud saving coming soon"
 }
