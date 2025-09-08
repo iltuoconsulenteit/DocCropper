@@ -54,11 +54,11 @@ if not defined DOCROPPER_BRANCH (
     echo Choose branch to install:
     echo  1^) main
     echo  2^) !DEV_BRANCH!
-    set /p BSEL=Selection [1]:
-    if "!BSEL!"=="2" (
-        set "BRANCH=!DEV_BRANCH!"
-    ) else (
+    set /p BSEL=Selection [2]:
+    if "!BSEL!"=="1" (
         set "BRANCH=main"
+    ) else (
+        set "BRANCH=!DEV_BRANCH!"
     )
 ) else (
     set "BRANCH=%DOCROPPER_BRANCH%"
@@ -81,7 +81,7 @@ if not exist "!APP_DIR!" (
 call :main
 set "MAIN_ERR=%ERRORLEVEL%"
 if not "%MAIN_ERR%"=="0" (
-    echo Installazione fallita. Vedi %LOG_FILE% per i dettagli.
+    echo Installation failed. See %LOG_FILE% for details.
     endlocal
     pause
     exit /b %MAIN_ERR%
@@ -134,6 +134,25 @@ if errorlevel 1 (
     )
 )
 
+where python >nul 2>&1
+if errorlevel 1 (
+    call :log "Python not found. Downloading installer..."
+    set "PY_VER=3.11.7"
+    set "PY_EXE=python-%PY_VER%-amd64.exe"
+    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/%PY_VER%/%PY_EXE%' -OutFile '%TEMP%\%PY_EXE%'" >>"%LOG_FILE%" 2>&1
+    if exist "%TEMP%\%PY_EXE%" (
+        start /wait "" "%TEMP%\%PY_EXE%" /quiet InstallAllUsers=1 PrependPath=1 Include_test=0 >>"%LOG_FILE%" 2>&1
+        del "%TEMP%\%PY_EXE%" >>"%LOG_FILE%" 2>&1
+    ) else (
+        call :log "Failed to download Python installer."
+        exit /b 1
+    )
+    where python >nul 2>&1 || (
+        call :log "Python installation failed."
+        exit /b 1
+    )
+)
+
 if exist "!APP_DIR!\scripts\stop_DocCropper.bat" (
     call :log "Stopping running DocCropper..."
     call "!APP_DIR!\scripts\stop_DocCropper.bat" >nul 2>&1
@@ -143,7 +162,7 @@ if not exist "!APP_DIR!\.git" (
     dir /b "!APP_DIR!" | findstr . >nul 2>&1
     if not errorlevel 1 (
         call :log "Destination !APP_DIR! exists and is not empty."
-        set /p wipe_choice=Delete contents and continue? [y/N] 
+        set /p wipe_choice=Delete contents and continue? [y/N]:
         if /I "!wipe_choice!"=="y" (
             call :log "Removing old files..."
             rmdir /S /Q "!APP_DIR!" >>"%LOG_FILE%" 2>&1
@@ -162,8 +181,10 @@ if not exist "!APP_DIR!\.git" (
     )
 ) else (
     call :log "Repository present in !APP_DIR!"
-    set /p update_choice=Vuoi aggiornare il repository da GitHub? [s/N] 
-    if /I "!update_choice!"=="s" (
+    set /p update_choice=Update repository from GitHub? [Y/n]:
+    if /I "!update_choice!"=="n" (
+        call :log "Skipping update"
+    ) else (
         cd /d "!APP_DIR!"
         if exist "!LAST_FILE!" (
             copy /Y "!LAST_FILE!" "!PREV_FILE!" >nul 2>&1
@@ -172,7 +193,7 @@ if not exist "!APP_DIR!\.git" (
         )
         if exist "!CONFIG_FILE!" (
             git status --porcelain | findstr "!CONFIG_FILE!" >nul && (
-                call :log "Backup di !CONFIG_FILE! in !BACKUP_FILE!..."
+                call :log "Backup !CONFIG_FILE! to !BACKUP_FILE!..."
                 copy /Y "!CONFIG_FILE!" "!BACKUP_FILE!" >>"%LOG_FILE%" 2>&1
                 git restore "!CONFIG_FILE!"
             )
@@ -210,13 +231,13 @@ powershell -NoProfile -Command "
 
 cd /d "!APP_DIR!"
 
-call :log "Ultimi 10 commit:"
+call :log "Last 10 commits:"
 git log -n 10 --pretty=format:"%%h | %%ad | %%s" --date=short >>"%LOG_FILE%" 2>&1
 
 echo.
-set /p commit_hash=Vuoi ripristinare un commit specifico? (lascia vuoto per continuare):
+set /p commit_hash=Restore to a specific commit? (leave empty to continue):
 if not "!commit_hash!"=="" (
-    call :log "Checkout del commit !commit_hash!..."
+    call :log "Checking out commit !commit_hash!..."
     git checkout !commit_hash! >>"%LOG_FILE%" 2>&1
     for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
 )
@@ -239,10 +260,10 @@ if not exist "!APP_DIR!\env\auth.env" (
 )
 
 if not exist "venv\Scripts\activate.bat" (
-    call :log "Creazione ambiente virtuale..."
+    call :log "Creating virtual environment..."
     rmdir /S /Q venv 2>>"%LOG_FILE%" 1>&2
     python -m venv venv >>"%LOG_FILE%" 2>&1 || (
-        call :log "Errore durante la creazione del venv"
+        call :log "Error creating venv"
         exit /b 1
     )
 )
@@ -250,15 +271,17 @@ if not exist "venv\Scripts\activate.bat" (
 call venv\Scripts\activate.bat
 
 if exist requirements.txt (
-    call :log "Installazione pacchetti Python..."
+    call :log "Installing Python packages..."
     python -m pip install --upgrade pip >>"%LOG_FILE%" 2>&1
     pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
 ) else (
-    call :log "File requirements.txt non trovato!"
+    call :log "requirements.txt not found!"
 )
 
-set /p RUN_APP=Launch DocCropper with tray icon now? [y/N]
-if /I "!RUN_APP!" EQU "y" (
+set /p RUN_APP=Launch DocCropper with tray icon now? [Y/n]:
+if /I "!RUN_APP!"=="n" (
+    rem user chose not to run
+) else (
     pushd "!APP_DIR!" >nul
     where pythonw >nul 2>&1 && (
         call :log "Launching tray icon"

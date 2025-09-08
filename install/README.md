@@ -2,6 +2,8 @@
 
 This directory contains installer scripts for Windows (`.bat`), macOS (`.command`) and Linux (`.sh`).
 
+On Windows, the installer downloads and installs Python automatically if it is not already available and defaults to the developer branch.
+
 ## Developer branch
 
 To override the default developer branch used by the installers, create a file named `dev_branch` in this folder and write the branch name on a single line.
