@@ -134,38 +134,6 @@ if errorlevel 1 (
     )
 )
 
-rem Locate or bootstrap Python
-for %%P in (python.exe) do set "PYTHON_CMD=%%~$PATH:P"
-if defined PYTHON_CMD (
-    "!PYTHON_CMD!" --version >nul 2>&1 || set "PYTHON_CMD="
-)
-if not defined PYTHON_CMD (
-    call :log "Python not found. Downloading embeddable runtime..."
-    set "PY_VER=3.11.7"
-    set "PY_ZIP=python-%PY_VER%-embed-amd64.zip"
-    set "PY_DIR=!APP_DIR!\python"
-    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/%PY_VER%/%PY_ZIP%' -OutFile '%TEMP%\%PY_ZIP%'" >>"%LOG_FILE%" 2>&1
-    if exist "%TEMP%\%PY_ZIP%" (
-        if exist "!PY_DIR!" rmdir /S /Q "!PY_DIR!" >>"%LOG_FILE%" 2>&1
-        mkdir "!PY_DIR!" >>"%LOG_FILE%" 2>&1
-        powershell -NoProfile -Command "Expand-Archive -Path '%TEMP%\%PY_ZIP%' -DestinationPath '!PY_DIR!'" >>"%LOG_FILE%" 2>&1
-        del "%TEMP%\%PY_ZIP%" >>"%LOG_FILE%" 2>&1
-        powershell -NoProfile -Command "(Get-Content '!PY_DIR!\python311._pth') -replace '#import site','import site' | Set-Content '!PY_DIR!\python311._pth'" >>"%LOG_FILE%" 2>&1
-        set "PYTHON_CMD=!PY_DIR!\python.exe"
-        set "PYTHONW_CMD=!PY_DIR!\pythonw.exe"
-        set "PY_EMBED=1"
-        call :log "Bootstrapping pip..."
-        powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://bootstrap.pypa.io/get-pip.py' -OutFile '!PY_DIR!\get-pip.py'" >>"%LOG_FILE%" 2>&1
-        "!PYTHON_CMD!" "!PY_DIR!\get-pip.py" >>"%LOG_FILE%" 2>&1
-        del "!PY_DIR!\get-pip.py" >>"%LOG_FILE%" 2>&1
-    ) else (
-        call :log "Failed to download Python embeddable package."
-        exit /b 1
-    )
-) else (
-    set "PYTHONW_CMD=!PYTHON_CMD:python.exe=pythonw.exe!"
-)
-call :log "Using Python at !PYTHON_CMD!"
 
 if exist "!APP_DIR!\scripts\stop_DocCropper.bat" (
     call :log "Stopping running DocCropper..."
@@ -270,6 +238,49 @@ if not exist "!APP_DIR!\env\auth.env" (
         copy "!APP_DIR!\env\auth.env.example" "!APP_DIR!\env\auth.env" >nul
     )
 )
+
+rem Determine required Python version
+set "PY_VER=3.11.7"
+if exist "env\python.env" (
+    for /f "usebackq tokens=1,2 delims==" %%A in ("env\python.env") do (
+        if /I "%%A"=="PYTHON_VERSION" set "PY_VER=%%B"
+    )
+)
+for /f "tokens=1,2 delims=." %%A in ("%PY_VER%") do set "PY_SHORT=%%A%%B"
+call :log "Required Python version: %PY_VER%"
+
+rem Locate or bootstrap Python
+for %%P in (python.exe) do set "PYTHON_CMD=%%~$PATH:P"
+if defined PYTHON_CMD (
+    for /f "tokens=2 delims= " %%V in ('""!PYTHON_CMD!" -V 2>&1"') do set "PY_FOUND=%%V"
+    if not "!PY_FOUND!"=="%PY_VER%" set "PYTHON_CMD="
+)
+if not defined PYTHON_CMD (
+    call :log "Python %PY_VER% not found. Downloading embeddable runtime..."
+    set "PY_ZIP=python-%PY_VER%-embed-amd64.zip"
+    set "PY_DIR=!APP_DIR!\python"
+    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/%PY_VER%/%PY_ZIP%' -OutFile '%TEMP%\%PY_ZIP%'" >>"%LOG_FILE%" 2>&1
+    if exist "%TEMP%\%PY_ZIP%" (
+        if exist "!PY_DIR!" rmdir /S /Q "!PY_DIR!" >>"%LOG_FILE%" 2>&1
+        mkdir "!PY_DIR!" >>"%LOG_FILE%" 2>&1
+        powershell -NoProfile -Command "Expand-Archive -Path '%TEMP%\%PY_ZIP%' -DestinationPath '!PY_DIR!'" >>"%LOG_FILE%" 2>&1
+        del "%TEMP%\%PY_ZIP%" >>"%LOG_FILE%" 2>&1
+        powershell -NoProfile -Command "(Get-Content '!PY_DIR!\python%PY_SHORT%._pth') -replace '#import site','import site' | Set-Content '!PY_DIR!\python%PY_SHORT%._pth'" >>"%LOG_FILE%" 2>&1
+        set "PYTHON_CMD=!PY_DIR!\python.exe"
+        set "PYTHONW_CMD=!PY_DIR!\pythonw.exe"
+        set "PY_EMBED=1"
+        call :log "Bootstrapping pip..."
+        powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://bootstrap.pypa.io/get-pip.py' -OutFile '!PY_DIR!\get-pip.py'" >>"%LOG_FILE%" 2>&1
+        "!PYTHON_CMD!" "!PY_DIR!\get-pip.py" >>"%LOG_FILE%" 2>&1
+        del "!PY_DIR!\get-pip.py" >>"%LOG_FILE%" 2>&1
+    ) else (
+        call :log "Failed to download Python %PY_VER% embeddable package."
+        exit /b 1
+    )
+) else (
+    set "PYTHONW_CMD=!PYTHON_CMD:python.exe=pythonw.exe!"
+)
+call :log "Using Python at !PYTHON_CMD!"
 
 if not defined PY_EMBED (
     if not exist "venv\Scripts\activate.bat" (
