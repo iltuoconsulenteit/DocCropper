@@ -17,6 +17,7 @@
 - Fix embeddable Python download path to ensure installer retrieves runtime even when the TEMP folder is missing
 - Skip `pyinsane2` on Windows to avoid build-tool errors; scanning requires manual setup
 - Preserve existing embeddable Python runtime across updates and skip download when the required version is already installed
+- Always fetch repository updates so incomplete installations don't skip new commits
 
 ## 2025-09-07
 - On Windows, compile lightweight wrappers so Task Manager lists `DocCropper.exe` and `DocCropperTray.exe` instead of generic Python names

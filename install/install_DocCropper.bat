@@ -163,46 +163,41 @@ if not exist "!APP_DIR!\.git" (
     )
 ) else (
     call :log "Repository present in !APP_DIR!"
-    set /p update_choice=Update repository from GitHub? [Y/n]:
-    if /I "!update_choice!"=="n" (
-        call :log "Skipping update"
+    cd /d "!APP_DIR!"
+    if exist "!LAST_FILE!" (
+        copy /Y "!LAST_FILE!" "!PREV_FILE!" >nul 2>&1
     ) else (
-        cd /d "!APP_DIR!"
-        if exist "!LAST_FILE!" (
-            copy /Y "!LAST_FILE!" "!PREV_FILE!" >nul 2>&1
-        ) else (
-            for /f %%h in ('git rev-parse HEAD') do echo %%h>"!PREV_FILE!"
-        )
-        if exist "!CONFIG_FILE!" (
-            git status --porcelain | findstr "!CONFIG_FILE!" >nul && (
-                call :log "Backup !CONFIG_FILE! to !BACKUP_FILE!..."
-                copy /Y "!CONFIG_FILE!" "!BACKUP_FILE!" >>"%LOG_FILE%" 2>&1
-                git restore "!CONFIG_FILE!"
-            )
-        )
-        set "LIC_BACKUP=%TEMP%\license.env"
-        if exist "env\license.env" copy /Y "env\license.env" "%LIC_BACKUP%" >nul
-        call :log "Updating repository..."
-        git fetch --all --prune >>"%LOG_FILE%" 2>&1 || (
-            call :log "Failed to fetch updates from origin"
-            exit /b 1
-        )
-        git merge --abort >nul 2>&1
-        git rebase --abort >nul 2>&1
-        git checkout !BRANCH! >>"%LOG_FILE%" 2>&1 || git checkout -B !BRANCH! origin/!BRANCH! >>"%LOG_FILE%" 2>&1
-        git reset --hard origin/!BRANCH! >>"%LOG_FILE%" 2>&1
-        git clean -ffdx -e python/ >>"%LOG_FILE%" 2>&1
-        for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
-        if exist "%LIC_BACKUP%" (
-            if not exist "env" mkdir "env"
-            copy /Y "%LIC_BACKUP%" "env\license.env" >nul
-        )
-        if exist "!BACKUP_FILE!" (
-            call :log "Merge !BACKUP_FILE! in !CONFIG_FILE! (manual merge suggested)"
-            del "!BACKUP_FILE!" >>"%LOG_FILE%" 2>&1
-        )
-        cd /d "%~dp0"
+        for /f %%h in ('git rev-parse HEAD') do echo %%h>"!PREV_FILE!"
     )
+    if exist "!CONFIG_FILE!" (
+        git status --porcelain | findstr "!CONFIG_FILE!" >nul && (
+            call :log "Backup !CONFIG_FILE! to !BACKUP_FILE!..."
+            copy /Y "!CONFIG_FILE!" "!BACKUP_FILE!" >>"%LOG_FILE%" 2>&1
+            git restore "!CONFIG_FILE!"
+        )
+    )
+    set "LIC_BACKUP=%TEMP%\license.env"
+    if exist "env\license.env" copy /Y "env\license.env" "%LIC_BACKUP%" >nul
+    call :log "Updating repository..."
+    git fetch --all --prune >>"%LOG_FILE%" 2>&1 || (
+        call :log "Failed to fetch updates from origin"
+        exit /b 1
+    )
+    git merge --abort >nul 2>&1
+    git rebase --abort >nul 2>&1
+    git checkout !BRANCH! >>"%LOG_FILE%" 2>&1 || git checkout -B !BRANCH! origin/!BRANCH! >>"%LOG_FILE%" 2>&1
+    git reset --hard origin/!BRANCH! >>"%LOG_FILE%" 2>&1
+    git clean -ffdx -e python/ >>"%LOG_FILE%" 2>&1
+    for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
+    if exist "%LIC_BACKUP%" (
+        if not exist "env" mkdir "env"
+        copy /Y "%LIC_BACKUP%" "env\license.env" >nul
+    )
+    if exist "!BACKUP_FILE!" (
+        call :log "Merge !BACKUP_FILE! in !CONFIG_FILE! (manual merge suggested)"
+        del "!BACKUP_FILE!" >>"%LOG_FILE%" 2>&1
+    )
+    cd /d "%~dp0"
 )
 
 rem Remove cached Python bytecode so updates load correctly
