@@ -2,6 +2,7 @@
 
 ## 2025-09-08
 - Windows installer now downloads and installs Python if missing, defaults to developer branch, and auto-confirms updates and tray launch, and detects the installed Python path for virtual environment creation
+- When no system Python is found, the Windows installer bootstraps the embeddable Python runtime and pip automatically
 - Move purchase, bug, and support links from the header to the sidebar navigation
 - Replace sidebar command menu with home-screen buttons for export and mobile signing
 - Licenses can be activated by uploading a signed token file from the web UI

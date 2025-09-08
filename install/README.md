@@ -2,7 +2,7 @@
 
 This directory contains installer scripts for Windows (`.bat`), macOS (`.command`) and Linux (`.sh`).
 
-On Windows, the installer downloads and installs Python automatically if it is not already available and defaults to the developer branch.
+On Windows, the installer downloads the embeddable Python runtime and bootstraps `pip` automatically if a local Python installation is not available, then defaults to the developer branch.
 
 ## Developer branch
 
