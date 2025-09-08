@@ -318,6 +318,9 @@ if defined PYTHON_CMD (
     for /f "tokens=2 delims= " %%V in ('"!PYTHON_CMD!" -V 2^>^&1') do set "PY_FOUND=%%V"
     if "!PY_FOUND!"=="%PY_VER%" (
         set "PYTHONW_CMD=!PYTHON_CMD:python.exe=pythonw.exe!"
+        for %%D in ("!PYTHON_CMD!") do set "PY_DIR=%%~dpD"
+        rem trim trailing backslash
+        if "!PY_DIR:~-1!"=="\" set "PY_DIR=!PY_DIR:~0,-1!"
         call :log "Using Python at !PYTHON_CMD!"
         exit /b 0
     ) else (
