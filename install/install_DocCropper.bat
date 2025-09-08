@@ -147,11 +147,24 @@ if errorlevel 1 (
         call :log "Failed to download Python installer."
         exit /b 1
     )
-    where python >nul 2>&1 || (
-        call :log "Python installation failed."
-        exit /b 1
+)
+for %%P in (python.exe) do set "PYTHON_CMD=%%~$PATH:P"
+if not defined PYTHON_CMD (
+    for /f "delims=" %%D in ('dir /b /ad "%ProgramFiles%\Python*" 2^>nul') do (
+        if exist "%ProgramFiles%\%%D\python.exe" set "PYTHON_CMD=%ProgramFiles%\%%D\python.exe"
     )
 )
+if not defined PYTHON_CMD (
+    for /f "delims=" %%D in ('dir /b /ad "%LocalAppData%\Programs\Python\Python*" 2^>nul') do (
+        if exist "%LocalAppData%\Programs\Python\%%D\python.exe" set "PYTHON_CMD=%LocalAppData%\Programs\Python\%%D\python.exe"
+    )
+)
+if not defined PYTHON_CMD (
+    call :log "Python installation failed."
+    exit /b 1
+)
+call :log "Using Python at !PYTHON_CMD!"
+set "PYTHONW_CMD=!PYTHON_CMD:python.exe=pythonw.exe!"
 
 if exist "!APP_DIR!\scripts\stop_DocCropper.bat" (
     call :log "Stopping running DocCropper..."
@@ -260,7 +273,7 @@ if not exist "!APP_DIR!\env\auth.env" (
 if not exist "venv\Scripts\activate.bat" (
     call :log "Creating virtual environment..."
     rmdir /S /Q venv 2>>"%LOG_FILE%" 1>&2
-    python -m venv venv >>"%LOG_FILE%" 2>&1 || (
+    "!PYTHON_CMD!" -m venv venv >>"%LOG_FILE%" 2>&1 || (
         call :log "Error creating venv"
         exit /b 1
     )
@@ -271,7 +284,7 @@ call venv\Scripts\activate.bat
 if exist requirements.txt (
     call :log "Installing Python packages..."
     python -m pip install --upgrade pip >>"%LOG_FILE%" 2>&1
-    pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
+    python -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
 ) else (
     call :log "requirements.txt not found!"
 )
@@ -281,12 +294,12 @@ if /I "!RUN_APP!"=="n" (
     rem user chose not to run
 ) else (
     pushd "!APP_DIR!" >nul
-    where pythonw >nul 2>&1 && (
+    if exist "!PYTHONW_CMD!" (
         call :log "Launching tray icon"
-        start "" pythonw doccropper_tray.py --auto-start
-    ) || (
+        start "" "!PYTHONW_CMD!" doccropper_tray.py --auto-start
+    ) else (
         call :log "Launching tray icon"
-        start "" python doccropper_tray.py --auto-start
+        start "" "!PYTHON_CMD!" doccropper_tray.py --auto-start
     )
     popd >nul
 )
