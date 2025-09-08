@@ -11,6 +11,7 @@
 - Enable moving any form field type, including on touch devices
 - Add signature modal with double-click placement and preview integration
 - Guard against future dates in this log with an automated test
+- Fix Windows installer exit during cleanup by running PowerShell cache removal on a single line
 
 ## 2025-09-07
 - On Windows, compile lightweight wrappers so Task Manager lists `DocCropper.exe` and `DocCropperTray.exe` instead of generic Python names

@@ -224,10 +224,8 @@ if not exist "!APP_DIR!\.git" (
 )
 
 rem Remove cached Python bytecode so updates load correctly
-powershell -NoProfile -Command "
-    Get-ChildItem -Path '!APP_DIR!' -Recurse -Filter '__pycache__' | Remove-Item -Recurse -Force; 
-    Get-ChildItem -Path '!APP_DIR!' -Recurse -Filter '*.pyc' | Remove-Item -Force
-" >nul 2>&1
+call :log "Cleaning Python cache..."
+powershell -NoProfile -Command "Get-ChildItem -Path `"!APP_DIR!`" -Recurse -Filter '__pycache__' | Remove-Item -Recurse -Force; Get-ChildItem -Path `"!APP_DIR!`" -Recurse -Filter '*.pyc' | Remove-Item -Force" >nul 2>&1
 
 cd /d "!APP_DIR!"
 
