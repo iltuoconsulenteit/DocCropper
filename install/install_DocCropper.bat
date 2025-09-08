@@ -191,7 +191,7 @@ if not exist "!APP_DIR!\.git" (
         git rebase --abort >nul 2>&1
         git checkout !BRANCH! >>"%LOG_FILE%" 2>&1 || git checkout -B !BRANCH! origin/!BRANCH! >>"%LOG_FILE%" 2>&1
         git reset --hard origin/!BRANCH! >>"%LOG_FILE%" 2>&1
-        git clean -ffdx >>"%LOG_FILE%" 2>&1
+        git clean -ffdx -e python/ >>"%LOG_FILE%" 2>&1
         for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
         if exist "%LIC_BACKUP%" (
             if not exist "env" mkdir "env"
@@ -250,15 +250,27 @@ for /f "tokens=1,2 delims=." %%A in ("%PY_VER%") do set "PY_SHORT=%%A%%B"
 call :log "Required Python version: %PY_VER%"
 
 rem Locate or bootstrap Python
-for %%P in (python.exe) do set "PYTHON_CMD=%%~$PATH:P"
-if defined PYTHON_CMD (
-    for /f "tokens=2 delims= " %%V in ('""!PYTHON_CMD!" -V 2>&1"') do set "PY_FOUND=%%V"
-    if not "!PY_FOUND!"=="%PY_VER%" set "PYTHON_CMD="
+set "PY_DIR=!APP_DIR!\python"
+if exist "!PY_DIR!\python.exe" (
+    for /f "tokens=2 delims= " %%V in ('"!PY_DIR!\python.exe" -V 2>&1') do set "PY_FOUND=%%V"
+    if "!PY_FOUND!"=="%PY_VER%" (
+        set "PYTHON_CMD=!PY_DIR!\python.exe"
+        set "PYTHONW_CMD=!PY_DIR!\pythonw.exe"
+        set "PY_EMBED=1"
+    )
 )
+
+if not defined PYTHON_CMD (
+    for %%P in (python.exe) do set "PYTHON_CMD=%%~$PATH:P"
+    if defined PYTHON_CMD (
+        for /f "tokens=2 delims= " %%V in ('""!PYTHON_CMD!" -V 2>&1"') do set "PY_FOUND=%%V"
+        if not "!PY_FOUND!"=="%PY_VER%" set "PYTHON_CMD="
+    )
+)
+
 if not defined PYTHON_CMD (
     call :log "Python %PY_VER% not found. Downloading embeddable runtime..."
     set "PY_ZIP=python-%PY_VER%-embed-amd64.zip"
-    set "PY_DIR=!APP_DIR!\python"
     if not exist "%TEMP%" mkdir "%TEMP%"
     powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/!PY_VER!/!PY_ZIP!' -OutFile '%TEMP%\!PY_ZIP!'" >>"%LOG_FILE%" 2>&1
     if exist "%TEMP%\!PY_ZIP!" (
