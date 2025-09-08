@@ -248,7 +248,7 @@ rem Ensure Python runtime is available
 call :ensure_python || exit /b 1
 
 rem Ensure our Python directory is on PATH for subsequent scripts
-set "PATH=!PY_DIR!;!PATH!"
+set "PATH=!PY_DIR!;!PY_DIR!\Scripts;!PATH!"
 
 if not defined PY_EMBED (
     if not exist "venv\Scripts\activate.bat" (
@@ -268,6 +268,10 @@ if exist requirements.txt (
     call :log "Installing Python packages..."
     "!PYTHON_CMD!" -m pip install --upgrade pip >>"%LOG_FILE%" 2>&1
     "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
+    if exist "!PY_DIR!\Scripts\pywin32_postinstall.py" (
+        call :log "Running pywin32 postinstall..."
+        "!PYTHON_CMD!" "!PY_DIR!\Scripts\pywin32_postinstall.py" -install >>"%LOG_FILE%" 2>&1
+    )
 ) else (
     call :log "requirements.txt not found!"
 )
