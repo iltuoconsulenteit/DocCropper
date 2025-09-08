@@ -8,6 +8,7 @@ rembg
 google-auth
 
 pystray
+pywin32; sys_platform == "win32"
 pyhanko
 pytesseract
 PyMuPDF

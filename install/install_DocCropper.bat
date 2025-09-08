@@ -247,6 +247,9 @@ call :log "Required Python version: %PY_VER%"
 rem Ensure Python runtime is available
 call :ensure_python || exit /b 1
 
+rem Ensure our Python directory is on PATH for subsequent scripts
+set "PATH=!PY_DIR!;!PATH!"
+
 if not defined PY_EMBED (
     if not exist "venv\Scripts\activate.bat" (
         call :log "Creating virtual environment..."
@@ -276,10 +279,10 @@ if /I "!RUN_APP!"=="n" (
     pushd "!APP_DIR!" >nul
     if exist "!PYTHONW_CMD!" (
         call :log "Launching tray icon"
-        start "" "!PYTHONW_CMD!" doccropper_tray.py --auto-start
+        start "" "!PYTHONW_CMD!" "!APP_DIR!\doccropper_tray.py" --auto-start
     ) else (
         call :log "Launching tray icon"
-        start "" "!PYTHON_CMD!" doccropper_tray.py --auto-start
+        start "" "!PYTHON_CMD!" "!APP_DIR!\doccropper_tray.py" --auto-start
     )
     popd >nul
 )

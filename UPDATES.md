@@ -19,6 +19,7 @@
 - Skip `pyinsane2` on Windows to avoid build-tool errors; scanning requires manual setup
 - Preserve existing embeddable Python runtime across updates and skip download when the required version is already installed
 - Always fetch repository updates so incomplete installations don't skip new commits
+- Install `pywin32` on Windows and put the bundled Python directory on `PATH` so the tray icon and server start reliably
 
 ## 2025-09-07
 - On Windows, compile lightweight wrappers so Task Manager lists `DocCropper.exe` and `DocCropperTray.exe` instead of generic Python names
