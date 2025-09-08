@@ -14,6 +14,7 @@
 - Guard against future dates in this log with an automated test
 - Fix Windows installer exit during cleanup by running PowerShell cache removal on a single line
 - Installer reads `env/python.env` to choose the Python version to download
+- Fix embeddable Python download path to ensure installer retrieves runtime even when the TEMP folder is missing
 
 ## 2025-09-07
 - On Windows, compile lightweight wrappers so Task Manager lists `DocCropper.exe` and `DocCropperTray.exe` instead of generic Python names

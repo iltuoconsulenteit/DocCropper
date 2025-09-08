@@ -259,13 +259,14 @@ if not defined PYTHON_CMD (
     call :log "Python %PY_VER% not found. Downloading embeddable runtime..."
     set "PY_ZIP=python-%PY_VER%-embed-amd64.zip"
     set "PY_DIR=!APP_DIR!\python"
-    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/%PY_VER%/%PY_ZIP%' -OutFile '%TEMP%\%PY_ZIP%'" >>"%LOG_FILE%" 2>&1
-    if exist "%TEMP%\%PY_ZIP%" (
+    if not exist "%TEMP%" mkdir "%TEMP%"
+    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/!PY_VER!/!PY_ZIP!' -OutFile '%TEMP%\!PY_ZIP!'" >>"%LOG_FILE%" 2>&1
+    if exist "%TEMP%\!PY_ZIP!" (
         if exist "!PY_DIR!" rmdir /S /Q "!PY_DIR!" >>"%LOG_FILE%" 2>&1
         mkdir "!PY_DIR!" >>"%LOG_FILE%" 2>&1
-        powershell -NoProfile -Command "Expand-Archive -Path '%TEMP%\%PY_ZIP%' -DestinationPath '!PY_DIR!'" >>"%LOG_FILE%" 2>&1
-        del "%TEMP%\%PY_ZIP%" >>"%LOG_FILE%" 2>&1
-        powershell -NoProfile -Command "(Get-Content '!PY_DIR!\python%PY_SHORT%._pth') -replace '#import site','import site' | Set-Content '!PY_DIR!\python%PY_SHORT%._pth'" >>"%LOG_FILE%" 2>&1
+        powershell -NoProfile -Command "Expand-Archive -Path '%TEMP%\!PY_ZIP!' -DestinationPath '!PY_DIR!'" >>"%LOG_FILE%" 2>&1
+        del "%TEMP%\!PY_ZIP!" >>"%LOG_FILE%" 2>&1
+        powershell -NoProfile -Command "(Get-Content '!PY_DIR!\python!PY_SHORT!._pth') -replace '#import site','import site' | Set-Content '!PY_DIR!\python!PY_SHORT!._pth'" >>"%LOG_FILE%" 2>&1
         set "PYTHON_CMD=!PY_DIR!\python.exe"
         set "PYTHONW_CMD=!PY_DIR!\pythonw.exe"
         set "PY_EMBED=1"
@@ -274,7 +275,7 @@ if not defined PYTHON_CMD (
         "!PYTHON_CMD!" "!PY_DIR!\get-pip.py" >>"%LOG_FILE%" 2>&1
         del "!PY_DIR!\get-pip.py" >>"%LOG_FILE%" 2>&1
     ) else (
-        call :log "Failed to download Python %PY_VER% embeddable package."
+        call :log "Failed to download Python !PY_VER! embeddable package."
         exit /b 1
     )
 ) else (
