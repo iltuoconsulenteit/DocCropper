@@ -1,31 +1,31 @@
 # Updates
 
-## 2025-09-10
+## 2025-09-08
 - Move purchase, bug, and support links from the header to the sidebar navigation
 - Replace sidebar command menu with home-screen buttons for export and mobile signing
-
-## 2025-09-09
 - Licenses can be activated by uploading a signed token file from the web UI
 - Added `scripts/license/generate_license_file.py` helper to create signed license files with `LICENSE_SECRET`
-
-## 2025-09-07
-- On Windows, compile lightweight wrappers so Task Manager lists
-  `DocCropper.exe` and `DocCropperTray.exe` instead of generic Python names
-
-## 2025-09-08
 - Uninstall scripts now back up `settings.json` and `env/license.env` to a `DocCropperBackup` folder under the current user before removing the installation
 - Installers restore these files on setup so licenses and preferences persist across clean reinstallations
+- Enable moving any form field type, including on touch devices
+- Add signature modal with double-click placement and preview integration
+- Guard against future dates in this log with an automated test
+
+## 2025-09-07
+- On Windows, compile lightweight wrappers so Task Manager lists `DocCropper.exe` and `DocCropperTray.exe` instead of generic Python names
+- Fix PDF compression levels by applying JPEG quality settings so file size reflects chosen compression
 
 ## 2025-09-06
-- Add client-side scanner helper with FastAPI and wire the scan plugin to
-  enumerate devices and trigger acquisitions through `http://127.0.0.1:28672`
+- Add client-side scanner helper with FastAPI and wire the scan plugin to enumerate devices and trigger acquisitions through `http://127.0.0.1:28672`
+- Restore watermark overlay on exported PDFs for Free and Demo editions
 
 ## 2025-09-05
-- Licenses panel can now persist manual keys to `env/license.env` and refresh the
-  server so the frontend reflects the new license immediately
+- Licenses panel can now persist manual keys to `env/license.env` and refresh the server so the frontend reflects the new license immediately
+- Convert images to JPEG during PDF compression so selected levels actually reduce file size
 
 ## 2025-09-04
 - Add cross-platform uninstallation scripts that stop running instances and remove the installation directory even when files are locked
+- Allow purchasing licenses directly from the license panel with a Stripe checkout flow
 
 ## 2025-08-19
 - Enable DocuSeal and remote signing plugins by default so developer licenses reveal them immediately
@@ -329,19 +329,3 @@
 ## 2025-08-27
 - Preserve `env/license.env` during repository updates so manual licenses survive upgrades
 - Add `/license/status` endpoint and frontend refresh to confirm the active license
-
-## 2025-09-04
-- Allow purchasing licenses directly from the license panel with a Stripe checkout flow
-
-## 2025-09-05
-- Convert images to JPEG during PDF compression so selected levels actually reduce file size
-
-## 2025-09-06
-- Restore watermark overlay on exported PDFs for Free and Demo editions
-
-## 2025-09-07
-- Fix PDF compression levels by applying JPEG quality settings so file size reflects chosen compression
-
-## 2025-09-08
-- Enable moving any form field type, including on touch devices
-- Add signature modal with double-click placement and preview integration
