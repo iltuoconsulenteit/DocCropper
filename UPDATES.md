@@ -16,6 +16,7 @@
 - Fix PDF compression plugin to use supported save options so chosen levels and filenames take effect
 - Recompress PDF images based on the selected level for clearer file size differences
 - Adapter downloads now honor the suggested filename so compression suffixes appear in saved PDFs
+- Enable PDF compression in the Free edition and enforce watermark overlays for Free licenses
 
 ## 2025-09-08
 - Fix Windows installer halting after Python version check by consolidating runtime detection into a dedicated function

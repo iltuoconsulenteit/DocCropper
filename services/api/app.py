@@ -967,10 +967,13 @@ if enable_docuseal and (not docuseal_dev or is_dev_license):
 if enable_removebg and (not removebg_dev or is_dev_license):
     register_removebg(app, plugin_utils)
     ACTIVE_PLUGINS.append('removebg')
-if enable_compresspdf and (not compresspdf_dev or is_dev_license) and settings.get('license_level', 'free').lower() != 'free':
+if enable_compresspdf and (not compresspdf_dev or is_dev_license):
     register_compresspdf(app, plugin_utils)
     ACTIVE_PLUGINS.append('compresspdf')
-if enable_watermark and (not watermark_dev or is_dev_license):
+if license_level == 'free':
+    register_watermark(app, plugin_utils)
+    ACTIVE_PLUGINS.append('watermark')
+elif enable_watermark and (not watermark_dev or is_dev_license):
     register_watermark(app, plugin_utils)
     ACTIVE_PLUGINS.append('watermark')
 if enable_downloadpng and (not downloadpng_dev or is_dev_license):
@@ -1492,6 +1495,7 @@ async def create_pdf(
         settings = load_settings()
         key = settings.get("license_key", "").strip().upper()
         license_check = settings.get("license_check", False)
+        license_level = settings.get("license_level", "free").strip().lower()
         dev_env = DEV_LICENSE_KEY_UPPER
         dev_key_valid = dev_env and key == dev_env
         demo_key = key == DEMO_FULL_LICENSE_KEY
@@ -1505,9 +1509,11 @@ async def create_pdf(
             else:
                 licensed = False
         else:
-            licensed = True
+            licensed = license_level != "free"
             if demo_key or (dev_key_valid and settings.get("developer_watermark", False)):
                 licensed = False
+        if license_level == "free":
+            licensed = False
         session_id = request.cookies.get("session_id")
         if not session_id:
             session_id = uuid.uuid4().hex
