@@ -281,18 +281,13 @@ if /I "!RUN_APP!"=="n" (
     rem user chose not to run
 ) else (
     pushd "!APP_DIR!" >nul
-    if exist "!PYTHONW_CMD!" (
-        call :log "Launching tray icon"
-        start "" "!PYTHONW_CMD!" "!APP_DIR!\doccropper_tray.py" --auto-start
-    ) else (
-        call :log "Launching tray icon"
-        start "" "!PYTHON_CMD!" "!APP_DIR!\doccropper_tray.py" --auto-start
-    )
+    call :log "Launching tray icon"
+    start "" /b cmd /c "\"!PYTHON_CMD!\" \"!APP_DIR!\doccropper_tray.py\" --auto-start >>\"%LOG_FILE%\" 2>&1"
     timeout /t 5 >nul
     if exist "%TEMP%\DocCropper_start.log" (
         call :log "Tray icon started successfully"
     ) else (
-        call :log "Tray icon failed to start"
+        call :log "Tray icon failed to start. See log for details."
     )
     popd >nul
 )

@@ -1,5 +1,8 @@
 # Updates
 
+## 2025-09-09
+- Capture tray icon launch output in installer logs to help diagnose startup failures
+
 ## 2025-09-08
 - Fix Windows installer halting after Python version check by consolidating runtime detection into a dedicated function
 - Correct Python path detection when reusing an existing interpreter so `pywin32` post-installation runs and the tray icon launches
