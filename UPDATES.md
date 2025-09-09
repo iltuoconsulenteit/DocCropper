@@ -5,6 +5,7 @@
 - Append tray helper logs to installer log when startup fails
 - Record detected Python interpreter paths in `env/python_path.env` and have start/stop scripts use them to launch the app and tray reliably
 - Warn when local repository differs from origin and log any leftover files after updates
+- Prevent duplicate tray launches and split PowerShell output/error logs so the Windows installer can start the tray helper only once without redirection conflicts
 
 ## 2025-09-08
 - Fix Windows installer halting after Python version check by consolidating runtime detection into a dedicated function
