@@ -20,18 +20,14 @@ if exist "!APP_DIR!\env\python_path.env" (
     )
 )
 
-set "PY=%PYTHON_CMD%"
-set "PYW=%PYTHONW_CMD%"
-if "%PYTHON_EMBED%"=="1" (
-    set "PY_DIR=!PY_DIR!"
+if not defined PYTHON_CMD (
+    set "PY_DIR=!APP_DIR!\python"
+    set "PY=!PY_DIR!\python.exe"
+    set "PYW=!PY_DIR!\pythonw.exe"
 ) else (
-    if not exist venv\Scripts\python.exe (
-        echo [INFO] Creo ambiente virtuale venv... >> "!LOG_FILE!"
-        "%PYTHON_CMD%" -m venv venv >> "!LOG_FILE!" 2>&1
-    )
-    set "PY=venv\Scripts\python.exe"
-    set "PYW=venv\Scripts\pythonw.exe"
-    set "PY_DIR=venv\Scripts"
+    set "PY=%PYTHON_CMD%"
+    set "PYW=%PYTHONW_CMD%"
+    if not defined PY_DIR set "PY_DIR=%APP_DIR%\python"
 )
 
 rem Copy default environment files if missing

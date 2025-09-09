@@ -313,7 +313,7 @@ if /I "!RUN_APP!"=="n" (
         set "TRAY_ERR=%TEMP%\doccropper_tray_boot_err.log"
         if exist "!TRAY_BOOT!" del "!TRAY_BOOT!" >nul 2>&1
         if exist "!TRAY_ERR!" del "!TRAY_ERR!" >nul 2>&1
-        powershell -NoProfile -Command "Start-Process -FilePath '!TRAY_PY!' -ArgumentList '""!APP_DIR!\doccropper_tray.py""','--auto-start' -NoNewWindow -RedirectStandardOutput '!TRAY_BOOT!' -RedirectStandardError '!TRAY_ERR!'" >>"%LOG_FILE%" 2>&1
+        powershell -NoProfile -Command "Start-Process -FilePath '!TRAY_PY!' -ArgumentList @('!APP_DIR!\doccropper_tray.py','--auto-start') -NoNewWindow -RedirectStandardOutput '!TRAY_BOOT!' -RedirectStandardError '!TRAY_ERR!'" >>"%LOG_FILE%" 2>&1
         timeout /t 5 >nul
         if exist "%TEMP%\DocCropper_start.log" (
             call :log "Tray icon started successfully"
@@ -351,20 +351,8 @@ if exist "!PY_DIR!\python.exe" (
     )
 )
 
-for %%P in (python.exe) do if not defined PYTHON_CMD set "PYTHON_CMD=%%~$PATH:%%P"
-if defined PYTHON_CMD (
-    for /f "tokens=2 delims= " %%V in ('"!PYTHON_CMD!" -V 2^>^&1') do set "PY_FOUND=%%V"
-    if "!PY_FOUND!"=="%PY_VER%" (
-        set "PYTHONW_CMD=!PYTHON_CMD:python.exe=pythonw.exe!"
-        for %%D in ("!PYTHON_CMD!") do set "PY_DIR=%%~dpD"
-        rem trim trailing backslash
-        if "!PY_DIR:~-1!"=="\" set "PY_DIR=!PY_DIR:~0,-1!"
-        call :log "Using Python at !PYTHON_CMD!"
-        exit /b 0
-    ) else (
-        set "PYTHON_CMD="
-    )
-)
+rem Always use embeddable runtime; ignore system Python
+
 
 call :log "Python %PY_VER% not found. Downloading embeddable runtime..."
 set "PY_ZIP=python-%PY_VER%-embed-amd64.zip"
