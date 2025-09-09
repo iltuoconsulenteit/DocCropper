@@ -288,6 +288,12 @@ if /I "!RUN_APP!"=="n" (
         call :log "Launching tray icon"
         start "" "!PYTHON_CMD!" "!APP_DIR!\doccropper_tray.py" --auto-start
     )
+    timeout /t 5 >nul
+    if exist "%TEMP%\DocCropper_start.log" (
+        call :log "Tray icon started successfully"
+    ) else (
+        call :log "Tray icon failed to start"
+    )
     popd >nul
 )
 
