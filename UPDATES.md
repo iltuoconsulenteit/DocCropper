@@ -13,6 +13,7 @@
 - Return suggested PDF filename with compression suffix so downloads match selected quality
 - Compile Windows wrappers with `csc.exe` to avoid PowerShell quoting issues
 - Stop script now also terminates `DocCropper.exe` and `DocCropperTray.exe` processes during upgrades
+- Fix PDF compression plugin to use supported save options so chosen levels and filenames take effect
 
 ## 2025-09-08
 - Fix Windows installer halting after Python version check by consolidating runtime detection into a dedicated function
