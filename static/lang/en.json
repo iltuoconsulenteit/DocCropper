@@ -242,7 +242,6 @@
   "enablePageSelect": "Enable page selection",
   "enableDownloadPng": "Enable PNG download",
   "enableScan": "Enable scanning",
-  "enableCloudSave": "Enable cloud/local save",
   "installScanner": "Install the scanner helper",
   "selectScanner": "Select scanner",
   "scanProfile": "Profile",
@@ -251,9 +250,5 @@
   "dpi": "DPI",
   "startScan": "Start scan",
   "saveProfile": "Save profile",
-  "none": "None",
-  "cloudSave": "Save to cloud",
-  "localSave": "Save locally",
-  "localSaveComingSoon": "Local saving coming soon",
-  "cloudSaveComingSoon": "Cloud saving coming soon"
+  "none": "None"
 }

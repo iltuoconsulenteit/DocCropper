@@ -54,11 +54,11 @@ if not defined DOCROPPER_BRANCH (
     echo Choose branch to install:
     echo  1^) main
     echo  2^) !DEV_BRANCH!
-    set /p BSEL=Selection [1]:
-    if "!BSEL!"=="2" (
-        set "BRANCH=!DEV_BRANCH!"
-    ) else (
+    set /p BSEL=Selection [2]:
+    if "!BSEL!"=="1" (
         set "BRANCH=main"
+    ) else (
+        set "BRANCH=!DEV_BRANCH!"
     )
 ) else (
     set "BRANCH=%DOCROPPER_BRANCH%"
@@ -81,12 +81,55 @@ if not exist "!APP_DIR!" (
 call :main
 set "MAIN_ERR=%ERRORLEVEL%"
 if not "%MAIN_ERR%"=="0" (
-    echo Installazione fallita. Vedi %LOG_FILE% per i dettagli.
+    echo Installation failed. See %LOG_FILE% for details.
     endlocal
     pause
     exit /b %MAIN_ERR%
 )
+rem Reload persisted python paths in case variables were lost
+if exist "!APP_DIR!\env\python_path.env" (
+    for /f "usebackq tokens=1* delims==" %%A in ("!APP_DIR!\env\python_path.env") do (
+        if /I "%%A"=="PYTHON_CMD" set "PYTHON_CMD=%%B"
+        if /I "%%A"=="PYTHONW_CMD" set "PYTHONW_CMD=%%B"
+    )
+)
+rem Fallback to bundled paths if env file missing values
+if not defined PYTHON_CMD set "PYTHON_CMD=!APP_DIR!\python\python.exe"
+if not defined PYTHONW_CMD set "PYTHONW_CMD=!APP_DIR!\python\pythonw.exe"
+set "RUN_APP="
+set /p RUN_APP=Launch DocCropper with tray icon now? [Y/n]:
+if /I "%RUN_APP%"=="n" (
+    rem user chose not to run
+) else (
+    pushd "%APP_DIR%" >nul
+    set "TRAY_PY=%PYTHONW_CMD%"
+    if not exist "!TRAY_PY!" set "TRAY_PY=%PYTHON_CMD%"
+    if defined TRAY_PY if exist "!TRAY_PY!" (
+        call :log "Launching tray icon"
+        set "TRAY_BOOT=%TEMP%\doccropper_tray_boot.log"
+        set "TRAY_ERR=%TEMP%\doccropper_tray_boot_err.log"
+        if exist "!TRAY_BOOT!" del "!TRAY_BOOT!" >nul 2>&1
+        if exist "!TRAY_ERR!" del "!TRAY_ERR!" >nul 2>&1
+        powershell -NoProfile -Command "Start-Process -FilePath '!TRAY_PY!' -ArgumentList @('\"%APP_DIR%\doccropper_tray.py\"','--auto-start') -WorkingDirectory '%APP_DIR%' -NoNewWindow -RedirectStandardOutput '!TRAY_BOOT!' -RedirectStandardError '!TRAY_ERR!'" >>"%LOG_FILE%" 2>&1
+        timeout /t 5 >nul
+        if exist "%TEMP%\DocCropper_start.log" (
+            call :log "Tray icon started successfully"
+        ) else (
+            call :log "Tray icon failed to start"
+            if exist "!TRAY_BOOT!" type "!TRAY_BOOT!" >>"%LOG_FILE%"
+            if exist "!TRAY_ERR!" type "!TRAY_ERR!" >>"%LOG_FILE%"
+            if exist "%TEMP%\doccropper_tray.log" type "%TEMP%\doccropper_tray.log" >>"%LOG_FILE%"
+        )
+    ) else (
+        call :log "Tray icon launch skipped: Python interpreter missing"
+        if defined TRAY_PY call :log "Expected interpreter at !TRAY_PY!"
+    )
+    popd >nul
+)
 
+call :log "Log saved to %LOG_FILE%"
+echo Installation complete. See %LOG_FILE% for details.
+pause
 endlocal
 exit /b 0
 
@@ -134,6 +177,7 @@ if errorlevel 1 (
     )
 )
 
+
 if exist "!APP_DIR!\scripts\stop_DocCropper.bat" (
     call :log "Stopping running DocCropper..."
     call "!APP_DIR!\scripts\stop_DocCropper.bat" >nul 2>&1
@@ -143,14 +187,14 @@ if not exist "!APP_DIR!\.git" (
     dir /b "!APP_DIR!" | findstr . >nul 2>&1
     if not errorlevel 1 (
         call :log "Destination !APP_DIR! exists and is not empty."
-        set /p wipe_choice=Delete contents and continue? [y/N] 
-        if /I "!wipe_choice!"=="y" (
+        set /p wipe_choice=Delete contents and continue? [Y/n]:
+        if /I "!wipe_choice!"=="n" (
+            call :log "Please choose another directory."
+            exit /b 1
+        ) else (
             call :log "Removing old files..."
             rmdir /S /Q "!APP_DIR!" >>"%LOG_FILE%" 2>&1
             mkdir "!APP_DIR!" >>"%LOG_FILE%" 2>&1
-        ) else (
-            call :log "Please choose another directory."
-            exit /b 1
         )
     )
     call :log "Cloning repository..."
@@ -162,61 +206,70 @@ if not exist "!APP_DIR!\.git" (
     )
 ) else (
     call :log "Repository present in !APP_DIR!"
-    set /p update_choice=Vuoi aggiornare il repository da GitHub? [s/N] 
-    if /I "!update_choice!"=="s" (
-        cd /d "!APP_DIR!"
-        if exist "!LAST_FILE!" (
-            copy /Y "!LAST_FILE!" "!PREV_FILE!" >nul 2>&1
-        ) else (
-            for /f %%h in ('git rev-parse HEAD') do echo %%h>"!PREV_FILE!"
-        )
-        if exist "!CONFIG_FILE!" (
-            git status --porcelain | findstr "!CONFIG_FILE!" >nul && (
-                call :log "Backup di !CONFIG_FILE! in !BACKUP_FILE!..."
-                copy /Y "!CONFIG_FILE!" "!BACKUP_FILE!" >>"%LOG_FILE%" 2>&1
-                git restore "!CONFIG_FILE!"
-            )
-        )
-        set "LIC_BACKUP=%TEMP%\license.env"
-        if exist "env\license.env" copy /Y "env\license.env" "%LIC_BACKUP%" >nul
-        call :log "Updating repository..."
-        git fetch --all --prune >>"%LOG_FILE%" 2>&1 || (
-            call :log "Failed to fetch updates from origin"
-            exit /b 1
-        )
-        git merge --abort >nul 2>&1
-        git rebase --abort >nul 2>&1
-        git checkout !BRANCH! >>"%LOG_FILE%" 2>&1 || git checkout -B !BRANCH! origin/!BRANCH! >>"%LOG_FILE%" 2>&1
-        git reset --hard origin/!BRANCH! >>"%LOG_FILE%" 2>&1
-        git clean -ffdx >>"%LOG_FILE%" 2>&1
-        for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
-        if exist "%LIC_BACKUP%" (
-            if not exist "env" mkdir "env"
-            copy /Y "%LIC_BACKUP%" "env\license.env" >nul
-        )
-        if exist "!BACKUP_FILE!" (
-            call :log "Merge !BACKUP_FILE! in !CONFIG_FILE! (manual merge suggested)"
-            del "!BACKUP_FILE!" >>"%LOG_FILE%" 2>&1
-        )
-        cd /d "%~dp0"
+    cd /d "!APP_DIR!"
+    if exist "!LAST_FILE!" (
+        copy /Y "!LAST_FILE!" "!PREV_FILE!" >nul 2>&1
+    ) else (
+        for /f %%h in ('git rev-parse HEAD') do echo %%h>"!PREV_FILE!"
     )
+    if exist "!CONFIG_FILE!" (
+        git status --porcelain | findstr "!CONFIG_FILE!" >nul && (
+            call :log "Backup !CONFIG_FILE! to !BACKUP_FILE!..."
+            copy /Y "!CONFIG_FILE!" "!BACKUP_FILE!" >>"%LOG_FILE%" 2>&1
+            git restore "!CONFIG_FILE!"
+        )
+    )
+    set "LIC_BACKUP=%TEMP%\license.env"
+    if exist "env\license.env" copy /Y "env\license.env" "%LIC_BACKUP%" >nul
+    call :log "Updating repository..."
+    git fetch --all --prune >>"%LOG_FILE%" 2>&1 || (
+        call :log "Failed to fetch updates from origin"
+        exit /b 1
+    )
+    git merge --abort >nul 2>&1
+    git rebase --abort >nul 2>&1
+    git checkout !BRANCH! >>"%LOG_FILE%" 2>&1 || git checkout -B !BRANCH! origin/!BRANCH! >>"%LOG_FILE%" 2>&1
+    git reset --hard origin/!BRANCH! >>"%LOG_FILE%" 2>&1
+    git clean -ffdx -e python/ >>"%LOG_FILE%" 2>&1
+    for /f %%h in ('git rev-parse HEAD') do set "LOCAL_COMMIT=%%h"
+    for /f %%h in ('git rev-parse origin/!BRANCH!') do set "REMOTE_COMMIT=%%h"
+    if /I not "!LOCAL_COMMIT!"=="!REMOTE_COMMIT!" (
+        call :log "Warning: local commit !LOCAL_COMMIT! differs from origin !REMOTE_COMMIT!"
+    )
+    set "DIRTY="
+    for /f %%F in ('git status --porcelain') do (
+        if not defined DIRTY (
+            set "DIRTY=1"
+            call :log "Unstaged files after update:"
+        )
+        call :log "    %%F"
+    )
+    if defined DIRTY call :log "Manual cleanup may be required"
+    echo !LOCAL_COMMIT!>"!LAST_FILE!"
+    if exist "%LIC_BACKUP%" (
+        if not exist "env" mkdir "env"
+        copy /Y "%LIC_BACKUP%" "env\license.env" >nul
+    )
+    if exist "!BACKUP_FILE!" (
+        call :log "Merge !BACKUP_FILE! in !CONFIG_FILE! (manual merge suggested)"
+        del "!BACKUP_FILE!" >>"%LOG_FILE%" 2>&1
+    )
+    cd /d "%~dp0"
 )
 
 rem Remove cached Python bytecode so updates load correctly
-powershell -NoProfile -Command "
-    Get-ChildItem -Path '!APP_DIR!' -Recurse -Filter '__pycache__' | Remove-Item -Recurse -Force; 
-    Get-ChildItem -Path '!APP_DIR!' -Recurse -Filter '*.pyc' | Remove-Item -Force
-" >nul 2>&1
+call :log "Cleaning Python cache..."
+powershell -NoProfile -Command "Get-ChildItem -Path `"!APP_DIR!`" -Recurse -Filter '__pycache__' | Remove-Item -Recurse -Force; Get-ChildItem -Path `"!APP_DIR!`" -Recurse -Filter '*.pyc' | Remove-Item -Force" >nul 2>&1
 
 cd /d "!APP_DIR!"
 
-call :log "Ultimi 10 commit:"
+call :log "Last 10 commits:"
 git log -n 10 --pretty=format:"%%h | %%ad | %%s" --date=short >>"%LOG_FILE%" 2>&1
 
 echo.
-set /p commit_hash=Vuoi ripristinare un commit specifico? (lascia vuoto per continuare):
+set /p commit_hash=Restore to a specific commit? (leave empty to continue):
 if not "!commit_hash!"=="" (
-    call :log "Checkout del commit !commit_hash!..."
+    call :log "Checking out commit !commit_hash!..."
     git checkout !commit_hash! >>"%LOG_FILE%" 2>&1
     for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
 )
@@ -238,39 +291,98 @@ if not exist "!APP_DIR!\env\auth.env" (
     )
 )
 
-if not exist "venv\Scripts\activate.bat" (
-    call :log "Creazione ambiente virtuale..."
-    rmdir /S /Q venv 2>>"%LOG_FILE%" 1>&2
-    python -m venv venv >>"%LOG_FILE%" 2>&1 || (
-        call :log "Errore durante la creazione del venv"
-        exit /b 1
+rem Determine required Python version
+set "PY_VER=3.11.7"
+if exist "env\python.env" (
+    for /f "usebackq tokens=1,2 delims==" %%A in ("env\python.env") do (
+        if /I "%%A"=="PYTHON_VERSION" set "PY_VER=%%B"
     )
 )
+for /f "tokens=1,2 delims=." %%A in ("%PY_VER%") do set "PY_SHORT=%%A%%B"
+call :log "Required Python version: %PY_VER%"
 
-call venv\Scripts\activate.bat
+rem Ensure Python runtime is available
+call :ensure_python || exit /b 1
+
+rem Ensure our Python directory is on PATH for subsequent scripts
+set "PATH=!PY_DIR!;!PY_DIR!\Scripts;!PATH!"
+
+rem Persist discovered Python paths for other scripts
+if not exist "env" mkdir "env"
+(
+    echo PYTHON_CMD=!PYTHON_CMD!
+    echo PYTHONW_CMD=!PYTHONW_CMD!
+    echo PY_DIR=!PY_DIR!
+    if defined PY_EMBED (echo PYTHON_EMBED=!PY_EMBED!) else echo PYTHON_EMBED=
+) > "env\python_path.env"
+
+if not defined PY_EMBED (
+    if not exist "venv\Scripts\activate.bat" (
+        call :log "Creating virtual environment..."
+        rmdir /S /Q venv 2>>"%LOG_FILE%" 1>&2
+        "!PYTHON_CMD!" -m venv venv >>"%LOG_FILE%" 2>&1 || (
+            call :log "Error creating venv"
+            exit /b 1
+        )
+    )
+    call venv\Scripts\activate.bat
+) else (
+    call :log "Using embeddable Python environment"
+)
 
 if exist requirements.txt (
-    call :log "Installazione pacchetti Python..."
-    python -m pip install --upgrade pip >>"%LOG_FILE%" 2>&1
-    pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
-) else (
-    call :log "File requirements.txt non trovato!"
-)
-
-set /p RUN_APP=Launch DocCropper with tray icon now? [y/N]
-if /I "!RUN_APP!" EQU "y" (
-    pushd "!APP_DIR!" >nul
-    where pythonw >nul 2>&1 && (
-        call :log "Launching tray icon"
-        start "" pythonw doccropper_tray.py --auto-start
-    ) || (
-        call :log "Launching tray icon"
-        start "" python doccropper_tray.py --auto-start
+    call :log "Installing Python packages..."
+    "!PYTHON_CMD!" -m pip install --upgrade pip >>"%LOG_FILE%" 2>&1
+    "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
+    if exist "!PY_DIR!\Scripts\pywin32_postinstall.py" (
+        call :log "Running pywin32 postinstall..."
+        "!PYTHON_CMD!" "!PY_DIR!\Scripts\pywin32_postinstall.py" -install >>"%LOG_FILE%" 2>&1
     )
-    popd >nul
+) else (
+    call :log "requirements.txt not found!"
 )
 
-call :log "Log saved to !LOG_FILE!"
-echo Installation complete. See !LOG_FILE! for details.
-pause
 exit /b
+
+:ensure_python
+set "PYTHON_CMD="
+set "PYTHONW_CMD="
+set "PY_FOUND="
+set "PY_EMBED="
+set "PY_DIR=!APP_DIR!\python"
+if exist "!PY_DIR!\python.exe" (
+    for /f "tokens=2 delims= " %%V in ('"!PY_DIR!\python.exe" -V 2^>^&1') do set "PY_FOUND=%%V"
+    if "!PY_FOUND!"=="%PY_VER%" (
+        set "PYTHON_CMD=!PY_DIR!\python.exe"
+        set "PYTHONW_CMD=!PY_DIR!\pythonw.exe"
+        set "PY_EMBED=1"
+        call :log "Using Python at !PYTHON_CMD!"
+        exit /b 0
+    )
+)
+
+rem Always use embeddable runtime; ignore system Python
+
+
+call :log "Python %PY_VER% not found. Downloading embeddable runtime..."
+set "PY_ZIP=python-%PY_VER%-embed-amd64.zip"
+if not exist "%TEMP%" mkdir "%TEMP%"
+powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/!PY_VER!/!PY_ZIP!' -OutFile '%TEMP%\!PY_ZIP!'" >>"%LOG_FILE%" 2>&1
+if not exist "%TEMP%\!PY_ZIP!" (
+    call :log "Failed to download Python !PY_VER! embeddable package."
+    exit /b 1
+)
+if exist "!PY_DIR!" rmdir /S /Q "!PY_DIR!" >>"%LOG_FILE%" 2>&1
+mkdir "!PY_DIR!" >>"%LOG_FILE%" 2>&1
+powershell -NoProfile -Command "Expand-Archive -Path '%TEMP%\!PY_ZIP!' -DestinationPath '!PY_DIR!'" >>"%LOG_FILE%" 2>&1
+del "%TEMP%\!PY_ZIP!" >>"%LOG_FILE%" 2>&1
+powershell -NoProfile -Command "(Get-Content '!PY_DIR!\python!PY_SHORT!._pth') -replace '#import site','import site' | Set-Content '!PY_DIR!\python!PY_SHORT!._pth'" >>"%LOG_FILE%" 2>&1
+set "PYTHON_CMD=!PY_DIR!\python.exe"
+set "PYTHONW_CMD=!PY_DIR!\pythonw.exe"
+set "PY_EMBED=1"
+call :log "Bootstrapping pip..."
+powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://bootstrap.pypa.io/get-pip.py' -OutFile '!PY_DIR!\get-pip.py'" >>"%LOG_FILE%" 2>&1
+"!PYTHON_CMD!" "!PY_DIR!\get-pip.py" >>"%LOG_FILE%" 2>&1
+del "!PY_DIR!\get-pip.py" >>"%LOG_FILE%" 2>&1
+call :log "Using Python at !PYTHON_CMD!"
+exit /b 0

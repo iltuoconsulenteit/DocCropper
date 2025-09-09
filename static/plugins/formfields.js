@@ -136,6 +136,7 @@ export function initFormFieldsPlugin(translations, enabled = true) {
         document.getElementById('ffOk').onclick = saveAndClose;
         overlay = document.getElementById('ffOverlay');
         overlay.addEventListener('mousedown', startDraw);
+        overlay.addEventListener('dblclick', placeSignature);
         colorInput = document.getElementById('ffColor');
         sizeInput = document.getElementById('ffSize');
         borderInput = document.getElementById('ffBorder');
@@ -145,7 +146,7 @@ export function initFormFieldsPlugin(translations, enabled = true) {
     }
 
     function startDraw(e) {
-        if (!currentType) return;
+        if (!currentType || currentType === 'signdraw' || currentType === 'signimg') return;
         e.preventDefault();
         const rect = overlay.getBoundingClientRect();
         const startX = e.clientX - rect.left;
@@ -195,6 +196,33 @@ export function initFormFieldsPlugin(translations, enabled = true) {
 
         overlay.addEventListener('mousemove', move);
         window.addEventListener('mouseup', end);
+    }
+
+    function placeSignature(e) {
+        if (currentType !== 'signdraw' && currentType !== 'signimg') return;
+        e.preventDefault();
+        const rect = overlay.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+        const w = 0.2;
+        const h = 0.1;
+        const f = {
+            type: currentType,
+            x: Math.max(0, Math.min(x - w / 2, 1 - w)),
+            y: Math.max(0, Math.min(y - h / 2, 1 - h)),
+            w,
+            h,
+            border: false
+        };
+        const cb = (data) => {
+            f.value = data;
+            createFieldElement(overlay, f);
+        };
+        if (currentType === 'signdraw') {
+            openSignDrawModal(cb);
+        } else {
+            pickSignImage(cb);
+        }
     }
 
     function createFieldElement(parent, f) {
@@ -269,29 +297,41 @@ export function initFormFieldsPlugin(translations, enabled = true) {
             e.preventDefault();
             e.stopPropagation();
             const rect = parent.getBoundingClientRect();
-            const startX = e.clientX;
-            const startY = e.clientY;
+            const startX = e.clientX !== undefined ? e.clientX : (e.touches ? e.touches[0].clientX : 0);
+            const startY = e.clientY !== undefined ? e.clientY : (e.touches ? e.touches[0].clientY : 0);
             const initLeft = parseFloat(el.style.left);
             const initTop = parseFloat(el.style.top);
             function move(ev) {
-                const dx = (ev.clientX - startX) / rect.width * 100;
-                const dy = (ev.clientY - startY) / rect.height * 100;
+                const clientX = ev.clientX !== undefined ? ev.clientX : (ev.touches ? ev.touches[0].clientX : startX);
+                const clientY = ev.clientY !== undefined ? ev.clientY : (ev.touches ? ev.touches[0].clientY : startY);
+                const dx = (clientX - startX) / rect.width * 100;
+                const dy = (clientY - startY) / rect.height * 100;
                 el.style.left = (initLeft + dx) + '%';
                 el.style.top = (initTop + dy) + '%';
             }
             function up() {
                 window.removeEventListener('mousemove', move);
                 window.removeEventListener('mouseup', up);
+                window.removeEventListener('touchmove', move);
+                window.removeEventListener('touchend', up);
             }
             window.addEventListener('mousemove', move);
             window.addEventListener('mouseup', up);
+            window.addEventListener('touchmove', move, {passive:false});
+            window.addEventListener('touchend', up);
         };
         handle.addEventListener('mousedown', dragStart);
+        handle.addEventListener('touchstart', dragStart, {passive:false});
         el.addEventListener('mousedown', (e) => {
             if (e.target === el && e.button === 0 && el.tagName !== 'TEXTAREA') {
                 dragStart(e);
             }
         });
+        el.addEventListener('touchstart', (e) => {
+            if (e.target === el && el.tagName !== 'TEXTAREA') {
+                dragStart(e);
+            }
+        }, {passive:false});
         el.addEventListener('click', () => {
             currentType = null;
             currentField = el;

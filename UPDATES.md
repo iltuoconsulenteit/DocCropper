@@ -1,27 +1,52 @@
 # Updates
 
 ## 2025-09-09
-- Licenses can be activated by uploading a signed token file from the web UI
-- Added `scripts/license/generate_license_file.py` helper to create signed license files with `LICENSE_SECRET`
-
-## 2025-09-07
-- On Windows, compile lightweight wrappers so Task Manager lists
-  `DocCropper.exe` and `DocCropperTray.exe` instead of generic Python names
+- Capture tray icon launch output in installer logs to help diagnose startup failures
+- Append tray helper logs to installer log when startup fails
+- Record detected Python interpreter paths in `env/python_path.env` and have start/stop scripts use them to launch the app and tray reliably
+- Warn when local repository differs from origin and log any leftover files after updates
+- Prevent duplicate tray launches and split PowerShell output/error logs so the Windows installer can start the tray helper only once without redirection conflicts
+- When launching immediately after installation, read persisted Python paths so the tray icon starts even if in-memory variables are cleared
+- Standardize installer prompts to English with default confirmations
 
 ## 2025-09-08
+- Fix Windows installer halting after Python version check by consolidating runtime detection into a dedicated function
+- Correct Python path detection when reusing an existing interpreter so `pywin32` post-installation runs and the tray icon launches
+- Windows installer now downloads and installs Python if missing, defaults to developer branch, and auto-confirms updates and tray launch, and detects the installed Python path for virtual environment creation
+- When no system Python is found, the Windows installer bootstraps the embeddable Python runtime and pip automatically
+- Move purchase, bug, and support links from the header to the sidebar navigation
+- Replace sidebar command menu with home-screen buttons for export and mobile signing
+- Licenses can be activated by uploading a signed token file from the web UI
+- Added `scripts/license/generate_license_file.py` helper to create signed license files with `LICENSE_SECRET`
 - Uninstall scripts now back up `settings.json` and `env/license.env` to a `DocCropperBackup` folder under the current user before removing the installation
 - Installers restore these files on setup so licenses and preferences persist across clean reinstallations
+- Enable moving any form field type, including on touch devices
+- Add signature modal with double-click placement and preview integration
+- Guard against future dates in this log with an automated test
+- Fix Windows installer exit during cleanup by running PowerShell cache removal on a single line
+- Installer reads `env/python.env` to choose the Python version to download
+- Fix embeddable Python download path to ensure installer retrieves runtime even when the TEMP folder is missing
+- Skip `pyinsane2` on Windows to avoid build-tool errors; scanning requires manual setup
+- Preserve existing embeddable Python runtime across updates and skip download when the required version is already installed
+- Always fetch repository updates so incomplete installations don't skip new commits
+- Install `pywin32` on Windows and put the bundled Python directory on `PATH` so the tray icon and server start reliably
+- Run `pywin32_postinstall.py` and add the `Scripts` directory to `PATH` so the tray helper can load Win32 modules
+
+## 2025-09-07
+- On Windows, compile lightweight wrappers so Task Manager lists `DocCropper.exe` and `DocCropperTray.exe` instead of generic Python names
+- Fix PDF compression levels by applying JPEG quality settings so file size reflects chosen compression
 
 ## 2025-09-06
-- Add client-side scanner helper with FastAPI and wire the scan plugin to
-  enumerate devices and trigger acquisitions through `http://127.0.0.1:28672`
+- Add client-side scanner helper with FastAPI and wire the scan plugin to enumerate devices and trigger acquisitions through `http://127.0.0.1:28672`
+- Restore watermark overlay on exported PDFs for Free and Demo editions
 
 ## 2025-09-05
-- Licenses panel can now persist manual keys to `env/license.env` and refresh the
-  server so the frontend reflects the new license immediately
+- Licenses panel can now persist manual keys to `env/license.env` and refresh the server so the frontend reflects the new license immediately
+- Convert images to JPEG during PDF compression so selected levels actually reduce file size
 
 ## 2025-09-04
 - Add cross-platform uninstallation scripts that stop running instances and remove the installation directory even when files are locked
+- Allow purchasing licenses directly from the license panel with a Stripe checkout flow
 
 ## 2025-08-19
 - Enable DocuSeal and remote signing plugins by default so developer licenses reveal them immediately
@@ -325,12 +350,3 @@
 ## 2025-08-27
 - Preserve `env/license.env` during repository updates so manual licenses survive upgrades
 - Add `/license/status` endpoint and frontend refresh to confirm the active license
-
-## 2025-09-04
-- Allow purchasing licenses directly from the license panel with a Stripe checkout flow
-
-## 2025-09-05
-- Convert images to JPEG during PDF compression so selected levels actually reduce file size
-
-## 2025-09-06
-- Restore watermark overlay on exported PDFs for Free and Demo editions

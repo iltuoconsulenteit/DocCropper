@@ -101,7 +101,6 @@ from plugin.core.downloadpng import register as register_downloadpng
 from plugin.core.pageselect import register as register_pageselect
 from plugin.core.colormode import register as register_colormode
 from plugin.core.scan import register as register_scan
-from plugin.core.cloudsave import register as register_cloudsave
 
 try:
     import stripe
@@ -951,8 +950,6 @@ enable_formfields = str(os.getenv('DOCROPPER_ENABLE_FORMFIELDS', settings.get('e
 formfields_dev = str(os.getenv('DOCROPPER_FORMFIELDS_DEV_ONLY', settings.get('formfields_dev_only', True))).lower() == 'true'
 enable_scan = str(os.getenv('DOCROPPER_ENABLE_SCAN', settings.get('enable_scan', False))).lower() == 'true'
 scan_dev = str(os.getenv('DOCROPPER_SCAN_DEV_ONLY', settings.get('scan_dev_only', True))).lower() == 'true'
-enable_cloudsave = str(os.getenv('DOCROPPER_ENABLE_CLOUDSAVE', settings.get('enable_cloudsave', False))).lower() == 'true'
-cloudsave_dev = str(os.getenv('DOCROPPER_CLOUDSAVE_DEV_ONLY', settings.get('cloudsave_dev_only', True))).lower() == 'true'
 
 if enable_sign and (not sign_dev or is_dev_license):
     register_sign(app, plugin_utils)
@@ -995,9 +992,6 @@ if enable_formfields and (not formfields_dev or is_dev_license):
 if enable_scan and (not scan_dev or is_dev_license):
     register_scan(app, plugin_utils)
     ACTIVE_PLUGINS.append('scan')
-if enable_cloudsave and (not cloudsave_dev or is_dev_license):
-    register_cloudsave(app, plugin_utils)
-    ACTIVE_PLUGINS.append('cloudsave')
 
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):

@@ -8,6 +8,7 @@ rembg
 google-auth
 
 pystray
+pywin32; sys_platform == "win32"
 pyhanko
 pytesseract
 PyMuPDF
@@ -33,4 +34,4 @@ redis
 python-dotenv
 bcrypt==4.1.2
 setproctitle; sys_platform != "win32"
-pyinsane2
+pyinsane2; sys_platform != "win32"

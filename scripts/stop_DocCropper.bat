@@ -4,10 +4,14 @@ set SCRIPT_DIR=%~dp0
 set APP_DIR=%SCRIPT_DIR%..\
 cd /d %APP_DIR%
 
-if exist venv\Scripts\python.exe (
-    set "PY=venv\Scripts\python.exe"
-) else (
-    set "PY=python"
+if exist "%APP_DIR%\env\python_path.env" (
+    for /f "usebackq tokens=1* delims==" %%A in ("%APP_DIR%\env\python_path.env") do (
+        set "%%A=%%B"
+    )
+)
+
+if exist main.py (
+    if defined PYTHON_CMD "%PYTHON_CMD%" main.py --stop >nul 2>&1
 )
 
 set "PID_FILE=%TEMP%\doccropper.pid"
