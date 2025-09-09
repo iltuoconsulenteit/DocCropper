@@ -313,7 +313,7 @@ if /I "!RUN_APP!"=="n" (
         set "TRAY_ERR=%TEMP%\doccropper_tray_boot_err.log"
         if exist "!TRAY_BOOT!" del "!TRAY_BOOT!" >nul 2>&1
         if exist "!TRAY_ERR!" del "!TRAY_ERR!" >nul 2>&1
-        powershell -NoProfile -Command "Start-Process -FilePath '!TRAY_PY!' -ArgumentList @('!APP_DIR!\doccropper_tray.py','--auto-start') -NoNewWindow -RedirectStandardOutput '!TRAY_BOOT!' -RedirectStandardError '!TRAY_ERR!'" >>"%LOG_FILE%" 2>&1
+        powershell -NoProfile -Command "Start-Process -FilePath '!TRAY_PY!' -ArgumentList @('\"!APP_DIR!\doccropper_tray.py\"','--auto-start') -WorkingDirectory '!APP_DIR!' -NoNewWindow -RedirectStandardOutput '!TRAY_BOOT!' -RedirectStandardError '!TRAY_ERR!'" >>"%LOG_FILE%" 2>&1
         timeout /t 5 >nul
         if exist "%TEMP%\DocCropper_start.log" (
             call :log "Tray icon started successfully"
