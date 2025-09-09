@@ -86,6 +86,13 @@ if not "%MAIN_ERR%"=="0" (
     pause
     exit /b %MAIN_ERR%
 )
+rem Reload persisted python paths in case variables were lost
+if exist "!APP_DIR!\env\python_path.env" (
+    for /f "usebackq tokens=1,2 delims==" %%A in ("!APP_DIR!\env\python_path.env") do (
+        if /I "%%A"=="PYTHON_CMD" set "PYTHON_CMD=%%B"
+        if /I "%%A"=="PYTHONW_CMD" set "PYTHONW_CMD=%%B"
+    )
+)
 set "RUN_APP="
 set /p RUN_APP=Launch DocCropper with tray icon now? [Y/n]:
 if /I "%RUN_APP%"=="n" (
