@@ -11,6 +11,7 @@ from __future__ import annotations
 import importlib.machinery
 import importlib.util
 import os
+import sys
 import sysconfig
 
 # Locate and load the original stdlib ``platform`` module.
@@ -29,7 +30,7 @@ if _path:
     _stdlib_paths.append(_path)
 # Also search the directory containing the interpreter as well as a potential
 # ``pythonXY.zip`` archive that hosts the stdlib in embeddable Windows builds.
-_base = os.path.dirname(os.__file__)
+_base = os.path.dirname(sys.executable)
 _stdlib_paths.append(_base)
 _zip_name = f"python{sysconfig.get_python_version().replace('.', '')}.zip"
 _zip_path = os.path.join(_base, _zip_name)
@@ -38,6 +39,8 @@ if os.path.exists(_zip_path):
 
 _spec = None
 for _p in _stdlib_paths:
+    if not os.path.exists(_p):
+        continue
     _spec = importlib.machinery.PathFinder.find_spec("platform", [_p])
     if _spec and _spec.loader:
         break
