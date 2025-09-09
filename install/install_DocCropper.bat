@@ -88,7 +88,7 @@ if not "%MAIN_ERR%"=="0" (
 )
 rem Reload persisted python paths in case variables were lost
 if exist "!APP_DIR!\env\python_path.env" (
-    for /f "usebackq tokens=1,* delims==" %%A in ("!APP_DIR!\env\python_path.env") do (
+    for /f "usebackq tokens=1* delims==" %%A in ("!APP_DIR!\env\python_path.env") do (
         if /I "%%A"=="PYTHON_CMD" set "PYTHON_CMD=%%B"
         if /I "%%A"=="PYTHONW_CMD" set "PYTHONW_CMD=%%B"
     )
@@ -122,6 +122,7 @@ if /I "%RUN_APP%"=="n" (
         )
     ) else (
         call :log "Tray icon launch skipped: Python interpreter missing"
+        if defined TRAY_PY call :log "Expected interpreter at %TRAY_PY%"
     )
     popd >nul
 )

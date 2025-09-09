@@ -15,7 +15,7 @@ cd /d "!APP_DIR!"
 
 :: Load Python path info recorded by installer
 if exist "!APP_DIR!\env\python_path.env" (
-    for /f "usebackq tokens=1,* delims==" %%A in ("!APP_DIR!\env\python_path.env") do (
+    for /f "usebackq tokens=1* delims==" %%A in ("!APP_DIR!\env\python_path.env") do (
         set "%%A=%%B"
     )
 )

@@ -5,7 +5,7 @@ set APP_DIR=%SCRIPT_DIR%..\
 cd /d %APP_DIR%
 
 if exist "%APP_DIR%\env\python_path.env" (
-    for /f "usebackq tokens=1,* delims==" %%A in ("%APP_DIR%\env\python_path.env") do (
+    for /f "usebackq tokens=1* delims==" %%A in ("%APP_DIR%\env\python_path.env") do (
         set "%%A=%%B"
     )
 )
