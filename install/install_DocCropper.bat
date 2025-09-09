@@ -187,14 +187,14 @@ if not exist "!APP_DIR!\.git" (
     dir /b "!APP_DIR!" | findstr . >nul 2>&1
     if not errorlevel 1 (
         call :log "Destination !APP_DIR! exists and is not empty."
-        set /p wipe_choice=Delete contents and continue? [y/N]:
-        if /I "!wipe_choice!"=="y" (
+        set /p wipe_choice=Delete contents and continue? [Y/n]:
+        if /I "!wipe_choice!"=="n" (
+            call :log "Please choose another directory."
+            exit /b 1
+        ) else (
             call :log "Removing old files..."
             rmdir /S /Q "!APP_DIR!" >>"%LOG_FILE%" 2>&1
             mkdir "!APP_DIR!" >>"%LOG_FILE%" 2>&1
-        ) else (
-            call :log "Please choose another directory."
-            exit /b 1
         )
     )
     call :log "Cloning repository..."

@@ -7,6 +7,7 @@
 - Warn when local repository differs from origin and log any leftover files after updates
 - Prevent duplicate tray launches and split PowerShell output/error logs so the Windows installer can start the tray helper only once without redirection conflicts
 - When launching immediately after installation, read persisted Python paths so the tray icon starts even if in-memory variables are cleared
+- Standardize installer prompts to English with default confirmations
 
 ## 2025-09-08
 - Fix Windows installer halting after Python version check by consolidating runtime detection into a dedicated function
