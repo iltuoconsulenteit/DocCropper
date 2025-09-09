@@ -721,8 +721,17 @@ def save_user_settings(email: str, update: dict):
     merged.update(data)
     return merged
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging: write logs to the OS temp directory so administrators can
+# inspect plugin activity (e.g. compression) after PDF downloads. Log to both a
+# file and stdout to preserve existing console output.
+LOG_FILE = os.path.join(tempfile.gettempdir(), "DocCropper.log")
+logging.basicConfig(
+    level=logging.INFO,
+    handlers=[
+        logging.FileHandler(LOG_FILE, encoding="utf-8"),
+        logging.StreamHandler(),
+    ],
+)
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager

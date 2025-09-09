@@ -361,3 +361,6 @@
 
 ## 2025-08-28
 - Log PDF downloads with details on applied plugins like compression and PDF/A without exposing sensitive data
+
+## 2025-08-29
+- Write DocCropper logs to the system temporary directory for easier troubleshooting
