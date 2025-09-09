@@ -1,14 +1,14 @@
 param([string]$PythonDir)
 
 # Compile DocCropper.exe wrapper
-$docSrc = @"
+$docSrc = @'
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-[assembly: AssemblyTitle(""DocCropper"")]
-[assembly: AssemblyProduct(""DocCropper"")]
-[assembly: AssemblyDescription(""DocCropper"")]
+[assembly: AssemblyTitle("DocCropper")]
+[assembly: AssemblyProduct("DocCropper")]
+[assembly: AssemblyDescription("DocCropper")]
 class Program {
     static void Main(string[] args) {
         var exe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python.exe");
@@ -20,19 +20,19 @@ class Program {
         p.WaitForExit();
     }
 }
-"@
+'@
 
 Add-Type -OutputAssembly (Join-Path $PythonDir "DocCropper.exe") -OutputType ConsoleApplication $docSrc
 
 # Compile DocCropperTray.exe wrapper
-$traySrc = @"
+$traySrc = @'
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-[assembly: AssemblyTitle(""DocCropperTray"")]
-[assembly: AssemblyProduct(""DocCropperTray"")]
-[assembly: AssemblyDescription(""DocCropper Tray"")]
+[assembly: AssemblyTitle("DocCropperTray")]
+[assembly: AssemblyProduct("DocCropperTray")]
+[assembly: AssemblyDescription("DocCropper Tray")]
 class Program {
     static void Main(string[] args) {
         var exe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "pythonw.exe");
@@ -43,6 +43,7 @@ class Program {
         Process.Start(psi);
     }
 }
-"@
+'@
 
 Add-Type -OutputAssembly (Join-Path $PythonDir "DocCropperTray.exe") -OutputType WindowsApplication $traySrc
+

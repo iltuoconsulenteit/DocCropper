@@ -27,7 +27,14 @@ _stdlib_paths = []
 _path = sysconfig.get_path("stdlib")
 if _path:
     _stdlib_paths.append(_path)
-_stdlib_paths.append(os.path.dirname(os.__file__))
+# Also search the directory containing the interpreter as well as a potential
+# ``pythonXY.zip`` archive that hosts the stdlib in embeddable Windows builds.
+_base = os.path.dirname(os.__file__)
+_stdlib_paths.append(_base)
+_zip_name = f"python{sysconfig.get_python_version().replace('.', '')}.zip"
+_zip_path = os.path.join(_base, _zip_name)
+if os.path.exists(_zip_path):
+    _stdlib_paths.insert(0, _zip_path)
 
 _spec = None
 for _p in _stdlib_paths:
@@ -46,5 +53,15 @@ for _name in dir(_stdlib_platform):
     if not _name.startswith("_"):
         globals()[_name] = getattr(_stdlib_platform, _name)
 
-del _name, _stdlib_platform, _spec, _stdlib_paths, _p, _path
+del (
+    _name,
+    _stdlib_platform,
+    _spec,
+    _stdlib_paths,
+    _p,
+    _path,
+    _base,
+    _zip_name,
+    _zip_path,
+)
 
