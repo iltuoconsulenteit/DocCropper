@@ -188,7 +188,21 @@ if not exist "!APP_DIR!\.git" (
     git checkout !BRANCH! >>"%LOG_FILE%" 2>&1 || git checkout -B !BRANCH! origin/!BRANCH! >>"%LOG_FILE%" 2>&1
     git reset --hard origin/!BRANCH! >>"%LOG_FILE%" 2>&1
     git clean -ffdx -e python/ >>"%LOG_FILE%" 2>&1
-    for /f %%h in ('git rev-parse HEAD') do echo %%h>"!LAST_FILE!"
+    for /f %%h in ('git rev-parse HEAD') do set "LOCAL_COMMIT=%%h"
+    for /f %%h in ('git rev-parse origin/!BRANCH!') do set "REMOTE_COMMIT=%%h"
+    if /I not "!LOCAL_COMMIT!"=="!REMOTE_COMMIT!" (
+        call :log "Warning: local commit !LOCAL_COMMIT! differs from origin !REMOTE_COMMIT!"
+    )
+    set "DIRTY="
+    for /f %%F in ('git status --porcelain') do (
+        if not defined DIRTY (
+            set "DIRTY=1"
+            call :log "Unstaged files after update:"
+        )
+        call :log "    %%F"
+    )
+    if defined DIRTY call :log "Manual cleanup may be required"
+    echo !LOCAL_COMMIT!>"!LAST_FILE!"
     if exist "%LIC_BACKUP%" (
         if not exist "env" mkdir "env"
         copy /Y "%LIC_BACKUP%" "env\license.env" >nul
