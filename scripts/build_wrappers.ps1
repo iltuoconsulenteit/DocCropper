@@ -1,7 +1,17 @@
 param([string]$PythonDir)
 
-# Compile DocCropper.exe wrapper
-$docSrc = @'
+# locate C# compiler
+$csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+if (-not (Test-Path $csc)) {
+    $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\csc.exe'
+}
+if (-not (Test-Path $csc)) {
+    Write-Error 'csc.exe not found'
+    exit 1
+}
+
+# compile console wrapper
+$docSrc = @"
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -17,12 +27,14 @@ class Program {
         p.WaitForExit();
     }
 }
-'@
+"@
+$docCs = Join-Path $env:TEMP 'DocCropper.cs'
+Set-Content -Path $docCs -Value $docSrc -Encoding UTF8
+& $csc /nologo /target:exe /out:(Join-Path $PythonDir 'DocCropper.exe') $docCs
+Remove-Item $docCs -ErrorAction SilentlyContinue
 
-Add-Type -OutputAssembly (Join-Path $PythonDir "DocCropper.exe") -OutputType ConsoleApplication $docSrc
-
-# Compile DocCropperTray.exe wrapper
-$traySrc = @'
+# compile tray wrapper
+$traySrc = @"
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -37,7 +49,8 @@ class Program {
         Process.Start(psi);
     }
 }
-'@
-
-Add-Type -OutputAssembly (Join-Path $PythonDir "DocCropperTray.exe") -OutputType WindowsApplication $traySrc
-
+"@
+$trayCs = Join-Path $env:TEMP 'DocCropperTray.cs'
+Set-Content -Path $trayCs -Value $traySrc -Encoding UTF8
+& $csc /nologo /target:winexe /out:(Join-Path $PythonDir 'DocCropperTray.exe') $trayCs
+Remove-Item $trayCs -ErrorAction SilentlyContinue

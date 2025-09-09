@@ -10,6 +10,9 @@
 - Standardize installer prompts to English with default confirmations
 - Clean unused objects when compressing PDFs so selected levels produce distinct file sizes
 - Append the chosen compression level to downloaded PDF filenames
+- Return suggested PDF filename with compression suffix so downloads match selected quality
+- Compile Windows wrappers with `csc.exe` to avoid PowerShell quoting issues
+- Stop script now also terminates `DocCropper.exe` and `DocCropperTray.exe` processes during upgrades
 
 ## 2025-09-08
 - Fix Windows installer halting after Python version check by consolidating runtime detection into a dedicated function

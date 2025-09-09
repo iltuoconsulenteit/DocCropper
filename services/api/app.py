@@ -1503,6 +1503,17 @@ async def create_pdf(
         if not session_id:
             session_id = uuid.uuid4().hex
         session_dir = get_session_dir(session_id)
+        download_name = "documents.pdf"
+        comp = (compression or "").lower()
+        if comp and comp != "none":
+            suffix = comp
+            if comp == "extreme":
+                try:
+                    q = int(jpeg_quality)
+                except Exception:
+                    q = 75
+                suffix += f"-{max(10, min(95, q))}"
+            download_name = f"documents_{suffix}.pdf"
         pil_images = []
         for img_b64 in images:
             if img_b64.startswith('data:'):
@@ -1770,7 +1781,10 @@ async def create_pdf(
             logger.exception("Failed to save PDF")
         pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
         cleanup_old_sessions()
-        response = JSONResponse(content={"pdf": "data:application/pdf;base64," + pdf_base64})
+        response = JSONResponse(content={
+            "pdf": "data:application/pdf;base64," + pdf_base64,
+            "filename": download_name,
+        })
         response.set_cookie("session_id", session_id, httponly=True)
         return response
     except Exception as e:

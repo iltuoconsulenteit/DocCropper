@@ -2377,6 +2377,7 @@ async function generatePdf() {
     })
     .then(data => {
         if (data.pdf) {
+            if (data.filename) currentPdfName = data.filename;
             const base64 = data.pdf.split(',')[1];
             const byteChars = atob(base64);
             const byteNumbers = new Array(byteChars.length);

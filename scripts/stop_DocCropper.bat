@@ -36,4 +36,8 @@ for /f "tokens=2 delims==" %%p in ('wmic process where "(name='python.exe' or na
     taskkill /F /T /PID %%p >nul 2>&1
 )
 
+rem Also try to stop precompiled wrappers if present
+taskkill /F /T /IM DocCropper.exe >nul 2>&1
+taskkill /F /T /IM DocCropperTray.exe >nul 2>&1
+
 endlocal

@@ -16,16 +16,14 @@ def register(app, utils: dict[str, Any]):
                 "deflate_images": True,
                 "deflate_fonts": True,
                 "recompress": True,
-                # convert images to JPEG so quality settings actually impact size
                 "image_compression": "jpeg",
                 "jpeg_quality": 95,
-                # remove unused objects so compression levels have a visible impact
                 "clean": True,
             }
             lvl = (level or "").lower()
             if lvl == "low":
-                save_args["garbage"] = 1
-                save_args["jpeg_quality"] = 85
+                save_args["garbage"] = 0
+                save_args["jpeg_quality"] = 90
             elif lvl == "medium":
                 save_args["garbage"] = 2
                 save_args["jpeg_quality"] = 60
