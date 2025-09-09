@@ -13,6 +13,27 @@ if exist "!SCRIPT_DIR!main.py" (
 
 cd /d "!APP_DIR!"
 
+:: Load Python path info recorded by installer
+if exist "!APP_DIR!\env\python_path.env" (
+    for /f "usebackq tokens=1,* delims==" %%A in ("!APP_DIR!\env\python_path.env") do (
+        set "%%A=%%B"
+    )
+)
+
+set "PY=%PYTHON_CMD%"
+set "PYW=%PYTHONW_CMD%"
+if "%PYTHON_EMBED%"=="1" (
+    set "PY_DIR=!PY_DIR!"
+) else (
+    if not exist venv\Scripts\python.exe (
+        echo [INFO] Creo ambiente virtuale venv... >> "!LOG_FILE!"
+        "%PYTHON_CMD%" -m venv venv >> "!LOG_FILE!" 2>&1
+    )
+    set "PY=venv\Scripts\python.exe"
+    set "PYW=venv\Scripts\pythonw.exe"
+    set "PY_DIR=venv\Scripts"
+)
+
 rem Copy default environment files if missing
 if not exist "!APP_DIR!\.env" if exist "!APP_DIR!\.env.example" copy "!APP_DIR!\.env.example" "!APP_DIR!\.env" >nul 2>&1
 if not exist "!APP_DIR!\env\auth.env" (
@@ -37,7 +58,7 @@ echo [INFO] Directory app: !APP_DIR! >> "!LOG_FILE!"
 :: Default port
 set "PORT=8765"
 if exist settings.json (
-    for /f "delims=" %%p in ('python -c "import json,sys;print(json.load(open('settings.json')).get('port', 8765))" 2^>nul') do set "PORT=%%p"
+    for /f "delims=" %%p in ('"%PY%" -c "import json,sys;print(json.load(open('settings.json')).get('port', 8765))" 2^>nul') do set "PORT=%%p"
 )
 echo [INFO] Porta usata: %PORT% >> "!LOG_FILE!"
 
@@ -79,23 +100,7 @@ if "!SERVER_RUNNING!"=="1" (
     goto finish
 )
 
-:: Ensure virtual environment
-if not exist venv (
-    echo [INFO] Creo ambiente virtuale venv... >> "!LOG_FILE!"
-    python -m venv venv >> "!LOG_FILE!" 2>&1
-)
-
-:: Activate environment
-call venv\Scripts\activate.bat
-if errorlevel 1 (
-    echo ❌ ERRORE: attivazione ambiente virtuale fallita! >> "!LOG_FILE!"
-    echo ❌ Attivazione ambiente virtuale fallita!
-    pause
-    exit /b
-)
-
 :: Ensure compiled wrappers for clearer Task Manager entries
-set "PY_DIR=venv\Scripts"
 set "DOC_EXE=!PY_DIR!\DocCropper.exe"
 set "TRAY_EXE=!PY_DIR!\DocCropperTray.exe"
 if not exist "!DOC_EXE!" (
@@ -108,11 +113,11 @@ if not exist "!DOC_EXE!" (
 
 if not exist "!DOC_EXE!" (
     echo [WARN] Wrapper DocCropper.exe mancante, uso python.exe >> "!LOG_FILE!"
-    set "DOC_EXE=!PY_DIR!\python.exe"
+    set "DOC_EXE=!PY!"
 )
 if not exist "!TRAY_EXE!" (
     echo [WARN] Wrapper DocCropperTray.exe mancante, uso pythonw.exe >> "!LOG_FILE!"
-    set "TRAY_EXE=!PY_DIR!\pythonw.exe"
+    set "TRAY_EXE=!PYW!"
 )
 
 if "!START_TRAY!"=="1" (
@@ -126,12 +131,12 @@ if "!START_TRAY!"=="1" (
 :: Install or update dependencies
 if exist requirements.txt (
     echo [INFO] Aggiornamento dipendenze Python >> "!LOG_FILE!"
-    python -m pip install --upgrade pip >> "!LOG_FILE!" 2>&1
-    pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
+    "%PY%" -m pip install --upgrade pip >> "!LOG_FILE!" 2>&1
+    "%PY%" -m pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
 )
 
 :: Stop any running instance
-python main.py --stop >> "!LOG_FILE!" 2>&1
+"%PY%" main.py --stop >> "!LOG_FILE!" 2>&1
 
 :: Launch application
 echo [INFO] Avvio DocCropper sulla porta %PORT% >> "!LOG_FILE!"

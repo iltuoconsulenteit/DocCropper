@@ -250,6 +250,15 @@ call :ensure_python || exit /b 1
 rem Ensure our Python directory is on PATH for subsequent scripts
 set "PATH=!PY_DIR!;!PY_DIR!\Scripts;!PATH!"
 
+rem Persist discovered Python paths for other scripts
+if not exist "env" mkdir "env"
+(
+    echo PYTHON_CMD=!PYTHON_CMD!
+    echo PYTHONW_CMD=!PYTHONW_CMD!
+    echo PY_DIR=!PY_DIR!
+    if defined PY_EMBED (echo PYTHON_EMBED=!PY_EMBED!) else echo PYTHON_EMBED=
+) > "env\python_path.env"
+
 if not defined PY_EMBED (
     if not exist "venv\Scripts\activate.bat" (
         call :log "Creating virtual environment..."
