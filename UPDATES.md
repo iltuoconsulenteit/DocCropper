@@ -2,6 +2,7 @@
 
 ## 2025-09-09
 - Capture tray icon launch output in installer logs to help diagnose startup failures
+- Append tray helper logs to installer log when startup fails
 
 ## 2025-09-08
 - Fix Windows installer halting after Python version check by consolidating runtime detection into a dedicated function

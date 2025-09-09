@@ -332,4 +332,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception:  # noqa: BLE001
+        logging.exception('Tray helper failed to start')
+        raise
