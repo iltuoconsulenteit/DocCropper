@@ -10,15 +10,20 @@ from urllib.request import urlopen
 import json
 import time
 import importlib.util
-import subprocess
+import sysconfig
+import zipimport
 from dotenv import load_dotenv
 
-# Ensure the standard library 'platform' module is used, not the local Django package
-_platform_spec = importlib.util.spec_from_file_location(
-    "platform", Path(os.__file__).resolve().parent / "platform.py"
-)
-platform = importlib.util.module_from_spec(_platform_spec)
-_platform_spec.loader.exec_module(platform)
+# Ensure the standard library 'platform' module is used, not the local project package
+_stdlib = Path(sysconfig.get_path("stdlib"))
+if _stdlib.suffix == ".zip":
+    platform = zipimport.zipimporter(str(_stdlib)).load_module("platform")
+else:
+    _platform_spec = importlib.util.spec_from_file_location(
+        "platform", _stdlib / "platform.py"
+    )
+    platform = importlib.util.module_from_spec(_platform_spec)
+    _platform_spec.loader.exec_module(platform)
 
 LANG = 'it'
 TRANSLATIONS = {}

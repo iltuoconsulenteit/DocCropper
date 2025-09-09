@@ -86,7 +86,39 @@ if not "%MAIN_ERR%"=="0" (
     pause
     exit /b %MAIN_ERR%
 )
+set "RUN_APP="
+set /p RUN_APP=Launch DocCropper with tray icon now? [Y/n]:
+if /I "%RUN_APP%"=="n" (
+    rem user chose not to run
+) else (
+    pushd "%APP_DIR%" >nul
+    set "TRAY_PY=%PYTHONW_CMD%"
+    if not exist "%TRAY_PY%" set "TRAY_PY=%PYTHON_CMD%"
+    if defined TRAY_PY if exist "%TRAY_PY%" (
+        call :log "Launching tray icon"
+        set "TRAY_BOOT=%TEMP%\doccropper_tray_boot.log"
+        set "TRAY_ERR=%TEMP%\doccropper_tray_boot_err.log"
+        if exist "%TRAY_BOOT%" del "%TRAY_BOOT%" >nul 2>&1
+        if exist "%TRAY_ERR%" del "%TRAY_ERR%" >nul 2>&1
+        powershell -NoProfile -Command "Start-Process -FilePath '%TRAY_PY%' -ArgumentList @('\"%APP_DIR%\doccropper_tray.py\"','--auto-start') -WorkingDirectory '%APP_DIR%' -NoNewWindow -RedirectStandardOutput '%TRAY_BOOT%' -RedirectStandardError '%TRAY_ERR%'" >>"%LOG_FILE%" 2>&1
+        timeout /t 5 >nul
+        if exist "%TEMP%\DocCropper_start.log" (
+            call :log "Tray icon started successfully"
+        ) else (
+            call :log "Tray icon failed to start"
+            if exist "%TRAY_BOOT%" type "%TRAY_BOOT%" >>"%LOG_FILE%"
+            if exist "%TRAY_ERR%" type "%TRAY_ERR%" >>"%LOG_FILE%"
+            if exist "%TEMP%\doccropper_tray.log" type "%TEMP%\doccropper_tray.log" >>"%LOG_FILE%"
+        )
+    ) else (
+        call :log "Tray icon launch skipped: Python interpreter missing"
+    )
+    popd >nul
+)
 
+call :log "Log saved to %LOG_FILE%"
+echo Installation complete. See %LOG_FILE% for details.
+pause
 endlocal
 exit /b 0
 
@@ -299,39 +331,6 @@ if exist requirements.txt (
     call :log "requirements.txt not found!"
 )
 
-set "RUN_APP="
-set /p RUN_APP=Launch DocCropper with tray icon now? [Y/n]:
-if /I "!RUN_APP!"=="n" (
-    rem user chose not to run
-) else (
-    pushd "!APP_DIR!" >nul
-    set "TRAY_PY=!PYTHONW_CMD!"
-    if not exist "!TRAY_PY!" set "TRAY_PY=!PYTHON_CMD!"
-    if defined TRAY_PY if exist "!TRAY_PY!" (
-        call :log "Launching tray icon"
-        set "TRAY_BOOT=%TEMP%\doccropper_tray_boot.log"
-        set "TRAY_ERR=%TEMP%\doccropper_tray_boot_err.log"
-        if exist "!TRAY_BOOT!" del "!TRAY_BOOT!" >nul 2>&1
-        if exist "!TRAY_ERR!" del "!TRAY_ERR!" >nul 2>&1
-        powershell -NoProfile -Command "Start-Process -FilePath '!TRAY_PY!' -ArgumentList @('\"!APP_DIR!\doccropper_tray.py\"','--auto-start') -WorkingDirectory '!APP_DIR!' -NoNewWindow -RedirectStandardOutput '!TRAY_BOOT!' -RedirectStandardError '!TRAY_ERR!'" >>"%LOG_FILE%" 2>&1
-        timeout /t 5 >nul
-        if exist "%TEMP%\DocCropper_start.log" (
-            call :log "Tray icon started successfully"
-        ) else (
-            call :log "Tray icon failed to start"
-            if exist "!TRAY_BOOT!" type "!TRAY_BOOT!" >>"%LOG_FILE%"
-            if exist "!TRAY_ERR!" type "!TRAY_ERR!" >>"%LOG_FILE%"
-            if exist "%TEMP%\doccropper_tray.log" type "%TEMP%\doccropper_tray.log" >>"%LOG_FILE%"
-        )
-    ) else (
-        call :log "Tray icon launch skipped: Python interpreter missing"
-    )
-    popd >nul
-)
-
-call :log "Log saved to !LOG_FILE!"
-echo Installation complete. See !LOG_FILE! for details.
-pause
 exit /b
 
 :ensure_python
