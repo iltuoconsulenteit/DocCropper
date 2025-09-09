@@ -42,9 +42,8 @@ from dotenv import load_dotenv
 import urllib.request
 import urllib.parse
 import socket
-from pathlib import Path
 import importlib
-import importlib.util
+import platform
 from types import SimpleNamespace
 
 import bcrypt as _bcrypt
@@ -57,13 +56,6 @@ _cv2 = None
 _np = None
 _fitz = None
 
-# Ensure the standard library 'platform' module is used even though a local
-# Django package named 'platform' exists in the project root.
-_platform_spec = importlib.util.spec_from_file_location(
-    "platform", Path(os.__file__).resolve().parent / "platform.py"
-)
-platform = importlib.util.module_from_spec(_platform_spec)
-_platform_spec.loader.exec_module(platform)
 
 def get_cv2():
     global _cv2
