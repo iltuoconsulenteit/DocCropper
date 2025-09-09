@@ -33,8 +33,16 @@ def register(app, utils: dict[str, Any]):
                 "jpeg_quality": q,
                 "clean": True,
             }
+            before = len(pdf_bytes)
             pdf_bytes = doc.tobytes(**save_args)
             doc.close()
+            logger.info(
+                "compress_pdf level=%s jpeg_quality=%s before=%d after=%d",
+                lvl,
+                q,
+                before,
+                len(pdf_bytes),
+            )
             return pdf_bytes
         except Exception:
             logger.exception("PDF compression failed")

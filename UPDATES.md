@@ -358,3 +358,6 @@
 ## 2025-08-27
 - Preserve `env/license.env` during repository updates so manual licenses survive upgrades
 - Add `/license/status` endpoint and frontend refresh to confirm the active license
+
+## 2025-08-28
+- Log PDF downloads with details on applied plugins like compression and PDF/A without exposing sensitive data

@@ -1749,6 +1749,7 @@ async def create_pdf(
         pdf_bytes_io = io.BytesIO()
         pages[0].save(pdf_bytes_io, format="PDF", save_all=True, append_images=pages[1:])
         pdf_bytes = pdf_bytes_io.getvalue()
+        log_details = {"filename": download_name, "size": len(pdf_bytes)}
 
         cert_path = os.environ.get("DOCROPPER_SIGN_CERT")
         cert_password = os.environ.get("DOCROPPER_SIGN_PASSWORD")
@@ -1763,12 +1764,26 @@ async def create_pdf(
                 logger.exception("PDF signing failed")
         compressor = plugin_utils.get("compress_pdf")
         if compressor and (compression and compression.lower() != "none"):
+            before = len(pdf_bytes)
             pdf_bytes = compressor(pdf_bytes, compression, jpeg_quality)
+            log_details["compression"] = {
+                "level": compression,
+                "jpeg_quality": int(jpeg_quality),
+                "before": before,
+                "after": len(pdf_bytes),
+            }
         if pdfa_version is not None:
             try:
                 fitz = get_fitz()
+                before = len(pdf_bytes)
                 doc = fitz.open(stream=pdf_bytes, filetype="pdf")
                 pdf_bytes = doc.tobytes(deflate=True, clean=True, garbage=4, pdfa=int(pdfa_version) - 1)
+                doc.close()
+                log_details["pdfa"] = {
+                    "version": int(pdfa_version),
+                    "before": before,
+                    "after": len(pdf_bytes),
+                }
             except Exception:
                 logger.exception("PDF/A conversion failed")
 
@@ -1779,6 +1794,8 @@ async def create_pdf(
                 fh.write(enc)
         except Exception:
             logger.exception("Failed to save PDF")
+        log_details["final_size"] = len(pdf_bytes)
+        logger.info("pdf_download %s", json.dumps(log_details, separators=(",", ":")))
         pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
         cleanup_old_sessions()
         response = JSONResponse(content={
