@@ -10,20 +10,28 @@ from urllib.request import urlopen
 import json
 import time
 import importlib.util
+import sys
 import sysconfig
 import zipimport
 from dotenv import load_dotenv
 
-# Ensure the standard library 'platform' module is used, not the local project package
+# Ensure the standard library 'platform' module is used, not the local project package.
+# Embeddable Python may store the stdlib in ``python311.zip`` rather than a full
+# ``Lib`` directory.  Try the on-disk file first and fall back to the zip
+# archive if necessary.
 _stdlib = Path(sysconfig.get_path("stdlib"))
-if _stdlib.suffix == ".zip":
-    platform = zipimport.zipimporter(str(_stdlib)).load_module("platform")
-else:
+if (_stdlib / "platform.py").exists():
     _platform_spec = importlib.util.spec_from_file_location(
         "platform", _stdlib / "platform.py"
     )
     platform = importlib.util.module_from_spec(_platform_spec)
     _platform_spec.loader.exec_module(platform)
+else:
+    _zip = Path(sys.executable).with_name("python311.zip")
+    try:
+        platform = zipimport.zipimporter(str(_zip)).load_module("platform")
+    except Exception:  # pragma: no cover - last resort
+        import platform as platform
 
 LANG = 'it'
 TRANSLATIONS = {}
