@@ -28,6 +28,7 @@ def register(app, utils: dict[str, Any]):
                 "deflate": True,
                 "deflate_images": True,
                 "deflate_fonts": True,
+                "recompress": True,
                 "image_compression": "jpeg",
                 "jpeg_quality": q,
                 "clean": True,
