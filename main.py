@@ -19,6 +19,8 @@ if not hasattr(_bcrypt, "__about__"):
     )
 
 BASE_DIR = Path(__file__).resolve().parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 platform_root = BASE_DIR / "platform"
 spec = importlib.util.spec_from_file_location(
     "platform", platform_root / "__init__.py", submodule_search_locations=[str(platform_root)]

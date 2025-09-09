@@ -5,10 +5,7 @@ $docSrc = @'
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
-[assembly: AssemblyTitle("DocCropper")]
-[assembly: AssemblyProduct("DocCropper")]
-[assembly: AssemblyDescription("DocCropper")]
+
 class Program {
     static void Main(string[] args) {
         var exe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python.exe");
@@ -29,10 +26,7 @@ $traySrc = @'
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
-[assembly: AssemblyTitle("DocCropperTray")]
-[assembly: AssemblyProduct("DocCropperTray")]
-[assembly: AssemblyDescription("DocCropper Tray")]
+
 class Program {
     static void Main(string[] args) {
         var exe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "pythonw.exe");
