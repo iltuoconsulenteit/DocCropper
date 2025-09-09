@@ -8,6 +8,8 @@
 - Prevent duplicate tray launches and split PowerShell output/error logs so the Windows installer can start the tray helper only once without redirection conflicts
 - When launching immediately after installation, read persisted Python paths so the tray icon starts even if in-memory variables are cleared
 - Standardize installer prompts to English with default confirmations
+- Clean unused objects when compressing PDFs so selected levels produce distinct file sizes
+- Append the chosen compression level to downloaded PDF filenames
 
 ## 2025-09-08
 - Fix Windows installer halting after Python version check by consolidating runtime detection into a dedicated function

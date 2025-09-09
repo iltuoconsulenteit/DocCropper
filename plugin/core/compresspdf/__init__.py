@@ -19,6 +19,8 @@ def register(app, utils: dict[str, Any]):
                 # convert images to JPEG so quality settings actually impact size
                 "image_compression": "jpeg",
                 "jpeg_quality": 95,
+                # remove unused objects so compression levels have a visible impact
+                "clean": True,
             }
             lvl = (level or "").lower()
             if lvl == "low":
@@ -32,6 +34,7 @@ def register(app, utils: dict[str, Any]):
                 save_args["jpeg_quality"] = max(10, min(95, int(jpeg_quality)))
             out = io.BytesIO()
             doc.save(out, **save_args)
+            doc.close()
             return out.getvalue()
         except Exception:
             logger.exception("PDF compression failed")
