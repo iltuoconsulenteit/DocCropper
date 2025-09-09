@@ -365,3 +365,6 @@
 
 ## 2025-08-29
 - Write DocCropper logs to the system temporary directory for easier troubleshooting
+
+## 2025-08-30
+- Log active plugins on startup and note when compression was requested without an available plugin

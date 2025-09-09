@@ -997,6 +997,8 @@ if enable_scan and (not scan_dev or is_dev_license):
     register_scan(app, plugin_utils)
     ACTIVE_PLUGINS.append('scan')
 
+logger.info("active_plugins %s", ACTIVE_PLUGINS)
+
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):
     return {"email": user.email, "license": user.license_type}
@@ -1778,15 +1780,25 @@ async def create_pdf(
             except Exception:
                 logger.exception("PDF signing failed")
         compressor = plugin_utils.get("compress_pdf")
-        if compressor and (compression and compression.lower() != "none"):
-            before = len(pdf_bytes)
-            pdf_bytes = compressor(pdf_bytes, compression, jpeg_quality)
-            log_details["compression"] = {
-                "level": compression,
-                "jpeg_quality": int(jpeg_quality),
-                "before": before,
-                "after": len(pdf_bytes),
-            }
+        comp_requested = compression and compression.lower() != "none"
+        if comp_requested:
+            if compressor:
+                before = len(pdf_bytes)
+                pdf_bytes = compressor(pdf_bytes, compression, jpeg_quality)
+                log_details["compression"] = {
+                    "level": compression,
+                    "jpeg_quality": int(jpeg_quality),
+                    "before": before,
+                    "after": len(pdf_bytes),
+                }
+            else:
+                logger.warning(
+                    "compression requested but compress_pdf plugin not registered"
+                )
+                log_details["compression"] = {
+                    "level": compression,
+                    "applied": False,
+                }
         if pdfa_version is not None:
             try:
                 fitz = get_fitz()
