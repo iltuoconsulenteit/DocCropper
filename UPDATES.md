@@ -368,3 +368,7 @@
 
 ## 2025-08-30
 - Log active plugins on startup and note when compression was requested without an available plugin
+
+## 2025-08-31
+- Load the standard library's `platform` module by searching `python*.zip` archives so embeddable Windows installs start correctly
+- Tray launcher now locates `platform` from zipped stdlib archives, preventing startup failures

@@ -8,47 +8,44 @@ re-export its public attributes here.
 
 from __future__ import annotations
 
-import importlib.machinery
-import importlib.util
+import importlib
 import os
 import sys
 import sysconfig
 
 # Locate and load the original stdlib ``platform`` module.
 #
-# When using the embeddable Windows distribution, the standard library may be
-# packaged inside a ``pythonXY.zip`` archive rather than as loose ``.py`` files
-# under ``Lib``.  The previous implementation expected ``platform.py`` to exist
-# as a regular file, which caused a ``FileNotFoundError`` on such installs.
-#
-# To support both layouts we ask Python's ``PathFinder`` to resolve the module
-# spec while restricting the search to known stdlib locations.  This works for
-# directories and zip archives alike.
-_stdlib_paths = []
+# Embeddable Windows distributions often package the standard library inside a
+# ``pythonXY.zip`` archive rather than as loose ``.py`` files.  Previous
+# implementations attempted to load ``Lib/platform.py`` directly, which fails on
+# such installs.  To support both layouts we temporarily prepend common stdlib
+# locations to ``sys.path`` and import the real module via the regular import
+# machinery.  This handles directories and zip archives transparently.
+
+# Candidate search paths: the configured stdlib path, the interpreter directory
+# and any ``python*.zip`` archives located there.
+_stdlib_paths: list[str] = []
 _path = sysconfig.get_path("stdlib")
-if _path:
+if _path and os.path.isdir(_path):
     _stdlib_paths.append(_path)
-# Also search the directory containing the interpreter as well as a potential
-# ``pythonXY.zip`` archive that hosts the stdlib in embeddable Windows builds.
 _base = os.path.dirname(sys.executable)
 _stdlib_paths.append(_base)
-_zip_name = f"python{sysconfig.get_python_version().replace('.', '')}.zip"
-_zip_path = os.path.join(_base, _zip_name)
-if os.path.exists(_zip_path):
-    _stdlib_paths.insert(0, _zip_path)
+for _name in os.listdir(_base):
+    if _name.lower().startswith("python") and _name.lower().endswith(".zip"):
+        _stdlib_paths.insert(0, os.path.join(_base, _name))
 
-_spec = None
-for _p in _stdlib_paths:
-    if not os.path.exists(_p):
-        continue
-    _spec = importlib.machinery.PathFinder.find_spec("platform", [_p])
-    if _spec and _spec.loader:
-        break
-if _spec is None or _spec.loader is None:
-    raise ModuleNotFoundError("Could not locate the standard library 'platform' module")
-
-_stdlib_platform = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_stdlib_platform)
+# Import the real stdlib module while our package is temporarily removed from
+# ``sys.modules`` so the import system doesn't resolve back to this file.
+_saved_module = sys.modules.pop(__name__, None)
+_saved_path = list(sys.path)
+for _p in reversed(_stdlib_paths):
+    if os.path.exists(_p):
+        sys.path.insert(0, _p)
+try:
+    _stdlib_platform = importlib.import_module(__name__)
+finally:
+    sys.path[:] = _saved_path
+    sys.modules[__name__] = _saved_module
 
 # Re-export the stdlib platform's public attributes so third-party imports
 # continue to function as expected.
@@ -57,14 +54,11 @@ for _name in dir(_stdlib_platform):
         globals()[_name] = getattr(_stdlib_platform, _name)
 
 del (
-    _name,
     _stdlib_platform,
-    _spec,
     _stdlib_paths,
-    _p,
     _path,
     _base,
-    _zip_name,
-    _zip_path,
+    _saved_module,
+    _saved_path,
 )
 
