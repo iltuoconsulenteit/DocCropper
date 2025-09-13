@@ -99,12 +99,13 @@ if "!SERVER_RUNNING!"=="1" (
 :: Ensure compiled wrappers for clearer Task Manager entries
 set "DOC_EXE=!PY_DIR!\DocCropper.exe"
 set "TRAY_EXE=!PY_DIR!\DocCropperTray.exe"
+set "WRAP_SCRIPT=!APP_DIR!\scripts\build_wrappers.py"
 if not exist "!DOC_EXE!" (
     echo [INFO] Compilo wrapper eseguibili >> "!LOG_FILE!"
-    "%PY%" scripts\build_wrappers.py "!PY_DIR!" >>"!LOG_FILE!" 2>&1
+    "%PY%" "!WRAP_SCRIPT!" "!PY_DIR!" >>"!LOG_FILE!" 2>&1
 ) else if not exist "!TRAY_EXE!" (
     echo [INFO] Compilo wrapper eseguibili >> "!LOG_FILE!"
-    "%PY%" scripts\build_wrappers.py "!PY_DIR!" >>"!LOG_FILE!" 2>&1
+    "%PY%" "!WRAP_SCRIPT!" "!PY_DIR!" >>"!LOG_FILE!" 2>&1
 )
 
 if not exist "!DOC_EXE!" (

@@ -374,3 +374,6 @@
 ## 2025-08-31
 - Load the standard library's `platform` module by searching `python*.zip` archives so embeddable Windows installs start correctly
 - Tray launcher now locates `platform` from zipped stdlib archives, preventing startup failures
+
+## 2025-09-13
+- Installer and startup scripts call the Python wrapper builder via absolute paths so Windows launchers compile without PowerShell
