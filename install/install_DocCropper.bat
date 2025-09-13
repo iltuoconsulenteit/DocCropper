@@ -344,13 +344,9 @@ if exist requirements.txt (
 
 rem Precompile wrappers so the start script does not rely on PowerShell Add-Type
 set "WRAP_PY=%APP_DIR%\scripts\build_wrappers.py"
-set "WRAP_PS=%APP_DIR%\scripts\build_wrappers.ps1"
 if exist "!WRAP_PY!" (
     call :log "Compiling launcher wrappers..."
     "!PY_DIR!\python.exe" "!WRAP_PY!" "!PY_DIR!" >>"%LOG_FILE%" 2>&1
-) else if exist "!WRAP_PS!" (
-    call :log "Compiling launcher wrappers via PowerShell..."
-    powershell -NoProfile -ExecutionPolicy Bypass -File "!WRAP_PS!" "!PY_DIR!" >>"%LOG_FILE%" 2>&1
 ) else (
     call :log "Wrapper build script not found; skipping"
 )

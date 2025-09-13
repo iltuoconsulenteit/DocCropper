@@ -14,6 +14,7 @@ import importlib.util as _util
 import os
 import sys
 import sysconfig
+import zipimport
 
 # Locate and load the original stdlib ``platform`` module.
 #
@@ -41,6 +42,9 @@ _stdlib_platform = None
 _spec = None
 for _p in _search_paths:
     try:
+        if os.path.isfile(_p) and _p.lower().endswith('.zip'):
+            _stdlib_platform = zipimport.zipimporter(_p).load_module(__name__)
+            break
         _spec = _mach.PathFinder.find_spec(__name__, [_p])
         if _spec and _spec.loader:
             _stdlib_platform = _util.module_from_spec(_spec)
