@@ -50,8 +50,21 @@ for _p in _search_paths:
         else:
             _spec = _mach.PathFinder.find_spec(__name__, [_p])
             if _spec and _spec.loader:
-                _stdlib_platform = _util.module_from_spec(_spec)
-                _spec.loader.exec_module(_stdlib_platform)
+                # Skip specs that reference a missing source file. Some
+                # embeddable Python builds report a ``Lib`` directory even
+                # when the standard library lives solely inside a
+                # ``pythonXY.zip`` archive.  Attempting to load such specs
+                # raises ``FileNotFoundError`` which would otherwise bubble
+                # up and abort initialisation.
+                try:
+                    origin = getattr(_spec, "origin", "")
+                    if origin and not os.path.exists(origin):
+                        continue
+                    _stdlib_platform = _util.module_from_spec(_spec)
+                    _spec.loader.exec_module(_stdlib_platform)
+                except FileNotFoundError:
+                    _stdlib_platform = None
+                    continue
         if _stdlib_platform:
             break
     except Exception:
