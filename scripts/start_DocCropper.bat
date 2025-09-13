@@ -101,10 +101,10 @@ set "DOC_EXE=!PY_DIR!\DocCropper.exe"
 set "TRAY_EXE=!PY_DIR!\DocCropperTray.exe"
 if not exist "!DOC_EXE!" (
     echo [INFO] Compilo wrapper eseguibili >> "!LOG_FILE!"
-    powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\build_wrappers.ps1" "!PY_DIR!" >>"!LOG_FILE!" 2>&1
+    "%PY%" scripts\build_wrappers.py "!PY_DIR!" >>"!LOG_FILE!" 2>&1
 ) else if not exist "!TRAY_EXE!" (
     echo [INFO] Compilo wrapper eseguibili >> "!LOG_FILE!"
-    powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\build_wrappers.ps1" "!PY_DIR!" >>"!LOG_FILE!" 2>&1
+    "%PY%" scripts\build_wrappers.py "!PY_DIR!" >>"!LOG_FILE!" 2>&1
 )
 
 if not exist "!DOC_EXE!" (
