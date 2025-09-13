@@ -96,32 +96,9 @@ if "!SERVER_RUNNING!"=="1" (
     goto finish
 )
 
-:: Ensure compiled wrappers for clearer Task Manager entries
-set "DOC_EXE=!PY_DIR!\DocCropper.exe"
-set "TRAY_EXE=!PY_DIR!\DocCropperTray.exe"
-set "WRAP_PY=!APP_DIR!\scripts\build_wrappers.py"
-rem Remove legacy PowerShell builder if it exists
-if exist "!APP_DIR!\scripts\build_wrappers.ps1" del /f /q "!APP_DIR!\scripts\build_wrappers.ps1" >nul 2>&1
-if not exist "!DOC_EXE!" (
-    echo [INFO] Compilo wrapper eseguibili >> "!LOG_FILE!"
-    if exist "!WRAP_PY!" (
-        "%PY%" "!WRAP_PY!" "!PY_DIR!" >>"!LOG_FILE!" 2>&1
-    )
-) else if not exist "!TRAY_EXE!" (
-    echo [INFO] Compilo wrapper eseguibili >> "!LOG_FILE!"
-    if exist "!WRAP_PY!" (
-        "%PY%" "!WRAP_PY!" "!PY_DIR!" >>"!LOG_FILE!" 2>&1
-    )
-)
-
-if not exist "!DOC_EXE!" (
-    echo [WARN] Wrapper DocCropper.exe mancante, uso python.exe >> "!LOG_FILE!"
-    set "DOC_EXE=!PY!"
-)
-if not exist "!TRAY_EXE!" (
-    echo [WARN] Wrapper DocCropperTray.exe mancante, uso pythonw.exe >> "!LOG_FILE!"
-    set "TRAY_EXE=!PYW!"
-)
+:: Use Python executables directly (no wrapper compilation)
+set "DOC_EXE=!PY!"
+set "TRAY_EXE=!PYW!"
 
 if "!START_TRAY!"=="1" (
     echo [INFO] Avvio tray helper >> "!LOG_FILE!"

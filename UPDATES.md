@@ -383,3 +383,4 @@
 ## 2025-09-13
 - Installer and startup scripts delete leftover PowerShell wrapper builders and force-reinstall Python dependencies to avoid
   partial upgrades
+- Startup script now skips wrapper compilation and runs directly with `python.exe`/`pythonw.exe` so Windows launches succeed even without `DocCropper.exe`
