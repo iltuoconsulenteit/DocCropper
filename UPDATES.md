@@ -377,3 +377,4 @@
 
 ## 2025-09-13
 - Installer and startup scripts call the Python wrapper builder via absolute paths so Windows launchers compile without PowerShell
+- Fallback to the PowerShell wrapper builder when the Python helper is missing, ensuring upgrades from older releases still compile launchers

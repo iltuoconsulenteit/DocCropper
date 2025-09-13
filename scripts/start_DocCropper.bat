@@ -99,13 +99,22 @@ if "!SERVER_RUNNING!"=="1" (
 :: Ensure compiled wrappers for clearer Task Manager entries
 set "DOC_EXE=!PY_DIR!\DocCropper.exe"
 set "TRAY_EXE=!PY_DIR!\DocCropperTray.exe"
-set "WRAP_SCRIPT=!APP_DIR!\scripts\build_wrappers.py"
+set "WRAP_PY=!APP_DIR!\scripts\build_wrappers.py"
+set "WRAP_PS=!APP_DIR!\scripts\build_wrappers.ps1"
 if not exist "!DOC_EXE!" (
     echo [INFO] Compilo wrapper eseguibili >> "!LOG_FILE!"
-    "%PY%" "!WRAP_SCRIPT!" "!PY_DIR!" >>"!LOG_FILE!" 2>&1
+    if exist "!WRAP_PY!" (
+        "%PY%" "!WRAP_PY!" "!PY_DIR!" >>"!LOG_FILE!" 2>&1
+    ) else if exist "!WRAP_PS!" (
+        powershell -NoProfile -ExecutionPolicy Bypass -File "!WRAP_PS!" "!PY_DIR!" >>"!LOG_FILE!" 2>&1
+    )
 ) else if not exist "!TRAY_EXE!" (
     echo [INFO] Compilo wrapper eseguibili >> "!LOG_FILE!"
-    "%PY%" "!WRAP_SCRIPT!" "!PY_DIR!" >>"!LOG_FILE!" 2>&1
+    if exist "!WRAP_PY!" (
+        "%PY%" "!WRAP_PY!" "!PY_DIR!" >>"!LOG_FILE!" 2>&1
+    ) else if exist "!WRAP_PS!" (
+        powershell -NoProfile -ExecutionPolicy Bypass -File "!WRAP_PS!" "!PY_DIR!" >>"!LOG_FILE!" 2>&1
+    )
 )
 
 if not exist "!DOC_EXE!" (
