@@ -1,6 +1,7 @@
 # Updates
 
 ## 2025-09-09
+- Precompile Windows launcher wrappers during installation so first start doesn't fall back to PowerShell `Add-Type`
 - Capture tray icon launch output in installer logs to help diagnose startup failures
 - Append tray helper logs to installer log when startup fails
 - Record detected Python interpreter paths in `env/python_path.env` and have start/stop scripts use them to launch the app and tray reliably

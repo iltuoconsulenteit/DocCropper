@@ -342,6 +342,14 @@ if exist requirements.txt (
     call :log "requirements.txt not found!"
 )
 
+rem Precompile wrappers so the start script does not rely on PowerShell Add-Type
+if exist "scripts\build_wrappers.ps1" (
+    call :log "Compiling launcher wrappers..."
+    powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\build_wrappers.ps1" "!PY_DIR!" >>"%LOG_FILE%" 2>&1
+) else (
+    call :log "Wrapper build script not found; skipping"
+)
+
 exit /b
 
 :ensure_python
