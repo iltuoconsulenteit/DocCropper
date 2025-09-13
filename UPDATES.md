@@ -384,3 +384,9 @@
 - Installer and startup scripts delete leftover PowerShell wrapper builders and force-reinstall Python dependencies to avoid
   partial upgrades
 - Startup script now skips wrapper compilation and runs directly with `python.exe`/`pythonw.exe` so Windows launches succeed even without `DocCropper.exe`
+
+## 2025-09-13
+- Locate the stdlib `platform` module by temporarily adding any `python*.zip` archives to `sys.path`, ensuring embeddable
+  Windows builds import it without error
+- Reintroduce a lightweight PowerShell wrapper that delegates to the Python builder so legacy launchers no longer fail with
+  `Add-Type` compilation errors

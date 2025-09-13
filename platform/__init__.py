@@ -39,21 +39,27 @@ for _name in os.listdir(_base):
         _search_paths.insert(0, os.path.join(_base, _name))
 
 _stdlib_platform = None
-_spec = None
 for _p in _search_paths:
     try:
-        if os.path.isfile(_p) and _p.lower().endswith('.zip'):
-            _stdlib_platform = zipimport.zipimporter(_p).load_module(__name__)
-            break
-        _spec = _mach.PathFinder.find_spec(__name__, [_p])
-        if _spec and _spec.loader:
-            _stdlib_platform = _util.module_from_spec(_spec)
-            _spec.loader.exec_module(_stdlib_platform)
+        if os.path.isfile(_p) and _p.lower().endswith(".zip"):
+            sys.path.insert(0, _p)
+            try:
+                _stdlib_platform = importlib.import_module(__name__)
+            finally:
+                sys.path.pop(0)
+        else:
+            _spec = _mach.PathFinder.find_spec(__name__, [_p])
+            if _spec and _spec.loader:
+                _stdlib_platform = _util.module_from_spec(_spec)
+                _spec.loader.exec_module(_stdlib_platform)
+        if _stdlib_platform:
             break
     except Exception:
-        pass
+        _stdlib_platform = None
 if _stdlib_platform is None:
-    raise ModuleNotFoundError("Could not locate the standard library 'platform' module")
+    raise ModuleNotFoundError(
+        "Could not locate the standard library 'platform' module"
+    )
 
 # Re-export the stdlib platform's public attributes so third-party imports
 # continue to function as expected.
@@ -64,7 +70,6 @@ for _name in dir(_stdlib_platform):
 del (
     _stdlib_platform,
     _search_paths,
-    _spec,
     _path,
     _base,
 )
