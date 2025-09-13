@@ -380,3 +380,6 @@
 - Fallback to the PowerShell wrapper builder when the Python helper is missing, ensuring upgrades from older releases still compile launchers
 ## 2025-09-13
 - Removed legacy PowerShell wrapper builder that used `Add-Type`; Python-based builder now compiles launchers exclusively
+## 2025-09-13
+- Installer and startup scripts delete leftover PowerShell wrapper builders and force-reinstall Python dependencies to avoid
+  partial upgrades

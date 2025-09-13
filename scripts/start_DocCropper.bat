@@ -100,6 +100,8 @@ if "!SERVER_RUNNING!"=="1" (
 set "DOC_EXE=!PY_DIR!\DocCropper.exe"
 set "TRAY_EXE=!PY_DIR!\DocCropperTray.exe"
 set "WRAP_PY=!APP_DIR!\scripts\build_wrappers.py"
+rem Remove legacy PowerShell builder if it exists
+if exist "!APP_DIR!\scripts\build_wrappers.ps1" del /f /q "!APP_DIR!\scripts\build_wrappers.ps1" >nul 2>&1
 if not exist "!DOC_EXE!" (
     echo [INFO] Compilo wrapper eseguibili >> "!LOG_FILE!"
     if exist "!WRAP_PY!" (
@@ -133,7 +135,7 @@ if "!START_TRAY!"=="1" (
 if exist requirements.txt (
     echo [INFO] Aggiornamento dipendenze Python >> "!LOG_FILE!"
     "%PY%" -m pip install --upgrade pip >> "!LOG_FILE!" 2>&1
-    "%PY%" -m pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
+    "%PY%" -m pip install --upgrade --force-reinstall -r requirements.txt >> "!LOG_FILE!" 2>&1
 )
 
 :: Stop any running instance
