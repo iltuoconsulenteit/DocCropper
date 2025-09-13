@@ -96,25 +96,9 @@ if "!SERVER_RUNNING!"=="1" (
     goto finish
 )
 
-:: Ensure compiled wrappers for clearer Task Manager entries
-set "DOC_EXE=!PY_DIR!\DocCropper.exe"
-set "TRAY_EXE=!PY_DIR!\DocCropperTray.exe"
-if not exist "!DOC_EXE!" (
-    echo [INFO] Compilo wrapper eseguibili >> "!LOG_FILE!"
-    powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\build_wrappers.ps1" "!PY_DIR!" >>"!LOG_FILE!" 2>&1
-) else if not exist "!TRAY_EXE!" (
-    echo [INFO] Compilo wrapper eseguibili >> "!LOG_FILE!"
-    powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\build_wrappers.ps1" "!PY_DIR!" >>"!LOG_FILE!" 2>&1
-)
-
-if not exist "!DOC_EXE!" (
-    echo [WARN] Wrapper DocCropper.exe mancante, uso python.exe >> "!LOG_FILE!"
-    set "DOC_EXE=!PY!"
-)
-if not exist "!TRAY_EXE!" (
-    echo [WARN] Wrapper DocCropperTray.exe mancante, uso pythonw.exe >> "!LOG_FILE!"
-    set "TRAY_EXE=!PYW!"
-)
+:: Use Python executables directly (no wrapper compilation)
+set "DOC_EXE=!PY!"
+set "TRAY_EXE=!PYW!"
 
 if "!START_TRAY!"=="1" (
     echo [INFO] Avvio tray helper >> "!LOG_FILE!"
@@ -128,7 +112,7 @@ if "!START_TRAY!"=="1" (
 if exist requirements.txt (
     echo [INFO] Aggiornamento dipendenze Python >> "!LOG_FILE!"
     "%PY%" -m pip install --upgrade pip >> "!LOG_FILE!" 2>&1
-    "%PY%" -m pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
+    "%PY%" -m pip install --upgrade --force-reinstall -r requirements.txt >> "!LOG_FILE!" 2>&1
 )
 
 :: Stop any running instance

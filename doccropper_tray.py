@@ -16,10 +16,10 @@ import zipimport
 from dotenv import load_dotenv
 
 # Ensure the standard library 'platform' module is used, not the local project package.
-# Embeddable Python may store the stdlib in ``python311.zip`` rather than a full
-# ``Lib`` directory.  Try the on-disk file first and fall back to the zip
-# archive if necessary.
-_stdlib = Path(sysconfig.get_path("stdlib"))
+# Embeddable Python may package the stdlib in a ``pythonXY.zip`` archive. Prefer
+# the on-disk ``platform.py`` when available and fall back to any ``python*.zip``
+# archive found next to the interpreter.
+_stdlib = Path(sysconfig.get_path("stdlib") or "")
 if (_stdlib / "platform.py").exists():
     _platform_spec = importlib.util.spec_from_file_location(
         "platform", _stdlib / "platform.py"
@@ -27,9 +27,17 @@ if (_stdlib / "platform.py").exists():
     platform = importlib.util.module_from_spec(_platform_spec)
     _platform_spec.loader.exec_module(platform)
 else:
-    _zip = Path(sys.executable).with_name("python311.zip")
+    _base = Path(sys.executable).parent
+    _zip = None
+    for _name in os.listdir(_base):
+        if _name.lower().startswith("python") and _name.lower().endswith(".zip"):
+            _zip = _base / _name
+            break
     try:
-        platform = zipimport.zipimporter(str(_zip)).load_module("platform")
+        if _zip and _zip.exists():
+            platform = zipimport.zipimporter(str(_zip)).load_module("platform")
+        else:  # pragma: no cover - last resort
+            import platform as platform
     except Exception:  # pragma: no cover - last resort
         import platform as platform
 

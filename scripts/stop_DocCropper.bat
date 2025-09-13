@@ -31,9 +31,13 @@ if exist "%TRAY_PID_FILE%" (
     echo Tray helper stopped
 )
 
-rem Fallback: terminate any Python process whose command line references DocCropper
-for /f "tokens=2 delims==" %%p in ('wmic process where "name='python.exe' and CommandLine like '%%DocCropper%%'" get ProcessId /value ^| find "="') do (
+rem Fallback: terminate any Python or Pythonw process whose command line references DocCropper
+for /f "tokens=2 delims==" %%p in ('wmic process where "(name='python.exe' or name='pythonw.exe') and CommandLine like '%%DocCropper%%'" get ProcessId /value ^| find "="') do (
     taskkill /F /T /PID %%p >nul 2>&1
 )
+
+rem Also try to stop precompiled wrappers if present
+taskkill /F /T /IM DocCropper.exe >nul 2>&1
+taskkill /F /T /IM DocCropperTray.exe >nul 2>&1
 
 endlocal

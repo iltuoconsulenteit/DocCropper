@@ -295,6 +295,7 @@ let editingIndex = null;
 let cameraStream = null;
 let cameraAvailable = false;
 let currentPdfBlob = null;
+let currentPdfName = 'documents.pdf';
 window.lastSignEmail = '';
 window.lastSignPhone = '';
 window.lastSignName = '';
@@ -2340,6 +2341,12 @@ async function generatePdf() {
     const scale_percent = parseInt(scalePercent.value || '100');
     const compression = window.getCompressionLevel ? window.getCompressionLevel() : 'none';
     const jpeg_quality = window.getJpegQuality ? window.getJpegQuality() : 75;
+    currentPdfName = 'documents.pdf';
+    if (compression && compression !== 'none') {
+        let suffix = compression;
+        if (compression === 'extreme') suffix += '-' + jpeg_quality;
+        currentPdfName = `documents_${suffix}.pdf`;
+    }
     const pdfa_version = window.getPdfaVersion ? window.getPdfaVersion() : null;
     let imagesForPdf = processedImages;
     if (pageSelectEnabled && processedGallery) {
@@ -2370,6 +2377,7 @@ async function generatePdf() {
     })
     .then(data => {
         if (data.pdf) {
+            if (data.filename) currentPdfName = data.filename;
             const base64 = data.pdf.split(',')[1];
             const byteChars = atob(base64);
             const byteNumbers = new Array(byteChars.length);
@@ -2387,6 +2395,7 @@ async function generatePdf() {
                 const url = window.lastSignedUrl || URL.createObjectURL(currentPdfBlob);
                 if (signedPdfLink) {
                     signedPdfLink.href = url;
+                    signedPdfLink.download = currentPdfName;
                     signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
                     signedPdfLink.style.display = 'inline';
                 }
@@ -2406,6 +2415,7 @@ async function generatePdf() {
                 if (signedPdfLink) {
                     const url = URL.createObjectURL(currentPdfBlob);
                     signedPdfLink.href = url;
+                    signedPdfLink.download = currentPdfName;
                     signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
                     signedPdfLink.style.display = 'inline';
                     if (exportPreviewFrame) {
@@ -2595,7 +2605,7 @@ if (downloadPdfBtn) {
         const url = URL.createObjectURL(currentPdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = 'documents.pdf';
+        link.download = currentPdfName;
         link.click();
         URL.revokeObjectURL(url);
     });
@@ -3056,6 +3066,7 @@ window.addEventListener('signedPdfAvailable', (e) => {
     exportOptions.style.display = 'block';
     if (signedPdfLink) {
         signedPdfLink.href = url;
+        signedPdfLink.download = currentPdfName;
         signedPdfLink.textContent = translations['downloadPdf'] || 'Download PDF';
         signedPdfLink.style.display = 'inline';
     }

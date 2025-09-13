@@ -43,6 +43,7 @@ window.DC.export = window.DC.export || (async function () {
   try {
     const data = await resp.json();
     downloadUrl = data && data.downloadUrl;
+    if (data && data.filename) window.currentPdfName = data.filename;
     if (downloadUrl) window.DC_DOWNLOAD_ENDPOINT = downloadUrl;
   } catch {}
   if (downloadUrl) {
@@ -78,7 +79,7 @@ window.DC.download = window.DC.download || (async function () {
     const url = URL.createObjectURL(window.currentPdfBlob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'document.pdf';
+    a.download = window.currentPdfName || 'document.pdf';
     a.click();
     URL.revokeObjectURL(url);
     return;

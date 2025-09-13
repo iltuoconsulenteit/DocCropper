@@ -333,13 +333,23 @@ if not defined PY_EMBED (
 if exist requirements.txt (
     call :log "Installing Python packages..."
     "!PYTHON_CMD!" -m pip install --upgrade pip >>"%LOG_FILE%" 2>&1
-    "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
+    "!PYTHON_CMD!" -m pip install --upgrade --force-reinstall -r requirements.txt >>"%LOG_FILE%" 2>&1
     if exist "!PY_DIR!\Scripts\pywin32_postinstall.py" (
         call :log "Running pywin32 postinstall..."
         "!PYTHON_CMD!" "!PY_DIR!\Scripts\pywin32_postinstall.py" -install >>"%LOG_FILE%" 2>&1
     )
 ) else (
     call :log "requirements.txt not found!"
+)
+
+rem Precompile wrappers so the start script does not rely on PowerShell Add-Type
+set "WRAP_PY=%APP_DIR%\scripts\build_wrappers.py"
+if exist "%APP_DIR%\scripts\build_wrappers.ps1" del /f /q "%APP_DIR%\scripts\build_wrappers.ps1" >>"%LOG_FILE%" 2>&1
+if exist "!WRAP_PY!" (
+    call :log "Compiling launcher wrappers..."
+    "!PY_DIR!\python.exe" "!WRAP_PY!" "!PY_DIR!" >>"%LOG_FILE%" 2>&1
+) else (
+    call :log "Wrapper build script not found; skipping"
 )
 
 exit /b

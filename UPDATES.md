@@ -1,6 +1,7 @@
 # Updates
 
 ## 2025-09-09
+- Precompile Windows launcher wrappers during installation so first start doesn't fall back to PowerShell `Add-Type`
 - Capture tray icon launch output in installer logs to help diagnose startup failures
 - Append tray helper logs to installer log when startup fails
 - Record detected Python interpreter paths in `env/python_path.env` and have start/stop scripts use them to launch the app and tray reliably
@@ -8,6 +9,16 @@
 - Prevent duplicate tray launches and split PowerShell output/error logs so the Windows installer can start the tray helper only once without redirection conflicts
 - When launching immediately after installation, read persisted Python paths so the tray icon starts even if in-memory variables are cleared
 - Standardize installer prompts to English with default confirmations
+- Clean unused objects when compressing PDFs so selected levels produce distinct file sizes
+- Append the chosen compression level to downloaded PDF filenames
+- Return suggested PDF filename with compression suffix so downloads match selected quality
+- Compile Windows wrappers with `csc.exe` to avoid PowerShell quoting issues
+- Stop script now also terminates `DocCropper.exe` and `DocCropperTray.exe` processes during upgrades
+- Fix PDF compression plugin to use supported save options so chosen levels and filenames take effect
+- Recompress PDF images based on the selected level for clearer file size differences
+- Adapter downloads now honor the suggested filename so compression suffixes appear in saved PDFs
+- Enable PDF compression in the Free edition and enforce watermark overlays for Free licenses
+- Build Windows wrappers via a Python helper that invokes `csc.exe`, removing reliance on PowerShell `Add-Type`
 
 ## 2025-09-08
 - Fix Windows installer halting after Python version check by consolidating runtime detection into a dedicated function
@@ -350,3 +361,32 @@
 ## 2025-08-27
 - Preserve `env/license.env` during repository updates so manual licenses survive upgrades
 - Add `/license/status` endpoint and frontend refresh to confirm the active license
+
+## 2025-08-28
+- Log PDF downloads with details on applied plugins like compression and PDF/A without exposing sensitive data
+
+## 2025-08-29
+- Write DocCropper logs to the system temporary directory for easier troubleshooting
+
+## 2025-08-30
+- Log active plugins on startup and note when compression was requested without an available plugin
+
+## 2025-08-31
+- Load the standard library's `platform` module by searching `python*.zip` archives so embeddable Windows installs start correctly
+- Tray launcher now locates `platform` from zipped stdlib archives, preventing startup failures
+
+## 2025-09-13
+- Installer and startup scripts call the Python wrapper builder via absolute paths so Windows launchers compile without PowerShell
+- Fallback to the PowerShell wrapper builder when the Python helper is missing, ensuring upgrades from older releases still compile launchers
+## 2025-09-13
+- Removed legacy PowerShell wrapper builder that used `Add-Type`; Python-based builder now compiles launchers exclusively
+## 2025-09-13
+- Installer and startup scripts delete leftover PowerShell wrapper builders and force-reinstall Python dependencies to avoid
+  partial upgrades
+- Startup script now skips wrapper compilation and runs directly with `python.exe`/`pythonw.exe` so Windows launches succeed even without `DocCropper.exe`
+
+## 2025-09-13
+- Locate the stdlib `platform` module by temporarily adding any `python*.zip` archives to `sys.path`, ensuring embeddable
+  Windows builds import it without error
+- Reintroduce a lightweight PowerShell wrapper that delegates to the Python builder so legacy launchers no longer fail with
+  `Add-Type` compilation errors

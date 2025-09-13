@@ -42,9 +42,8 @@ from dotenv import load_dotenv
 import urllib.request
 import urllib.parse
 import socket
-from pathlib import Path
 import importlib
-import importlib.util
+import platform
 from types import SimpleNamespace
 
 import bcrypt as _bcrypt
@@ -57,13 +56,6 @@ _cv2 = None
 _np = None
 _fitz = None
 
-# Ensure the standard library 'platform' module is used even though a local
-# Django package named 'platform' exists in the project root.
-_platform_spec = importlib.util.spec_from_file_location(
-    "platform", Path(os.__file__).resolve().parent / "platform.py"
-)
-platform = importlib.util.module_from_spec(_platform_spec)
-_platform_spec.loader.exec_module(platform)
 
 def get_cv2():
     global _cv2
@@ -729,8 +721,17 @@ def save_user_settings(email: str, update: dict):
     merged.update(data)
     return merged
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging: write logs to the OS temp directory so administrators can
+# inspect plugin activity (e.g. compression) after PDF downloads. Log to both a
+# file and stdout to preserve existing console output.
+LOG_FILE = os.path.join(tempfile.gettempdir(), "DocCropper.log")
+logging.basicConfig(
+    level=logging.INFO,
+    handlers=[
+        logging.FileHandler(LOG_FILE, encoding="utf-8"),
+        logging.StreamHandler(),
+    ],
+)
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
@@ -966,10 +967,13 @@ if enable_docuseal and (not docuseal_dev or is_dev_license):
 if enable_removebg and (not removebg_dev or is_dev_license):
     register_removebg(app, plugin_utils)
     ACTIVE_PLUGINS.append('removebg')
-if enable_compresspdf and (not compresspdf_dev or is_dev_license) and settings.get('license_level', 'free').lower() != 'free':
+if enable_compresspdf and (not compresspdf_dev or is_dev_license):
     register_compresspdf(app, plugin_utils)
     ACTIVE_PLUGINS.append('compresspdf')
-if enable_watermark and (not watermark_dev or is_dev_license):
+if license_level == 'free':
+    register_watermark(app, plugin_utils)
+    ACTIVE_PLUGINS.append('watermark')
+elif enable_watermark and (not watermark_dev or is_dev_license):
     register_watermark(app, plugin_utils)
     ACTIVE_PLUGINS.append('watermark')
 if enable_downloadpng and (not downloadpng_dev or is_dev_license):
@@ -992,6 +996,8 @@ if enable_formfields and (not formfields_dev or is_dev_license):
 if enable_scan and (not scan_dev or is_dev_license):
     register_scan(app, plugin_utils)
     ACTIVE_PLUGINS.append('scan')
+
+logger.info("active_plugins %s", ACTIVE_PLUGINS)
 
 @app.get("/me", tags=["auth"])
 async def get_me(user: User = Depends(fastapi_users.current_user())):
@@ -1491,6 +1497,7 @@ async def create_pdf(
         settings = load_settings()
         key = settings.get("license_key", "").strip().upper()
         license_check = settings.get("license_check", False)
+        license_level = settings.get("license_level", "free").strip().lower()
         dev_env = DEV_LICENSE_KEY_UPPER
         dev_key_valid = dev_env and key == dev_env
         demo_key = key == DEMO_FULL_LICENSE_KEY
@@ -1504,13 +1511,26 @@ async def create_pdf(
             else:
                 licensed = False
         else:
-            licensed = True
+            licensed = license_level != "free"
             if demo_key or (dev_key_valid and settings.get("developer_watermark", False)):
                 licensed = False
+        if license_level == "free":
+            licensed = False
         session_id = request.cookies.get("session_id")
         if not session_id:
             session_id = uuid.uuid4().hex
         session_dir = get_session_dir(session_id)
+        download_name = "documents.pdf"
+        comp = (compression or "").lower()
+        if comp and comp != "none":
+            suffix = comp
+            if comp == "extreme":
+                try:
+                    q = int(jpeg_quality)
+                except Exception:
+                    q = 75
+                suffix += f"-{max(10, min(95, q))}"
+            download_name = f"documents_{suffix}.pdf"
         pil_images = []
         for img_b64 in images:
             if img_b64.startswith('data:'):
@@ -1746,6 +1766,7 @@ async def create_pdf(
         pdf_bytes_io = io.BytesIO()
         pages[0].save(pdf_bytes_io, format="PDF", save_all=True, append_images=pages[1:])
         pdf_bytes = pdf_bytes_io.getvalue()
+        log_details = {"filename": download_name, "size": len(pdf_bytes)}
 
         cert_path = os.environ.get("DOCROPPER_SIGN_CERT")
         cert_password = os.environ.get("DOCROPPER_SIGN_PASSWORD")
@@ -1759,13 +1780,37 @@ async def create_pdf(
             except Exception:
                 logger.exception("PDF signing failed")
         compressor = plugin_utils.get("compress_pdf")
-        if compressor and (compression and compression.lower() != "none"):
-            pdf_bytes = compressor(pdf_bytes, compression, jpeg_quality)
+        comp_requested = compression and compression.lower() != "none"
+        if comp_requested:
+            if compressor:
+                before = len(pdf_bytes)
+                pdf_bytes = compressor(pdf_bytes, compression, jpeg_quality)
+                log_details["compression"] = {
+                    "level": compression,
+                    "jpeg_quality": int(jpeg_quality),
+                    "before": before,
+                    "after": len(pdf_bytes),
+                }
+            else:
+                logger.warning(
+                    "compression requested but compress_pdf plugin not registered"
+                )
+                log_details["compression"] = {
+                    "level": compression,
+                    "applied": False,
+                }
         if pdfa_version is not None:
             try:
                 fitz = get_fitz()
+                before = len(pdf_bytes)
                 doc = fitz.open(stream=pdf_bytes, filetype="pdf")
                 pdf_bytes = doc.tobytes(deflate=True, clean=True, garbage=4, pdfa=int(pdfa_version) - 1)
+                doc.close()
+                log_details["pdfa"] = {
+                    "version": int(pdfa_version),
+                    "before": before,
+                    "after": len(pdf_bytes),
+                }
             except Exception:
                 logger.exception("PDF/A conversion failed")
 
@@ -1776,9 +1821,14 @@ async def create_pdf(
                 fh.write(enc)
         except Exception:
             logger.exception("Failed to save PDF")
+        log_details["final_size"] = len(pdf_bytes)
+        logger.info("pdf_download %s", json.dumps(log_details, separators=(",", ":")))
         pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
         cleanup_old_sessions()
-        response = JSONResponse(content={"pdf": "data:application/pdf;base64," + pdf_base64})
+        response = JSONResponse(content={
+            "pdf": "data:application/pdf;base64," + pdf_base64,
+            "filename": download_name,
+        })
         response.set_cookie("session_id", session_id, httponly=True)
         return response
     except Exception as e:
