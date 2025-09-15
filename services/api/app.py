@@ -886,9 +886,32 @@ async def require_valid_license(
 
     return user
 
-# Mount static files directory and local wiki with no-cache headers
+# Mount static files directory and serve the local wiki with no-cache headers
 app.mount("/static", NoCacheStaticFiles(directory=str(STATIC_DIR)), name="static")
-app.mount("/wiki", NoCacheStaticFiles(directory=str(WIKI_DIR), html=True), name="wiki")
+
+
+@app.get("/wiki/{lang}/{page:path}")
+async def get_wiki_page(lang: str, page: str = "index.html"):
+    """Serve files from the bundled wiki without caching.
+
+    Falling back to ``index.html`` allows callers to request ``/wiki/<lang>/``
+    or ``/wiki/<lang>/index.html`` interchangeably.
+    """
+    file_path = WIKI_DIR / lang / page
+    if file_path.is_dir():
+        file_path /= "index.html"
+    try:
+        response = FileResponse(file_path)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    # Disable caching so updates are reflected immediately and allow the wiki
+    # to be embedded inside the Electron/Expressive UI.
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    response.headers.pop("X-Frame-Options", None)
+    response.headers["Content-Security-Policy"] = "frame-ancestors *"
+    return response
 # Serve JavaScript helpers if present; fall back gracefully when the
 # directory is missing so the API can start even without optional assets.
 js_dir = Path("static/js")
