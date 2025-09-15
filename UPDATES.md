@@ -10,6 +10,7 @@
 - Ask whether to reinstall Python dependencies or skip existing packages during startup
 - Remove unsupported header call in `NoCacheStaticFiles` that caused wiki 500 errors
 - Permit `/settings-login/` to accept the default password when no hash is set
+- Redirect `/sign` URLs through Django to FastAPI so mobile signing links resolve correctly
 
 ## 2025-09-09
 - Precompile Windows launcher wrappers during installation so first start doesn't fall back to PowerShell `Add-Type`
