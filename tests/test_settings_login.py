@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from pathlib import Path
 import pytest
 
@@ -24,9 +25,16 @@ class DummyBcrypt:
     @staticmethod
     def hash(pwd: str) -> str:
         return 'hash-' + pwd
+
     @staticmethod
     def verify(pwd: str, hashed: str) -> bool:
+        if not DummyBcrypt.identify(hashed):
+            raise ValueError('invalid hash')
         return hashed == 'hash-' + pwd
+
+    @staticmethod
+    def identify(value) -> bool:
+        return isinstance(value, str) and value.startswith('hash-')
 
 bcrypt = DummyBcrypt()
 DEFAULT_SETTINGS_PASSWORD = '12345678'
@@ -38,6 +46,7 @@ def build_func(load_settings):
         'DEFAULT_SETTINGS_PASSWORD': DEFAULT_SETTINGS_PASSWORD,
         'load_settings': load_settings,
         'HTTPException': HTTPException,
+        'logging': logging,
     }
     exec(func_src, ns)
     return ns['settings_login']
@@ -59,4 +68,17 @@ def test_settings_login_rejects_wrong_password():
     func = build_func(lambda: {})
     with pytest.raises(HTTPException) as exc:
         asyncio.run(func({'password': 'wrong'}))
+    assert exc.value.status_code == 403
+
+
+def test_settings_login_accepts_default_when_hash_corrupted():
+    func = build_func(lambda: {'settings_password_hash': 'broken'})
+    result = asyncio.run(func({'password': '12345678'}))
+    assert result['status'] == 'ok'
+
+
+def test_settings_login_rejects_default_when_custom_hash_present():
+    func = build_func(lambda: {'settings_password_hash': bcrypt.hash('custom')})
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(func({'password': '12345678'}))
     assert exc.value.status_code == 403

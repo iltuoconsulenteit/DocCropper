@@ -10,6 +10,7 @@ import uuid
 from pathlib import Path
 from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, Body, Request, Depends, HTTPException
@@ -141,6 +142,43 @@ USERS_DIR = os.path.join(BASE_DIR, "users")
 
 DEFAULT_DEV_PASSWORD = os.getenv("DOCROPPER_DEV_PASSWORD", "87654321")
 DEFAULT_SETTINGS_PASSWORD = os.getenv("DOCROPPER_SETTINGS_PASSWORD", "12345678")
+
+
+def _normalize_password_hash(value: Any, default: str, label: str) -> str:
+    """Return a valid bcrypt hash, regenerating it when the stored value is invalid."""
+
+    logger = logging.getLogger(__name__)
+    if isinstance(value, str):
+        candidate = value.strip()
+        if not candidate:
+            return bcrypt.hash(default)
+        try:
+            if not bcrypt.identify(candidate):
+                logger.warning("Discarding invalid %s password hash", label)
+                return bcrypt.hash(default)
+            try:
+                # ``verify`` raises for truncated or otherwise corrupted hashes.
+                bcrypt.verify(default, candidate)
+            except (TypeError, ValueError):
+                logger.warning(
+                    "Discarding unreadable %s password hash; regenerating default",
+                    label,
+                )
+                return bcrypt.hash(default)
+            return candidate
+        except Exception:  # pragma: no cover - defensive guard
+            logger.warning(
+                "Failed to inspect %s password hash; regenerating default", label
+            )
+            return bcrypt.hash(default)
+    if value in (None, "", False):
+        return bcrypt.hash(default)
+    logger.warning(
+        "Discarding unexpected %s password hash type %s",
+        label,
+        type(value).__name__,
+    )
+    return bcrypt.hash(default)
 
 # Read/write values that the license server enforces. They override normal
 # settings and cannot be changed by users.
@@ -510,10 +548,16 @@ def load_settings():
         if slides_env:
             merged["sponsor_slides"] = [s.strip() for s in slides_env.split(",") if s.strip()]
 
-        if "developer_password_hash" not in merged:
-            merged["developer_password_hash"] = bcrypt.hash(DEFAULT_DEV_PASSWORD)
-        if "settings_password_hash" not in merged:
-            merged["settings_password_hash"] = bcrypt.hash(DEFAULT_SETTINGS_PASSWORD)
+        merged["developer_password_hash"] = _normalize_password_hash(
+            merged.get("developer_password_hash"),
+            DEFAULT_DEV_PASSWORD,
+            "developer",
+        )
+        merged["settings_password_hash"] = _normalize_password_hash(
+            merged.get("settings_password_hash"),
+            DEFAULT_SETTINGS_PASSWORD,
+            "settings",
+        )
         token = merged.get("license_token")
         if token:
             try:
@@ -1379,10 +1423,17 @@ async def settings_login(data: dict = Body(...)):
     password = data.get("password", "")
     settings = load_settings()
     hashed = settings.get("settings_password_hash", "")
+    hash_corrupted = False
     if hashed:
-        if bcrypt.verify(password, hashed):
-            return {"status": "ok"}
-    elif password == DEFAULT_SETTINGS_PASSWORD:
+        try:
+            if bcrypt.verify(password, hashed):
+                return {"status": "ok"}
+        except (TypeError, ValueError):
+            logging.getLogger(__name__).warning(
+                "Encountered invalid settings password hash; allowing default password"
+            )
+            hash_corrupted = True
+    if (not hashed or hash_corrupted) and password == DEFAULT_SETTINGS_PASSWORD:
         return {"status": "ok"}
     raise HTTPException(status_code=403, detail="Invalid password")
 
