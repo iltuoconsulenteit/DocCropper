@@ -292,17 +292,24 @@ if not exist "!APP_DIR!\env\auth.env" (
 )
 
 rem Determine required Python version
-set "PY_VER=3.11.7"
+set "PY_DEFAULT=3.11.9"
+set "PY_REQUESTED="
 if exist "env\python.env" (
     for /f "usebackq tokens=1,2 delims==" %%A in ("env\python.env") do (
-        if /I "%%A"=="PYTHON_VERSION" set "PY_VER=%%B"
+        if /I "%%A"=="PYTHON_VERSION" set "PY_REQUESTED=%%~B"
     )
 )
-for /f "tokens=1,2 delims=." %%A in ("%PY_VER%") do set "PY_SHORT=%%A%%B"
-call :log "Required Python version: %PY_VER%"
+if not defined PY_REQUESTED set "PY_REQUESTED=%PY_DEFAULT%"
+for /f "tokens=* delims= " %%A in ("!PY_REQUESTED!") do set "PY_REQUESTED=%%A"
+echo !PY_REQUESTED!| findstr /R "^[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$" >nul
+if errorlevel 1 set "PY_REQUESTED=%PY_DEFAULT%"
+set "PY_VER=!PY_REQUESTED!"
+call :log "Required Python version: !PY_VER!"
 
 rem Ensure Python runtime is available
 call :ensure_python || exit /b 1
+
+for /f "tokens=1,2 delims=." %%A in ("!PY_VER!") do set "PY_SHORT=%%A%%B"
 
 rem Ensure our Python directory is on PATH for subsequent scripts
 set "PATH=!PY_DIR!;!PY_DIR!\Scripts;!PATH!"
@@ -333,8 +340,45 @@ if not defined PY_EMBED (
 if exist requirements.txt (
     call :log "Installing Python packages..."
     "!PYTHON_CMD!" -m pip install --upgrade pip >>"%LOG_FILE%" 2>&1
-    "!PYTHON_CMD!" -m pip install --upgrade --force-reinstall -r requirements.txt >>"%LOG_FILE%" 2>&1
-    if exist "!PY_DIR!\Scripts\pywin32_postinstall.py" (
+    for /f "delims=" %%h in ('certutil -hashfile requirements.txt MD5 ^| find /i /v "hash" ^| find /i /v "CertUtil"') do set "REQ_HASH=%%h"
+    set "HASH_FILE=!PY_DIR!\requirements.hash"
+    set "NEED_INSTALL=1"
+    set "DEFAULT_CHOICE=M"
+    if exist "!HASH_FILE!" (
+        set /p EXISTING_HASH=<"!HASH_FILE!"
+        if /I "!EXISTING_HASH!"=="!REQ_HASH!" (
+            set "NEED_INSTALL=0"
+            set "DEFAULT_CHOICE=S"
+        )
+    )
+    set "CHOICE="
+    set /p CHOICE=Gestione dipendenze Python - (S)alta, (M)ancanti, (T)utte [!DEFAULT_CHOICE!]:
+    if "!CHOICE!"=="" set "CHOICE=!DEFAULT_CHOICE!"
+    set "INSTALL_DONE=0"
+    if /I "!CHOICE!"=="S" (
+        if "!NEED_INSTALL!"=="0" (
+            call :log "Requisiti Python gia aggiornati"
+        ) else (
+            call :log "Installazione dipendenze saltata dall'utente"
+        )
+    ) else if /I "!CHOICE!"=="T" (
+        "!PYTHON_CMD!" -m pip install --upgrade --force-reinstall -r requirements.txt >>"%LOG_FILE%" 2>&1
+        if errorlevel 1 (
+            call :log "Reinstallazione completa dei pacchetti fallita"
+        ) else (
+            set "INSTALL_DONE=1"
+            echo !REQ_HASH!>"!HASH_FILE!"
+        )
+    ) else (
+        "!PYTHON_CMD!" -m pip install --upgrade -r requirements.txt >>"%LOG_FILE%" 2>&1
+        if errorlevel 1 (
+            call :log "Aggiornamento pacchetti fallito"
+        ) else (
+            set "INSTALL_DONE=1"
+            echo !REQ_HASH!>"!HASH_FILE!"
+        )
+    )
+    if "!INSTALL_DONE!"=="1" if exist "!PY_DIR!\Scripts\pywin32_postinstall.py" (
         call :log "Running pywin32 postinstall..."
         "!PYTHON_CMD!" "!PY_DIR!\Scripts\pywin32_postinstall.py" -install >>"%LOG_FILE%" 2>&1
     )
@@ -362,7 +406,7 @@ set "PY_EMBED="
 set "PY_DIR=!APP_DIR!\python"
 if exist "!PY_DIR!\python.exe" (
     for /f "tokens=2 delims= " %%V in ('"!PY_DIR!\python.exe" -V 2^>^&1') do set "PY_FOUND=%%V"
-    if "!PY_FOUND!"=="%PY_VER%" (
+    if "!PY_FOUND!"=="!PY_VER!" (
         set "PYTHON_CMD=!PY_DIR!\python.exe"
         set "PYTHONW_CMD=!PY_DIR!\pythonw.exe"
         set "PY_EMBED=1"
@@ -373,15 +417,31 @@ if exist "!PY_DIR!\python.exe" (
 
 rem Always use embeddable runtime; ignore system Python
 
-
-call :log "Python %PY_VER% not found. Downloading embeddable runtime..."
-set "PY_ZIP=python-%PY_VER%-embed-amd64.zip"
-if not exist "%TEMP%" mkdir "%TEMP%"
-powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/!PY_VER!/!PY_ZIP!' -OutFile '%TEMP%\!PY_ZIP!'" >>"%LOG_FILE%" 2>&1
-if not exist "%TEMP%\!PY_ZIP!" (
-    call :log "Failed to download Python !PY_VER! embeddable package."
+call :log "Python !PY_VER! not found. Downloading embeddable runtime..."
+set "PY_SUCCESS="
+set "PY_ATTEMPTS=!PY_VER!"
+if defined PY_DEFAULT if /I not "!PY_VER!"=="!PY_DEFAULT!" set "PY_ATTEMPTS=!PY_ATTEMPTS! !PY_DEFAULT!"
+for %%V in (!PY_ATTEMPTS!) do (
+    if not defined PY_SUCCESS (
+        set "PY_CANDIDATE=%%~V"
+        if not "!PY_CANDIDATE!"=="" (
+            set "PY_ZIP=python-!PY_CANDIDATE!-embed-amd64.zip"
+            call :log "Downloading Python !PY_CANDIDATE! embeddable runtime..."
+            if not exist "%TEMP%" mkdir "%TEMP%"
+            powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/!PY_CANDIDATE!/!PY_ZIP!' -OutFile '%TEMP%\!PY_ZIP!'" >>"%LOG_FILE%" 2>&1
+            if exist "%TEMP%\!PY_ZIP!" (
+                set "PY_SUCCESS=1"
+                set "PY_VER=!PY_CANDIDATE!"
+            ) else (
+                call :log "Failed to download Python !PY_CANDIDATE! embeddable package."
+            )
+        )
+    )
+)
+if not defined PY_SUCCESS (
     exit /b 1
 )
+for /f "tokens=1,2 delims=." %%A in ("!PY_VER!") do set "PY_SHORT=%%A%%B"
 if exist "!PY_DIR!" rmdir /S /Q "!PY_DIR!" >>"%LOG_FILE%" 2>&1
 mkdir "!PY_DIR!" >>"%LOG_FILE%" 2>&1
 powershell -NoProfile -Command "Expand-Archive -Path '%TEMP%\!PY_ZIP!' -DestinationPath '!PY_DIR!'" >>"%LOG_FILE%" 2>&1
@@ -394,5 +454,5 @@ call :log "Bootstrapping pip..."
 powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://bootstrap.pypa.io/get-pip.py' -OutFile '!PY_DIR!\get-pip.py'" >>"%LOG_FILE%" 2>&1
 "!PYTHON_CMD!" "!PY_DIR!\get-pip.py" >>"%LOG_FILE%" 2>&1
 del "!PY_DIR!\get-pip.py" >>"%LOG_FILE%" 2>&1
-call :log "Using Python at !PYTHON_CMD!"
+call :log "Using Python at !PYTHON_CMD! (version !PY_VER!)"
 exit /b 0

@@ -112,31 +112,39 @@ if "!START_TRAY!"=="1" (
 if exist requirements.txt (
     echo [INFO] Aggiornamento dipendenze Python >> "!LOG_FILE!"
     "%PY%" -m pip install --upgrade pip >> "!LOG_FILE!" 2>&1
-    set "FORCE_PIP="
-    set /p FORCE_PIP=Forzare reinstallazione di tutti i pacchetti? [y/N]:
-    if /I "!FORCE_PIP!"=="y" (
-        "%PY%" -m pip install --upgrade --force-reinstall -r requirements.txt >> "!LOG_FILE!" 2>&1
-        for /f "delims=" %%h in ('certutil -hashfile requirements.txt MD5 ^| find /i /v "hash" ^| find /i /v "CertUtil"') do set "REQ_HASH=%%h"
-        echo !REQ_HASH!>"!PY_DIR!\requirements.hash"
-    ) else (
-        for /f "delims=" %%h in ('certutil -hashfile requirements.txt MD5 ^| find /i /v "hash" ^| find /i /v "CertUtil"') do set "REQ_HASH=%%h"
-        set "HASH_FILE=!PY_DIR!\requirements.hash"
-        set "NEED_INSTALL=1"
-        if exist "!HASH_FILE!" (
-            set /p EXISTING_HASH=<"!HASH_FILE!"
-            if /I "!EXISTING_HASH!"=="!REQ_HASH!" set "NEED_INSTALL=0"
+    for /f "delims=" %%h in ('certutil -hashfile requirements.txt MD5 ^| find /i /v "hash" ^| find /i /v "CertUtil"') do set "REQ_HASH=%%h"
+    set "HASH_FILE=!PY_DIR!\requirements.hash"
+    set "NEED_INSTALL=1"
+    set "DEFAULT_CHOICE=M"
+    if exist "!HASH_FILE!" (
+        set /p EXISTING_HASH=<"!HASH_FILE!"
+        if /I "!EXISTING_HASH!"=="!REQ_HASH!" (
+            set "NEED_INSTALL=0"
+            set "DEFAULT_CHOICE=S"
         )
-        if "!NEED_INSTALL!"=="1" (
-            set "SKIP_PIP="
-            set /p SKIP_PIP=Installare solo i pacchetti mancanti? [Y/n]:
-            if /I "!SKIP_PIP!"=="n" (
-                echo [INFO] Installazione dipendenze saltata dall'utente >> "!LOG_FILE!"
-            ) else (
-                "%PY%" -m pip install --upgrade -r requirements.txt >> "!LOG_FILE!" 2>&1
-                echo !REQ_HASH!>"!HASH_FILE!"
-            )
-        ) else (
+    )
+    set "CHOICE="
+    set /p CHOICE=Gestione dipendenze Python - (S)alta, (M)ancanti, (T)utte [!DEFAULT_CHOICE!]:
+    if "!CHOICE!"=="" set "CHOICE=!DEFAULT_CHOICE!"
+    if /I "!CHOICE!"=="S" (
+        if "!NEED_INSTALL!"=="0" (
             echo [INFO] Requisiti Python gia aggiornati >> "!LOG_FILE!"
+        ) else (
+            echo [INFO] Installazione dipendenze saltata dall'utente >> "!LOG_FILE!"
+        )
+    ) else if /I "!CHOICE!"=="T" (
+        "%PY%" -m pip install --upgrade --force-reinstall -r requirements.txt >> "!LOG_FILE!" 2>&1
+        if errorlevel 1 (
+            echo [WARN] Reinstallazione completa dei pacchetti fallita >> "!LOG_FILE!"
+        ) else (
+            echo !REQ_HASH!>"!HASH_FILE!"
+        )
+    ) else (
+        "%PY%" -m pip install --upgrade -r requirements.txt >> "!LOG_FILE!" 2>&1
+        if errorlevel 1 (
+            echo [WARN] Aggiornamento pacchetti fallito >> "!LOG_FILE!"
+        ) else (
+            echo !REQ_HASH!>"!HASH_FILE!"
         )
     )
 )

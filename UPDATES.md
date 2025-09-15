@@ -409,3 +409,8 @@
 
 ## 2025-09-13
 - Route `/wiki` through Django to serve bundled help pages without 500 errors when FastAPI is bypassed
+
+## 2025-09-13
+- Store the settings panel password in plain text alongside its hash so the default `12345678` works reliably and can be changed without bcrypt issues
+- Ask once before installing Windows dependencies, letting admins skip, update missing packages, or force a full reinstall during startup and upgrades
+- Fall back to a maintained Python embeddable version when downloads fail and validate the configured version before attempting installation

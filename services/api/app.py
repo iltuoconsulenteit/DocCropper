@@ -4,6 +4,7 @@ import logging
 import json
 import math
 import os
+import secrets
 import shutil
 import time
 import uuid
@@ -180,6 +181,32 @@ def _normalize_password_hash(value: Any, default: str, label: str) -> str:
     )
     return bcrypt.hash(default)
 
+
+def _clean_settings_password(value: Any, default: str) -> str:
+    if isinstance(value, str):
+        candidate = value.strip()
+        if candidate:
+            return candidate
+    return default
+
+
+def _verify_settings_password(settings: dict, candidate: str) -> tuple[bool, bool]:
+    plain = settings.get("settings_password")
+    plain_valid = isinstance(plain, str) and plain != ""
+    if plain_valid and secrets.compare_digest(plain, candidate):
+        return True, False
+
+    hashed = settings.get("settings_password_hash", "")
+    if hashed:
+        try:
+            if bcrypt.verify(candidate, hashed):
+                return True, False
+        except (TypeError, ValueError):
+            return candidate == DEFAULT_SETTINGS_PASSWORD, True
+
+    fallback_allowed = not plain_valid
+    return fallback_allowed and candidate == DEFAULT_SETTINGS_PASSWORD, False
+
 # Read/write values that the license server enforces. They override normal
 # settings and cannot be changed by users.
 def load_license_overrides() -> dict:
@@ -340,6 +367,7 @@ DEFAULT_SETTINGS = {
     "template": "static",
     "update_pin": "",
     "update_interval": 3600000,
+    "settings_password": DEFAULT_SETTINGS_PASSWORD,
     "developer_password_hash": bcrypt.hash(DEFAULT_DEV_PASSWORD),
 }
 
@@ -548,6 +576,10 @@ def load_settings():
         if slides_env:
             merged["sponsor_slides"] = [s.strip() for s in slides_env.split(",") if s.strip()]
 
+        merged["settings_password"] = _clean_settings_password(
+            merged.get("settings_password"),
+            DEFAULT_SETTINGS_PASSWORD,
+        )
         merged["developer_password_hash"] = _normalize_password_hash(
             merged.get("developer_password_hash"),
             DEFAULT_DEV_PASSWORD,
@@ -555,7 +587,7 @@ def load_settings():
         )
         merged["settings_password_hash"] = _normalize_password_hash(
             merged.get("settings_password_hash"),
-            DEFAULT_SETTINGS_PASSWORD,
+            merged["settings_password"],
             "settings",
         )
         token = merged.get("license_token")
@@ -1420,35 +1452,38 @@ async def change_developer_password(data: dict = Body(...)):
 
 @app.post("/settings-login/")
 async def settings_login(data: dict = Body(...)):
-    password = data.get("password", "")
+    password = str(data.get("password", ""))
     settings = load_settings()
-    hashed = settings.get("settings_password_hash", "")
-    hash_corrupted = False
-    if hashed:
-        try:
-            if bcrypt.verify(password, hashed):
-                return {"status": "ok"}
-        except (TypeError, ValueError):
-            logging.getLogger(__name__).warning(
-                "Encountered invalid settings password hash; allowing default password"
-            )
-            hash_corrupted = True
-    if (not hashed or hash_corrupted) and password == DEFAULT_SETTINGS_PASSWORD:
+    ok, hash_corrupted = _verify_settings_password(settings, password)
+    if hash_corrupted:
+        logging.getLogger(__name__).warning(
+            "Encountered invalid settings password hash; allowing default password"
+        )
+    if ok:
         return {"status": "ok"}
     raise HTTPException(status_code=403, detail="Invalid password")
 
 
 @app.post("/settings-password/")
 async def change_settings_password(data: dict = Body(...)):
-    old = data.get("old", "")
+    old = str(data.get("old", ""))
     new = data.get("new", "")
     if not new:
         raise HTTPException(status_code=400, detail="New password required")
     settings = load_settings()
-    hashed = settings.get("settings_password_hash", "")
-    if not hashed or not bcrypt.verify(old, hashed):
+    ok, hash_corrupted = _verify_settings_password(settings, old)
+    if hash_corrupted:
+        logging.getLogger(__name__).warning(
+            "Encountered invalid settings password hash; allowing default password"
+        )
+    if not ok:
         raise HTTPException(status_code=403, detail="Invalid password")
-    save_settings({"settings_password_hash": bcrypt.hash(new)})
+    save_settings(
+        {
+            "settings_password": new,
+            "settings_password_hash": bcrypt.hash(new),
+        }
+    )
     return {"status": "updated"}
 
 
