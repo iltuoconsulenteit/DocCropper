@@ -111,6 +111,8 @@ except Exception:
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
+STATIC_DIR = BASE_DIR / "static"
+WIKI_DIR = BASE_DIR / "wiki"
 SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
 # Additional file storing values enforced by a license check
 LICENSE_OVERRIDES_FILE = os.path.join(BASE_DIR, "license_overrides.json")
@@ -885,8 +887,8 @@ async def require_valid_license(
     return user
 
 # Mount static files directory and local wiki with no-cache headers
-app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
-app.mount("/wiki", NoCacheStaticFiles(directory="wiki", html=True), name="wiki")
+app.mount("/static", NoCacheStaticFiles(directory=str(STATIC_DIR)), name="static")
+app.mount("/wiki", NoCacheStaticFiles(directory=str(WIKI_DIR), html=True), name="wiki")
 # Serve JavaScript helpers if present; fall back gracefully when the
 # directory is missing so the API can start even without optional assets.
 js_dir = Path("static/js")

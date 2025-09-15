@@ -199,6 +199,9 @@
             </div>
           </div>
         </div>
+        <div x-show="tab==='guide'" class="p-4">
+          <iframe id="wikiFrame" :src="`/wiki/${lang}/index.html`" style="border:none;width:100%;height:80vh"></iframe>
+        </div>
         <div x-show="tab==='updates'" class="p-4 space-y-2">
           <template x-for="(note, idx) in updates[lang]" :key="idx">
             <div class="border-b pb-2" x-text="note"></div>
@@ -1067,7 +1070,8 @@
                 await window.DC.mobileSign();
                 break;
               case 'guide':
-                window.open(`/wiki/${this.lang}/index.html`, '_blank');
+                this.tab='guide';
+                this.showSlides=false;
                 break;
               case 'updates':
                 this.tab='updates';
