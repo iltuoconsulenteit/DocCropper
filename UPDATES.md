@@ -2,6 +2,7 @@
 
 ## 2025-09-15
 - Route `/wiki` requests to the FastAPI app so built-in help pages load correctly
+- Skip unnecessary Windows dependency reinstalls by tracking `requirements.txt` hash
 
 ## 2025-09-09
 - Precompile Windows launcher wrappers during installation so first start doesn't fall back to PowerShell `Add-Type`

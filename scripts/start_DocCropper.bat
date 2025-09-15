@@ -112,7 +112,19 @@ if "!START_TRAY!"=="1" (
 if exist requirements.txt (
     echo [INFO] Aggiornamento dipendenze Python >> "!LOG_FILE!"
     "%PY%" -m pip install --upgrade pip >> "!LOG_FILE!" 2>&1
-    "%PY%" -m pip install --upgrade --force-reinstall -r requirements.txt >> "!LOG_FILE!" 2>&1
+    for /f "delims=" %%h in ('certutil -hashfile requirements.txt MD5 ^| find /i /v "hash" ^| find /i /v "CertUtil"') do set "REQ_HASH=%%h"
+    set "HASH_FILE=!PY_DIR!\requirements.hash"
+    set "NEED_INSTALL=1"
+    if exist "!HASH_FILE!" (
+        set /p EXISTING_HASH=<"!HASH_FILE!"
+        if /I "!EXISTING_HASH!"=="!REQ_HASH!" set "NEED_INSTALL=0"
+    )
+    if "!NEED_INSTALL!"=="1" (
+        "%PY%" -m pip install --upgrade -r requirements.txt >> "!LOG_FILE!" 2>&1
+        echo !REQ_HASH!>"!HASH_FILE!"
+    ) else (
+        echo [INFO] Requisiti Python gia aggiornati >> "!LOG_FILE!"
+    )
 )
 
 :: Stop any running instance
