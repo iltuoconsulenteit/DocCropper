@@ -399,3 +399,6 @@
   Windows builds import it without error
 - Reintroduce a lightweight PowerShell wrapper that delegates to the Python builder so legacy launchers no longer fail with
   `Add-Type` compilation errors
+
+## 2025-09-13
+- Route `/wiki` through Django to serve bundled help pages without 500 errors when FastAPI is bypassed

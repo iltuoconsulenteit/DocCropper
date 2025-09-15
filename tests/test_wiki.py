@@ -22,8 +22,8 @@ starlette_module = types.ModuleType("starlette")
 responses_module = types.ModuleType("starlette.responses")
 responses_module.RedirectResponse = DummyRedirectResponse
 starlette_module.responses = responses_module
-sys.modules.setdefault("starlette", starlette_module)
-sys.modules.setdefault("starlette.responses", responses_module)
+sys.modules["starlette"] = starlette_module
+sys.modules["starlette.responses"] = responses_module
 
 def dummy_get_asgi_application():
     async def app(scope, receive, send):
@@ -35,14 +35,16 @@ core_module = types.ModuleType("django.core")
 asgi_module = types.ModuleType("django.core.asgi")
 asgi_module.get_asgi_application = dummy_get_asgi_application
 exceptions_module = types.ModuleType("django.core.exceptions")
+
 class RequestAborted(Exception):
     pass
+
 exceptions_module.RequestAborted = RequestAborted
 
-sys.modules.setdefault("django", django_module)
-sys.modules.setdefault("django.core", core_module)
-sys.modules.setdefault("django.core.asgi", asgi_module)
-sys.modules.setdefault("django.core.exceptions", exceptions_module)
+sys.modules["django"] = django_module
+sys.modules["django.core"] = core_module
+sys.modules["django.core.asgi"] = asgi_module
+sys.modules["django.core.exceptions"] = exceptions_module
 
 # Stub the FastAPI app module
 fastapi_called = {}
@@ -53,9 +55,9 @@ services_module = types.ModuleType("services")
 api_module = types.ModuleType("services.api")
 app_module = types.ModuleType("services.api.app")
 app_module.app = fastapi_app
-sys.modules.setdefault("services", services_module)
-sys.modules.setdefault("services.api", api_module)
-sys.modules.setdefault("services.api.app", app_module)
+sys.modules["services"] = services_module
+sys.modules["services.api"] = api_module
+sys.modules["services.api.app"] = app_module
 
 # Remove standard 'platform' so our local package can be imported
 sys.modules.pop("platform", None)
