@@ -1375,8 +1375,6 @@ async def settings_login(data: dict = Body(...)):
     settings = load_settings()
     hashed = settings.get("settings_password_hash", "")
     if hashed and bcrypt.verify(password, hashed):
-        if bcrypt.verify(DEFAULT_SETTINGS_PASSWORD, hashed):
-            raise HTTPException(status_code=403, detail="Change default settings password")
         return {"status": "ok"}
     raise HTTPException(status_code=403, detail="Invalid password")
 
