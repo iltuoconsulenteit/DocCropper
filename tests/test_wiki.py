@@ -77,3 +77,8 @@ def test_wiki_routed_to_fastapi():
 
     asyncio.run(dispatcher({"path": "/wiki/it/index.html", "method": "GET"}, receive, send))
     assert fastapi_called["path"] == "/wiki/it/index.html"
+
+
+def test_wiki_mount_present():
+    content = Path("services/api/app.py").read_text()
+    assert 'NoCacheStaticFiles(directory=str(WIKI_DIR), html=True)' in content
