@@ -404,4 +404,8 @@
   `Add-Type` compilation errors
 
 ## 2025-09-13
+- Added an API endpoint that streams wiki pages as HTML with no-cache headers so help content can be embedded safely inside the UI
+- Replaced iframe-based wiki embeds in both interfaces with dynamic loaders that fetch from the new endpoint and handle in-app navigation
+
+## 2025-09-13
 - Route `/wiki` through Django to serve bundled help pages without 500 errors when FastAPI is bypassed

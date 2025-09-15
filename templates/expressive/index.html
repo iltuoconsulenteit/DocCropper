@@ -199,8 +199,13 @@
             </div>
           </div>
         </div>
-        <div x-show="tab==='guide'" class="p-4">
-          <iframe id="wikiFrame" :src="`/wiki/${lang}/index.html`" style="border:none;width:100%;height:80vh"></iframe>
+        <div x-show="tab==='guide'" class="p-4 space-y-4">
+          <div x-show="wikiLoading" class="text-sm text-gray-500" x-text="t('guideLoading')"></div>
+          <div x-show="wikiError" class="p-3 bg-red-100 text-red-700 text-sm rounded" x-text="wikiError"></div>
+          <div x-show="!wikiLoading && wikiContent" x-ref="wikiContainer" class="bg-white border border-gray-200 rounded shadow-inner p-4 overflow-y-auto max-h-[70vh] text-sm leading-relaxed space-y-3" x-html="wikiContent"></div>
+          <div x-show="!wikiLoading && wikiContent" class="text-right">
+            <button class="text-sm underline" @click="openWiki" x-text="t('openWiki')"></button>
+          </div>
         </div>
         <div x-show="tab==='updates'" class="p-4 space-y-2">
           <template x-for="(note, idx) in updates[lang]" :key="idx">
@@ -562,6 +567,8 @@
             navigation:'Navigation',
             files:'Files',
             guide:'Guide',
+            guideLoading:'Loading guide...',
+            guideFailed:'Unable to load the guide. Please try again.',
             updates:'Updates',
             tutorials:'Tutorials',
             purchase:'Purchase',
@@ -682,6 +689,8 @@
             navigation:'Navigazione',
             files:'File',
             guide:'Guida',
+            guideLoading:'Caricamento della guida...',
+            guideFailed:'Impossibile caricare la guida. Riprova.',
             updates:'Aggiornamenti',
             tutorials:'Tutorial',
             purchase:'Acquisto',
@@ -880,6 +889,11 @@
             it:[]
           },
           updateAvailable:false,
+          wikiContent:'',
+          wikiLoading:false,
+          wikiError:'',
+          wikiPage:'index.html',
+          _wikiListener:null,
           showUpdateModal:false,
           updatePin:'',
           updateAction:'update',
@@ -933,6 +947,57 @@
               .finally(()=>{ this.showUpdateModal=false; });
           },
           cancelUpdate(){ this.showUpdateModal=false; },
+          normalizeWikiPage(href){
+            if(!href) return 'index.html';
+            const base = href.split('#')[0].trim();
+            if(!base) return 'index.html';
+            return base.replace(/^\/+/, '');
+          },
+          async loadWiki(page='index.html'){
+            const target = this.normalizeWikiPage(page);
+            this.wikiPage = target || 'index.html';
+            this.wikiLoading = true;
+            this.wikiError = '';
+            this.wikiContent = '';
+            try {
+              const resp = await fetch(`/wiki-content/${this.lang}/${this.wikiPage}`);
+              if(!resp.ok){
+                throw new Error(`HTTP ${resp.status}`);
+              }
+              const html = await resp.text();
+              const parser = new DOMParser();
+              const doc = parser.parseFromString(html, 'text/html');
+              this.wikiContent = doc.body ? doc.body.innerHTML : html;
+              this.$nextTick(()=>{
+                const container = this.$refs.wikiContainer;
+                if(!container) return;
+                container.scrollTop = 0;
+                if(this._wikiListener){
+                  container.removeEventListener('click', this._wikiListener);
+                }
+                this._wikiListener = (event)=>{
+                  const anchor = event.target.closest('a[href]');
+                  if(!anchor) return;
+                  const href = anchor.getAttribute('href');
+                  if(!href || anchor.target === '_blank' || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('http')){
+                    return;
+                  }
+                  event.preventDefault();
+                  this.loadWiki(href);
+                };
+                container.addEventListener('click', this._wikiListener);
+              });
+            } catch (err){
+              console.error('Failed to load wiki', err);
+              this.wikiError = this.t('guideFailed');
+            } finally {
+              this.wikiLoading = false;
+            }
+          },
+          openWiki(){
+            const page = this.wikiPage || 'index.html';
+            window.open(`/wiki/${this.lang}/${page}`, '_blank', 'noopener');
+          },
           adjustSponsor(){
             this.$nextTick(()=>{
               const grid = this.$refs.fileGrid;
@@ -1072,6 +1137,9 @@
               case 'guide':
                 this.tab='guide';
                 this.showSlides=false;
+                if(!this.wikiContent || this.wikiError){
+                  this.loadWiki('index.html');
+                }
                 break;
               case 'updates':
                 this.tab='updates';
@@ -1097,6 +1165,13 @@
           setLang(){
             document.documentElement.lang = this.lang;
             this.refreshSlides();
+            if(this.tab === 'guide'){
+              this.loadWiki('index.html');
+            } else {
+              this.wikiContent='';
+              this.wikiError='';
+              this.wikiPage='index.html';
+            }
           },
           openSettings(){
             this.passwordInput='';

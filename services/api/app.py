@@ -49,6 +49,8 @@ import importlib
 import platform
 from types import SimpleNamespace
 
+from .wiki_content import read_wiki_content
+
 import bcrypt as _bcrypt
 if not hasattr(_bcrypt, "__about__"):
     _bcrypt.__about__ = SimpleNamespace(__version__=getattr(_bcrypt, "__version__", ""))
@@ -1302,6 +1304,23 @@ async def get_updates():
             elif line.startswith("- ") and current_date:
                 entries.append(f"{current_date}: {line[2:].strip()}")
     return {"en": entries, "it": entries}
+
+
+@app.get("/wiki-content/{lang}/", response_class=HTMLResponse)
+@app.get("/wiki-content/{lang}/{page:path}", response_class=HTMLResponse)
+async def wiki_content(lang: str, page: str = "index.html"):
+    try:
+        html = read_wiki_content(lang, page)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Page not found")
+
+    response = HTMLResponse(html)
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Content-Security-Policy"] = "frame-ancestors *"
+    return response
 
 
 @app.get("/update-check/")

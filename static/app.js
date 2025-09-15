@@ -170,7 +170,8 @@ const DEFAULT_PAYPAL = 'https://www.paypal.com/donate/?hosted_button_id=XGKVRL2Y
 const bannerBox = document.getElementById('brandArea');
 const closeBanner = document.getElementById('closeBanner');
 const sloganImg = document.getElementById('sloganImg');
-const wikiFrame = document.getElementById('wikiFrame');
+const wikiContent = document.getElementById('wikiContent');
+const wikiStatus = document.getElementById('wikiStatus');
 const openWikiLink = document.getElementById('openWikiLink');
 const sponsorBanner = document.getElementById('sponsorBanner');
 const sponsorBannerImg = document.getElementById('sponsorBannerImg');
@@ -319,6 +320,7 @@ let scanEnabled = false;
 let translations = {};
 let currentLang = window.DC_LANG || 'it';
 let currentSettings = {};
+let currentWikiPage = 'index.html';
 
 async function enumerateCameras() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
@@ -932,6 +934,19 @@ function updateGalleryLayout() {
     }
 }
 
+if (wikiContent) {
+    wikiContent.addEventListener('click', (event) => {
+        const anchor = event.target.closest('a[href]');
+        if (!anchor) return;
+        const href = anchor.getAttribute('href');
+        if (!href || anchor.target === '_blank' || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('http')) {
+            return;
+        }
+        event.preventDefault();
+        loadWiki(href);
+    });
+}
+
 if (layoutToggleBtn) {
     layoutToggleBtn.addEventListener('click', () => {
         galleryHorizontal = !galleryHorizontal;
@@ -998,15 +1013,62 @@ function applyTranslations() {
     if (autoDetectHint) {
         autoDetectHint.textContent = translations['autoHint'] || 'Double click to auto-detect';
     }
+    if (wikiStatus && wikiStatus.style.display !== 'none') {
+        if (wikiStatus.classList.contains('error')) {
+            wikiStatus.textContent = translations['guideFailed'] || wikiStatus.textContent;
+        } else {
+            wikiStatus.textContent = translations['guideLoading'] || wikiStatus.textContent;
+        }
+    }
     updateGalleryLayout();
     updateWikiLinks();
     startBannerRotation();
 }
 
 function updateWikiLinks() {
-    const url = `/wiki/${currentLang}/index.html`;
-    if (wikiFrame) wikiFrame.src = url;
-    if (openWikiLink) openWikiLink.href = url;
+    if (openWikiLink) openWikiLink.href = `/wiki/${currentLang}/${currentWikiPage}`;
+}
+
+function setWikiStatus(message = '', type = 'info') {
+    if (!wikiStatus) return;
+    wikiStatus.classList.remove('info', 'error');
+    if (!message) {
+        wikiStatus.style.display = 'none';
+        wikiStatus.textContent = '';
+        return;
+    }
+    wikiStatus.textContent = message;
+    wikiStatus.style.display = 'block';
+    wikiStatus.classList.add(type === 'error' ? 'error' : 'info');
+}
+
+function renderWiki(html) {
+    if (!wikiContent) return;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    wikiContent.innerHTML = doc.body ? doc.body.innerHTML : html;
+    wikiContent.scrollTop = 0;
+}
+
+async function loadWiki(page = 'index.html') {
+    if (!wikiContent) return;
+    const normalized = (page || 'index.html').split('#')[0].trim().replace(/^\/+/, '') || 'index.html';
+    currentWikiPage = normalized;
+    setWikiStatus(t('guideLoading'), 'info');
+    wikiContent.innerHTML = '';
+    try {
+        const resp = await fetch(`/wiki-content/${currentLang}/${normalized}`);
+        if (!resp.ok) {
+            throw new Error(`HTTP ${resp.status}`);
+        }
+        const html = await resp.text();
+        renderWiki(html);
+        updateWikiLinks();
+        setWikiStatus();
+    } catch (err) {
+        console.error('Failed to load wiki', err);
+        setWikiStatus(t('guideFailed'), 'error');
+    }
 }
 
 function updateBannerImage() {
@@ -2766,6 +2828,8 @@ langSelect.addEventListener('change', async () => {
     renderPaymentBox(currentSettings);
     renderLicenseBox();
     settingsBox.innerHTML = '';
+    currentWikiPage = 'index.html';
+    loadWiki(currentWikiPage);
     saveSettings({ language: currentLang });
 });
 
@@ -3678,6 +3742,8 @@ loadSettings().then(async (cfg) => {
     updateLayoutPreview();
     setupDeviceMode();
     updateInputMode();
+    currentWikiPage = 'index.html';
+    loadWiki(currentWikiPage);
     if (updateBell) {
         checkForUpdate();
         setInterval(checkForUpdate, updateInterval);
