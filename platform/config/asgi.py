@@ -39,6 +39,9 @@ class Dispatcher:
             scope["path"] = path[4:] or "/"
             await self.fastapi_app(scope, receive, send)
             return
+        if path.startswith("/wiki"):
+            await self.fastapi_app(scope, receive, send)
+            return
         try:
             await self.django_app(scope, receive, send)
         except RequestAborted:
