@@ -5,6 +5,7 @@
 - Route `/wiki` requests to the FastAPI app so built-in help pages load correctly
 - Skip unnecessary Windows dependency reinstalls by tracking `requirements.txt` hash
 - Embed wiki documentation inside the app via an iframe and serve it from absolute paths to avoid 500 errors
+- Forward `/settings` requests to FastAPI so the settings panel accepts the correct password
 
 ## 2025-09-09
 - Precompile Windows launcher wrappers during installation so first start doesn't fall back to PowerShell `Add-Type`

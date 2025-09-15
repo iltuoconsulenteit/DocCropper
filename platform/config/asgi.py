@@ -52,6 +52,9 @@ class Dispatcher:
         ):
             await self.fastapi_app(scope, receive, send)
             return
+        if path.startswith("/settings"):
+            await self.fastapi_app(scope, receive, send)
+            return
         if path.startswith("/wiki"):
             await self.fastapi_app(scope, receive, send)
             return
