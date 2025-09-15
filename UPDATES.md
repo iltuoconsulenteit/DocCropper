@@ -1,6 +1,7 @@
 # Updates
 
 ## 2025-09-15
+- Route mobile signing endpoints through FastAPI so shared links no longer 404
 - Route `/wiki` requests to the FastAPI app so built-in help pages load correctly
 - Skip unnecessary Windows dependency reinstalls by tracking `requirements.txt` hash
 - Embed wiki documentation inside the app via an iframe and serve it from absolute paths to avoid 500 errors
