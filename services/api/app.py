@@ -30,7 +30,10 @@ class NoCacheStaticFiles(StaticFiles):
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
             # Allow help pages like the wiki to be embedded in the UI
-            response.headers.pop("X-Frame-Options", None)
+            try:
+                del response.headers["X-Frame-Options"]
+            except KeyError:
+                pass
             response.headers["Content-Security-Policy"] = "frame-ancestors *"
         return response
 from fastapi.middleware.cors import CORSMiddleware
@@ -1357,7 +1360,10 @@ async def settings_login(data: dict = Body(...)):
     password = data.get("password", "")
     settings = load_settings()
     hashed = settings.get("settings_password_hash", "")
-    if hashed and bcrypt.verify(password, hashed):
+    if hashed:
+        if bcrypt.verify(password, hashed):
+            return {"status": "ok"}
+    elif password == DEFAULT_SETTINGS_PASSWORD:
         return {"status": "ok"}
     raise HTTPException(status_code=403, detail="Invalid password")
 

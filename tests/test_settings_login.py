@@ -14,7 +14,7 @@ for line in source[start:]:
     else:
         break
 func_src = "async def settings_login(data: dict = None):\n" + "\n".join(body_lines)
-# Compile the function in isolated namespace
+
 class HTTPException(Exception):
     def __init__(self, status_code, detail=""):
         self.status_code = status_code
@@ -31,25 +31,32 @@ class DummyBcrypt:
 bcrypt = DummyBcrypt()
 DEFAULT_SETTINGS_PASSWORD = '12345678'
 
-def load_settings():
-    return {'settings_password_hash': bcrypt.hash(DEFAULT_SETTINGS_PASSWORD)}
 
-ns = {
-    'bcrypt': bcrypt,
-    'DEFAULT_SETTINGS_PASSWORD': DEFAULT_SETTINGS_PASSWORD,
-    'load_settings': load_settings,
-    'HTTPException': HTTPException,
-}
-exec(func_src, ns)
-settings_login = ns['settings_login']
+def build_func(load_settings):
+    ns = {
+        'bcrypt': bcrypt,
+        'DEFAULT_SETTINGS_PASSWORD': DEFAULT_SETTINGS_PASSWORD,
+        'load_settings': load_settings,
+        'HTTPException': HTTPException,
+    }
+    exec(func_src, ns)
+    return ns['settings_login']
 
 
-def test_settings_login_accepts_default_password():
-    result = asyncio.run(settings_login({'password': '12345678'}))
+def test_settings_login_accepts_hashed_password():
+    func = build_func(lambda: {'settings_password_hash': bcrypt.hash(DEFAULT_SETTINGS_PASSWORD)})
+    result = asyncio.run(func({'password': '12345678'}))
+    assert result['status'] == 'ok'
+
+
+def test_settings_login_accepts_default_when_unset():
+    func = build_func(lambda: {})
+    result = asyncio.run(func({'password': '12345678'}))
     assert result['status'] == 'ok'
 
 
 def test_settings_login_rejects_wrong_password():
+    func = build_func(lambda: {})
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(settings_login({'password': 'wrong'}))
+        asyncio.run(func({'password': 'wrong'}))
     assert exc.value.status_code == 403

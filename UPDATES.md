@@ -8,6 +8,8 @@
 - Forward `/settings` requests to FastAPI so the settings panel accepts the correct password
 - Serve wiki pages via a dedicated `StaticFiles` mount to prevent internal server errors
 - Ask whether to reinstall Python dependencies or skip existing packages during startup
+- Remove unsupported header call in `NoCacheStaticFiles` that caused wiki 500 errors
+- Permit `/settings-login/` to accept the default password when no hash is set
 
 ## 2025-09-09
 - Precompile Windows launcher wrappers during installation so first start doesn't fall back to PowerShell `Add-Type`
