@@ -211,6 +211,7 @@ if exist requirements.txt (
     if /I "!CHOICE!"=="S" (
         if "!NEED_INSTALL!"=="0" (
             echo [INFO] Requisiti Python gia aggiornati >> "!LOG_FILE!"
+            set "DEPENDENCIES_OK=1"
         ) else (
             echo [INFO] Installazione dipendenze saltata >> "!LOG_FILE!"
         )
@@ -282,8 +283,8 @@ if exist requirements.txt (
 :: Launch application
 echo [INFO] Avvio DocCropper sulla porta %PORT% >> "!LOG_FILE!"
 set "DOCROPPER_PROC=DocCropper"
-set "LAUNCH_CMD=cmd /c \"\"!DOC_EXE!\" main.py --port %PORT% >> \"!LOG_FILE!\" 2^>^&1\""
-start "" /b !LAUNCH_CMD!
+set "LAUNCH_CMD=\"\"!DOC_EXE!\" main.py --port %PORT% >> \"!LOG_FILE!\" 2^^>^^&1\""
+start "" /b cmd /c !LAUNCH_CMD!
 set "DOCROPPER_PROC="
 
 set "SERVER_RUNNING=0"
