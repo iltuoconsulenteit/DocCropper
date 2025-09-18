@@ -1,6 +1,35 @@
 @echo off
 setlocal EnableDelayedExpansion
 
+set "AUTO_MODE=0"
+set "FORCED_DEPS_CHOICE="
+
+:parse_args
+if "%~1"=="" goto args_done
+if /I "%~1"=="--auto" (
+    set "AUTO_MODE=1"
+) else if /I "%~1"=="--deps=skip" (
+    set "FORCED_DEPS_CHOICE=S"
+) else if /I "%~1"=="--deps=s" (
+    set "FORCED_DEPS_CHOICE=S"
+) else if /I "%~1"=="--deps=missing" (
+    set "FORCED_DEPS_CHOICE=M"
+) else if /I "%~1"=="--deps=m" (
+    set "FORCED_DEPS_CHOICE=M"
+) else if /I "%~1"=="--deps=all" (
+    set "FORCED_DEPS_CHOICE=T"
+) else if /I "%~1"=="--deps=t" (
+    set "FORCED_DEPS_CHOICE=T"
+)
+shift
+goto parse_args
+
+:args_done
+
+if defined DOCROPPER_DEP_CHOICE (
+    if not defined FORCED_DEPS_CHOICE set "FORCED_DEPS_CHOICE=%DOCROPPER_DEP_CHOICE%"
+)
+
 :: Directory where this script resides
 set "SCRIPT_DIR=%~dp0"
 
@@ -124,13 +153,38 @@ if exist requirements.txt (
         )
     )
     set "CHOICE="
-    set /p CHOICE=Gestione dipendenze Python - (S)alta, (M)ancanti, (T)utte [!DEFAULT_CHOICE!]:
-    if "!CHOICE!"=="" set "CHOICE=!DEFAULT_CHOICE!"
+    set "CHOICE_SOURCE="
+    if defined FORCED_DEPS_CHOICE (
+        set "CHOICE=!FORCED_DEPS_CHOICE!"
+        set "CHOICE_SOURCE=forced"
+    )
+    if not defined CHOICE if "!AUTO_MODE!"=="1" (
+        if "!NEED_INSTALL!"=="0" (
+            set "CHOICE=S"
+            set "CHOICE_SOURCE=auto-skip"
+        ) else (
+            set "CHOICE=M"
+            set "CHOICE_SOURCE=auto-missing"
+        )
+    )
+    if not defined CHOICE (
+        set /p CHOICE=Gestione dipendenze Python - (S)alta, (M)ancanti, (T)utte [!DEFAULT_CHOICE!]:
+        if "!CHOICE!"=="" set "CHOICE=!DEFAULT_CHOICE!"
+        set "CHOICE_SOURCE=prompt"
+    )
+    set "CHOICE=!CHOICE:~0,1!"
+    if /I "!CHOICE_SOURCE!"=="forced" (
+        echo [INFO] Gestione dipendenze forzata: !CHOICE! >> "!LOG_FILE!"
+    ) else if /I "!CHOICE_SOURCE!"=="auto-skip" (
+        echo [INFO] Modalita automatica: requisiti invariati, salto installazione >> "!LOG_FILE!"
+    ) else if /I "!CHOICE_SOURCE!"=="auto-missing" (
+        echo [INFO] Modalita automatica: aggiorno solo pacchetti mancanti/obsoleti >> "!LOG_FILE!"
+    )
     if /I "!CHOICE!"=="S" (
         if "!NEED_INSTALL!"=="0" (
             echo [INFO] Requisiti Python gia aggiornati >> "!LOG_FILE!"
         ) else (
-            echo [INFO] Installazione dipendenze saltata dall'utente >> "!LOG_FILE!"
+            echo [INFO] Installazione dipendenze saltata >> "!LOG_FILE!"
         )
     ) else if /I "!CHOICE!"=="T" (
         "%PY%" -m pip install --upgrade --force-reinstall -r requirements.txt >> "!LOG_FILE!" 2>&1
