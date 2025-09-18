@@ -13,8 +13,18 @@ import sys
 from importlib import metadata
 from pathlib import Path
 
-from packaging.requirements import Requirement
-from packaging.markers import default_environment
+from typing import Any
+
+try:  # pragma: no cover - exercised in integration tests
+    from packaging.requirements import Requirement  # type: ignore
+    from packaging.markers import default_environment  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - Windows embeddable Python may miss packaging
+    try:
+        from pip._vendor.packaging.requirements import Requirement  # type: ignore
+        from pip._vendor.packaging.markers import default_environment  # type: ignore
+    except ModuleNotFoundError:  # pragma: no cover - extremely unlikely
+        Requirement = None  # type: ignore
+        default_environment = None  # type: ignore
 
 
 def parse_args() -> argparse.Namespace:
@@ -29,7 +39,12 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def requirement_applies(req: Requirement) -> bool:
+PACKAGING_AVAILABLE = Requirement is not None and default_environment is not None
+
+
+def requirement_applies(req: Any) -> bool:
+    if not PACKAGING_AVAILABLE:
+        return True
     if req.marker is None:
         return True
     try:
@@ -39,7 +54,9 @@ def requirement_applies(req: Requirement) -> bool:
     return req.marker.evaluate(env)
 
 
-def needs_install(req: Requirement) -> bool:
+def needs_install(req: Any) -> bool:
+    if not PACKAGING_AVAILABLE:
+        return True
     if not requirement_applies(req):
         return False
     try:
@@ -58,6 +75,13 @@ def main() -> int:
 
     if not requirements_path.exists():
         print(f"[ensure] requirements file not found: {requirements_path}", file=sys.stderr)
+        return 1
+
+    if Requirement is None:
+        print(
+            "[ensure] packaging module unavailable; cannot analyze requirements",
+            file=sys.stderr,
+        )
         return 1
 
     lines_to_install: list[str] = []
