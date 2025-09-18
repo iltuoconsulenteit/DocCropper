@@ -414,3 +414,7 @@
 - Store the settings panel password in plain text alongside its hash so the default `12345678` works reliably and can be changed without bcrypt issues
 - Ask once before installing Windows dependencies, letting admins skip, update missing packages, or force a full reinstall during startup and upgrades
 - Fall back to a maintained Python embeddable version when downloads fail and validate the configured version before attempting installation
+
+## 2025-09-14
+- Startup and installer scripts now leave matching Python packages untouched so upgrades only reinstall dependencies when explicitly requested
+- Windows installer detects the operating system architecture before downloading the embeddable Python runtime, preventing 404 errors on 32-bit or ARM64 hosts

@@ -370,7 +370,7 @@ if exist requirements.txt (
             echo !REQ_HASH!>"!HASH_FILE!"
         )
     ) else (
-        "!PYTHON_CMD!" -m pip install --upgrade -r requirements.txt >>"%LOG_FILE%" 2>&1
+        "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
         if errorlevel 1 (
             call :log "Aggiornamento pacchetti fallito"
         ) else (
@@ -421,12 +421,18 @@ call :log "Python !PY_VER! not found. Downloading embeddable runtime..."
 set "PY_SUCCESS="
 set "PY_ATTEMPTS=!PY_VER!"
 if defined PY_DEFAULT if /I not "!PY_VER!"=="!PY_DEFAULT!" set "PY_ATTEMPTS=!PY_ATTEMPTS! !PY_DEFAULT!"
+set "ARCH_SOURCE=%PROCESSOR_ARCHITEW6432%"
+if not defined ARCH_SOURCE set "ARCH_SOURCE=%PROCESSOR_ARCHITECTURE%"
+set "PY_ARCH=amd64"
+if /I "!ARCH_SOURCE!"=="x86" set "PY_ARCH=win32"
+if /I "!ARCH_SOURCE!"=="arm64" set "PY_ARCH=arm64"
+if /I "!ARCH_SOURCE!"=="arm" set "PY_ARCH=arm64"
 for %%V in (!PY_ATTEMPTS!) do (
     if not defined PY_SUCCESS (
         set "PY_CANDIDATE=%%~V"
         if not "!PY_CANDIDATE!"=="" (
-            set "PY_ZIP=python-!PY_CANDIDATE!-embed-amd64.zip"
-            call :log "Downloading Python !PY_CANDIDATE! embeddable runtime..."
+            set "PY_ZIP=python-!PY_CANDIDATE!-embed-!PY_ARCH!.zip"
+            call :log "Downloading Python !PY_CANDIDATE! embeddable runtime (!PY_ARCH!)..."
             if not exist "%TEMP%" mkdir "%TEMP%"
             powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/!PY_CANDIDATE!/!PY_ZIP!' -OutFile '%TEMP%\!PY_ZIP!'" >>"%LOG_FILE%" 2>&1
             if exist "%TEMP%\!PY_ZIP!" (

@@ -194,7 +194,7 @@ if exist requirements.txt (
             echo !REQ_HASH!>"!HASH_FILE!"
         )
     ) else (
-        "%PY%" -m pip install --upgrade -r requirements.txt >> "!LOG_FILE!" 2>&1
+        "%PY%" -m pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
         if errorlevel 1 (
             echo [WARN] Aggiornamento pacchetti fallito >> "!LOG_FILE!"
         ) else (
