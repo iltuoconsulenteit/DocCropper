@@ -209,8 +209,30 @@ if exist requirements.txt (
 :: Launch application
 echo [INFO] Avvio DocCropper sulla porta %PORT% >> "!LOG_FILE!"
 set "DOCROPPER_PROC=DocCropper"
-start "" /b "!DOC_EXE!" main.py --port %PORT% >> "!LOG_FILE!" 2>&1
+set "LAUNCH_CMD=cmd /c \"\"!DOC_EXE!\" main.py --port %PORT% >> \"!LOG_FILE!\" 2^>^&1\""
+start "" /b !LAUNCH_CMD!
 set "DOCROPPER_PROC="
+
+set "SERVER_RUNNING=0"
+set "WAIT_ITER=0"
+:wait_for_pid
+if exist "!PID_FILE!" (
+    for /f %%p in (!PID_FILE!) do set "PID=%%p"
+    set "SERVER_RUNNING=1"
+    goto server_status_known
+)
+set /a WAIT_ITER+=1
+if "!WAIT_ITER!" GEQ "15" goto server_status_known
+ping -n 2 127.0.0.1 >nul
+goto wait_for_pid
+
+:server_status_known
+if "!SERVER_RUNNING!"=="0" (
+    echo [ERROR] Nessun PID rilevato, controlla il log: %LOG_FILE% >> "!LOG_FILE!"
+    echo ❌ ERRORE: esecuzione fallita! Vedi log: %LOG_FILE%
+    goto finish
+)
+
 if "%DOCROPPER_TUNNEL%"=="true" (
     where cloudflared >nul 2>&1 && (
         echo Starting Cloudflare Tunnel... >> "!LOG_FILE!"
@@ -218,12 +240,9 @@ if "%DOCROPPER_TUNNEL%"=="true" (
     )
 )
 
-if errorlevel 1 (
-    echo ❌ ERRORE: esecuzione fallita! Vedi log: %LOG_FILE%
-) else (
-    echo ✅ Avvio completato. Apri %OPEN_URL%
-    start "" "%OPEN_URL%"
-)
+echo [INFO] DocCropper avviato con PID !PID! >> "!LOG_FILE!"
+echo ✅ Avvio completato. Apri %OPEN_URL%
+start "" "%OPEN_URL%"
 
 goto finish
 
