@@ -382,6 +382,7 @@ if exist requirements.txt (
     set /p CHOICE=Gestione dipendenze Python - (S)alta, (M)ancanti, (T)utte [!DEFAULT_CHOICE!]:
     if "!CHOICE!"=="" set "CHOICE=!DEFAULT_CHOICE!"
     set "INSTALL_DONE=0"
+    set "RAN_PIP_INSTALL=0"
     if /I "!CHOICE!"=="S" (
         if "!NEED_INSTALL!"=="0" (
             call :log "Requisiti Python gia aggiornati"
@@ -394,20 +395,64 @@ if exist requirements.txt (
             call :log "Reinstallazione completa dei pacchetti fallita"
         ) else (
             set "INSTALL_DONE=1"
-            echo(!REQ_HASH!>"!HASH_FILE!"
-            if not exist "!HASH_FILE!" call :log "Impossibile salvare l'hash in !HASH_FILE!"
+            set "RAN_PIP_INSTALL=1"
         )
     ) else (
-        "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
-        if errorlevel 1 (
-            call :log "Aggiornamento pacchetti fallito"
+        set "ENSURE_SCRIPT=!APP_DIR!\scripts\ensure_requirements.py"
+        set "TEMP_REQ=%TEMP%\doccropper_requirements_install.txt"
+        if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
+        if exist "!ENSURE_SCRIPT!" (
+            "!PYTHON_CMD!" "!ENSURE_SCRIPT!" requirements.txt --output "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
+            if errorlevel 1 (
+                call :log "Controllo dipendenze fallito, eseguo installazione completa"
+                "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
+                if errorlevel 1 (
+                    call :log "Aggiornamento pacchetti fallito"
+                ) else (
+                    set "INSTALL_DONE=1"
+                    set "RAN_PIP_INSTALL=1"
+                )
+            ) else (
+                set "NEEDS_TARGETED=0"
+                if exist "!TEMP_REQ!" (
+                    for %%I in ("!TEMP_REQ!") do if %%~zI GTR 0 set "NEEDS_TARGETED=1"
+                )
+                if "!NEEDS_TARGETED!"=="1" (
+                    "!PYTHON_CMD!" -m pip install -r "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
+                    if errorlevel 1 (
+                        call :log "Aggiornamento mirato fallito, eseguo installazione completa"
+                        "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
+                        if errorlevel 1 (
+                            call :log "Aggiornamento pacchetti fallito"
+                        ) else (
+                            set "INSTALL_DONE=1"
+                            set "RAN_PIP_INSTALL=1"
+                        )
+                    ) else (
+                        set "INSTALL_DONE=1"
+                        set "RAN_PIP_INSTALL=1"
+                    )
+                ) else (
+                    call :log "Tutti i pacchetti richiesti sono gia installati"
+                    set "INSTALL_DONE=1"
+                )
+            )
         ) else (
-            set "INSTALL_DONE=1"
-            echo(!REQ_HASH!>"!HASH_FILE!"
-            if not exist "!HASH_FILE!" call :log "Impossibile salvare l'hash in !HASH_FILE!"
+            "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
+            if errorlevel 1 (
+                call :log "Aggiornamento pacchetti fallito"
+            ) else (
+                set "INSTALL_DONE=1"
+                set "RAN_PIP_INSTALL=1"
+            )
         )
+        if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
     )
-    if "!INSTALL_DONE!"=="1" if exist "!PY_DIR!\Scripts\pywin32_postinstall.py" (
+    if "!INSTALL_DONE!"=="1" (
+        echo(!REQ_HASH!>"!HASH_FILE!"
+        if not exist "!HASH_FILE!" call :log "Impossibile salvare l'hash in !HASH_FILE!"
+    )
+    if "!RAN_PIP_INSTALL!"=="1" if exist "!PY_DIR!\Scripts\pywin32_postinstall.py" (
         call :log "Running pywin32 postinstall..."
         "!PYTHON_CMD!" "!PY_DIR!\Scripts\pywin32_postinstall.py" -install >>"%LOG_FILE%" 2>&1
     )

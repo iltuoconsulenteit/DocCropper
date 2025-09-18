@@ -207,6 +207,7 @@ if exist requirements.txt (
     ) else if /I "!CHOICE_SOURCE!"=="auto-missing" (
         echo [INFO] Modalita automatica: aggiorno solo pacchetti mancanti/obsoleti >> "!LOG_FILE!"
     )
+    set "DEPENDENCIES_OK=0"
     if /I "!CHOICE!"=="S" (
         if "!NEED_INSTALL!"=="0" (
             echo [INFO] Requisiti Python gia aggiornati >> "!LOG_FILE!"
@@ -218,20 +219,59 @@ if exist requirements.txt (
         if errorlevel 1 (
             echo [WARN] Reinstallazione completa dei pacchetti fallita >> "!LOG_FILE!"
         ) else (
-            echo(!REQ_HASH!>"!HASH_FILE!"
-            if not exist "!HASH_FILE!" (
-                echo [WARN] Impossibile salvare l'hash in !HASH_FILE! >> "!LOG_FILE!"
-            )
+            set "DEPENDENCIES_OK=1"
         )
     ) else (
-        "%PY%" -m pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
-        if errorlevel 1 (
-            echo [WARN] Aggiornamento pacchetti fallito >> "!LOG_FILE!"
-        ) else (
-            echo(!REQ_HASH!>"!HASH_FILE!"
-            if not exist "!HASH_FILE!" (
-                echo [WARN] Impossibile salvare l'hash in !HASH_FILE! >> "!LOG_FILE!"
+        set "ENSURE_SCRIPT=!APP_DIR!\scripts\ensure_requirements.py"
+        set "TEMP_REQ=%TEMP%\doccropper_requirements_install.txt"
+        if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
+        if exist "!ENSURE_SCRIPT!" (
+            "%PY%" "!ENSURE_SCRIPT!" requirements.txt --output "!TEMP_REQ!" >> "!LOG_FILE!" 2>&1
+            if errorlevel 1 (
+                echo [WARN] Controllo dipendenze fallito, eseguo installazione completa >> "!LOG_FILE!"
+                "%PY%" -m pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
+                if errorlevel 1 (
+                    echo [WARN] Aggiornamento pacchetti fallito >> "!LOG_FILE!"
+                ) else (
+                    set "DEPENDENCIES_OK=1"
+                )
+            ) else (
+                set "NEEDS_TARGETED=0"
+                if exist "!TEMP_REQ!" (
+                    for %%I in ("!TEMP_REQ!") do if %%~zI GTR 0 set "NEEDS_TARGETED=1"
+                )
+                if "!NEEDS_TARGETED!"=="1" (
+                    "%PY%" -m pip install -r "!TEMP_REQ!" >> "!LOG_FILE!" 2>&1
+                    if errorlevel 1 (
+                        echo [WARN] Aggiornamento mirato fallito, eseguo installazione completa >> "!LOG_FILE!"
+                        "%PY%" -m pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
+                        if errorlevel 1 (
+                            echo [WARN] Aggiornamento pacchetti fallito >> "!LOG_FILE!"
+                        ) else (
+                            set "DEPENDENCIES_OK=1"
+                        )
+                    ) else (
+                        set "DEPENDENCIES_OK=1"
+                    )
+                ) else (
+                    echo [INFO] Tutti i pacchetti richiesti sono gia installati >> "!LOG_FILE!"
+                    set "DEPENDENCIES_OK=1"
+                )
             )
+        ) else (
+            "%PY%" -m pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
+            if errorlevel 1 (
+                echo [WARN] Aggiornamento pacchetti fallito >> "!LOG_FILE!"
+            ) else (
+                set "DEPENDENCIES_OK=1"
+            )
+        )
+        if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
+    )
+    if "!DEPENDENCIES_OK!"=="1" (
+        echo(!REQ_HASH!>"!HASH_FILE!"
+        if not exist "!HASH_FILE!" (
+            echo [WARN] Impossibile salvare l'hash in !HASH_FILE! >> "!LOG_FILE!"
         )
     )
 )
