@@ -60,3 +60,12 @@ def test_falls_back_to_pip_vendor_packaging(tmp_path):
 
     assert result.returncode == 0
     assert output_path.read_text(encoding="utf-8") == ""
+
+
+def test_uses_pip_list_when_metadata_missing(tmp_path):
+    env = {"ENSURE_REQUIREMENTS_USE_PIP_LIST": "1"}
+
+    result, output_path = run_helper(tmp_path, "pip\n", env)
+
+    assert result.returncode == 0
+    assert output_path.read_text(encoding="utf-8") == ""

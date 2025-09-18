@@ -9,6 +9,9 @@ just the missing or out-of-spec packages instead of forcing reinstallations.
 from __future__ import annotations
 
 import argparse
+import json
+import os
+import subprocess
 import sys
 from importlib import metadata
 from pathlib import Path
@@ -18,13 +21,16 @@ from typing import Any
 try:  # pragma: no cover - exercised in integration tests
     from packaging.requirements import Requirement  # type: ignore
     from packaging.markers import default_environment  # type: ignore
+    from packaging.utils import canonicalize_name  # type: ignore
 except ModuleNotFoundError:  # pragma: no cover - Windows embeddable Python may miss packaging
     try:
         from pip._vendor.packaging.requirements import Requirement  # type: ignore
         from pip._vendor.packaging.markers import default_environment  # type: ignore
+        from pip._vendor.packaging.utils import canonicalize_name  # type: ignore
     except ModuleNotFoundError:  # pragma: no cover - extremely unlikely
         Requirement = None  # type: ignore
         default_environment = None  # type: ignore
+        canonicalize_name = None  # type: ignore
 
 
 def parse_args() -> argparse.Namespace:
@@ -40,6 +46,11 @@ def parse_args() -> argparse.Namespace:
 
 
 PACKAGING_AVAILABLE = Requirement is not None and default_environment is not None
+
+_INSTALLED_CACHE: dict[str, str] = {}
+_METADATA_SCANNED = False
+_PIP_LIST_SCANNED = False
+_USE_PIP_ONLY = os.environ.get("ENSURE_REQUIREMENTS_USE_PIP_LIST") == "1"
 
 
 def requirement_applies(req: Any) -> bool:
@@ -59,13 +70,98 @@ def needs_install(req: Any) -> bool:
         return True
     if not requirement_applies(req):
         return False
-    try:
-        installed_version = metadata.version(req.name)
-    except metadata.PackageNotFoundError:
+    installed_version = lookup_installed(req.name)
+    if installed_version is None:
         return True
     if not req.specifier:
         return False
     return not req.specifier.contains(installed_version, prereleases=True)
+
+
+def lookup_installed(name: str) -> str | None:
+    """Return the installed version for *name* if available."""
+
+    if canonicalize_name is None:  # pragma: no cover - packaging unavailable
+        normalized = name.lower().replace("_", "-")
+    else:
+        normalized = canonicalize_name(name)
+
+    cached = _INSTALLED_CACHE.get(normalized)
+    if cached is not None:
+        return cached
+
+    if not _USE_PIP_ONLY:
+        try:
+            version = metadata.version(name)
+        except metadata.PackageNotFoundError:
+            version = None
+        except Exception:  # pragma: no cover - defensive
+            version = None
+        if version is not None:
+            _INSTALLED_CACHE[normalized] = version
+            return version
+
+        _populate_from_metadata()
+        cached = _INSTALLED_CACHE.get(normalized)
+        if cached is not None:
+            return cached
+
+    _populate_from_pip()
+    return _INSTALLED_CACHE.get(normalized)
+
+
+def _populate_from_metadata() -> None:
+    global _METADATA_SCANNED
+    if _METADATA_SCANNED or _USE_PIP_ONLY:
+        return
+    _METADATA_SCANNED = True
+    try:
+        for dist in metadata.distributions():
+            name = dist.metadata.get("Name")
+            if not name:
+                continue
+            if canonicalize_name is None:  # pragma: no cover
+                normalized = name.lower().replace("_", "-")
+            else:
+                normalized = canonicalize_name(name)
+            _INSTALLED_CACHE[normalized] = dist.version
+    except Exception:  # pragma: no cover - safety net
+        pass
+
+
+def _populate_from_pip() -> None:
+    global _PIP_LIST_SCANNED
+    if _PIP_LIST_SCANNED:
+        return
+    _PIP_LIST_SCANNED = True
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "list", "--format", "json"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:  # pragma: no cover - interpreter missing pip module
+        return
+
+    if result.returncode != 0:
+        return
+
+    try:
+        entries = json.loads(result.stdout)
+    except json.JSONDecodeError:  # pragma: no cover - pip emitted unexpected text
+        return
+
+    for entry in entries:
+        name = entry.get("name")
+        version = entry.get("version")
+        if not name or not version:
+            continue
+        if canonicalize_name is None:  # pragma: no cover
+            normalized = name.lower().replace("_", "-")
+        else:
+            normalized = canonicalize_name(name)
+        _INSTALLED_CACHE.setdefault(normalized, version)
 
 
 def main() -> int:
