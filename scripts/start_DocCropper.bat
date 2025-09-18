@@ -142,11 +142,38 @@ if exist requirements.txt (
     echo [INFO] Aggiornamento dipendenze Python >> "!LOG_FILE!"
     "%PY%" -m pip install --upgrade pip >> "!LOG_FILE!" 2>&1
     for /f "delims=" %%h in ('certutil -hashfile requirements.txt MD5 ^| find /i /v "hash" ^| find /i /v "CertUtil"') do set "REQ_HASH=%%h"
-    set "HASH_FILE=!PY_DIR!\requirements.hash"
+    set "OLD_HASH_FILE=!PY_DIR!\requirements.hash"
+    set "HASH_ROOT="
+    if defined DOCROPPER_HASH_DIR (
+        set "HASH_ROOT=%DOCROPPER_HASH_DIR%"
+    ) else (
+        if defined LOCALAPPDATA set "HASH_ROOT=%LOCALAPPDATA%\DocCropper"
+        if not defined HASH_ROOT if defined APPDATA set "HASH_ROOT=%APPDATA%\DocCropper"
+        if not defined HASH_ROOT set "HASH_ROOT=%TEMP%\DocCropper"
+    )
+    if not exist "!HASH_ROOT!" (
+        mkdir "!HASH_ROOT!" >nul 2>&1
+        if errorlevel 1 (
+            set "HASH_ROOT=%TEMP%\DocCropper"
+            if not exist "!HASH_ROOT!" mkdir "!HASH_ROOT!" >nul 2>&1
+        )
+    )
+    set "HASH_FILE=!HASH_ROOT!\requirements.hash"
     set "NEED_INSTALL=1"
     set "DEFAULT_CHOICE=M"
+    set "EXISTING_HASH="
     if exist "!HASH_FILE!" (
         set /p EXISTING_HASH=<"!HASH_FILE!"
+    ) else if exist "!OLD_HASH_FILE!" (
+        set /p EXISTING_HASH=<"!OLD_HASH_FILE!"
+        copy /y "!OLD_HASH_FILE!" "!HASH_FILE!" >nul 2>&1
+        if errorlevel 1 (
+            echo [WARN] Impossibile migrare il file hash in !HASH_FILE! >> "!LOG_FILE!"
+        ) else (
+            echo [INFO] Migrazione hash dipendenze in !HASH_FILE! >> "!LOG_FILE!"
+        )
+    )
+    if defined EXISTING_HASH (
         if /I "!EXISTING_HASH!"=="!REQ_HASH!" (
             set "NEED_INSTALL=0"
             set "DEFAULT_CHOICE=S"
@@ -191,14 +218,20 @@ if exist requirements.txt (
         if errorlevel 1 (
             echo [WARN] Reinstallazione completa dei pacchetti fallita >> "!LOG_FILE!"
         ) else (
-            echo !REQ_HASH!>"!HASH_FILE!"
+            echo(!REQ_HASH!>"!HASH_FILE!"
+            if not exist "!HASH_FILE!" (
+                echo [WARN] Impossibile salvare l'hash in !HASH_FILE! >> "!LOG_FILE!"
+            )
         )
     ) else (
         "%PY%" -m pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
         if errorlevel 1 (
             echo [WARN] Aggiornamento pacchetti fallito >> "!LOG_FILE!"
         ) else (
-            echo !REQ_HASH!>"!HASH_FILE!"
+            echo(!REQ_HASH!>"!HASH_FILE!"
+            if not exist "!HASH_FILE!" (
+                echo [WARN] Impossibile salvare l'hash in !HASH_FILE! >> "!LOG_FILE!"
+            )
         )
     )
 )

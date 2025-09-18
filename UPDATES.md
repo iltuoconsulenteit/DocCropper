@@ -418,3 +418,4 @@
 ## 2025-09-14
 - Startup and installer scripts now leave matching Python packages untouched so upgrades only reinstall dependencies when explicitly requested
 - Windows installer detects the operating system architecture before downloading the embeddable Python runtime, preventing 404 errors on 32-bit or ARM64 hosts
+- Store dependency hashes under the user profile (or `%TEMP%`) so Windows upgrades can skip reinstalling packages even when `Program Files` is read-only

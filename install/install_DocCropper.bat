@@ -341,11 +341,38 @@ if exist requirements.txt (
     call :log "Installing Python packages..."
     "!PYTHON_CMD!" -m pip install --upgrade pip >>"%LOG_FILE%" 2>&1
     for /f "delims=" %%h in ('certutil -hashfile requirements.txt MD5 ^| find /i /v "hash" ^| find /i /v "CertUtil"') do set "REQ_HASH=%%h"
-    set "HASH_FILE=!PY_DIR!\requirements.hash"
+    set "OLD_HASH_FILE=!PY_DIR!\requirements.hash"
+    set "HASH_ROOT="
+    if defined DOCROPPER_HASH_DIR (
+        set "HASH_ROOT=%DOCROPPER_HASH_DIR%"
+    ) else (
+        if defined LOCALAPPDATA set "HASH_ROOT=%LOCALAPPDATA%\DocCropper"
+        if not defined HASH_ROOT if defined APPDATA set "HASH_ROOT=%APPDATA%\DocCropper"
+        if not defined HASH_ROOT set "HASH_ROOT=%TEMP%\DocCropper"
+    )
+    if not exist "!HASH_ROOT!" (
+        mkdir "!HASH_ROOT!" >nul 2>&1
+        if errorlevel 1 (
+            set "HASH_ROOT=%TEMP%\DocCropper"
+            if not exist "!HASH_ROOT!" mkdir "!HASH_ROOT!" >nul 2>&1
+        )
+    )
+    set "HASH_FILE=!HASH_ROOT!\requirements.hash"
     set "NEED_INSTALL=1"
     set "DEFAULT_CHOICE=M"
+    set "EXISTING_HASH="
     if exist "!HASH_FILE!" (
         set /p EXISTING_HASH=<"!HASH_FILE!"
+    ) else if exist "!OLD_HASH_FILE!" (
+        set /p EXISTING_HASH=<"!OLD_HASH_FILE!"
+        copy /y "!OLD_HASH_FILE!" "!HASH_FILE!" >nul 2>&1
+        if errorlevel 1 (
+            call :log "Impossibile migrare il file hash in !HASH_FILE!"
+        ) else (
+            call :log "Migrazione hash dipendenze in !HASH_FILE!"
+        )
+    )
+    if defined EXISTING_HASH (
         if /I "!EXISTING_HASH!"=="!REQ_HASH!" (
             set "NEED_INSTALL=0"
             set "DEFAULT_CHOICE=S"
@@ -367,7 +394,8 @@ if exist requirements.txt (
             call :log "Reinstallazione completa dei pacchetti fallita"
         ) else (
             set "INSTALL_DONE=1"
-            echo !REQ_HASH!>"!HASH_FILE!"
+            echo(!REQ_HASH!>"!HASH_FILE!"
+            if not exist "!HASH_FILE!" call :log "Impossibile salvare l'hash in !HASH_FILE!"
         )
     ) else (
         "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
@@ -375,7 +403,8 @@ if exist requirements.txt (
             call :log "Aggiornamento pacchetti fallito"
         ) else (
             set "INSTALL_DONE=1"
-            echo !REQ_HASH!>"!HASH_FILE!"
+            echo(!REQ_HASH!>"!HASH_FILE!"
+            if not exist "!HASH_FILE!" call :log "Impossibile salvare l'hash in !HASH_FILE!"
         )
     )
     if "!INSTALL_DONE!"=="1" if exist "!PY_DIR!\Scripts\pywin32_postinstall.py" (
