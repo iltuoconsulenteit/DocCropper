@@ -442,13 +442,13 @@ if exist requirements.txt (
                     set "INSTALL_DONE=1"
                 )
             )
+        ) else (
+            call :prepare_pip
+            "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
+            if errorlevel 1 (
+                call :log "Aggiornamento pacchetti fallito"
             ) else (
-                call :prepare_pip
-                "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
-                if errorlevel 1 (
-                    call :log "Aggiornamento pacchetti fallito"
-                ) else (
-                    set "INSTALL_DONE=1"
+                set "INSTALL_DONE=1"
                 set "RAN_PIP_INSTALL=1"
             )
         )
