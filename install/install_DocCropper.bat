@@ -308,6 +308,14 @@ call :log "Required Python version: !PY_VER!"
 
 rem Ensure Python runtime is available
 call :ensure_python || exit /b 1
+if not defined PYTHON_CMD (
+    call :log "Percorso dell'interprete Python non disponibile"
+    exit /b 1
+)
+if not exist "!PYTHON_CMD!" (
+    call :log "Interprete Python mancante: !PYTHON_CMD!"
+    exit /b 1
+)
 
 for /f "tokens=1,2 delims=." %%A in ("!PY_VER!") do set "PY_SHORT=%%A%%B"
 
@@ -391,6 +399,7 @@ if exist requirements.txt (
         )
     ) else if /I "!CHOICE!"=="T" (
         call :prepare_pip
+        if errorlevel 1 goto pip_error
         "!PYTHON_CMD!" -m pip install --upgrade --force-reinstall -r requirements.txt >>"%LOG_FILE%" 2>&1
         if errorlevel 1 (
             call :log "Reinstallazione completa dei pacchetti fallita"
@@ -404,10 +413,12 @@ if exist requirements.txt (
         if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
         if exist "!ENSURE_SCRIPT!" (
             call :prepare_pip
+            if errorlevel 1 goto pip_error
             "!PYTHON_CMD!" "!ENSURE_SCRIPT!" requirements.txt --output "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
             if errorlevel 1 (
                 call :log "Controllo dipendenze fallito, eseguo installazione completa"
                 call :prepare_pip
+                if errorlevel 1 goto pip_error
                 "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
                 if errorlevel 1 (
                     call :log "Aggiornamento pacchetti fallito"
@@ -422,10 +433,12 @@ if exist requirements.txt (
                 )
                 if "!NEEDS_TARGETED!"=="1" (
                     call :prepare_pip
+                    if errorlevel 1 goto pip_error
                     "!PYTHON_CMD!" -m pip install -r "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
                     if errorlevel 1 (
                         call :log "Aggiornamento mirato fallito, eseguo installazione completa"
                         call :prepare_pip
+                        if errorlevel 1 goto pip_error
                         "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
                         if errorlevel 1 (
                             call :log "Aggiornamento pacchetti fallito"
@@ -444,6 +457,7 @@ if exist requirements.txt (
             )
         ) else (
             call :prepare_pip
+            if errorlevel 1 goto pip_error
             "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
             if errorlevel 1 (
                 call :log "Aggiornamento pacchetti fallito"
@@ -475,9 +489,25 @@ call :log "Wrapper executables are no longer required; skipping compilation step
 
 exit /b 0
 
+:pip_error
+call :log "Impossibile aggiornare pip: controllare l'installazione di Python"
+exit /b 1
+
 :prepare_pip
 if "%PIP_PREPARED%"=="1" exit /b 0
+if not defined PYTHON_CMD (
+    call :log "Variabile PYTHON_CMD non definita"
+    exit /b 1
+)
+if not exist "!PYTHON_CMD!" (
+    call :log "Percorso Python inesistente: !PYTHON_CMD!"
+    exit /b 1
+)
 "!PYTHON_CMD!" -m pip install --upgrade pip >>"%LOG_FILE%" 2>&1
+if errorlevel 1 (
+    call :log "Aggiornamento di pip non riuscito"
+    exit /b 1
+)
 set "PIP_PREPARED=1"
 exit /b 0
 
