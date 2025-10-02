@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import os
 import subprocess
+import time
 import sys
 from pathlib import Path
 
@@ -62,6 +63,16 @@ def launch(args: argparse.Namespace) -> int:
             return 1
         log_file.write(f"[launch] started DocCropper with PID {proc.pid}\n")
         log_file.flush()
+
+        # Give the child process a brief moment to report immediate failures.
+        time.sleep(1)
+        returncode = proc.poll()
+        if returncode is not None and returncode != 0:
+            log_file.write(
+                f"[launch] DocCropper exited immediately with code {returncode}\n"
+            )
+            log_file.flush()
+            return 1
 
     try:
         Path(args.pid_file).write_text(str(proc.pid), encoding="utf-8")

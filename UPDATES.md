@@ -427,3 +427,5 @@
 ## 2025-10-02
 - Added a dedicated `launch_app.py` helper so the Windows start script spawns DocCropper via Python, appends logs, and records the server PID before reporting success
 - Hardened the dependency checker to fall back to a simplified parser when `packaging` is unavailable, preventing unnecessary reinstalls while still catching missing packages
+- Windows launcher now verifies that DocCropper stays alive for the first second and reports immediate exits in the start log instead of leaving the tray LED red with no clues
+- Startup and installer batches upgrade `pip` only when they actually install packages, dramatically reducing update time when dependencies are already satisfied

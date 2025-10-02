@@ -140,7 +140,6 @@ if "!START_TRAY!"=="1" (
 :: Install or update dependencies
 if exist requirements.txt (
     echo [INFO] Aggiornamento dipendenze Python >> "!LOG_FILE!"
-    "%PY%" -m pip install --upgrade pip >> "!LOG_FILE!" 2>&1
     for /f "delims=" %%h in ('certutil -hashfile requirements.txt MD5 ^| find /i /v "hash" ^| find /i /v "CertUtil"') do set "REQ_HASH=%%h"
     set "OLD_HASH_FILE=!PY_DIR!\requirements.hash"
     set "HASH_ROOT="
@@ -208,6 +207,7 @@ if exist requirements.txt (
         echo [INFO] Modalita automatica: aggiorno solo pacchetti mancanti/obsoleti >> "!LOG_FILE!"
     )
     set "DEPENDENCIES_OK=0"
+    set "PIP_PREPARED=0"
     if /I "!CHOICE!"=="S" (
         if "!NEED_INSTALL!"=="0" (
             echo [INFO] Requisiti Python gia aggiornati >> "!LOG_FILE!"
@@ -216,6 +216,7 @@ if exist requirements.txt (
             echo [INFO] Installazione dipendenze saltata >> "!LOG_FILE!"
         )
     ) else if /I "!CHOICE!"=="T" (
+        call :prepare_pip
         "%PY%" -m pip install --upgrade --force-reinstall -r requirements.txt >> "!LOG_FILE!" 2>&1
         if errorlevel 1 (
             echo [WARN] Reinstallazione completa dei pacchetti fallita >> "!LOG_FILE!"
@@ -227,9 +228,11 @@ if exist requirements.txt (
         set "TEMP_REQ=%TEMP%\doccropper_requirements_install.txt"
         if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
         if exist "!ENSURE_SCRIPT!" (
+            call :prepare_pip
             "%PY%" "!ENSURE_SCRIPT!" requirements.txt --output "!TEMP_REQ!" >> "!LOG_FILE!" 2>&1
             if errorlevel 1 (
                 echo [WARN] Controllo dipendenze fallito, eseguo installazione completa >> "!LOG_FILE!"
+                call :prepare_pip
                 "%PY%" -m pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
                 if errorlevel 1 (
                     echo [WARN] Aggiornamento pacchetti fallito >> "!LOG_FILE!"
@@ -242,9 +245,11 @@ if exist requirements.txt (
                     for %%I in ("!TEMP_REQ!") do if %%~zI GTR 0 set "NEEDS_TARGETED=1"
                 )
                 if "!NEEDS_TARGETED!"=="1" (
+                    call :prepare_pip
                     "%PY%" -m pip install -r "!TEMP_REQ!" >> "!LOG_FILE!" 2>&1
                     if errorlevel 1 (
                         echo [WARN] Aggiornamento mirato fallito, eseguo installazione completa >> "!LOG_FILE!"
+                        call :prepare_pip
                         "%PY%" -m pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
                         if errorlevel 1 (
                             echo [WARN] Aggiornamento pacchetti fallito >> "!LOG_FILE!"
@@ -260,6 +265,7 @@ if exist requirements.txt (
                 )
             )
         ) else (
+            call :prepare_pip
             "%PY%" -m pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
             if errorlevel 1 (
                 echo [WARN] Aggiornamento pacchetti fallito >> "!LOG_FILE!"
@@ -334,6 +340,12 @@ echo [INFO] Script completato >> "!LOG_FILE!"
 pause
 endlocal
 exit /b
+
+:prepare_pip
+if "%PIP_PREPARED%"=="1" exit /b 0
+"%PY%" -m pip install --upgrade pip >> "!LOG_FILE!" 2>&1
+set "PIP_PREPARED=1"
+exit /b 0
 
 :log
 set MSG=%*

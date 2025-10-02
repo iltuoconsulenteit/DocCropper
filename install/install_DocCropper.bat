@@ -339,7 +339,6 @@ if not defined PY_EMBED (
 
 if exist requirements.txt (
     call :log "Installing Python packages..."
-    "!PYTHON_CMD!" -m pip install --upgrade pip >>"%LOG_FILE%" 2>&1
     for /f "delims=" %%h in ('certutil -hashfile requirements.txt MD5 ^| find /i /v "hash" ^| find /i /v "CertUtil"') do set "REQ_HASH=%%h"
     set "OLD_HASH_FILE=!PY_DIR!\requirements.hash"
     set "HASH_ROOT="
@@ -382,6 +381,7 @@ if exist requirements.txt (
     set /p CHOICE=Gestione dipendenze Python - (S)alta, (M)ancanti, (T)utte [!DEFAULT_CHOICE!]:
     if "!CHOICE!"=="" set "CHOICE=!DEFAULT_CHOICE!"
     set "INSTALL_DONE=0"
+    set "PIP_PREPARED=0"
     set "RAN_PIP_INSTALL=0"
     if /I "!CHOICE!"=="S" (
         if "!NEED_INSTALL!"=="0" (
@@ -390,6 +390,7 @@ if exist requirements.txt (
             call :log "Installazione dipendenze saltata dall'utente"
         )
     ) else if /I "!CHOICE!"=="T" (
+        call :prepare_pip
         "!PYTHON_CMD!" -m pip install --upgrade --force-reinstall -r requirements.txt >>"%LOG_FILE%" 2>&1
         if errorlevel 1 (
             call :log "Reinstallazione completa dei pacchetti fallita"
@@ -402,9 +403,11 @@ if exist requirements.txt (
         set "TEMP_REQ=%TEMP%\doccropper_requirements_install.txt"
         if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
         if exist "!ENSURE_SCRIPT!" (
+            call :prepare_pip
             "!PYTHON_CMD!" "!ENSURE_SCRIPT!" requirements.txt --output "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
             if errorlevel 1 (
                 call :log "Controllo dipendenze fallito, eseguo installazione completa"
+                call :prepare_pip
                 "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
                 if errorlevel 1 (
                     call :log "Aggiornamento pacchetti fallito"
@@ -418,9 +421,11 @@ if exist requirements.txt (
                     for %%I in ("!TEMP_REQ!") do if %%~zI GTR 0 set "NEEDS_TARGETED=1"
                 )
                 if "!NEEDS_TARGETED!"=="1" (
+                    call :prepare_pip
                     "!PYTHON_CMD!" -m pip install -r "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
                     if errorlevel 1 (
                         call :log "Aggiornamento mirato fallito, eseguo installazione completa"
+                        call :prepare_pip
                         "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
                         if errorlevel 1 (
                             call :log "Aggiornamento pacchetti fallito"
@@ -437,12 +442,13 @@ if exist requirements.txt (
                     set "INSTALL_DONE=1"
                 )
             )
-        ) else (
-            "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
-            if errorlevel 1 (
-                call :log "Aggiornamento pacchetti fallito"
             ) else (
-                set "INSTALL_DONE=1"
+                call :prepare_pip
+                "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
+                if errorlevel 1 (
+                    call :log "Aggiornamento pacchetti fallito"
+                ) else (
+                    set "INSTALL_DONE=1"
                 set "RAN_PIP_INSTALL=1"
             )
         )
@@ -467,6 +473,12 @@ if exist "%APP_DIR%\scripts\build_wrappers.ps1" (
 )
 call :log "Wrapper executables are no longer required; skipping compilation step"
 
+exit /b 0
+
+:prepare_pip
+if "%PIP_PREPARED%"=="1" exit /b 0
+"!PYTHON_CMD!" -m pip install --upgrade pip >>"%LOG_FILE%" 2>&1
+set "PIP_PREPARED=1"
 exit /b 0
 
 :ensure_python
