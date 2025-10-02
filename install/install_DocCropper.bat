@@ -345,39 +345,55 @@ if not defined PY_EMBED (
     call :log "Using embeddable Python environment"
 )
 
-if exist requirements.txt (
+set "REQ_FILE=!APP_DIR!\requirements.txt"
+if exist "!REQ_FILE!" (
     call :log "Installing Python packages..."
-    for /f "delims=" %%h in ('certutil -hashfile requirements.txt MD5 ^| find /i /v "hash" ^| find /i /v "CertUtil"') do set "REQ_HASH=%%h"
+    for /f "delims=" %%h in ('certutil -hashfile "!REQ_FILE!" MD5 ^| find /i /v "hash" ^| find /i /v "CertUtil"') do set "REQ_HASH=%%h"
     set "OLD_HASH_FILE=!PY_DIR!\requirements.hash"
     set "HASH_ROOT="
+    set "HASH_FILE="
     if defined DOCROPPER_HASH_DIR (
         set "HASH_ROOT=%DOCROPPER_HASH_DIR%"
     ) else (
         if defined LOCALAPPDATA set "HASH_ROOT=%LOCALAPPDATA%\DocCropper"
-        if not defined HASH_ROOT if defined APPDATA set "HASH_ROOT=%APPDATA%\DocCropper"
-        if not defined HASH_ROOT set "HASH_ROOT=%TEMP%\DocCropper"
+        if "!HASH_ROOT!"=="" if defined APPDATA set "HASH_ROOT=%APPDATA%\DocCropper"
+        if "!HASH_ROOT!"=="" if defined TEMP set "HASH_ROOT=%TEMP%\DocCropper"
+    )
+    if "!HASH_ROOT!"=="" (
+        set "HASH_ROOT=%TEMP%\DocCropper"
     )
     if not exist "!HASH_ROOT!" (
         mkdir "!HASH_ROOT!" >nul 2>&1
         if errorlevel 1 (
-            set "HASH_ROOT=%TEMP%\DocCropper"
+            if defined TEMP (
+                set "HASH_ROOT=%TEMP%\DocCropper"
+            ) else (
+                set "HASH_ROOT=!APP_DIR!"
+            )
             if not exist "!HASH_ROOT!" mkdir "!HASH_ROOT!" >nul 2>&1
         )
     )
-    set "HASH_FILE=!HASH_ROOT!\requirements.hash"
+    if not "!HASH_ROOT!"=="" (
+        set "HASH_FILE=!HASH_ROOT!\requirements.hash"
+    )
     set "NEED_INSTALL=1"
     set "DEFAULT_CHOICE=M"
     set "EXISTING_HASH="
-    if exist "!HASH_FILE!" (
-        set /p EXISTING_HASH=<"!HASH_FILE!"
+    if defined HASH_FILE (
+        if exist "!HASH_FILE!" (
+            set /p EXISTING_HASH=<"!HASH_FILE!"
+        ) else if exist "!OLD_HASH_FILE!" (
+            set /p EXISTING_HASH=<"!OLD_HASH_FILE!"
+            copy /y "!OLD_HASH_FILE!" "!HASH_FILE!" >nul 2>&1
+            if errorlevel 1 (
+                call :log "Impossibile migrare il file hash in !HASH_FILE!"
+            ) else (
+                call :log "Migrazione hash dipendenze in !HASH_FILE!"
+            )
+        )
     ) else if exist "!OLD_HASH_FILE!" (
         set /p EXISTING_HASH=<"!OLD_HASH_FILE!"
-        copy /y "!OLD_HASH_FILE!" "!HASH_FILE!" >nul 2>&1
-        if errorlevel 1 (
-            call :log "Impossibile migrare il file hash in !HASH_FILE!"
-        ) else (
-            call :log "Migrazione hash dipendenze in !HASH_FILE!"
-        )
+        call :log "Percorso hash non disponibile; impossibile migrare !OLD_HASH_FILE!"
     )
     if defined EXISTING_HASH (
         if /I "!EXISTING_HASH!"=="!REQ_HASH!" (
@@ -403,7 +419,7 @@ if exist requirements.txt (
             call :pip_error
             exit /b 1
         )
-        "!PYTHON_CMD!" -m pip install --upgrade --force-reinstall -r requirements.txt >>"%LOG_FILE%" 2>&1
+        "!PYTHON_CMD!" -m pip install --upgrade --force-reinstall -r "!REQ_FILE!" >>"%LOG_FILE%" 2>&1
         if errorlevel 1 (
             call :log "Reinstallazione completa dei pacchetti fallita"
         ) else (
@@ -420,7 +436,7 @@ if exist requirements.txt (
                 call :pip_error
                 exit /b 1
             )
-            "!PYTHON_CMD!" "!ENSURE_SCRIPT!" requirements.txt --output "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
+            "!PYTHON_CMD!" "!ENSURE_SCRIPT!" "!REQ_FILE!" --output "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
             if errorlevel 1 (
                 call :log "Controllo dipendenze fallito, eseguo installazione completa"
                 call :prepare_pip
@@ -428,7 +444,7 @@ if exist requirements.txt (
                     call :pip_error
                     exit /b 1
                 )
-                "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
+                "!PYTHON_CMD!" -m pip install -r "!REQ_FILE!" >>"%LOG_FILE%" 2>&1
                 if errorlevel 1 (
                     call :log "Aggiornamento pacchetti fallito"
                 ) else (
@@ -454,7 +470,7 @@ if exist requirements.txt (
                             call :pip_error
                             exit /b 1
                         )
-                        "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
+                        "!PYTHON_CMD!" -m pip install -r "!REQ_FILE!" >>"%LOG_FILE%" 2>&1
                         if errorlevel 1 (
                             call :log "Aggiornamento pacchetti fallito"
                         ) else (
@@ -476,7 +492,7 @@ if exist requirements.txt (
                 call :pip_error
                 exit /b 1
             )
-            "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
+            "!PYTHON_CMD!" -m pip install -r "!REQ_FILE!" >>"%LOG_FILE%" 2>&1
             if errorlevel 1 (
                 call :log "Aggiornamento pacchetti fallito"
             ) else (
@@ -487,15 +503,21 @@ if exist requirements.txt (
         if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
     )
     if "!INSTALL_DONE!"=="1" (
-        echo(!REQ_HASH!>"!HASH_FILE!"
-        if not exist "!HASH_FILE!" call :log "Impossibile salvare l'hash in !HASH_FILE!"
+        if defined HASH_FILE (
+            >"!HASH_FILE!" echo(!REQ_HASH!
+            if not exist "!HASH_FILE!" (
+                call :log "Impossibile salvare l'hash in !HASH_FILE!"
+            )
+        ) else (
+            call :log "Directory hash dipendenze non determinata; impossibile salvare l'hash"
+        )
     )
     if "!RAN_PIP_INSTALL!"=="1" if exist "!PY_DIR!\Scripts\pywin32_postinstall.py" (
         call :log "Running pywin32 postinstall..."
         "!PYTHON_CMD!" "!PY_DIR!\Scripts\pywin32_postinstall.py" -install >>"%LOG_FILE%" 2>&1
     )
 ) else (
-    call :log "requirements.txt not found!"
+    call :log "requirements.txt non trovato in !REQ_FILE!"
 )
 
 rem Legacy PowerShell wrapper compilation has been deprecated; ensure the script is removed

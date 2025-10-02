@@ -430,3 +430,4 @@
 - Windows launcher now verifies that DocCropper stays alive for the first second and reports immediate exits in the start log instead of leaving the tray LED red with no clues
 - Startup and installer batches upgrade `pip` only when they actually install packages, dramatically reducing update time when dependencies are already satisfied
 - Windows installer now validates the Python interpreter path before preparing `pip` and logs clear errors if it is missing, avoiding silent terminations caused by commands invoked with empty quotes
+- Installer now resolves `requirements.txt` via an absolute path, gracefully falls back when the dependency-hash directory is unavailable, and logs precise failures instead of reporting missing files or empty hash locations.
