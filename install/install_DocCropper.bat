@@ -402,7 +402,7 @@ if exist "!REQ_FILE!" (
         )
     )
     set "CHOICE="
-    set /p CHOICE=Gestione dipendenze Python - (S)alta, (M)ancanti, (T)utte [!DEFAULT_CHOICE!]:
+    set /p CHOICE=Gestione dipendenze Python - (S^)alta, (M^)ancanti, (T^)utte [!DEFAULT_CHOICE!]:
     if "!CHOICE!"=="" set "CHOICE=!DEFAULT_CHOICE!"
     set "INSTALL_DONE=0"
     set "PIP_PREPARED=0"
