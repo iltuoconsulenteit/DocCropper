@@ -69,3 +69,15 @@ def test_uses_pip_list_when_metadata_missing(tmp_path):
 
     assert result.returncode == 0
     assert output_path.read_text(encoding="utf-8") == ""
+
+
+def test_simple_fallback_satisfied_package(tmp_path):
+    import pip
+
+    env = {"ENSURE_REQUIREMENTS_FORCE_SIMPLE": "1"}
+    requirement_line = f"pip=={pip.__version__}\n"
+
+    result, output_path = run_helper(tmp_path, requirement_line, env)
+
+    assert result.returncode == 0
+    assert output_path.read_text(encoding="utf-8") == ""

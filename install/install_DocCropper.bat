@@ -467,7 +467,7 @@ if exist "%APP_DIR%\scripts\build_wrappers.ps1" (
 )
 call :log "Wrapper executables are no longer required; skipping compilation step"
 
-exit /b
+exit /b 0
 
 :ensure_python
 set "PYTHON_CMD="

@@ -282,10 +282,19 @@ if exist requirements.txt (
 
 :: Launch application
 echo [INFO] Avvio DocCropper sulla porta %PORT% >> "!LOG_FILE!"
-set "DOCROPPER_PROC=DocCropper"
-set "LAUNCH_CMD=\"\"!DOC_EXE!\" main.py --port %PORT% >> \"!LOG_FILE!\" 2^^>^^&1\""
-start "" /b cmd /c !LAUNCH_CMD!
-set "DOCROPPER_PROC="
+set "LAUNCH_HELPER=!APP_DIR!\scripts\launch_app.py"
+if not exist "!LAUNCH_HELPER!" (
+    echo [ERROR] launch_app.py non trovato in !APP_DIR!\scripts >> "!LOG_FILE!"
+    echo ❌ ERRORE: impossibile avviare DocCropper. >> "!LOG_FILE!"
+    echo ❌ ERRORE: launch_app.py mancante, verifica l'installazione.
+    goto finish
+)
+"%PY%" "!LAUNCH_HELPER!" --python "!DOC_EXE!" --main "!APP_DIR!\main.py" --port %PORT% --log "!LOG_FILE!" --pid-file "!PID_FILE!" --cwd "!APP_DIR!" >> "!LOG_FILE!" 2>&1
+if errorlevel 1 (
+    echo [ERROR] Avvio DocCropper fallito, controlla il log: %LOG_FILE% >> "!LOG_FILE!"
+    echo ❌ ERRORE: avvio fallito! Vedi log: %LOG_FILE%
+    goto finish
+)
 
 set "SERVER_RUNNING=0"
 set "WAIT_ITER=0"

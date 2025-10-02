@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from importlib import metadata
@@ -46,6 +47,15 @@ def parse_args() -> argparse.Namespace:
 
 
 PACKAGING_AVAILABLE = Requirement is not None and default_environment is not None
+if os.environ.get("ENSURE_REQUIREMENTS_FORCE_SIMPLE") == "1":
+    PACKAGING_AVAILABLE = False
+
+_SIMPLE_REQ_RE = re.compile(
+    r"^\s*(?P<name>[A-Za-z0-9_.-]+)"  # package name
+    r"(?:\[[^\]]*\])?"  # optional extras, ignored for matching
+    r"\s*(?P<operator>==)?\s*"  # currently we only support == in the fallback
+    r"(?P<version>[A-Za-z0-9_.+-]+)?\s*$"
+)
 
 _INSTALLED_CACHE: dict[str, str] = {}
 _METADATA_SCANNED = False
@@ -67,7 +77,7 @@ def requirement_applies(req: Any) -> bool:
 
 def needs_install(req: Any) -> bool:
     if not PACKAGING_AVAILABLE:
-        return True
+        raise RuntimeError("packaging requirement unavailable")
     if not requirement_applies(req):
         return False
     installed_version = lookup_installed(req.name)
@@ -191,14 +201,27 @@ def main() -> int:
         stripped = raw_line.strip()
         if not stripped or stripped.startswith("#"):
             continue
-        try:
-            req = Requirement(stripped)
-        except Exception as exc:  # pragma: no cover - invalid requirement
-            print(f"[ensure] skipping invalid requirement '{raw_line}': {exc}", file=sys.stderr)
-            lines_to_install.append(stripped)
-            continue
-        if needs_install(req):
-            lines_to_install.append(stripped)
+        if PACKAGING_AVAILABLE:
+            try:
+                req = Requirement(stripped)
+            except Exception as exc:  # pragma: no cover - invalid requirement
+                print(
+                    f"[ensure] skipping invalid requirement '{raw_line}': {exc}",
+                    file=sys.stderr,
+                )
+                lines_to_install.append(stripped)
+                continue
+            try:
+                if needs_install(req):
+                    lines_to_install.append(stripped)
+            except RuntimeError:
+                # Extremely defensive: if packaging suddenly disappears mid-run,
+                # fall back to the simplified checker.
+                if _fallback_needs_install(stripped):
+                    lines_to_install.append(stripped)
+        else:
+            if _fallback_needs_install(stripped):
+                lines_to_install.append(stripped)
 
     try:
         if lines_to_install:
@@ -215,6 +238,42 @@ def main() -> int:
         f"pending installs: {len(lines_to_install)}"
     )
     return 0
+
+
+def _fallback_needs_install(raw_line: str) -> bool:
+    """Best-effort requirement evaluator used when ``packaging`` is unavailable.
+
+    The fallback understands the common ``package==version`` pattern and ignores
+    extras. Any requirement it cannot safely evaluate is treated as needing
+    installation to stay on the safe side.
+    """
+
+    marker_split = raw_line.split(";", 1)
+    requirement_text = marker_split[0].strip()
+    # Without packaging we cannot evaluate environment markers reliably, so we
+    # conservatively assume they apply to the current interpreter.
+
+    match = _SIMPLE_REQ_RE.match(requirement_text)
+    if not match:
+        return True
+
+    name = match.group("name")
+    operator = match.group("operator")
+    version = match.group("version")
+
+    installed_version = lookup_installed(name)
+    if installed_version is None:
+        return True
+
+    if not operator:
+        # No version specifier -> already satisfied if package exists.
+        return False
+
+    if operator == "==" and version is not None:
+        return installed_version != version
+
+    # Unsupported operator; force installation to ensure correctness.
+    return True
 
 
 if __name__ == "__main__":

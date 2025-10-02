@@ -423,3 +423,7 @@
 ## 2025-09-18
 - Windows installer skips compiling obsolete launcher wrappers and removes the legacy PowerShell builder, preventing `Add-Type` errors during upgrades
 - Stubbed the legacy wrapper scripts so historical start/installer batches simply log the skip instead of invoking `Add-Type`
+
+## 2025-10-02
+- Added a dedicated `launch_app.py` helper so the Windows start script spawns DocCropper via Python, appends logs, and records the server PID before reporting success
+- Hardened the dependency checker to fall back to a simplified parser when `packaging` is unavailable, preventing unnecessary reinstalls while still catching missing packages
