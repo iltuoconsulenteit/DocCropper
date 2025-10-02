@@ -422,3 +422,4 @@
 
 ## 2025-09-18
 - Windows installer skips compiling obsolete launcher wrappers and removes the legacy PowerShell builder, preventing `Add-Type` errors during upgrades
+- Stubbed the legacy wrapper scripts so historical start/installer batches simply log the skip instead of invoking `Add-Type`
