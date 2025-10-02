@@ -399,7 +399,10 @@ if exist requirements.txt (
         )
     ) else if /I "!CHOICE!"=="T" (
         call :prepare_pip
-        if errorlevel 1 goto pip_error
+        if errorlevel 1 (
+            call :pip_error
+            exit /b 1
+        )
         "!PYTHON_CMD!" -m pip install --upgrade --force-reinstall -r requirements.txt >>"%LOG_FILE%" 2>&1
         if errorlevel 1 (
             call :log "Reinstallazione completa dei pacchetti fallita"
@@ -413,12 +416,18 @@ if exist requirements.txt (
         if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
         if exist "!ENSURE_SCRIPT!" (
             call :prepare_pip
-            if errorlevel 1 goto pip_error
+            if errorlevel 1 (
+                call :pip_error
+                exit /b 1
+            )
             "!PYTHON_CMD!" "!ENSURE_SCRIPT!" requirements.txt --output "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
             if errorlevel 1 (
                 call :log "Controllo dipendenze fallito, eseguo installazione completa"
                 call :prepare_pip
-                if errorlevel 1 goto pip_error
+                if errorlevel 1 (
+                    call :pip_error
+                    exit /b 1
+                )
                 "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
                 if errorlevel 1 (
                     call :log "Aggiornamento pacchetti fallito"
@@ -433,12 +442,18 @@ if exist requirements.txt (
                 )
                 if "!NEEDS_TARGETED!"=="1" (
                     call :prepare_pip
-                    if errorlevel 1 goto pip_error
+                    if errorlevel 1 (
+                        call :pip_error
+                        exit /b 1
+                    )
                     "!PYTHON_CMD!" -m pip install -r "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
                     if errorlevel 1 (
                         call :log "Aggiornamento mirato fallito, eseguo installazione completa"
                         call :prepare_pip
-                        if errorlevel 1 goto pip_error
+                        if errorlevel 1 (
+                            call :pip_error
+                            exit /b 1
+                        )
                         "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
                         if errorlevel 1 (
                             call :log "Aggiornamento pacchetti fallito"
@@ -457,7 +472,10 @@ if exist requirements.txt (
             )
         ) else (
             call :prepare_pip
-            if errorlevel 1 goto pip_error
+            if errorlevel 1 (
+                call :pip_error
+                exit /b 1
+            )
             "!PYTHON_CMD!" -m pip install -r requirements.txt >>"%LOG_FILE%" 2>&1
             if errorlevel 1 (
                 call :log "Aggiornamento pacchetti fallito"
