@@ -350,32 +350,9 @@ if exist "!REQ_FILE!" (
     call :log "Installing Python packages..."
     for /f "delims=" %%h in ('certutil -hashfile "!REQ_FILE!" MD5 ^| find /i /v "hash" ^| find /i /v "CertUtil"') do set "REQ_HASH=%%h"
     set "OLD_HASH_FILE=!PY_DIR!\requirements.hash"
-    set "HASH_ROOT="
-    set "HASH_FILE="
-    if defined DOCROPPER_HASH_DIR (
-        set "HASH_ROOT=%DOCROPPER_HASH_DIR%"
-    ) else (
-        if defined LOCALAPPDATA set "HASH_ROOT=%LOCALAPPDATA%\DocCropper"
-        if "!HASH_ROOT!"=="" if defined APPDATA set "HASH_ROOT=%APPDATA%\DocCropper"
-        if "!HASH_ROOT!"=="" if defined TEMP set "HASH_ROOT=%TEMP%\DocCropper"
-    )
-    if "!HASH_ROOT!"=="" (
-        set "HASH_ROOT=%TEMP%\DocCropper"
-    )
-    if not exist "!HASH_ROOT!" (
-        mkdir "!HASH_ROOT!" >nul 2>&1
-        if errorlevel 1 (
-            if defined TEMP (
-                set "HASH_ROOT=%TEMP%\DocCropper"
-            ) else (
-                set "HASH_ROOT=!APP_DIR!"
-            )
-            if not exist "!HASH_ROOT!" mkdir "!HASH_ROOT!" >nul 2>&1
-        )
-    )
-    if not "!HASH_ROOT!"=="" (
-        set "HASH_FILE=!HASH_ROOT!\requirements.hash"
-    )
+    call :resolve_hash_root
+    set "HASH_FILE=!HASH_ROOT!\requirements.hash"
+    call :log "Percorso file hash: !HASH_FILE!"
     set "NEED_INSTALL=1"
     set "DEFAULT_CHOICE=M"
     set "EXISTING_HASH="
@@ -532,6 +509,28 @@ exit /b 0
 :pip_error
 call :log "Impossibile aggiornare pip: controllare l'installazione di Python"
 exit /b 1
+
+:resolve_hash_root
+set "HASH_ROOT="
+if defined DOCROPPER_HASH_DIR if not "%DOCROPPER_HASH_DIR%"=="" set "HASH_ROOT=%DOCROPPER_HASH_DIR%"
+if not defined HASH_ROOT if defined LOCALAPPDATA set "HASH_ROOT=%LOCALAPPDATA%\DocCropper"
+if not defined HASH_ROOT if defined APPDATA set "HASH_ROOT=%APPDATA%\DocCropper"
+if not defined HASH_ROOT if defined USERPROFILE set "HASH_ROOT=%USERPROFILE%\DocCropper"
+if not defined HASH_ROOT if defined PROGRAMDATA set "HASH_ROOT=%PROGRAMDATA%\DocCropper"
+if not defined HASH_ROOT if defined TEMP set "HASH_ROOT=%TEMP%\DocCropper"
+if not defined HASH_ROOT set "HASH_ROOT=%APP_DIR%\temp\DocCropper"
+if "!HASH_ROOT!"=="" set "HASH_ROOT=%TEMP%\DocCropper"
+if not exist "!HASH_ROOT!" (
+    mkdir "!HASH_ROOT!" >nul 2>&1
+    if errorlevel 1 (
+        if defined TEMP (
+            set "HASH_ROOT=%TEMP%\DocCropper"
+            if not exist "!HASH_ROOT!" mkdir "!HASH_ROOT!" >nul 2>&1
+        )
+    )
+)
+if not exist "!HASH_ROOT!" set "HASH_ROOT=%TEMP%"
+exit /b 0
 
 :prepare_pip
 if "%PIP_PREPARED%"=="1" exit /b 0

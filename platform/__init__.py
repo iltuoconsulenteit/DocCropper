@@ -95,11 +95,32 @@ if _stdlib_platform is None:
         "Could not locate the standard library 'platform' module"
     )
 
+# Retain a private reference so ``__getattr__`` can proxy lookups for
+# attributes that third-party packages expect but that might not have been
+# eagerly copied into ``globals()`` yet.
+_STDLIB_PLATFORM = _stdlib_platform
+
 # Re-export the stdlib platform's public attributes so third-party imports
 # continue to function as expected.
 for _name in dir(_stdlib_platform):
     if not _name.startswith("_"):
         globals()[_name] = getattr(_stdlib_platform, _name)
+
+__all__ = sorted(
+    name for name in dir(_stdlib_platform) if not name.startswith("_")
+)
+
+
+def __getattr__(name: str):
+    try:
+        return getattr(_STDLIB_PLATFORM, name)
+    except AttributeError:
+        raise
+
+
+def __dir__():  # pragma: no cover - mirrors stdlib behaviour
+    combined = set(globals()) | set(dir(_STDLIB_PLATFORM))
+    return sorted(combined)
 
 del (
     _stdlib_platform,
