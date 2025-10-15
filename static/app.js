@@ -881,19 +881,57 @@ function applySettings(cfg) {
     if (cfg.version_date) {
         appVersionDate = cfg.version_date;
     }
-    const activePlugins = cfg.active_plugins || [];
-    docusealEnabled = activePlugins.includes('docuseal') && !!cfg.docuseal_api_url;
-    signEnabled = activePlugins.includes('sign');
-    mobileSignEnabled = activePlugins.includes('mobilesign');
-    remoteSignEnabled = activePlugins.includes('remotesign');
-    removeBgEnabled = activePlugins.includes('removebg');
-    watermarkEnabled = activePlugins.includes('watermark');
-    downloadPngEnabled = activePlugins.includes('downloadpng');
-    pageSelectEnabled = activePlugins.includes('pageselect');
-    colorModePluginEnabled = activePlugins.includes('colormode');
-    imageEditorEnabled = activePlugins.includes('imageeditor');
-    formFieldsEnabled = activePlugins.includes('formfields');
-    scanEnabled = activePlugins.includes('scan');
+    const activePlugins = Array.isArray(cfg.active_plugins) ? cfg.active_plugins : [];
+    const activePluginSet = new Set(activePlugins);
+    const normalizedLicenseKey = (cfg.license_key || '').toString().trim().toUpperCase();
+    const normalizedLevel = (cfg.license_level || cfg.license_type || '').toString().trim().toLowerCase();
+    const hasDeveloperLicense = normalizedLevel === 'developer' || normalizedLicenseKey.endsWith('-DEV');
+
+    const isTruthy = (value) => {
+        if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase();
+            if (!normalized) {
+                return false;
+            }
+            if (['false', '0', 'no', 'off'].includes(normalized)) {
+                return false;
+            }
+            return true;
+        }
+        return Boolean(value);
+    };
+
+    const ensurePlugin = (name, enabledFlag, devOnlyFlag) => {
+        if (activePluginSet.has(name)) {
+            return true;
+        }
+        const enabled = enabledFlag === undefined ? false : isTruthy(enabledFlag);
+        if (!enabled) {
+            return false;
+        }
+        const devOnly = devOnlyFlag === undefined ? false : isTruthy(devOnlyFlag);
+        if (devOnly && !hasDeveloperLicense) {
+            return false;
+        }
+        activePluginSet.add(name);
+        return true;
+    };
+
+    docusealEnabled = (activePluginSet.has('docuseal') || ensurePlugin('docuseal', cfg.enable_docuseal, cfg.docuseal_dev_only))
+        && !!cfg.docuseal_api_url;
+    signEnabled = activePluginSet.has('sign') || ensurePlugin('sign', cfg.enable_sign, cfg.sign_dev_only);
+    mobileSignEnabled = activePluginSet.has('mobilesign') || ensurePlugin('mobilesign', cfg.enable_mobilesign, cfg.mobilesign_dev_only);
+    remoteSignEnabled = activePluginSet.has('remotesign') || ensurePlugin('remotesign', cfg.enable_remotesign, cfg.remotesign_dev_only);
+    removeBgEnabled = activePluginSet.has('removebg') || ensurePlugin('removebg', cfg.enable_removebg, cfg.removebg_dev_only);
+    watermarkEnabled = activePluginSet.has('watermark')
+        || ensurePlugin('watermark', cfg.enable_watermark || normalizedLevel === 'free', cfg.watermark_dev_only);
+    downloadPngEnabled = activePluginSet.has('downloadpng') || ensurePlugin('downloadpng', cfg.enable_downloadpng, cfg.downloadpng_dev_only);
+    pageSelectEnabled = activePluginSet.has('pageselect') || ensurePlugin('pageselect', cfg.enable_pageselect, cfg.pageselect_dev_only);
+    colorModePluginEnabled = activePluginSet.has('colormode') || ensurePlugin('colormode', cfg.enable_colormode, cfg.colormode_dev_only);
+    imageEditorEnabled = activePluginSet.has('imageeditor') || ensurePlugin('imageeditor', cfg.enable_imageeditor, cfg.imageeditor_dev_only);
+    formFieldsEnabled = activePluginSet.has('formfields') || ensurePlugin('formfields', cfg.enable_formfields, cfg.formfields_dev_only);
+    scanEnabled = activePluginSet.has('scan') || ensurePlugin('scan', cfg.enable_scan, cfg.scan_dev_only);
+    compressEnabled = activePluginSet.has('compresspdf') || ensurePlugin('compresspdf', cfg.enable_compresspdf, cfg.compresspdf_dev_only);
     if (typeof initRemoveBgPlugin === 'function' && Object.keys(translations).length) {
         initRemoveBgPlugin(translations, removeBgEnabled);
     }
@@ -918,7 +956,6 @@ function applySettings(cfg) {
     if (typeof initFormFieldsPlugin === 'function') {
         initFormFieldsPlugin(translations, formFieldsEnabled);
     }
-    compressEnabled = activePlugins.includes('compresspdf');
     if (cfg.update_interval !== undefined) {
         updateInterval = parseInt(cfg.update_interval);
     }

@@ -316,6 +316,15 @@ if exist "!APP_DIR!\scripts\version_info.py" (
         if /I "%%A"=="DOCROPPER_VERSION" set "DOCROPPER_VERSION=%%B"
         if /I "%%A"=="DOCROPPER_VERSION_DATE" set "DOCROPPER_VERSION_DATE=%%B"
     )
+    if defined DOCROPPER_VERSION (
+        set "VERSION_ENV_DIR=!APP_DIR!\env"
+        if not exist "!VERSION_ENV_DIR!" mkdir "!VERSION_ENV_DIR!" >nul 2>&1
+        set "VERSION_ENV_FILE=!VERSION_ENV_DIR!\version.env"
+        >"!VERSION_ENV_FILE!" echo DOCROPPER_VERSION=!DOCROPPER_VERSION!
+        if defined DOCROPPER_VERSION_DATE (
+            >>"!VERSION_ENV_FILE!" echo DOCROPPER_VERSION_DATE=!DOCROPPER_VERSION_DATE!
+        )
+    )
 )
 
 :: Stop any running instance
