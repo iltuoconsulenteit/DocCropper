@@ -1,3 +1,5 @@
+import { apiFetch } from '../api.js';
+
 export function initSignaturePlugin(translations, enabled = true) {
     const mobileSignBtn = document.getElementById('mobileSignBtn');
     const signQR = document.getElementById('signQR');
@@ -27,7 +29,7 @@ export function initSignaturePlugin(translations, enabled = true) {
 
     async function pollPdf(token) {
         try {
-            const r = await fetch(`/signed-pdf/${token}`);
+            const r = await apiFetch(`/signed-pdf/${token}`);
             if (r.status === 200) {
                 const d = await r.json();
                 if (d.url) {
@@ -44,7 +46,7 @@ export function initSignaturePlugin(translations, enabled = true) {
 
     async function pollSignature(token) {
         try {
-            const resp = await fetch(`/signature-result/${token}`);
+            const resp = await apiFetch(`/signature-result/${token}`);
             if (resp.status === 200) {
                 const data = await resp.json();
                 window.lastSignName = data.name || '';
@@ -90,7 +92,7 @@ export function initSignaturePlugin(translations, enabled = true) {
             if (window.lastSignName) payload.name = window.lastSignName;
             if (window.lastSignEmail) payload.email = window.lastSignEmail;
             if (window.lastSignPhone) payload.phone = window.lastSignPhone;
-            const resp = await fetch('/start-sign/', {
+            const resp = await apiFetch('/start-sign/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)

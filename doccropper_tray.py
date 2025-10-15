@@ -247,9 +247,12 @@ def main():
     if args.auto_start and not running:
         logging.info("Auto-start requested from start script")
         start_app()
-        # give the server a moment to start
-        time.sleep(1)
-        running = is_running()
+        # give the server time to start and update LED accordingly
+        for _ in range(20):
+            time.sleep(0.5)
+            if is_running():
+                running = True
+                break
 
     if args.no_tray:
         logging.info("--no-tray specified, launching server directly")

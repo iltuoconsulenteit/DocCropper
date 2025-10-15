@@ -10,18 +10,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.11/dist/interact.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-    <script>
-      // Prefix all relative fetch() calls with the API root so existing
-      // front-end code continues to work after mounting FastAPI under /api.
-      const DC_API_PREFIX = '/api';
-      const _fetch = window.fetch.bind(window);
-      window.fetch = function(resource, init) {
-        if (typeof resource === 'string' && resource.startsWith('/') && !resource.startsWith(DC_API_PREFIX)) {
-          resource = DC_API_PREFIX + resource;
-        }
-        return _fetch(resource, init);
-      };
-    </script>
     <style>
       main::-webkit-scrollbar { width: 16px; }
       main::-webkit-scrollbar-track { background: #f3f4f6; }

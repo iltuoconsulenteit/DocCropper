@@ -1,4 +1,5 @@
 import interact from 'https://cdn.interactjs.io/v1.10.11/interactjs/index.js';
+import { apiFetch } from './api.js';
 import { initSignaturePlugin } from './plugins/mobilesign.js';
 import { initRemoveBgPlugin } from './plugins/removebg.js';
 import { initPdfCompressPlugin } from './plugins/compresspdf.js';
@@ -79,7 +80,7 @@ async function checkForUpdate(first = false) {
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const resp = await fetch('/update-check/', { signal: controller.signal });
+        const resp = await apiFetch('/update-check/', { signal: controller.signal });
         clearTimeout(timeoutId);
         if (resp.ok) {
             const data = await resp.json();
@@ -110,7 +111,7 @@ if (updateBell) {
         const pin = updatePinInput.value.trim();
         if (!pin) return;
         try {
-            const resp = await fetch('/update/', {
+            const resp = await apiFetch('/update/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pin })
@@ -126,7 +127,7 @@ if (updateBell) {
         const pin = updatePinInput.value.trim();
         if (!pin) return;
         try {
-            const resp = await fetch('/rollback/', {
+            const resp = await apiFetch('/rollback/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pin })
@@ -400,7 +401,7 @@ if (digitalSignBtn) {
         }
         statusMessageElement.textContent = translations['signingPdf'] || 'Signing PDF...';
         try {
-            const resp = await fetch('/docuseal-sign/', {method: 'POST'});
+            const resp = await apiFetch('/docuseal-sign/', {method: 'POST'});
             const data = await resp.json();
             if (data.url) {
                 window.open(data.url, '_blank');
@@ -501,7 +502,7 @@ async function convertPdfToImages(file) {
     form.append('pdf_file', file, file.name);
     form.append('threshold', blankThreshold);
     form.append('skip_blank', skipBlank ? '1' : '0');
-    const resp = await fetch('/pdf-to-images/', { method: 'POST', body: form });
+    const resp = await apiFetch('/pdf-to-images/', { method: 'POST', body: form });
     if (!resp.ok) {
         if (resp.status === 413) {
             statusMessageElement.textContent = t('fileTooLarge').replace('{mb}', MAX_FILE_MB);
@@ -580,7 +581,7 @@ async function importPdfPages(file) {
 async function loadSettings() {
     const url = userInfo ? '/user-settings/' : '/settings/';
     try {
-        const resp = await fetch(url + `?t=${Date.now()}` , { cache: 'no-store' });
+        const resp = await apiFetch(url + `?t=${Date.now()}`, { cache: 'no-store' });
         if (resp.ok) {
             return await resp.json();
         }
@@ -592,7 +593,7 @@ async function loadSettings() {
 
 function saveSettings(data) {
     const url = userInfo ? '/user-settings/' : '/settings/';
-    fetch(url, {
+    apiFetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -603,7 +604,7 @@ async function refreshLicenseInfo() {
     const cfg = await loadSettings();
     applySettings(cfg);
     try {
-        const resp = await fetch('/license/status?t=' + Date.now(), { cache: 'no-store' });
+        const resp = await apiFetch('/license/status?t=' + Date.now(), { cache: 'no-store' });
         if (resp.ok) {
             const info = await resp.json();
             isLicensed = info.valid && !!info.license_key;
@@ -1057,7 +1058,7 @@ async function loadWiki(page = 'index.html') {
     setWikiStatus(t('guideLoading'), 'info');
     wikiContent.innerHTML = '';
     try {
-        const resp = await fetch(`/wiki-content/${currentLang}/${normalized}`);
+        const resp = await apiFetch(`/wiki-content/${currentLang}/${normalized}`);
         if (!resp.ok) {
             throw new Error(`HTTP ${resp.status}`);
         }
@@ -1361,7 +1362,7 @@ function deleteImage(index) {
         signaturePreview.style.display = 'none';
         signatureHint.style.display = 'none';
         if (legalDisclaimerEl) legalDisclaimerEl.style.display = 'none';
-        fetch('/clear-session/', {method:'POST'}).catch(()=>{});
+        apiFetch('/clear-session/', {method:'POST'}).catch(()=>{});
     }
 }
 
@@ -2281,7 +2282,7 @@ submitBtn.addEventListener('click', () => {
     formData.append('brightness', brightnessRange.value);
     formData.append('contrast', contrastRange.value);
 
-    fetch('/process-image/', {
+    apiFetch('/process-image/', {
         method: 'POST',
         body: formData,
     })
@@ -2426,7 +2427,7 @@ async function generatePdf() {
     if (window.lastSignEmail || window.lastSignPhone || window.lastSignName) {
         payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
     }
-    fetch('/create-pdf/', {
+    apiFetch('/create-pdf/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -2508,7 +2509,7 @@ if (OCR_ENABLED) {
             return;
         }
         statusMessageElement.textContent = 'Extracting text...';
-        fetch('/ocr/', {
+        apiFetch('/ocr/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ images: processedImages })
@@ -2605,7 +2606,7 @@ settingsBtn.addEventListener('click', async () => {
     if (!settingsUnlocked) {
         const pwd = prompt(t('enterSettingsPassword'));
         if (!pwd) return;
-        const resp = await fetch('/settings-login/', {
+        const resp = await apiFetch('/settings-login/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password: pwd })
@@ -2627,7 +2628,7 @@ if (devSettingsBtn) {
         if (!devSettingsUnlocked) {
             const pwd = prompt(t('enterDevPassword'));
             if (!pwd) return;
-            const resp = await fetch('/developer-login/', {
+            const resp = await apiFetch('/developer-login/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ password: pwd })
@@ -3227,7 +3228,7 @@ function autoDetectCorners() {
     statusMessageElement.textContent = translations['detectingEdges'] || 'Detecting edges...';
     const formData = new FormData();
     formData.append('image_file', currentFile);
-    fetch('/detect-corners/', { method: 'POST', body: formData })
+    apiFetch('/detect-corners/', { method: 'POST', body: formData })
         .then(resp => {
             if (!resp.ok) {
                 if (resp.status === 413) {
@@ -3397,7 +3398,7 @@ function renderPaymentBox(cfg) {
     const proBtn = document.getElementById('stripeProBtn');
     if (proBtn) {
         proBtn.addEventListener('click', async () => {
-            const res = await fetch('/stripe-checkout/', {
+            const res = await apiFetch('/stripe-checkout/', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({level: 'pro'})
@@ -3415,7 +3416,7 @@ function renderPaymentBox(cfg) {
     const fullBtn = document.getElementById('stripeFullBtn');
     if (fullBtn) {
         fullBtn.addEventListener('click', async () => {
-            const res = await fetch('/stripe-checkout/', {
+            const res = await apiFetch('/stripe-checkout/', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({level: 'full'})
@@ -3491,7 +3492,7 @@ function renderLicenseBox() {
         btn.addEventListener('click', async () => {
             const key = document.getElementById('licenseKeyInput').value.trim();
             const name = document.getElementById('licenseNameInput').value.trim();
-            const resp = await fetch('/license/manual', {
+            const resp = await apiFetch('/license/manual', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ key, name })
@@ -3502,7 +3503,7 @@ function renderLicenseBox() {
                 return;
             }
             await refreshLicenseInfo();
-            await fetch('/restart/', {method: 'POST'});
+            await apiFetch('/restart/', {method: 'POST'});
             if ('caches' in window) {
                 const keys = await caches.keys();
                 for (const k of keys) {
@@ -3522,14 +3523,14 @@ function renderLicenseBox() {
             }
             const fd = new FormData();
             fd.append('file', f);
-            const resp = await fetch('/license/upload', { method: 'POST', body: fd });
+            const resp = await apiFetch('/license/upload', { method: 'POST', body: fd });
             if (!resp.ok) {
                 const txt = await resp.text();
                 alert('License save failed: ' + txt);
                 return;
             }
             await refreshLicenseInfo();
-            await fetch('/restart/', {method: 'POST'});
+            await apiFetch('/restart/', {method: 'POST'});
             if ('caches' in window) {
                 const keys = await caches.keys();
                 for (const k of keys) {
@@ -3544,7 +3545,7 @@ function renderLicenseBox() {
         if (buyBtn) {
             buyBtn.addEventListener('click', async () => {
                 const level = document.getElementById('purchaseLevel').value;
-                const res = await fetch('/stripe-checkout/', {
+                const res = await apiFetch('/stripe-checkout/', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({level})
@@ -3671,7 +3672,7 @@ function renderLogin(cfg) {
         google.accounts.id.initialize({
             client_id: cfg.google_client_id,
             callback: async (response) => {
-                const res = await fetch('/google-login/', {
+                const res = await apiFetch('/google-login/', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({token: response.credential})

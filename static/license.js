@@ -32,8 +32,10 @@ export async function verifyTokenLocally(token, secret) {
   }
 }
 
+import { apiFetch } from './api.js';
+
 export async function verifyTokenRemotely(token) {
-  const resp = await fetch('/license/verify', {
+  const resp = await apiFetch('/license/verify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token, domain: location.hostname })
