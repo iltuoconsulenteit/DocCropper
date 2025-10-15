@@ -68,7 +68,7 @@
   "colormode_dev_only": false,
   "imageeditor_dev_only": true,
   "formfields_dev_only": true,
-  "scan_dev_only": true,
+  "scan_dev_only": false,
   "sponsorframe_dev_only": false,
   "enable_sponsor_video": false,
   "banner_images": [

@@ -25,6 +25,24 @@ def test_get_version_info_uses_environment(monkeypatch):
     assert date == "2025-01-31"
 
 
+def test_get_version_info_reads_version_env(tmp_path: Path, monkeypatch):
+    monkeypatch.delenv("DOCROPPER_VERSION", raising=False)
+    monkeypatch.delenv("DOCROPPER_VERSION_DATE", raising=False)
+
+    env_dir = tmp_path / "env"
+    env_dir.mkdir()
+    env_file = env_dir / "version.env"
+    env_file.write_text(
+        "DOCROPPER_VERSION=zip1234\nDOCROPPER_VERSION_DATE=2025-03-04\n",
+        encoding="utf-8",
+    )
+
+    version, date = get_version_info(tmp_path)
+
+    assert version == "zip1234"
+    assert date == "2025-03-04"
+
+
 def test_get_version_info_reads_last_commit(tmp_path: Path, monkeypatch):
     monkeypatch.delenv("DOCROPPER_VERSION", raising=False)
     monkeypatch.delenv("DOCROPPER_VERSION_DATE", raising=False)

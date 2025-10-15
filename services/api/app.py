@@ -728,27 +728,36 @@ def save_settings(update: dict):
             data["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
         if not data.get("public_url"):
             data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
+    elif not key_upper:
+        data["license_level"] = "full"
+        data["license_type"] = "free"
+        data["demo_full_mode"] = False
+        if not data.get("license_name"):
+            data["license_name"] = "Free Edition"
     elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
         data["license_level"] = "full"
         data["license_type"] = "developer"
+        data["demo_full_mode"] = False
         if not data.get("license_name"):
             data["license_name"] = "Developer"
         data["enable_mobilesign"] = True
     elif manual_env and key_upper == manual_env:
         data["license_level"] = "full"
         data["license_type"] = "manual"
+        data["demo_full_mode"] = False
         if not data.get("license_name"):
             data["license_name"] = "Manual License"
     elif online_env and key_upper == online_env:
         data["license_level"] = "full"
         data["license_type"] = "online"
         data["license_check"] = True
+        data["demo_full_mode"] = False
         if not data.get("license_name"):
             data["license_name"] = "Online License"
     else:
         data["license_level"] = "full"
         data["license_type"] = "demo"
-        data["demo_full_mode"] = True
+        data["demo_full_mode"] = False
         if not data.get("license_name"):
             data["license_name"] = "Demo User"
         data["enable_mobilesign"] = True
@@ -756,6 +765,7 @@ def save_settings(update: dict):
             data["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
         if not data.get("public_url"):
             data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
+    data["scan_dev_only"] = False
     # Remove fields that are enforced by license
     license_locked = load_license_overrides()
     for key, val in license_locked.items():

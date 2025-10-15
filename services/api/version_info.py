@@ -10,6 +10,26 @@ from typing import Tuple
 BASE_DIR = Path(__file__).resolve().parents[2]
 
 
+def _read_version_env(path: Path) -> tuple[str, str]:
+    """Return version metadata stored in ``env/version.env`` if available."""
+
+    version = ""
+    date = ""
+    try:
+        for raw_line in path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if line.upper().startswith("DOCROPPER_VERSION="):
+                version = line.split("=", 1)[1].strip()
+            elif line.upper().startswith("DOCROPPER_VERSION_DATE="):
+                date = line.split("=", 1)[1].strip()
+    except OSError:
+        return "", ""
+
+    return version, date
+
+
 def _shorten(commit: str | None) -> str:
     if not commit:
         return ""
@@ -70,36 +90,46 @@ def get_version_info(base_dir: Path | None = None) -> Tuple[str, str]:
     if base_dir is None:
         base_dir = BASE_DIR
 
-    env_version = os.getenv("DOCROPPER_VERSION")
-    env_date = os.getenv("DOCROPPER_VERSION_DATE", "")
+    env_version = (os.getenv("DOCROPPER_VERSION") or "").strip()
+    env_date = (os.getenv("DOCROPPER_VERSION_DATE") or "").strip()
+
     if env_version:
         return env_version, env_date
 
     version = ""
-    date = ""
+    date = env_date
 
-    try:
-        version = (
-            subprocess.check_output(
-                ["git", "rev-parse", "--short", "HEAD"],
-                cwd=base_dir,
-                stderr=subprocess.DEVNULL,
+    version_env = base_dir / "env" / "version.env"
+    if version_env.is_file():
+        file_version, file_date = _read_version_env(version_env)
+        if file_version:
+            version = file_version.strip()
+        if not date and file_date:
+            date = file_date.strip()
+
+    if not version:
+        try:
+            version = (
+                subprocess.check_output(
+                    ["git", "rev-parse", "--short", "HEAD"],
+                    cwd=base_dir,
+                    stderr=subprocess.DEVNULL,
+                )
+                .decode()
+                .strip()
             )
-            .decode()
-            .strip()
-        )
-        date = (
-            subprocess.check_output(
-                ["git", "log", "-1", "--format=%cd", "--date=short"],
-                cwd=base_dir,
-                stderr=subprocess.DEVNULL,
+            date = (
+                subprocess.check_output(
+                    ["git", "log", "-1", "--format=%cd", "--date=short"],
+                    cwd=base_dir,
+                    stderr=subprocess.DEVNULL,
+                )
+                .decode()
+                .strip()
             )
-            .decode()
-            .strip()
-        )
-    except Exception:
-        version = ""
-        date = ""
+        except Exception:
+            version = ""
+            date = ""
 
     if not version:
         last_commit_path = base_dir / "last_commit"

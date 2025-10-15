@@ -4,6 +4,8 @@
 - Restore default plugin toggles (including the scanner) for installations with older `settings.json` files so homepage controls remain visible after updates.
 - Parse `.git/HEAD` or the stored commit marker when Git isn't available, keeping the footer version and build date visible instead of "unknown".
 - Export build metadata from the Windows start script so launched processes receive `DOCROPPER_VERSION`/`_DATE`, ensuring the UI footer always shows the running revision.
+- Treat empty or developer license codes as full editions without forcing demo mode, keeping the license editor responsive and avoiding UI lockups when switching keys.
+- Read `env/version.env` before attempting Git lookups so packaged Windows installs that capture the build metadata still display their revision even without repository metadata.
 
 ## 2025-09-15
 - Route mobile signing endpoints through FastAPI so shared links no longer 404
