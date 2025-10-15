@@ -54,7 +54,7 @@
           <li>
             <button class="w-full text-left p-2 hover:bg-gray-700" @click="command('files')" x-text="t('files')"></button>
           </li>
-          <li>
+          <li x-show="enableSponsorFeatures">
             <button class="w-full text-left p-2 hover:bg-gray-700 text-yellow-400 font-semibold" @click="command('sponsor')" x-text="t('sponsor')"></button>
           </li>
           <li>
@@ -107,7 +107,7 @@
       <!-- Content -->
       <main class="flex-1 p-4 space-y-4 overflow-y-auto" x-cloak>
         <input type="file" id="imageUpload" x-ref="imageUpload" class="hidden" multiple accept="image/*,application/pdf" @change="handleImport">
-        <div class="mb-4 flex justify-center" x-show="sponsorBanner && files.length===0 && tab==='files'">
+          <div class="mb-4 flex justify-center" x-show="enableSponsorFeatures && sponsorBanner && files.length===0 && tab==='files'">
           <a :href="sponsorUrl || '#'" target="_blank"><img :src="sponsorBanner" alt="Sponsor" class="max-h-32 w-auto object-contain" /></a>
         </div>
         <div class="mb-4 flex justify-center" x-show="showSlides && currentSlide && files.length===0 && tab==='files'">
@@ -177,7 +177,7 @@
                 </div>
               </div>
             </template>
-          <div x-show="sponsorFrame || sponsorBanner" id="sponsorPreview" class="mb-4 thumbContainer inline-flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-400" :style="`width:${sponsorThumbWidth}px;height:${sponsorThumbHeight}px`">
+          <div x-show="enableSponsorFeatures && (sponsorFrame || sponsorBanner)" id="sponsorPreview" class="mb-4 thumbContainer inline-flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-400" :style="`width:${sponsorThumbWidth}px;height:${sponsorThumbHeight}px`">
               <template x-if="sponsorFrame">
                 <iframe :src="sponsorFrame" :style="`border:none;width:${sponsorFrameWidth}px;height:${sponsorFrameHeight}px;transform:scale(${Math.min(sponsorThumbWidth/sponsorFrameWidth, sponsorThumbHeight/sponsorFrameHeight)});transform-origin:0 0;`"></iframe>
               </template>
@@ -204,7 +204,7 @@
             <button class="px-2 py-1 border rounded text-xs" @click="openUpdateModal('rollback')" x-text="t('rollback')"></button>
           </div>
         </div>
-        <div x-show="tab==='sponsor'" class="p-4 space-y-4" x-data="{tiers:[], price(c){const t=(Array.isArray(this.tiers)?this.tiers:[]).find(x=>x.codice===c);return t&&t.prezzo_base?('€'+t.prezzo_base):'';}}" x-init="fetch('/index.php?option=com_fabrik&view=list&listid=XX&format=raw&format=json').then(r=>r.ok?r.json():Promise.reject()).then(d=>this.tiers=Array.isArray(d)?d:[]).catch(()=>{})">
+        <div x-show="enableSponsorFeatures && tab==='sponsor'" class="p-4 space-y-4" x-data="{tiers:[], price(c){const t=(Array.isArray(this.tiers)?this.tiers:[]).find(x=>x.codice===c);return t&&t.prezzo_base?('€'+t.prezzo_base):'';}}" x-init="fetch('/index.php?option=com_fabrik&view=list&listid=XX&format=raw&format=json').then(r=>r.ok?r.json():Promise.reject()).then(d=>this.tiers=Array.isArray(d)?d:[]).catch(()=>{})">
           <h2 class="text-2xl font-bold" x-text="t('sponsorTitle')"></h2>
           <p x-text="t('sponsorIntro')"></p>
           <table class="w-full text-sm text-left border-collapse">
@@ -281,7 +281,7 @@
             <button @click="donate()" class="bg-yellow-400 text-black px-4 py-2 rounded text-sm" x-text="t('donate')"></button>
           </div>
         </div>
-        <div x-show="tab!=='files' && tab!=='updates' && tab!=='tutorials' && tab!=='purchase' && tab!=='sponsor'" class="text-gray-600" x-text="t('selectCommand')"></div>
+        <div x-show="tab!=='files' && tab!=='updates' && tab!=='tutorials' && tab!=='purchase' && (tab!=='sponsor' || !enableSponsorFeatures)" class="text-gray-600" x-text="t('selectCommand')"></div>
       </main>
       <footer class="mt-auto py-1 px-4">
         <div :class="['flex flex-col sm:flex-row items-center w-full space-y-2 sm:space-y-0', (sponsorLogo || clientLogo) ? 'justify-between' : 'justify-center']">
@@ -438,15 +438,15 @@
           <label class="block text-sm" x-text="t('clientUrl')"></label>
           <input type="text" class="border w-full p-1" x-model="settings.clientUrl" />
         </div>
-        <div>
+        <div x-show="enableSponsorFeatures">
           <label class="block text-sm" x-text="t('sponsorLogo')"></label>
           <input type="text" class="border w-full p-1" x-model="settings.sponsorLogo" />
         </div>
-        <div>
+        <div x-show="enableSponsorFeatures">
           <label class="block text-sm" x-text="t('sponsorUrl')"></label>
           <input type="text" class="border w-full p-1" x-model="settings.sponsorUrl" />
         </div>
-        <div>
+        <div x-show="enableSponsorFeatures">
           <label class="block text-sm" x-text="t('sponsorFrame')"></label>
           <input type="text" class="border w-full p-1" x-model="settings.sponsorFrame" />
         </div>
@@ -454,7 +454,7 @@
           <label class="block text-sm" x-text="t('clientLogoHeight')"></label>
           <input type="number" class="border w-full p-1" x-model.number="settings.clientLogoHeight" />
         </div>
-        <div>
+        <div x-show="enableSponsorFeatures">
           <label class="block text-sm" x-text="t('sponsorLogoHeight')"></label>
           <input type="number" class="border w-full p-1" x-model.number="settings.sponsorLogoHeight" />
         </div>
@@ -847,7 +847,8 @@
           settingsModal:false,
           passwordModal:false,
           passwordInput:'',
-          settings:{clientLogo:'', sponsorLogo:'', clientLogoHeight:125, sponsorLogoHeight:125, clientUrl:'', sponsorUrl:'', sponsorFrame:''},
+          settings:{clientLogo:'', sponsorLogo:'', clientLogoHeight:125, sponsorLogoHeight:125, clientUrl:'', sponsorUrl:'', sponsorFrame:'', enableSponsorFeatures:false},
+          enableSponsorFeatures:false,
           sponsorFrameWidth:340,
           sponsorFrameHeight:500,
           sponsorThumbWidth:150,
@@ -987,6 +988,7 @@
             window.open(`/wiki/${this.lang}/${page}`, '_blank', 'noopener');
           },
           adjustSponsor(){
+            if (!this.enableSponsorFeatures) return;
             this.$nextTick(()=>{
               const grid = this.$refs.fileGrid;
               if(grid){
@@ -1031,16 +1033,24 @@
               this.settings.clientUrl = cfg.client_url || '';
               this.settings.sponsorUrl = cfg.sponsor_url || '';
               this.settings.sponsorFrame = cfg.sponsor_frame || '';
+              this.settings.enableSponsorFeatures = !!cfg.enable_sponsor_features;
+              this.enableSponsorFeatures = this.settings.enableSponsorFeatures;
               this.clientUrl = this.settings.clientUrl;
-              this.sponsorUrl = this.settings.sponsorUrl;
-              this.sponsorBanner = cfg.sponsor_banner ? `/static/logos/${cfg.sponsor_banner}` : null;
-              this.sponsorFrame = cfg.sponsor_frame || null;
-              this.sponsorFrameWidth = parseInt(cfg.sponsor_frame_width || 340);
-              this.sponsorFrameHeight = parseInt(cfg.sponsor_frame_height || 500);
-              this.sponsorThumbWidth = parseInt(cfg.sponsor_thumb_width || 150);
-              this.sponsorThumbHeight = parseInt(cfg.sponsor_thumb_height || 150);
+              if (this.enableSponsorFeatures) {
+                this.sponsorUrl = this.settings.sponsorUrl;
+                this.sponsorBanner = cfg.sponsor_banner ? `/static/logos/${cfg.sponsor_banner}` : null;
+                this.sponsorFrame = cfg.sponsor_frame || null;
+                this.sponsorFrameWidth = parseInt(cfg.sponsor_frame_width || 340);
+                this.sponsorFrameHeight = parseInt(cfg.sponsor_frame_height || 500);
+                this.sponsorThumbWidth = parseInt(cfg.sponsor_thumb_width || 150);
+                this.sponsorThumbHeight = parseInt(cfg.sponsor_thumb_height || 150);
+              } else {
+                this.sponsorUrl = '';
+                this.sponsorBanner = null;
+                this.sponsorFrame = null;
+              }
               this.clientLogo = this.settings.clientLogo ? `/static/logos/${this.settings.clientLogo}` : null;
-              this.sponsorLogo = this.settings.sponsorLogo ? `/static/logos/${this.settings.sponsorLogo}` : null;
+              this.sponsorLogo = (this.enableSponsorFeatures && this.settings.sponsorLogo) ? `/static/logos/${this.settings.sponsorLogo}` : null;
               this.clientLogoHeight = this.settings.clientLogoHeight;
               this.sponsorLogoHeight = this.settings.sponsorLogoHeight;
               if(Array.isArray(cfg.banner_images)){
@@ -1142,6 +1152,9 @@
                 this.showSlides=false;
                 break;
               case 'sponsor':
+                if (!this.enableSponsorFeatures) {
+                  return;
+                }
                 this.tab='sponsor';
                 this.showSlides=false;
                 break;

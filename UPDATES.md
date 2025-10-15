@@ -1,6 +1,8 @@
 # Updates
 
 ## 2025-10-02
+- Ship installations with the demo-full license enabled by default, disable sponsor widgets, and keep the UI responsive until an imported license re-enables premium features.
+- Accept JSON-based license files during upload, keeping sponsor tools disabled until a valid file explicitly unlocks them.
 - Restore default plugin toggles (including the scanner) for installations with older `settings.json` files so homepage controls remain visible after updates.
 - Parse `.git/HEAD` or the stored commit marker when Git isn't available, keeping the footer version and build date visible instead of "unknown".
 - Export build metadata from the Windows start script so launched processes receive `DOCROPPER_VERSION`/`_DATE`, ensuring the UI footer always shows the running revision.

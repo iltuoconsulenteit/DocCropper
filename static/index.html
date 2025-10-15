@@ -24,7 +24,7 @@
         <div id="brandBox"></div>
         <div id="actionButtons">
             <button id="helpBtn" data-i18n="showHelp" data-i18n-title="showHelp" title="Help">Help</button>
-            <button id="sponsorBtn" class="highlight" data-i18n="sponsor" data-i18n-title="sponsor" title="Sponsor">Sponsor</button>
+            <button id="sponsorBtn" class="highlight" data-i18n="sponsor" data-i18n-title="sponsor" title="Sponsor" data-sponsor="true" style="display:none;">Sponsor</button>
             <button id="purchaseBtn" data-i18n="purchase" data-i18n-title="purchase" title="Purchase">Purchase</button>
             <button id="licenseBtn" data-i18n="licenses" data-i18n-title="licenses" title="Licenses">Licenses</button>
             <button id="devSettingsBtn" data-i18n="developerSettings" data-i18n-title="developerSettings" title="Developer" style="display:none;">Dev</button>
@@ -33,7 +33,7 @@
         </div>
         <div id="demoNotice" class="demo-notice" data-i18n="demoTestPage" style="display:none;"></div>
     </header>
-    <div id="sponsorBanner" style="display:none;text-align:center;">
+    <div id="sponsorBanner" data-sponsor="true" style="display:none;text-align:center;">
         <a id="sponsorBannerLink" target="_blank">
             <img id="sponsorBannerImg" alt="Sponsor banner">
         </a>
@@ -52,7 +52,7 @@
 
     <div id="purchaseBox" style="display:none;"></div>
     <div id="licenseBox" style="display:none;"></div>
-    <div id="sponsorBox" style="display:none;"></div>
+    <div id="sponsorBox" data-sponsor="true" style="display:none;"></div>
     <div id="settingsBox" style="display:none;"></div>
     <div id="devSettingsBox" style="display:none;"></div>
     <div id="updateBox" style="display:none;">
@@ -232,7 +232,7 @@
         <span id="closeModal" class="close">&times;</span>
         <img class="modal-content" id="modalImage" src="#" alt="Full size">
     </div>
-    <div id="sponsorModal" class="modal" style="display:none;">
+    <div id="sponsorModal" class="modal" data-sponsor="true" style="display:none;">
         <span id="closeSponsor" class="close" style="display:none;">&times;</span>
         <span id="sponsorCountdown" class="countdown"></span>
         <div class="modal-content" id="sponsorContent" style="text-align:center;max-width:720px;">

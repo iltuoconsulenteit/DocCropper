@@ -231,6 +231,7 @@ const sponsorBanner = document.getElementById('sponsorBanner');
 const sponsorBannerImg = document.getElementById('sponsorBannerImg');
 const sponsorBannerLink = document.getElementById('sponsorBannerLink');
 let sponsorPreview;
+let sponsorFeaturesEnabled = false;
 const devSettingsBtn = document.getElementById('devSettingsBtn');
 const devSettingsBox = document.getElementById('devSettingsBox');
 let settingsUnlocked = false;
@@ -672,6 +673,13 @@ async function refreshLicenseInfo() {
 }
 
 function initSponsorPreview(cfg) {
+    if (!sponsorFeaturesEnabled) {
+        if (sponsorPreview && sponsorPreview.parentElement) {
+            sponsorPreview.parentElement.removeChild(sponsorPreview);
+        }
+        sponsorPreview = null;
+        return;
+    }
     if (!processedGallery) return;
     if (sponsorPreview) sponsorPreview.remove();
     sponsorPreview = document.createElement('div');
@@ -739,6 +747,9 @@ function initSponsorPreview(cfg) {
 }
 
 function ensureSponsorPreviewLast() {
+    if (!sponsorFeaturesEnabled) {
+        return;
+    }
     if (sponsorPreview && processedGallery) {
         processedGallery.appendChild(sponsorPreview);
     }
@@ -747,6 +758,30 @@ function ensureSponsorPreviewLast() {
 function applySettings(cfg) {
     currentSettings = cfg;
     currentSettings.enable_sponsor_video = !!cfg.enable_sponsor_video;
+    sponsorFeaturesEnabled = !!cfg.enable_sponsor_features;
+    currentSettings.enable_sponsor_features = sponsorFeaturesEnabled;
+    document.querySelectorAll('[data-sponsor]').forEach((el) => {
+        if (!sponsorFeaturesEnabled) {
+            el.classList.remove('visible');
+            el.style.display = 'none';
+        }
+    });
+    if (sponsorBtn) {
+        sponsorBtn.style.display = sponsorFeaturesEnabled ? '' : 'none';
+    }
+    if (!sponsorFeaturesEnabled) {
+        if (sponsorBox) {
+            sponsorBox.classList.remove('visible');
+            sponsorBox.style.display = 'none';
+        }
+        if (sponsorBanner) {
+            sponsorBanner.style.display = 'none';
+        }
+        if (sponsorPreview && sponsorPreview.parentElement) {
+            sponsorPreview.parentElement.removeChild(sponsorPreview);
+        }
+        sponsorPreview = null;
+    }
     const urlLang = window.DC_LANG;
     currentLang = urlLang || cfg.language || 'it';
     langSelect.value = currentLang;
@@ -822,7 +857,9 @@ function applySettings(cfg) {
         }
     }
     if (sponsorLogo && sponsorLogoLink) {
-        if (cfg.sponsor_logo) {
+        if (!sponsorFeaturesEnabled) {
+            sponsorLogoLink.style.display = 'none';
+        } else if (cfg.sponsor_logo) {
             sponsorLogo.src = `/static/logos/${cfg.sponsor_logo}`;
             sponsorLogoLink.href = cfg.sponsor_url || '#';
             sponsorLogoLink.style.display = 'block';
@@ -841,7 +878,9 @@ function applySettings(cfg) {
         }
     }
     if (sponsorBadge && sponsorBadgeLink) {
-        if (cfg.sponsor_logo) {
+        if (!sponsorFeaturesEnabled) {
+            sponsorBadgeLink.style.display = 'none';
+        } else if (cfg.sponsor_logo) {
             sponsorBadge.src = `/static/logos/${cfg.sponsor_logo}`;
             sponsorBadgeLink.href = cfg.sponsor_url || '#';
             sponsorBadgeLink.style.display = 'block';
@@ -851,7 +890,9 @@ function applySettings(cfg) {
         }
     }
     if (sponsorBanner && sponsorBannerImg && sponsorBannerLink) {
-        if (cfg.sponsor_banner) {
+        if (!sponsorFeaturesEnabled) {
+            sponsorBanner.style.display = 'none';
+        } else if (cfg.sponsor_banner) {
             sponsorBannerImg.src = `/static/logos/${cfg.sponsor_banner}`;
             sponsorBannerLink.href = cfg.sponsor_url || '#';
             sponsorBanner.style.display = 'block';
@@ -2672,15 +2713,23 @@ purchaseBtn.addEventListener('click', () => {
         purchaseBox.classList.toggle('visible');
     }
 });
-sponsorBtn.addEventListener("click", () => {
-    const rect = sponsorBtn.getBoundingClientRect();
-    sponsorBox.style.top = (rect.bottom + window.scrollY) + 'px';
-    sponsorBox.classList.toggle('visible');
-    if (!sponsorBox.dataset.loaded) {
-        loadSponsorLevels();
-        sponsorBox.dataset.loaded = '1';
-    }
-});
+if (sponsorBtn) {
+    sponsorBtn.addEventListener("click", () => {
+        if (!sponsorFeaturesEnabled) {
+            return;
+        }
+        if (!sponsorBox) {
+            return;
+        }
+        const rect = sponsorBtn.getBoundingClientRect();
+        sponsorBox.style.top = (rect.bottom + window.scrollY) + 'px';
+        sponsorBox.classList.toggle('visible');
+        if (!sponsorBox.dataset.loaded) {
+            loadSponsorLevels();
+            sponsorBox.dataset.loaded = '1';
+        }
+    });
+}
 licenseBtn.addEventListener('click', () => {
     const rect = licenseBtn.getBoundingClientRect();
     licenseBox.style.display = 'block';
