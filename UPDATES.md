@@ -434,3 +434,5 @@
 - The stdlib proxy inside `platform/__init__.py` now provides a defensive fallback for helpers like `python_implementation`, ensuring embeddable Windows builds always expose the APIs required by dependencies.
 - Startup and installer scripts compute a writable dependency-hash directory (preferring `%LOCALAPPDATA%`, `%APPDATA%`, or `%TEMP%`) and log the chosen path, preventing repeated reinstalls when Program Files is read-only.
 - Startup and installer batches pre-compute the list of truly missing requirements so matching environments skip `pip install` entirely unless packages are absent or a full reinstall is explicitly requested.
+- Static templates now load the shared API helper before the main bundle and fall back gracefully when it is unavailable, restoring the full home page controls after updates.
+- `get_version_info` now honours `DOCROPPER_VERSION`/`DOCROPPER_VERSION_DATE` and reads the `last_commit` marker so builds without Git still display the installed revision.

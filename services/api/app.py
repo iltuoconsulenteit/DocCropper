@@ -239,7 +239,13 @@ DEFAULT_SPONSOR_FRAME = (
 )
 
 def get_version_info() -> tuple[str, str]:
-    """Return the current Git commit hash and date."""
+    """Return the current application version and commit date."""
+
+    env_version = os.getenv("DOCROPPER_VERSION")
+    env_date = os.getenv("DOCROPPER_VERSION_DATE", "")
+    if env_version:
+        return env_version, env_date
+
     try:
         version = subprocess.check_output(
             ["git", "rev-parse", "--short", "HEAD"],
@@ -254,6 +260,25 @@ def get_version_info() -> tuple[str, str]:
     except Exception:
         version = "unknown"
         date = ""
+
+    if not version or version == "unknown":
+        last_commit_path = BASE_DIR / "last_commit"
+        try:
+            if last_commit_path.exists():
+                candidate = last_commit_path.read_text(encoding="utf-8").strip()
+                if candidate:
+                    version = candidate
+                if not date:
+                    try:
+                        mtime = last_commit_path.stat().st_mtime
+                        date = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d")
+                    except OSError:
+                        date = ""
+        except OSError:
+            version = "unknown"
+
+    if not version:
+        version = "unknown"
     return version, date
 
 def get_cache_bust() -> str:
@@ -1126,6 +1151,7 @@ def make_index_response(request: Request, lang: str) -> HTMLResponse:
         cache_bust = get_cache_bust()
         if cache_bust:
             content = content.replace("styles.css", f"styles.css{cache_bust}")
+            content = content.replace("/static/api.js", f"/static/api.js{cache_bust}")
             content = content.replace("app.js", f"app.js{cache_bust}")
             content = content.replace("mobilesign.js", f"mobilesign.js{cache_bust}")
             content = content.replace("app_logo.png", f"app_logo.png{cache_bust}")
