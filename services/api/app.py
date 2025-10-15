@@ -51,6 +51,7 @@ import importlib
 import platform
 from types import SimpleNamespace
 
+from .version_info import get_cache_bust, get_version_info
 from .wiki_content import read_wiki_content
 
 import bcrypt as _bcrypt
@@ -238,97 +239,8 @@ DEFAULT_SPONSOR_FRAME = (
     "adapt_container_width=true&hide_cover=true&show_facepile=false"
 )
 
-def get_version_info() -> tuple[str, str]:
-    """Return the current application version and commit date."""
-
-    env_version = os.getenv("DOCROPPER_VERSION")
-    env_date = os.getenv("DOCROPPER_VERSION_DATE", "")
-    if env_version:
-        return env_version, env_date
-
-    try:
-        version = subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            cwd=BASE_DIR,
-            stderr=subprocess.DEVNULL,
-        ).decode().strip()
-        date = subprocess.check_output(
-            ["git", "log", "-1", "--format=%cd", "--date=short"],
-            cwd=BASE_DIR,
-            stderr=subprocess.DEVNULL,
-        ).decode().strip()
-    except Exception:
-        version = "unknown"
-        date = ""
-
-    if not version or version == "unknown":
-        last_commit_path = BASE_DIR / "last_commit"
-        try:
-            if last_commit_path.exists():
-                candidate = last_commit_path.read_text(encoding="utf-8").strip()
-                if candidate:
-                    version = candidate[:7]
-                if not date:
-                    try:
-                        mtime = last_commit_path.stat().st_mtime
-                        date = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d")
-                    except OSError:
-                        date = ""
-        except OSError:
-            version = "unknown"
-
-    if not version or version == "unknown":
-        git_dir = BASE_DIR / ".git"
-        head_path = git_dir / "HEAD"
-        commit = ""
-        ref_path: Path | None = None
-        try:
-            head_data = head_path.read_text(encoding="utf-8").strip()
-        except OSError:
-            head_data = ""
-        if head_data:
-            if head_data.startswith("ref:"):
-                ref = head_data.split(" ", 1)[1].strip()
-                ref_path = git_dir / ref
-                try:
-                    commit = ref_path.read_text(encoding="utf-8").strip()
-                except OSError:
-                    packed_path = git_dir / "packed-refs"
-                    try:
-                        with open(packed_path, "r", encoding="utf-8") as pf:
-                            for line in pf:
-                                line = line.strip()
-                                if not line or line.startswith("#") or line.startswith("^"):
-                                    continue
-                                parts = line.split()
-                                if len(parts) == 2 and parts[1] == ref:
-                                    commit = parts[0]
-                                    break
-                    except OSError:
-                        commit = ""
-            else:
-                commit = head_data
-                ref_path = head_path
-        if commit:
-            version = commit[:7]
-            if not date:
-                target = ref_path if ref_path and ref_path.exists() else head_path
-                try:
-                    mtime = target.stat().st_mtime
-                    date = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d")
-                except OSError:
-                    pass
-
-    if not version:
-        version = "unknown"
-    return version, date
-
-def get_cache_bust() -> str:
-    version, _ = get_version_info()
-    return f"?v={version}" if version != "unknown" else ""
-
-VERSION, VERSION_DATE = get_version_info()
-CACHE_BUST = get_cache_bust()
+VERSION, VERSION_DATE = get_version_info(BASE_DIR)
+CACHE_BUST = get_cache_bust(BASE_DIR)
 
 SESSIONS_ROOT = "sessions"
 SIGNATURES_DIR = "signatures"
@@ -450,7 +362,7 @@ DEFAULT_SETTINGS = {
     "colormode_dev_only": False,
     "imageeditor_dev_only": True,
     "formfields_dev_only": True,
-    "scan_dev_only": True,
+    "scan_dev_only": False,
     "sponsorframe_dev_only": False,
     "enable_sponsor_video": False,
     "banner_images": ["DocCropper_slogan_main_{{lang}}.png"],

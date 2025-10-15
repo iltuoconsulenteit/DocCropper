@@ -308,6 +308,16 @@ if exist requirements.txt (
     )
 )
 
+:: Capture version information for the launched process
+set "DOCROPPER_VERSION="
+set "DOCROPPER_VERSION_DATE="
+if exist "!APP_DIR!\scripts\version_info.py" (
+    for /f "tokens=1* delims==" %%A in ('"%PY%" "!APP_DIR!\scripts\version_info.py" --print-env 2^>nul') do (
+        if /I "%%A"=="DOCROPPER_VERSION" set "DOCROPPER_VERSION=%%B"
+        if /I "%%A"=="DOCROPPER_VERSION_DATE" set "DOCROPPER_VERSION_DATE=%%B"
+    )
+)
+
 :: Stop any running instance
 "%PY%" main.py --stop >> "!LOG_FILE!" 2>&1
 
