@@ -356,6 +356,9 @@ if exist "!REQ_FILE!" (
     set "NEED_INSTALL=1"
     set "DEFAULT_CHOICE=M"
     set "EXISTING_HASH="
+    set "ENSURE_SCRIPT=!APP_DIR!\scripts\ensure_requirements.py"
+    set "TEMP_REQ=%TEMP%\doccropper_requirements_install.txt"
+    if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
     if defined HASH_FILE (
         if exist "!HASH_FILE!" (
             set /p EXISTING_HASH=<"!HASH_FILE!"
@@ -376,6 +379,33 @@ if exist "!REQ_FILE!" (
         if /I "!EXISTING_HASH!"=="!REQ_HASH!" (
             set "NEED_INSTALL=0"
             set "DEFAULT_CHOICE=S"
+        )
+    )
+    set "ENSURE_SUCCESS=0"
+    set "ENSURE_MISSING_COUNT="
+    if exist "!ENSURE_SCRIPT!" (
+        "!PYTHON_CMD!" "!ENSURE_SCRIPT!" "!REQ_FILE!" --output "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
+        if errorlevel 1 (
+            if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
+            call :log "Analisi automatica delle dipendenze non riuscita"
+        ) else (
+            set "ENSURE_SUCCESS=1"
+            set "ENSURE_MISSING_COUNT=0"
+            if exist "!TEMP_REQ!" (
+                for %%I in ("!TEMP_REQ!") do if %%~zI GTR 0 (
+                    for /f %%C in ('find /c /v "" ^< "!TEMP_REQ!"') do set "ENSURE_MISSING_COUNT=%%C"
+                )
+            )
+            if "!ENSURE_MISSING_COUNT!"=="" set "ENSURE_MISSING_COUNT=0"
+            if "!ENSURE_MISSING_COUNT!"=="0" (
+                call :log "Analisi dipendenze: nessun pacchetto da installare"
+                if "!NEED_INSTALL!"=="1" (
+                    set "NEED_INSTALL=0"
+                    set "DEFAULT_CHOICE=S"
+                )
+            ) else (
+                call :log "Pacchetti mancanti rilevati: !ENSURE_MISSING_COUNT!"
+            )
         )
     )
     set "CHOICE="
@@ -404,66 +434,7 @@ if exist "!REQ_FILE!" (
             set "RAN_PIP_INSTALL=1"
         )
     ) else (
-        set "ENSURE_SCRIPT=!APP_DIR!\scripts\ensure_requirements.py"
-        set "TEMP_REQ=%TEMP%\doccropper_requirements_install.txt"
-        if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
-        if exist "!ENSURE_SCRIPT!" (
-            call :prepare_pip
-            if errorlevel 1 (
-                call :pip_error
-                exit /b 1
-            )
-            "!PYTHON_CMD!" "!ENSURE_SCRIPT!" "!REQ_FILE!" --output "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
-            if errorlevel 1 (
-                call :log "Controllo dipendenze fallito, eseguo installazione completa"
-                call :prepare_pip
-                if errorlevel 1 (
-                    call :pip_error
-                    exit /b 1
-                )
-                "!PYTHON_CMD!" -m pip install -r "!REQ_FILE!" >>"%LOG_FILE%" 2>&1
-                if errorlevel 1 (
-                    call :log "Aggiornamento pacchetti fallito"
-                ) else (
-                    set "INSTALL_DONE=1"
-                    set "RAN_PIP_INSTALL=1"
-                )
-            ) else (
-                set "NEEDS_TARGETED=0"
-                if exist "!TEMP_REQ!" (
-                    for %%I in ("!TEMP_REQ!") do if %%~zI GTR 0 set "NEEDS_TARGETED=1"
-                )
-                if "!NEEDS_TARGETED!"=="1" (
-                    call :prepare_pip
-                    if errorlevel 1 (
-                        call :pip_error
-                        exit /b 1
-                    )
-                    "!PYTHON_CMD!" -m pip install -r "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
-                    if errorlevel 1 (
-                        call :log "Aggiornamento mirato fallito, eseguo installazione completa"
-                        call :prepare_pip
-                        if errorlevel 1 (
-                            call :pip_error
-                            exit /b 1
-                        )
-                        "!PYTHON_CMD!" -m pip install -r "!REQ_FILE!" >>"%LOG_FILE%" 2>&1
-                        if errorlevel 1 (
-                            call :log "Aggiornamento pacchetti fallito"
-                        ) else (
-                            set "INSTALL_DONE=1"
-                            set "RAN_PIP_INSTALL=1"
-                        )
-                    ) else (
-                        set "INSTALL_DONE=1"
-                        set "RAN_PIP_INSTALL=1"
-                    )
-                ) else (
-                    call :log "Tutti i pacchetti richiesti sono gia installati"
-                    set "INSTALL_DONE=1"
-                )
-            )
-        ) else (
+        if not exist "!ENSURE_SCRIPT!" (
             call :prepare_pip
             if errorlevel 1 (
                 call :pip_error
@@ -476,7 +447,74 @@ if exist "!REQ_FILE!" (
                 set "INSTALL_DONE=1"
                 set "RAN_PIP_INSTALL=1"
             )
+        ) else (
+            if "!ENSURE_SUCCESS!"=="1" (
+                set "NEEDS_TARGETED=0"
+                if exist "!TEMP_REQ!" (
+                    for %%I in ("!TEMP_REQ!") do if %%~zI GTR 0 set "NEEDS_TARGETED=1"
+                )
+            ) else (
+                call :prepare_pip
+                if errorlevel 1 (
+                    call :pip_error
+                    exit /b 1
+                )
+                "!PYTHON_CMD!" "!ENSURE_SCRIPT!" "!REQ_FILE!" --output "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
+                if errorlevel 1 (
+                    call :log "Controllo dipendenze fallito, eseguo installazione completa"
+                    call :prepare_pip
+                    if errorlevel 1 (
+                        call :pip_error
+                        exit /b 1
+                    )
+                    "!PYTHON_CMD!" -m pip install -r "!REQ_FILE!" >>"%LOG_FILE%" 2>&1
+                    if errorlevel 1 (
+                        call :log "Aggiornamento pacchetti fallito"
+                    ) else (
+                        set "INSTALL_DONE=1"
+                        set "RAN_PIP_INSTALL=1"
+                    )
+                    if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
+                    goto deps_done
+                ) else (
+                    set "NEEDS_TARGETED=0"
+                    if exist "!TEMP_REQ!" (
+                        for %%I in ("!TEMP_REQ!") do if %%~zI GTR 0 set "NEEDS_TARGETED=1"
+                    )
+                    set "ENSURE_SUCCESS=1"
+                )
+            )
+            if "!NEEDS_TARGETED!"=="1" (
+                call :prepare_pip
+                if errorlevel 1 (
+                    call :pip_error
+                    exit /b 1
+                )
+                "!PYTHON_CMD!" -m pip install -r "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
+                if errorlevel 1 (
+                    call :log "Aggiornamento mirato fallito, eseguo installazione completa"
+                    call :prepare_pip
+                    if errorlevel 1 (
+                        call :pip_error
+                        exit /b 1
+                    )
+                    "!PYTHON_CMD!" -m pip install -r "!REQ_FILE!" >>"%LOG_FILE%" 2>&1
+                    if errorlevel 1 (
+                        call :log "Aggiornamento pacchetti fallito"
+                    ) else (
+                        set "INSTALL_DONE=1"
+                        set "RAN_PIP_INSTALL=1"
+                    )
+                ) else (
+                    set "INSTALL_DONE=1"
+                    set "RAN_PIP_INSTALL=1"
+                )
+            ) else (
+                call :log "Tutti i pacchetti richiesti sono gia installati"
+                set "INSTALL_DONE=1"
+            )
         )
+        :deps_done
         if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
     )
     if "!INSTALL_DONE!"=="1" (

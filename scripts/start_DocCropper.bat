@@ -148,6 +148,9 @@ if exist requirements.txt (
     set "NEED_INSTALL=1"
     set "DEFAULT_CHOICE=M"
     set "EXISTING_HASH="
+    set "ENSURE_SCRIPT=!APP_DIR!\scripts\ensure_requirements.py"
+    set "TEMP_REQ=%TEMP%\doccropper_requirements_install.txt"
+    if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
     if exist "!HASH_FILE!" (
         set /p EXISTING_HASH=<"!HASH_FILE!"
     ) else if exist "!OLD_HASH_FILE!" (
@@ -163,6 +166,33 @@ if exist requirements.txt (
         if /I "!EXISTING_HASH!"=="!REQ_HASH!" (
             set "NEED_INSTALL=0"
             set "DEFAULT_CHOICE=S"
+        )
+    )
+    set "ENSURE_SUCCESS=0"
+    set "ENSURE_MISSING_COUNT="
+    if exist "!ENSURE_SCRIPT!" (
+        "%PY%" "!ENSURE_SCRIPT!" requirements.txt --output "!TEMP_REQ!" >> "!LOG_FILE!" 2>&1
+        if errorlevel 1 (
+            if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
+            echo [WARN] Analisi automatica delle dipendenze non riuscita >> "!LOG_FILE!"
+        ) else (
+            set "ENSURE_SUCCESS=1"
+            set "ENSURE_MISSING_COUNT=0"
+            if exist "!TEMP_REQ!" (
+                for %%I in ("!TEMP_REQ!") do if %%~zI GTR 0 (
+                    for /f %%C in ('find /c /v "" ^< "!TEMP_REQ!"') do set "ENSURE_MISSING_COUNT=%%C"
+                )
+            )
+            if "!ENSURE_MISSING_COUNT!"=="" set "ENSURE_MISSING_COUNT=0"
+            if "!ENSURE_MISSING_COUNT!"=="0" (
+                echo [INFO] Analisi dipendenze: nessun pacchetto da installare >> "!LOG_FILE!"
+                if "!NEED_INSTALL!"=="1" (
+                    set "NEED_INSTALL=0"
+                    set "DEFAULT_CHOICE=S"
+                )
+            ) else (
+                echo [INFO] Pacchetti mancanti rilevati: !ENSURE_MISSING_COUNT! >> "!LOG_FILE!"
+            )
         )
     )
     set "CHOICE="
@@ -211,47 +241,7 @@ if exist requirements.txt (
             set "DEPENDENCIES_OK=1"
         )
     ) else (
-        set "ENSURE_SCRIPT=!APP_DIR!\scripts\ensure_requirements.py"
-        set "TEMP_REQ=%TEMP%\doccropper_requirements_install.txt"
-        if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
-        if exist "!ENSURE_SCRIPT!" (
-            call :prepare_pip
-            "%PY%" "!ENSURE_SCRIPT!" requirements.txt --output "!TEMP_REQ!" >> "!LOG_FILE!" 2>&1
-            if errorlevel 1 (
-                echo [WARN] Controllo dipendenze fallito, eseguo installazione completa >> "!LOG_FILE!"
-                call :prepare_pip
-                "%PY%" -m pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
-                if errorlevel 1 (
-                    echo [WARN] Aggiornamento pacchetti fallito >> "!LOG_FILE!"
-                ) else (
-                    set "DEPENDENCIES_OK=1"
-                )
-            ) else (
-                set "NEEDS_TARGETED=0"
-                if exist "!TEMP_REQ!" (
-                    for %%I in ("!TEMP_REQ!") do if %%~zI GTR 0 set "NEEDS_TARGETED=1"
-                )
-                if "!NEEDS_TARGETED!"=="1" (
-                    call :prepare_pip
-                    "%PY%" -m pip install -r "!TEMP_REQ!" >> "!LOG_FILE!" 2>&1
-                    if errorlevel 1 (
-                        echo [WARN] Aggiornamento mirato fallito, eseguo installazione completa >> "!LOG_FILE!"
-                        call :prepare_pip
-                        "%PY%" -m pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
-                        if errorlevel 1 (
-                            echo [WARN] Aggiornamento pacchetti fallito >> "!LOG_FILE!"
-                        ) else (
-                            set "DEPENDENCIES_OK=1"
-                        )
-                    ) else (
-                        set "DEPENDENCIES_OK=1"
-                    )
-                ) else (
-                    echo [INFO] Tutti i pacchetti richiesti sono gia installati >> "!LOG_FILE!"
-                    set "DEPENDENCIES_OK=1"
-                )
-            )
-        ) else (
+        if not exist "!ENSURE_SCRIPT!" (
             call :prepare_pip
             "%PY%" -m pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
             if errorlevel 1 (
@@ -259,7 +249,55 @@ if exist requirements.txt (
             ) else (
                 set "DEPENDENCIES_OK=1"
             )
+        ) else (
+            if "!ENSURE_SUCCESS!"=="1" (
+                set "NEEDS_TARGETED=0"
+                if exist "!TEMP_REQ!" (
+                    for %%I in ("!TEMP_REQ!") do if %%~zI GTR 0 set "NEEDS_TARGETED=1"
+                )
+            ) else (
+                call :prepare_pip
+                "%PY%" "!ENSURE_SCRIPT!" requirements.txt --output "!TEMP_REQ!" >> "!LOG_FILE!" 2>&1
+                if errorlevel 1 (
+                    echo [WARN] Controllo dipendenze fallito, eseguo installazione completa >> "!LOG_FILE!"
+                    call :prepare_pip
+                    "%PY%" -m pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
+                    if errorlevel 1 (
+                        echo [WARN] Aggiornamento pacchetti fallito >> "!LOG_FILE!"
+                    ) else (
+                        set "DEPENDENCIES_OK=1"
+                    )
+                    if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
+                    goto deps_done
+                ) else (
+                    set "NEEDS_TARGETED=0"
+                    if exist "!TEMP_REQ!" (
+                        for %%I in ("!TEMP_REQ!") do if %%~zI GTR 0 set "NEEDS_TARGETED=1"
+                    )
+                    set "ENSURE_SUCCESS=1"
+                )
+            )
+            if "!NEEDS_TARGETED!"=="1" (
+                call :prepare_pip
+                "%PY%" -m pip install -r "!TEMP_REQ!" >> "!LOG_FILE!" 2>&1
+                if errorlevel 1 (
+                    echo [WARN] Aggiornamento mirato fallito, eseguo installazione completa >> "!LOG_FILE!"
+                    call :prepare_pip
+                    "%PY%" -m pip install -r requirements.txt >> "!LOG_FILE!" 2>&1
+                    if errorlevel 1 (
+                        echo [WARN] Aggiornamento pacchetti fallito >> "!LOG_FILE!"
+                    ) else (
+                        set "DEPENDENCIES_OK=1"
+                    )
+                ) else (
+                    set "DEPENDENCIES_OK=1"
+                )
+            ) else (
+                echo [INFO] Tutti i pacchetti richiesti sono gia installati >> "!LOG_FILE!"
+                set "DEPENDENCIES_OK=1"
+            )
         )
+        :deps_done
         if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
     )
     if "!DEPENDENCIES_OK!"=="1" (

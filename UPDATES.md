@@ -431,5 +431,6 @@
 - Startup and installer batches upgrade `pip` only when they actually install packages, dramatically reducing update time when dependencies are already satisfied
 - Windows installer now validates the Python interpreter path before preparing `pip` and logs clear errors if it is missing, avoiding silent terminations caused by commands invoked with empty quotes
 - Installer now resolves `requirements.txt` via an absolute path, gracefully falls back when the dependency-hash directory is unavailable, and logs precise failures instead of reporting missing files or empty hash locations.
-- The stdlib proxy inside `platform/__init__.py` now delegates missing attributes via `__getattr__`, keeping functions like `python_implementation` available to dependencies on Windows embeddable builds.
+- The stdlib proxy inside `platform/__init__.py` now provides a defensive fallback for helpers like `python_implementation`, ensuring embeddable Windows builds always expose the APIs required by dependencies.
 - Startup and installer scripts compute a writable dependency-hash directory (preferring `%LOCALAPPDATA%`, `%APPDATA%`, or `%TEMP%`) and log the chosen path, preventing repeated reinstalls when Program Files is read-only.
+- Startup and installer batches pre-compute the list of truly missing requirements so matching environments skip `pip install` entirely unless packages are absent or a full reinstall is explicitly requested.

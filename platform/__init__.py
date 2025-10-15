@@ -110,6 +110,25 @@ __all__ = sorted(
     name for name in dir(_stdlib_platform) if not name.startswith("_")
 )
 
+# Some embeddable distributions have shipped trimmed ``platform`` modules that
+# omit helper functions such as :func:`python_implementation`.  Third-party
+# packages like SQLAlchemy rely on these helpers, so provide a defensive
+# fallback when they are missing instead of raising :class:`AttributeError`.
+if "python_implementation" not in globals():
+
+    def python_implementation() -> str:  # type: ignore[override]
+        implementation = getattr(sys, "implementation", None)
+        name = getattr(implementation, "name", "") if implementation else ""
+        if not name:
+            return "CPython"
+        if name.lower() == "cpython":
+            return "CPython"
+        return name.capitalize()
+
+    globals()["python_implementation"] = python_implementation
+    if "python_implementation" not in __all__:
+        __all__.append("python_implementation")
+
 
 def __getattr__(name: str):
     try:

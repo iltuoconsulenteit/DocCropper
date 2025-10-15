@@ -44,3 +44,19 @@ def test_platform_imports_from_embeddable_zip(tmp_path, monkeypatch):
         # Restore the normal module for any later tests.
         sys.modules.pop("platform", None)
         importlib.import_module("platform")
+
+
+def test_platform_exposes_python_implementation(monkeypatch):
+    """The shim should always expose ``python_implementation``."""
+
+    # Remove cached module to exercise import path.
+    sys.modules.pop("platform", None)
+    module = importlib.import_module("platform")
+    try:
+        assert callable(module.python_implementation)
+        value = module.python_implementation()
+        assert isinstance(value, str)
+        assert value
+    finally:
+        sys.modules.pop("platform", None)
+        importlib.import_module("platform")
