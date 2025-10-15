@@ -267,7 +267,7 @@ def get_version_info() -> tuple[str, str]:
             if last_commit_path.exists():
                 candidate = last_commit_path.read_text(encoding="utf-8").strip()
                 if candidate:
-                    version = candidate
+                    version = candidate[:7]
                 if not date:
                     try:
                         mtime = last_commit_path.stat().st_mtime
@@ -276,6 +276,48 @@ def get_version_info() -> tuple[str, str]:
                         date = ""
         except OSError:
             version = "unknown"
+
+    if not version or version == "unknown":
+        git_dir = BASE_DIR / ".git"
+        head_path = git_dir / "HEAD"
+        commit = ""
+        ref_path: Path | None = None
+        try:
+            head_data = head_path.read_text(encoding="utf-8").strip()
+        except OSError:
+            head_data = ""
+        if head_data:
+            if head_data.startswith("ref:"):
+                ref = head_data.split(" ", 1)[1].strip()
+                ref_path = git_dir / ref
+                try:
+                    commit = ref_path.read_text(encoding="utf-8").strip()
+                except OSError:
+                    packed_path = git_dir / "packed-refs"
+                    try:
+                        with open(packed_path, "r", encoding="utf-8") as pf:
+                            for line in pf:
+                                line = line.strip()
+                                if not line or line.startswith("#") or line.startswith("^"):
+                                    continue
+                                parts = line.split()
+                                if len(parts) == 2 and parts[1] == ref:
+                                    commit = parts[0]
+                                    break
+                    except OSError:
+                        commit = ""
+            else:
+                commit = head_data
+                ref_path = head_path
+        if commit:
+            version = commit[:7]
+            if not date:
+                target = ref_path if ref_path and ref_path.exists() else head_path
+                try:
+                    mtime = target.stat().st_mtime
+                    date = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d")
+                except OSError:
+                    pass
 
     if not version:
         version = "unknown"
@@ -384,6 +426,32 @@ DEFAULT_SETTINGS = {
     "skip_blank": True,
     "max_upload_files": 10,
     "max_upload_mb": 5,
+    "enable_sign": True,
+    "enable_mobilesign": False,
+    "enable_removebg": True,
+    "enable_compresspdf": True,
+    "enable_pageselect": True,
+    "enable_downloadpng": True,
+    "enable_colormode": True,
+    "enable_imageeditor": True,
+    "enable_formfields": True,
+    "enable_scan": True,
+    "enable_watermark": False,
+    "enable_remotesign": False,
+    "enable_docuseal": False,
+    "login_dev_only": True,
+    "crop_dev_only": False,
+    "sign_dev_only": False,
+    "mobilesign_dev_only": False,
+    "removebg_dev_only": False,
+    "compresspdf_dev_only": False,
+    "downloadpng_dev_only": True,
+    "pageselect_dev_only": False,
+    "colormode_dev_only": False,
+    "imageeditor_dev_only": True,
+    "formfields_dev_only": True,
+    "scan_dev_only": True,
+    "sponsorframe_dev_only": False,
     "enable_sponsor_video": False,
     "banner_images": ["DocCropper_slogan_main_{{lang}}.png"],
     "developer_watermark": False,

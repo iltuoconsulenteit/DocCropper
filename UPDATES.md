@@ -1,5 +1,9 @@
 # Updates
 
+## 2025-10-02
+- Restore default plugin toggles (including the scanner) for installations with older `settings.json` files so homepage controls remain visible after updates.
+- Parse `.git/HEAD` or the stored commit marker when Git isn't available, keeping the footer version and build date visible instead of "unknown".
+
 ## 2025-09-15
 - Route mobile signing endpoints through FastAPI so shared links no longer 404
 - Route `/wiki` requests to the FastAPI app so built-in help pages load correctly
