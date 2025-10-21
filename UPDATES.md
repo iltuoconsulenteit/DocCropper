@@ -1,5 +1,9 @@
 # Updates
 
+## 2025-10-21
+- Detect already running DocCropper instances during Windows startup by probing the local service, preventing repeated failures when a previous installation is still active and keeping the tray indicator in sync.
+
+
 ## 2025-10-02
 - Ship installations with the demo-full license enabled by default, disable sponsor widgets, and keep the UI responsive until an imported license re-enables premium features.
 - Accept JSON-based license files during upload, keeping sponsor tools disabled until a valid file explicitly unlocks them.

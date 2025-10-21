@@ -98,32 +98,13 @@ if exist "!TRAY_PID_FILE!" (
 
 :: Check if server already running using PID file
 set "PID_FILE=%TEMP%\doccropper.pid"
-set "SERVER_RUNNING=0"
-if exist "!PID_FILE!" (
-    for /f %%p in (!PID_FILE!) do set "PID=%%p"
-    tasklist /FI "PID eq !PID!" | find "!PID!" >nul && set "SERVER_RUNNING=1"
-)
-
 set "START_TRAY=0"
 if "!TRAY_RUNNING!"=="0" (
     set "START_TRAY=1"
 )
 
-rem refresh server status after possible tray launch
-set "SERVER_RUNNING=0"
-if exist "!PID_FILE!" (
-    for /f %%p in (!PID_FILE!) do set "PID=%%p"
-    tasklist /FI "PID eq !PID!" | find "!PID!" >nul && set "SERVER_RUNNING=1"
-)
-
 set "OPEN_URL=%DOCROPPER_OPEN_URL%"
 if "%OPEN_URL%"=="" set "OPEN_URL=http://localhost:%PORT%/"
-
-if "!SERVER_RUNNING!"=="1" (
-    echo [INFO] DocCropper gia in esecuzione con PID !PID! >> "!LOG_FILE!"
-    start "" "%OPEN_URL%"
-    goto finish
-)
 
 :: Use Python executables directly (no wrapper compilation)
 set "DOC_EXE=!PY!"
@@ -135,6 +116,19 @@ if "!START_TRAY!"=="1" (
     start "" "!TRAY_EXE!" doccropper_tray.pyw >> "!LOG_FILE!" 2>&1
     set "DOCROPPER_PROC="
     timeout /t 2 >nul
+)
+
+rem refresh server status after possible tray launch or legacy runs
+set "SERVER_RUNNING=0"
+if exist "!PID_FILE!" (
+    for /f %%p in (!PID_FILE!) do set "PID=%%p"
+    tasklist /FI "PID eq !PID!" | find "!PID!" >nul && set "SERVER_RUNNING=1"
+)
+if "!SERVER_RUNNING!"=="0" (
+    call :check_existing_server %PORT%
+)
+if "!SERVER_RUNNING!"=="1" (
+    echo [INFO] DocCropper gia in esecuzione sulla porta %PORT% >> "!LOG_FILE!"
 )
 
 :: Install or update dependencies
@@ -330,6 +324,14 @@ if exist "!APP_DIR!\scripts\version_info.py" (
 :: Stop any running instance
 "%PY%" main.py --stop >> "!LOG_FILE!" 2>&1
 
+call :check_existing_server %PORT%
+if "!SERVER_RUNNING!"=="1" (
+    echo [WARN] DocCropper risulta ancora attivo sulla porta %PORT%, salto il nuovo avvio >> "!LOG_FILE!"
+    echo ⚠️ DocCropper risulta gia in esecuzione sulla porta %PORT%. Chiudi l'istanza precedente e riprova.
+    start "" "%OPEN_URL%"
+    goto finish
+)
+
 :: Launch application
 echo [INFO] Avvio DocCropper sulla porta %PORT% >> "!LOG_FILE!"
 set "LAUNCH_HELPER=!APP_DIR!\scripts\launch_app.py"
@@ -405,6 +407,18 @@ if not exist "!HASH_ROOT!" (
     )
 )
 if not exist "!HASH_ROOT!" set "HASH_ROOT=%TEMP%"
+exit /b 0
+
+:check_existing_server
+set "SERVER_RUNNING=0"
+set "_CHECK_PORT=%~1"
+if "!_CHECK_PORT!"=="" set "_CHECK_PORT=%PORT%"
+"%PY%" -c "import sys, urllib.request;\nport = int(sys.argv[1]);\nurl = f'http://127.0.0.1:{port}/license/status';\ntry:\n    with urllib.request.urlopen(url, timeout=1) as resp:\n        sys.exit(0 if resp.status == 200 else 1)\nexcept Exception:\n    sys.exit(1)" "!_CHECK_PORT!" >nul 2>&1
+if errorlevel 1 (
+    set "SERVER_RUNNING=0"
+) else (
+    set "SERVER_RUNNING=1"
+)
 exit /b 0
 
 :prepare_pip
