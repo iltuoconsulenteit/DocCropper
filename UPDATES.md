@@ -1,5 +1,30 @@
 # Updates
 
+## 2025-10-21
+- Detect already running DocCropper instances during Windows startup by probing the local service, preventing repeated failures when a previous installation is still active and keeping the tray indicator in sync.
+
+
+## 2025-10-02
+- Ship installations with the demo-full license enabled by default, disable sponsor widgets, and keep the UI responsive until an imported license re-enables premium features.
+- Accept JSON-based license files during upload, keeping sponsor tools disabled until a valid file explicitly unlocks them.
+- Restore default plugin toggles (including the scanner) for installations with older `settings.json` files so homepage controls remain visible after updates.
+- Parse `.git/HEAD` or the stored commit marker when Git isn't available, keeping the footer version and build date visible instead of "unknown".
+- Export build metadata from the Windows start script so launched processes receive `DOCROPPER_VERSION`/`_DATE`, ensuring the UI footer always shows the running revision.
+- Treat empty or developer license codes as full editions without forcing demo mode, keeping the license editor responsive and avoiding UI lockups when switching keys.
+- Read `env/version.env` before attempting Git lookups so packaged Windows installs that capture the build metadata still display their revision even without repository metadata.
+
+## 2025-09-15
+- Route mobile signing endpoints through FastAPI so shared links no longer 404
+- Route `/wiki` requests to the FastAPI app so built-in help pages load correctly
+- Skip unnecessary Windows dependency reinstalls by tracking `requirements.txt` hash
+- Embed wiki documentation inside the app via an iframe and serve it from absolute paths to avoid 500 errors
+- Forward `/settings` requests to FastAPI so the settings panel accepts the correct password
+- Serve wiki pages via a dedicated `StaticFiles` mount to prevent internal server errors
+- Ask whether to reinstall Python dependencies or skip existing packages during startup
+- Remove unsupported header call in `NoCacheStaticFiles` that caused wiki 500 errors
+- Permit `/settings-login/` to accept the default password when no hash is set
+- Redirect `/sign` URLs through Django to FastAPI so mobile signing links resolve correctly
+
 ## 2025-09-09
 - Precompile Windows launcher wrappers during installation so first start doesn't fall back to PowerShell `Add-Type`
 - Capture tray icon launch output in installer logs to help diagnose startup failures
@@ -390,3 +415,37 @@
   Windows builds import it without error
 - Reintroduce a lightweight PowerShell wrapper that delegates to the Python builder so legacy launchers no longer fail with
   `Add-Type` compilation errors
+
+## 2025-09-13
+- Added an API endpoint that streams wiki pages as HTML with no-cache headers so help content can be embedded safely inside the UI
+- Replaced iframe-based wiki embeds in both interfaces with dynamic loaders that fetch from the new endpoint and handle in-app navigation
+
+## 2025-09-13
+- Route `/wiki` through Django to serve bundled help pages without 500 errors when FastAPI is bypassed
+
+## 2025-09-13
+- Store the settings panel password in plain text alongside its hash so the default `12345678` works reliably and can be changed without bcrypt issues
+- Ask once before installing Windows dependencies, letting admins skip, update missing packages, or force a full reinstall during startup and upgrades
+- Fall back to a maintained Python embeddable version when downloads fail and validate the configured version before attempting installation
+
+## 2025-09-14
+- Startup and installer scripts now leave matching Python packages untouched so upgrades only reinstall dependencies when explicitly requested
+- Windows installer detects the operating system architecture before downloading the embeddable Python runtime, preventing 404 errors on 32-bit or ARM64 hosts
+- Store dependency hashes under the user profile (or `%TEMP%`) so Windows upgrades can skip reinstalling packages even when `Program Files` is read-only
+
+## 2025-09-18
+- Windows installer skips compiling obsolete launcher wrappers and removes the legacy PowerShell builder, preventing `Add-Type` errors during upgrades
+- Stubbed the legacy wrapper scripts so historical start/installer batches simply log the skip instead of invoking `Add-Type`
+
+## 2025-10-02
+- Added a dedicated `launch_app.py` helper so the Windows start script spawns DocCropper via Python, appends logs, and records the server PID before reporting success
+- Hardened the dependency checker to fall back to a simplified parser when `packaging` is unavailable, preventing unnecessary reinstalls while still catching missing packages
+- Windows launcher now verifies that DocCropper stays alive for the first second and reports immediate exits in the start log instead of leaving the tray LED red with no clues
+- Startup and installer batches upgrade `pip` only when they actually install packages, dramatically reducing update time when dependencies are already satisfied
+- Windows installer now validates the Python interpreter path before preparing `pip` and logs clear errors if it is missing, avoiding silent terminations caused by commands invoked with empty quotes
+- Installer now resolves `requirements.txt` via an absolute path, gracefully falls back when the dependency-hash directory is unavailable, and logs precise failures instead of reporting missing files or empty hash locations.
+- The stdlib proxy inside `platform/__init__.py` now provides a defensive fallback for helpers like `python_implementation`, ensuring embeddable Windows builds always expose the APIs required by dependencies.
+- Startup and installer scripts compute a writable dependency-hash directory (preferring `%LOCALAPPDATA%`, `%APPDATA%`, or `%TEMP%`) and log the chosen path, preventing repeated reinstalls when Program Files is read-only.
+- Startup and installer batches pre-compute the list of truly missing requirements so matching environments skip `pip install` entirely unless packages are absent or a full reinstall is explicitly requested.
+- Static templates now load the shared API helper before the main bundle and fall back gracefully when it is unavailable, restoring the full home page controls after updates.
+- `get_version_info` now honours `DOCROPPER_VERSION`/`DOCROPPER_VERSION_DATE` and reads the `last_commit` marker so builds without Git still display the installed revision.

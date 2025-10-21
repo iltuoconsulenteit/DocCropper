@@ -138,6 +138,8 @@
   "ocrNoSupport": "OCR not available",
   "instructionsTitle": "Usage",
   "instructionsComing": "Browse the wiki below.",
+  "guideLoading": "Loading guide...",
+  "guideFailed": "Unable to load the guide. Please try again.",
   "openWiki": "Open Wiki",
   "showHelp": "Help",
   "inputModeLabel": "Source:",

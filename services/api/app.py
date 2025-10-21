@@ -4,12 +4,14 @@ import logging
 import json
 import math
 import os
+import secrets
 import shutil
 import time
 import uuid
 from pathlib import Path
 from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, Body, Request, Depends, HTTPException
@@ -30,7 +32,10 @@ class NoCacheStaticFiles(StaticFiles):
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
             # Allow help pages like the wiki to be embedded in the UI
-            response.headers.pop("X-Frame-Options", None)
+            try:
+                del response.headers["X-Frame-Options"]
+            except KeyError:
+                pass
             response.headers["Content-Security-Policy"] = "frame-ancestors *"
         return response
 from fastapi.middleware.cors import CORSMiddleware
@@ -45,6 +50,9 @@ import socket
 import importlib
 import platform
 from types import SimpleNamespace
+
+from .version_info import get_cache_bust, get_version_info
+from .wiki_content import read_wiki_content
 
 import bcrypt as _bcrypt
 if not hasattr(_bcrypt, "__about__"):
@@ -111,6 +119,8 @@ except Exception:
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
+STATIC_DIR = BASE_DIR / "static"
+WIKI_DIR = BASE_DIR / "wiki"
 SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
 # Additional file storing values enforced by a license check
 LICENSE_OVERRIDES_FILE = os.path.join(BASE_DIR, "license_overrides.json")
@@ -134,6 +144,69 @@ USERS_DIR = os.path.join(BASE_DIR, "users")
 
 DEFAULT_DEV_PASSWORD = os.getenv("DOCROPPER_DEV_PASSWORD", "87654321")
 DEFAULT_SETTINGS_PASSWORD = os.getenv("DOCROPPER_SETTINGS_PASSWORD", "12345678")
+
+
+def _normalize_password_hash(value: Any, default: str, label: str) -> str:
+    """Return a valid bcrypt hash, regenerating it when the stored value is invalid."""
+
+    logger = logging.getLogger(__name__)
+    if isinstance(value, str):
+        candidate = value.strip()
+        if not candidate:
+            return bcrypt.hash(default)
+        try:
+            if not bcrypt.identify(candidate):
+                logger.warning("Discarding invalid %s password hash", label)
+                return bcrypt.hash(default)
+            try:
+                # ``verify`` raises for truncated or otherwise corrupted hashes.
+                bcrypt.verify(default, candidate)
+            except (TypeError, ValueError):
+                logger.warning(
+                    "Discarding unreadable %s password hash; regenerating default",
+                    label,
+                )
+                return bcrypt.hash(default)
+            return candidate
+        except Exception:  # pragma: no cover - defensive guard
+            logger.warning(
+                "Failed to inspect %s password hash; regenerating default", label
+            )
+            return bcrypt.hash(default)
+    if value in (None, "", False):
+        return bcrypt.hash(default)
+    logger.warning(
+        "Discarding unexpected %s password hash type %s",
+        label,
+        type(value).__name__,
+    )
+    return bcrypt.hash(default)
+
+
+def _clean_settings_password(value: Any, default: str) -> str:
+    if isinstance(value, str):
+        candidate = value.strip()
+        if candidate:
+            return candidate
+    return default
+
+
+def _verify_settings_password(settings: dict, candidate: str) -> tuple[bool, bool]:
+    plain = settings.get("settings_password")
+    plain_valid = isinstance(plain, str) and plain != ""
+    if plain_valid and secrets.compare_digest(plain, candidate):
+        return True, False
+
+    hashed = settings.get("settings_password_hash", "")
+    if hashed:
+        try:
+            if bcrypt.verify(candidate, hashed):
+                return True, False
+        except (TypeError, ValueError):
+            return candidate == DEFAULT_SETTINGS_PASSWORD, True
+
+    fallback_allowed = not plain_valid
+    return fallback_allowed and candidate == DEFAULT_SETTINGS_PASSWORD, False
 
 # Read/write values that the license server enforces. They override normal
 # settings and cannot be changed by users.
@@ -166,30 +239,8 @@ DEFAULT_SPONSOR_FRAME = (
     "adapt_container_width=true&hide_cover=true&show_facepile=false"
 )
 
-def get_version_info() -> tuple[str, str]:
-    """Return the current Git commit hash and date."""
-    try:
-        version = subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            cwd=BASE_DIR,
-            stderr=subprocess.DEVNULL,
-        ).decode().strip()
-        date = subprocess.check_output(
-            ["git", "log", "-1", "--format=%cd", "--date=short"],
-            cwd=BASE_DIR,
-            stderr=subprocess.DEVNULL,
-        ).decode().strip()
-    except Exception:
-        version = "unknown"
-        date = ""
-    return version, date
-
-def get_cache_bust() -> str:
-    version, _ = get_version_info()
-    return f"?v={version}" if version != "unknown" else ""
-
-VERSION, VERSION_DATE = get_version_info()
-CACHE_BUST = get_cache_bust()
+VERSION, VERSION_DATE = get_version_info(BASE_DIR)
+CACHE_BUST = get_cache_bust(BASE_DIR)
 
 SESSIONS_ROOT = "sessions"
 SIGNATURES_DIR = "signatures"
@@ -248,9 +299,10 @@ DEFAULT_SETTINGS = {
     "brightness": 100,
     "contrast": 100,
     "port": 8765,
-    "license_key": "",
-    "license_name": "",
+    "license_key": "DEMO-FULL-DC",
+    "license_name": "Demo User",
     "license_token": "",
+    "license_type": "demo",
     "payment_mode": "donation",
     "paypal_link": "",
     "stripe_link": "",
@@ -263,7 +315,7 @@ DEFAULT_SETTINGS = {
     "bank_info": "",
     "google_client_id": "",
     "license_check": False,
-    "license_level": "free",
+    "license_level": "full",
     "brand_html": "",
     "client_logo": "client_logo.png",
     "sponsor_logo": "sponsor_logo.png",
@@ -287,14 +339,42 @@ DEFAULT_SETTINGS = {
     "skip_blank": True,
     "max_upload_files": 10,
     "max_upload_mb": 5,
+    "enable_sign": True,
+    "enable_mobilesign": True,
+    "enable_removebg": True,
+    "enable_compresspdf": True,
+    "enable_pageselect": True,
+    "enable_downloadpng": True,
+    "enable_colormode": True,
+    "enable_imageeditor": True,
+    "enable_formfields": True,
+    "enable_scan": True,
+    "enable_watermark": False,
+    "enable_remotesign": False,
+    "enable_docuseal": False,
+    "login_dev_only": True,
+    "crop_dev_only": False,
+    "sign_dev_only": False,
+    "mobilesign_dev_only": False,
+    "removebg_dev_only": False,
+    "compresspdf_dev_only": False,
+    "downloadpng_dev_only": True,
+    "pageselect_dev_only": False,
+    "colormode_dev_only": False,
+    "imageeditor_dev_only": True,
+    "formfields_dev_only": True,
+    "scan_dev_only": False,
+    "sponsorframe_dev_only": False,
+    "enable_sponsor_features": False,
     "enable_sponsor_video": False,
     "banner_images": ["DocCropper_slogan_main_{{lang}}.png"],
     "developer_watermark": False,
-    "demo_full_mode": False,
+    "demo_full_mode": True,
     "public_url": "",
     "template": "static",
     "update_pin": "",
     "update_interval": 3600000,
+    "settings_password": DEFAULT_SETTINGS_PASSWORD,
     "developer_password_hash": bcrypt.hash(DEFAULT_DEV_PASSWORD),
 }
 
@@ -503,10 +583,24 @@ def load_settings():
         if slides_env:
             merged["sponsor_slides"] = [s.strip() for s in slides_env.split(",") if s.strip()]
 
-        if "developer_password_hash" not in merged:
-            merged["developer_password_hash"] = bcrypt.hash(DEFAULT_DEV_PASSWORD)
-        if "settings_password_hash" not in merged:
-            merged["settings_password_hash"] = bcrypt.hash(DEFAULT_SETTINGS_PASSWORD)
+        merged["settings_password"] = _clean_settings_password(
+            merged.get("settings_password"),
+            DEFAULT_SETTINGS_PASSWORD,
+        )
+        merged["developer_password_hash"] = _normalize_password_hash(
+            merged.get("developer_password_hash"),
+            DEFAULT_DEV_PASSWORD,
+            "developer",
+        )
+        merged["settings_password_hash"] = _normalize_password_hash(
+            merged.get("settings_password_hash"),
+            merged["settings_password"],
+            "settings",
+        )
+        if not merged.get("license_key"):
+            merged["license_key"] = DEMO_FULL_LICENSE_KEY
+        merged.setdefault("license_type", "demo")
+        merged.setdefault("enable_sponsor_features", False)
         token = merged.get("license_token")
         if token:
             try:
@@ -535,6 +629,9 @@ def load_settings():
         manual_env = MANUAL_LICENSE_KEY
         online_env = ONLINE_LICENSE_KEY
         key_upper = merged.get("license_key", "").strip().upper()
+        if not key_upper:
+            key_upper = DEMO_FULL_LICENSE_KEY
+            merged["license_key"] = DEMO_FULL_LICENSE_KEY
         is_demo = key_upper == DEMO_FULL_LICENSE_KEY
         is_dev = (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV")
         if is_demo:
@@ -544,6 +641,7 @@ def load_settings():
             if not merged.get("license_name"):
                 merged["license_name"] = "Demo User"
             merged["enable_mobilesign"] = True
+            merged["enable_sponsor_features"] = False
             if not merged.get("paypal_link"):
                 merged["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
             if not merged.get("public_url"):
@@ -554,17 +652,20 @@ def load_settings():
             if not merged.get("license_name"):
                 merged["license_name"] = "Developer"
             merged["enable_mobilesign"] = True
+            merged["enable_sponsor_features"] = bool(merged.get("enable_sponsor_features"))
         elif manual_env and key_upper == manual_env:
             merged["license_level"] = "full"
             merged["license_type"] = "manual"
             if not merged.get("license_name"):
                 merged["license_name"] = "Manual License"
+            merged["enable_sponsor_features"] = bool(merged.get("enable_sponsor_features"))
         elif online_env and key_upper == online_env:
             merged["license_level"] = "full"
             merged["license_type"] = "online"
             merged["license_check"] = True
             if not merged.get("license_name"):
                 merged["license_name"] = "Online License"
+            merged["enable_sponsor_features"] = bool(merged.get("enable_sponsor_features"))
         else:
             merged["license_level"] = "full"
             merged["license_type"] = "demo"
@@ -572,25 +673,30 @@ def load_settings():
             if not merged.get("license_name"):
                 merged["license_name"] = "Demo User"
             merged["enable_mobilesign"] = True
+            merged["enable_sponsor_features"] = False
             if not merged.get("paypal_link"):
                 merged["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
             if not merged.get("public_url"):
                 merged["public_url"] = "https://doccropper.iltuoconsulenteit.it"
             is_demo = True
-        if (is_demo or is_dev) and not merged.get("sponsor_frame"):
+        if merged.get("enable_sponsor_features") and (is_demo or is_dev) and not merged.get("sponsor_frame"):
             merged["sponsor_frame"] = DEFAULT_SPONSOR_FRAME
-        try:
-            from plugin.core import sponsorframe
-            sponsor_dev = str(
-                os.getenv(
-                    "DOCROPPER_SPONSORFRAME_DEV_ONLY",
-                    merged.get("sponsorframe_dev_only", False),
-                )
-            ).lower() == "true"
-            if not sponsor_dev or is_dev:
-                merged.update(sponsorframe.get_config(merged))
-        except Exception:
-            logger.exception("sponsor plugin failed")
+        if merged.get("enable_sponsor_features"):
+            try:
+                from plugin.core import sponsorframe
+                sponsor_dev = str(
+                    os.getenv(
+                        "DOCROPPER_SPONSORFRAME_DEV_ONLY",
+                        merged.get("sponsorframe_dev_only", False),
+                    )
+                ).lower() == "true"
+                if not sponsor_dev or is_dev:
+                    merged.update(sponsorframe.get_config(merged))
+            except Exception:
+                logger.exception("sponsor plugin failed")
+        else:
+            merged["sponsor_frame"] = ""
+            merged["sponsor_banner"] = ""
         logger.info(
             "License key '%s' loaded (level: %s)",
             merged.get("license_key", ""),
@@ -623,6 +729,7 @@ def save_settings(update: dict):
         if subset:
             plugin_updates[pname] = subset
     data.update(filtered)
+    data.setdefault("enable_sponsor_features", False)
     if os.getenv("DOCROPPER_PUBLIC_URL"):
         data["public_url"] = os.getenv("DOCROPPER_PUBLIC_URL")
     key_upper = data.get("license_key", "").strip().upper()
@@ -636,31 +743,17 @@ def save_settings(update: dict):
         if not data.get("license_name"):
             data["license_name"] = "Demo User"
         data["enable_mobilesign"] = True
+        data["enable_sponsor_features"] = False
         if not data.get("paypal_link"):
             data["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
         if not data.get("public_url"):
             data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
-    elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
-        data["license_level"] = "full"
-        data["license_type"] = "developer"
-        if not data.get("license_name"):
-            data["license_name"] = "Developer"
-        data["enable_mobilesign"] = True
-    elif manual_env and key_upper == manual_env:
-        data["license_level"] = "full"
-        data["license_type"] = "manual"
-        if not data.get("license_name"):
-            data["license_name"] = "Manual License"
-    elif online_env and key_upper == online_env:
-        data["license_level"] = "full"
-        data["license_type"] = "online"
-        data["license_check"] = True
-        if not data.get("license_name"):
-            data["license_name"] = "Online License"
-    else:
+    elif not key_upper:
+        data["license_key"] = DEMO_FULL_LICENSE_KEY
         data["license_level"] = "full"
         data["license_type"] = "demo"
         data["demo_full_mode"] = True
+        data["enable_sponsor_features"] = False
         if not data.get("license_name"):
             data["license_name"] = "Demo User"
         data["enable_mobilesign"] = True
@@ -668,6 +761,42 @@ def save_settings(update: dict):
             data["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
         if not data.get("public_url"):
             data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
+    elif (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV"):
+        data["license_level"] = "full"
+        data["license_type"] = "developer"
+        data["demo_full_mode"] = False
+        if not data.get("license_name"):
+            data["license_name"] = "Developer"
+        data["enable_mobilesign"] = True
+        data["enable_sponsor_features"] = bool(data.get("enable_sponsor_features"))
+    elif manual_env and key_upper == manual_env:
+        data["license_level"] = "full"
+        data["license_type"] = "manual"
+        data["demo_full_mode"] = False
+        if not data.get("license_name"):
+            data["license_name"] = "Manual License"
+        data["enable_sponsor_features"] = bool(data.get("enable_sponsor_features"))
+    elif online_env and key_upper == online_env:
+        data["license_level"] = "full"
+        data["license_type"] = "online"
+        data["license_check"] = True
+        data["demo_full_mode"] = False
+        if not data.get("license_name"):
+            data["license_name"] = "Online License"
+        data["enable_sponsor_features"] = bool(data.get("enable_sponsor_features"))
+    else:
+        data["license_level"] = "full"
+        data["license_type"] = "demo"
+        data["demo_full_mode"] = False
+        if not data.get("license_name"):
+            data["license_name"] = "Demo User"
+        data["enable_mobilesign"] = True
+        data["enable_sponsor_features"] = False
+        if not data.get("paypal_link"):
+            data["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
+        if not data.get("public_url"):
+            data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
+    data["scan_dev_only"] = False
     # Remove fields that are enforced by license
     license_locked = load_license_overrides()
     for key, val in license_locked.items():
@@ -884,9 +1013,15 @@ async def require_valid_license(
 
     return user
 
-# Mount static files directory and local wiki with no-cache headers
-app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
-app.mount("/wiki", NoCacheStaticFiles(directory="wiki", html=True), name="wiki")
+# Mount static files directory and serve the local wiki with no-cache headers
+app.mount("/static", NoCacheStaticFiles(directory=str(STATIC_DIR)), name="static")
+# Serve the bundled wiki with the same no-cache headers so help pages load
+# without proxy caching and can be embedded inside the UI.
+app.mount(
+    "/wiki",
+    NoCacheStaticFiles(directory=str(WIKI_DIR), html=True),
+    name="wiki",
+)
 # Serve JavaScript helpers if present; fall back gracefully when the
 # directory is missing so the API can start even without optional assets.
 js_dir = Path("static/js")
@@ -1037,6 +1172,7 @@ def make_index_response(request: Request, lang: str) -> HTMLResponse:
         cache_bust = get_cache_bust()
         if cache_bust:
             content = content.replace("styles.css", f"styles.css{cache_bust}")
+            content = content.replace("/static/api.js", f"/static/api.js{cache_bust}")
             content = content.replace("app.js", f"app.js{cache_bust}")
             content = content.replace("mobilesign.js", f"mobilesign.js{cache_bust}")
             content = content.replace("app_logo.png", f"app_logo.png{cache_bust}")
@@ -1162,7 +1298,14 @@ async def set_manual_license(data: dict = Body(...)):
     DEV_LICENSE_KEY_UPPER = DEV_LICENSE_KEY.upper()
     MANUAL_LICENSE_KEY = os.environ.get("DOCROPPER_MANUAL_LICENSE", MANUAL_LICENSE_KEY).upper()
     ONLINE_LICENSE_KEY = os.environ.get("DOCROPPER_ONLINE_LICENSE", ONLINE_LICENSE_KEY).upper()
-    saved = save_settings({"license_key": key, "license_name": name, "license_check": False})
+    saved = save_settings(
+        {
+            "license_key": key,
+            "license_name": name,
+            "license_check": False,
+            "enable_sponsor_features": False,
+        }
+    )
     for p in Path(BASE_DIR).rglob("__pycache__"):
         shutil.rmtree(p, ignore_errors=True)
     for p in Path(BASE_DIR).rglob("*.pyc"):
@@ -1178,9 +1321,35 @@ async def set_manual_license(data: dict = Body(...)):
 
 @app.post("/license/upload")
 async def upload_license(request: Request, file: UploadFile = File(...)):
-    token = (await file.read()).decode("utf-8").strip()
+    raw_content = (await file.read()).decode("utf-8").strip()
+    if not raw_content:
+        raise HTTPException(status_code=400, detail="Empty license file")
+
+    payload: dict[str, Any]
+    using_token = False
     try:
-        payload = jwt.decode(token, LICENSE_SECRET, algorithms=["HS256"])
+        payload = jwt.decode(raw_content, LICENSE_SECRET, algorithms=["HS256"])
+        using_token = True
+    except JWTError as exc:
+        try:
+            payload = json.loads(raw_content)
+        except json.JSONDecodeError as json_exc:
+            raise HTTPException(status_code=400, detail=f"Invalid license file: {exc}") from json_exc
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="Invalid license structure")
+
+    updates: dict[str, Any] = {
+        "license_check": False,
+        "license_level": "full",
+        "enable_sponsor_features": bool(payload.get("enable_sponsor_features")),
+    }
+    if payload.get("license_level"):
+        updates["license_level"] = str(payload.get("license_level", "full")).strip().lower() or "full"
+
+    os.makedirs(ENV_DIR, exist_ok=True)
+    env_path = os.path.join(ENV_DIR, "license.env")
+
+    if using_token:
         now = int(time.time())
         exp = payload.get("expires_at")
         if exp and exp < now:
@@ -1194,36 +1363,72 @@ async def upload_license(request: Request, file: UploadFile = File(...)):
             raise HTTPException(status_code=400, detail="Token missing fingerprint")
         if fp != get_machine_fingerprint():
             raise HTTPException(status_code=403, detail="Fingerprint mismatch")
-    except JWTError as exc:
-        raise HTTPException(status_code=400, detail=f"Invalid token: {exc}")
 
-    name = payload.get("license_name", "")
-    ltype = payload.get("license_type", "manual")
-    os.makedirs(ENV_DIR, exist_ok=True)
-    env_path = os.path.join(ENV_DIR, "license.env")
-    try:
-        with open(env_path, "w", encoding="utf-8") as fh:
-            fh.write(
-                f"DOCROPPER_LICENSE_TOKEN={token}\n"
-                f"DOCROPPER_LICENSE_NAME={name}\n"
-                f"DOCROPPER_LICENSE_TYPE={ltype}\n"
-                "LICENSE_CHECK=false\n"
-            )
-            fh.flush()
-            os.fsync(fh.fileno())
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to write license: {exc}")
+        name = payload.get("license_name", "")
+        ltype = payload.get("license_type", "manual")
+        try:
+            with open(env_path, "w", encoding="utf-8") as fh:
+                fh.write(
+                    f"DOCROPPER_LICENSE_TOKEN={raw_content}\n"
+                    f"DOCROPPER_LICENSE_NAME={name}\n"
+                    f"DOCROPPER_LICENSE_TYPE={ltype}\n"
+                    "LICENSE_CHECK=false\n"
+                )
+                fh.flush()
+                os.fsync(fh.fileno())
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to write license: {exc}")
+
+        updates.update(
+            {
+                "license_token": raw_content,
+                "license_name": name,
+                "license_type": ltype,
+            }
+        )
+        if payload.get("license_key"):
+            updates["license_key"] = payload.get("license_key")
+    else:
+        key = str(payload.get("license_key", "")).strip()
+        if not key:
+            raise HTTPException(status_code=400, detail="License file missing license_key")
+        name = (payload.get("license_name") or "").strip()
+        ltype = (payload.get("license_type") or "manual").strip() or "manual"
+        token = (payload.get("license_token") or "").strip()
+        level = (payload.get("license_level") or "full").strip() or "full"
+        try:
+            with open(env_path, "w", encoding="utf-8") as fh:
+                fh.write(
+                    f"DOCROPPER_LICENSE_KEY={key}\n"
+                    f"DOCROPPER_LICENSE_NAME={name}\n"
+                    f"DOCROPPER_LICENSE_TYPE={ltype}\n"
+                    f"DOCROPPER_LICENSE_TOKEN={token}\n"
+                    "LICENSE_CHECK=false\n"
+                )
+                fh.flush()
+                os.fsync(fh.fileno())
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to write license: {exc}")
+
+        updates.update(
+            {
+                "license_key": key,
+                "license_name": name,
+                "license_type": ltype,
+                "license_token": token,
+                "license_level": level.lower() or "full",
+            }
+        )
+
+    extra_settings = payload.get("settings") if isinstance(payload, dict) else {}
+    if isinstance(extra_settings, dict):
+        for setting_key, value in extra_settings.items():
+            if setting_key not in updates:
+                updates[setting_key] = value
 
     load_env_files(override=True)
-    saved = save_settings(
-        {
-            "license_token": token,
-            "license_name": name,
-            "license_type": ltype,
-            "license_level": "full",
-            "license_check": False,
-        }
-    )
+    save_settings(updates)
+
     for p in Path(BASE_DIR).rglob("__pycache__"):
         shutil.rmtree(p, ignore_errors=True)
     for p in Path(BASE_DIR).rglob("*.pyc"):
@@ -1232,7 +1437,11 @@ async def upload_license(request: Request, file: UploadFile = File(...)):
         except Exception:
             pass
     return JSONResponse(
-        {"status": "saved", "license_name": name, "license_type": ltype},
+        {
+            "status": "saved",
+            "license_name": updates.get("license_name", ""),
+            "license_type": updates.get("license_type", ""),
+        },
         headers={"Cache-Control": "no-store, max-age=0"},
     )
 
@@ -1260,6 +1469,7 @@ async def license_status(request: Request):
         "license_token": settings.get("license_token", ""),
         "license_level": settings.get("license_level", "free"),
         "license_type": settings.get("license_type", "free"),
+        "enable_sponsor_features": bool(settings.get("enable_sponsor_features")),
         "valid": valid,
     }
     return JSONResponse(info, headers={"Cache-Control": "no-store, max-age=0"})
@@ -1291,6 +1501,23 @@ async def get_updates():
             elif line.startswith("- ") and current_date:
                 entries.append(f"{current_date}: {line[2:].strip()}")
     return {"en": entries, "it": entries}
+
+
+@app.get("/wiki-content/{lang}/", response_class=HTMLResponse)
+@app.get("/wiki-content/{lang}/{page:path}", response_class=HTMLResponse)
+async def wiki_content(lang: str, page: str = "index.html"):
+    try:
+        html = read_wiki_content(lang, page)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Page not found")
+
+    response = HTMLResponse(html)
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Content-Security-Policy"] = "frame-ancestors *"
+    return response
 
 
 @app.get("/update-check/")
@@ -1346,27 +1573,38 @@ async def change_developer_password(data: dict = Body(...)):
 
 @app.post("/settings-login/")
 async def settings_login(data: dict = Body(...)):
-    password = data.get("password", "")
+    password = str(data.get("password", ""))
     settings = load_settings()
-    hashed = settings.get("settings_password_hash", "")
-    if hashed and bcrypt.verify(password, hashed):
-        if bcrypt.verify(DEFAULT_SETTINGS_PASSWORD, hashed):
-            raise HTTPException(status_code=403, detail="Change default settings password")
+    ok, hash_corrupted = _verify_settings_password(settings, password)
+    if hash_corrupted:
+        logging.getLogger(__name__).warning(
+            "Encountered invalid settings password hash; allowing default password"
+        )
+    if ok:
         return {"status": "ok"}
     raise HTTPException(status_code=403, detail="Invalid password")
 
 
 @app.post("/settings-password/")
 async def change_settings_password(data: dict = Body(...)):
-    old = data.get("old", "")
+    old = str(data.get("old", ""))
     new = data.get("new", "")
     if not new:
         raise HTTPException(status_code=400, detail="New password required")
     settings = load_settings()
-    hashed = settings.get("settings_password_hash", "")
-    if not hashed or not bcrypt.verify(old, hashed):
+    ok, hash_corrupted = _verify_settings_password(settings, old)
+    if hash_corrupted:
+        logging.getLogger(__name__).warning(
+            "Encountered invalid settings password hash; allowing default password"
+        )
+    if not ok:
         raise HTTPException(status_code=403, detail="Invalid password")
-    save_settings({"settings_password_hash": bcrypt.hash(new)})
+    save_settings(
+        {
+            "settings_password": new,
+            "settings_password_hash": bcrypt.hash(new),
+        }
+    )
     return {"status": "updated"}
 
 

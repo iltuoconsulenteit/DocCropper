@@ -138,6 +138,8 @@
   "ocrNoSupport": "OCR non disponibile",
   "instructionsTitle": "Istruzioni",
   "instructionsComing": "Consulta la wiki qui sotto.",
+  "guideLoading": "Caricamento della guida...",
+  "guideFailed": "Impossibile caricare la guida. Riprova.",
   "openWiki": "Apri Wiki",
   "showHelp": "Guida",
   "inputModeLabel": "Sorgente:",

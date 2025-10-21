@@ -134,30 +134,33 @@ def is_developer():
     except Exception:
         return False
 
-def run_script(name, env=None, folder=INSTALL_DIR):
+def run_script(name, env=None, folder=INSTALL_DIR, args=None):
     """Run a helper script while logging output.
 
     The log file is opened only for the duration of the spawn so we don't keep
-    the handle locked after starting the child process.
+    the handle locked after starting the child process. Optional ``args`` are
+    forwarded to the script so callers can switch between interactive and
+    unattended modes.
     """
     script = folder / name
     logging.info("Running %s", script)
+    extra_args = list(args or [])
     if SYSTEM == 'Windows':
         flags = 0
         if hasattr(subprocess, 'CREATE_NO_WINDOW'):
             flags = subprocess.CREATE_NO_WINDOW
         with open(LOG_FILE, 'a') as stdout:
-            subprocess.Popen(['cmd', '/c', str(script)], env=env,
+            subprocess.Popen(['cmd', '/c', str(script), *extra_args], env=env,
                              stdout=stdout, stderr=subprocess.STDOUT,
                              creationflags=flags)
     else:
         with open(LOG_FILE, 'a') as stdout:
-            subprocess.Popen(['bash', str(script)], env=env,
+            subprocess.Popen(['bash', str(script), *extra_args], env=env,
                              stdout=stdout, stderr=subprocess.STDOUT)
 
 
 def start_app():
-    run_script(START_SCRIPTS, folder=SCRIPTS_DIR)
+    run_script(START_SCRIPTS, folder=SCRIPTS_DIR, args=['--auto'])
 
 def stop_app():
     run_script(STOP_SCRIPTS, folder=SCRIPTS_DIR)
@@ -244,9 +247,12 @@ def main():
     if args.auto_start and not running:
         logging.info("Auto-start requested from start script")
         start_app()
-        # give the server a moment to start
-        time.sleep(1)
-        running = is_running()
+        # give the server time to start and update LED accordingly
+        for _ in range(20):
+            time.sleep(0.5)
+            if is_running():
+                running = True
+                break
 
     if args.no_tray:
         logging.info("--no-tray specified, launching server directly")

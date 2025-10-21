@@ -292,17 +292,32 @@ if not exist "!APP_DIR!\env\auth.env" (
 )
 
 rem Determine required Python version
-set "PY_VER=3.11.7"
+set "PY_DEFAULT=3.11.9"
+set "PY_REQUESTED="
 if exist "env\python.env" (
     for /f "usebackq tokens=1,2 delims==" %%A in ("env\python.env") do (
-        if /I "%%A"=="PYTHON_VERSION" set "PY_VER=%%B"
+        if /I "%%A"=="PYTHON_VERSION" set "PY_REQUESTED=%%~B"
     )
 )
-for /f "tokens=1,2 delims=." %%A in ("%PY_VER%") do set "PY_SHORT=%%A%%B"
-call :log "Required Python version: %PY_VER%"
+if not defined PY_REQUESTED set "PY_REQUESTED=%PY_DEFAULT%"
+for /f "tokens=* delims= " %%A in ("!PY_REQUESTED!") do set "PY_REQUESTED=%%A"
+echo !PY_REQUESTED!| findstr /R "^[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$" >nul
+if errorlevel 1 set "PY_REQUESTED=%PY_DEFAULT%"
+set "PY_VER=!PY_REQUESTED!"
+call :log "Required Python version: !PY_VER!"
 
 rem Ensure Python runtime is available
 call :ensure_python || exit /b 1
+if not defined PYTHON_CMD (
+    call :log "Percorso dell'interprete Python non disponibile"
+    exit /b 1
+)
+if not exist "!PYTHON_CMD!" (
+    call :log "Interprete Python mancante: !PYTHON_CMD!"
+    exit /b 1
+)
+
+for /f "tokens=1,2 delims=." %%A in ("!PY_VER!") do set "PY_SHORT=%%A%%B"
 
 rem Ensure our Python directory is on PATH for subsequent scripts
 set "PATH=!PY_DIR!;!PY_DIR!\Scripts;!PATH!"
@@ -330,29 +345,248 @@ if not defined PY_EMBED (
     call :log "Using embeddable Python environment"
 )
 
-if exist requirements.txt (
+set "REQ_FILE=!APP_DIR!\requirements.txt"
+if exist "!REQ_FILE!" (
     call :log "Installing Python packages..."
-    "!PYTHON_CMD!" -m pip install --upgrade pip >>"%LOG_FILE%" 2>&1
-    "!PYTHON_CMD!" -m pip install --upgrade --force-reinstall -r requirements.txt >>"%LOG_FILE%" 2>&1
-    if exist "!PY_DIR!\Scripts\pywin32_postinstall.py" (
+    for /f "delims=" %%h in ('certutil -hashfile "!REQ_FILE!" MD5 ^| find /i /v "hash" ^| find /i /v "CertUtil"') do set "REQ_HASH=%%h"
+    set "OLD_HASH_FILE=!PY_DIR!\requirements.hash"
+    call :resolve_hash_root
+    set "HASH_FILE=!HASH_ROOT!\requirements.hash"
+    call :log "Percorso file hash: !HASH_FILE!"
+    set "NEED_INSTALL=1"
+    set "DEFAULT_CHOICE=M"
+    set "EXISTING_HASH="
+    set "ENSURE_SCRIPT=!APP_DIR!\scripts\ensure_requirements.py"
+    set "TEMP_REQ=%TEMP%\doccropper_requirements_install.txt"
+    if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
+    if defined HASH_FILE (
+        if exist "!HASH_FILE!" (
+            set /p EXISTING_HASH=<"!HASH_FILE!"
+        ) else if exist "!OLD_HASH_FILE!" (
+            set /p EXISTING_HASH=<"!OLD_HASH_FILE!"
+            copy /y "!OLD_HASH_FILE!" "!HASH_FILE!" >nul 2>&1
+            if errorlevel 1 (
+                call :log "Impossibile migrare il file hash in !HASH_FILE!"
+            ) else (
+                call :log "Migrazione hash dipendenze in !HASH_FILE!"
+            )
+        )
+    ) else if exist "!OLD_HASH_FILE!" (
+        set /p EXISTING_HASH=<"!OLD_HASH_FILE!"
+        call :log "Percorso hash non disponibile; impossibile migrare !OLD_HASH_FILE!"
+    )
+    if defined EXISTING_HASH (
+        if /I "!EXISTING_HASH!"=="!REQ_HASH!" (
+            set "NEED_INSTALL=0"
+            set "DEFAULT_CHOICE=S"
+        )
+    )
+    set "ENSURE_SUCCESS=0"
+    set "ENSURE_MISSING_COUNT="
+    if exist "!ENSURE_SCRIPT!" (
+        "!PYTHON_CMD!" "!ENSURE_SCRIPT!" "!REQ_FILE!" --output "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
+        if errorlevel 1 (
+            if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
+            call :log "Analisi automatica delle dipendenze non riuscita"
+        ) else (
+            set "ENSURE_SUCCESS=1"
+            set "ENSURE_MISSING_COUNT=0"
+            if exist "!TEMP_REQ!" (
+                for %%I in ("!TEMP_REQ!") do if %%~zI GTR 0 (
+                    for /f %%C in ('find /c /v "" ^< "!TEMP_REQ!"') do set "ENSURE_MISSING_COUNT=%%C"
+                )
+            )
+            if "!ENSURE_MISSING_COUNT!"=="" set "ENSURE_MISSING_COUNT=0"
+            if "!ENSURE_MISSING_COUNT!"=="0" (
+                call :log "Analisi dipendenze: nessun pacchetto da installare"
+                if "!NEED_INSTALL!"=="1" (
+                    set "NEED_INSTALL=0"
+                    set "DEFAULT_CHOICE=S"
+                )
+            ) else (
+                call :log "Pacchetti mancanti rilevati: !ENSURE_MISSING_COUNT!"
+            )
+        )
+    )
+    set "CHOICE="
+    set /p CHOICE=Gestione dipendenze Python - (S^)alta, (M^)ancanti, (T^)utte [!DEFAULT_CHOICE!]:
+    if "!CHOICE!"=="" set "CHOICE=!DEFAULT_CHOICE!"
+    set "INSTALL_DONE=0"
+    set "PIP_PREPARED=0"
+    set "RAN_PIP_INSTALL=0"
+    if /I "!CHOICE!"=="S" (
+        if "!NEED_INSTALL!"=="0" (
+            call :log "Requisiti Python gia aggiornati"
+        ) else (
+            call :log "Installazione dipendenze saltata dall'utente"
+        )
+    ) else if /I "!CHOICE!"=="T" (
+        call :prepare_pip
+        if errorlevel 1 (
+            call :pip_error
+            exit /b 1
+        )
+        "!PYTHON_CMD!" -m pip install --upgrade --force-reinstall -r "!REQ_FILE!" >>"%LOG_FILE%" 2>&1
+        if errorlevel 1 (
+            call :log "Reinstallazione completa dei pacchetti fallita"
+        ) else (
+            set "INSTALL_DONE=1"
+            set "RAN_PIP_INSTALL=1"
+        )
+    ) else (
+        if not exist "!ENSURE_SCRIPT!" (
+            call :prepare_pip
+            if errorlevel 1 (
+                call :pip_error
+                exit /b 1
+            )
+            "!PYTHON_CMD!" -m pip install -r "!REQ_FILE!" >>"%LOG_FILE%" 2>&1
+            if errorlevel 1 (
+                call :log "Aggiornamento pacchetti fallito"
+            ) else (
+                set "INSTALL_DONE=1"
+                set "RAN_PIP_INSTALL=1"
+            )
+        ) else (
+            if "!ENSURE_SUCCESS!"=="1" (
+                set "NEEDS_TARGETED=0"
+                if exist "!TEMP_REQ!" (
+                    for %%I in ("!TEMP_REQ!") do if %%~zI GTR 0 set "NEEDS_TARGETED=1"
+                )
+            ) else (
+                call :prepare_pip
+                if errorlevel 1 (
+                    call :pip_error
+                    exit /b 1
+                )
+                "!PYTHON_CMD!" "!ENSURE_SCRIPT!" "!REQ_FILE!" --output "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
+                if errorlevel 1 (
+                    call :log "Controllo dipendenze fallito, eseguo installazione completa"
+                    call :prepare_pip
+                    if errorlevel 1 (
+                        call :pip_error
+                        exit /b 1
+                    )
+                    "!PYTHON_CMD!" -m pip install -r "!REQ_FILE!" >>"%LOG_FILE%" 2>&1
+                    if errorlevel 1 (
+                        call :log "Aggiornamento pacchetti fallito"
+                    ) else (
+                        set "INSTALL_DONE=1"
+                        set "RAN_PIP_INSTALL=1"
+                    )
+                    if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
+                    goto deps_done
+                ) else (
+                    set "NEEDS_TARGETED=0"
+                    if exist "!TEMP_REQ!" (
+                        for %%I in ("!TEMP_REQ!") do if %%~zI GTR 0 set "NEEDS_TARGETED=1"
+                    )
+                    set "ENSURE_SUCCESS=1"
+                )
+            )
+            if "!NEEDS_TARGETED!"=="1" (
+                call :prepare_pip
+                if errorlevel 1 (
+                    call :pip_error
+                    exit /b 1
+                )
+                "!PYTHON_CMD!" -m pip install -r "!TEMP_REQ!" >>"%LOG_FILE%" 2>&1
+                if errorlevel 1 (
+                    call :log "Aggiornamento mirato fallito, eseguo installazione completa"
+                    call :prepare_pip
+                    if errorlevel 1 (
+                        call :pip_error
+                        exit /b 1
+                    )
+                    "!PYTHON_CMD!" -m pip install -r "!REQ_FILE!" >>"%LOG_FILE%" 2>&1
+                    if errorlevel 1 (
+                        call :log "Aggiornamento pacchetti fallito"
+                    ) else (
+                        set "INSTALL_DONE=1"
+                        set "RAN_PIP_INSTALL=1"
+                    )
+                ) else (
+                    set "INSTALL_DONE=1"
+                    set "RAN_PIP_INSTALL=1"
+                )
+            ) else (
+                call :log "Tutti i pacchetti richiesti sono gia installati"
+                set "INSTALL_DONE=1"
+            )
+        )
+        :deps_done
+        if exist "!TEMP_REQ!" del /f /q "!TEMP_REQ!" >nul 2>&1
+    )
+    if "!INSTALL_DONE!"=="1" (
+        if defined HASH_FILE (
+            >"!HASH_FILE!" echo(!REQ_HASH!
+            if not exist "!HASH_FILE!" (
+                call :log "Impossibile salvare l'hash in !HASH_FILE!"
+            )
+        ) else (
+            call :log "Directory hash dipendenze non determinata; impossibile salvare l'hash"
+        )
+    )
+    if "!RAN_PIP_INSTALL!"=="1" if exist "!PY_DIR!\Scripts\pywin32_postinstall.py" (
         call :log "Running pywin32 postinstall..."
         "!PYTHON_CMD!" "!PY_DIR!\Scripts\pywin32_postinstall.py" -install >>"%LOG_FILE%" 2>&1
     )
 ) else (
-    call :log "requirements.txt not found!"
+    call :log "requirements.txt non trovato in !REQ_FILE!"
 )
 
-rem Precompile wrappers so the start script does not rely on PowerShell Add-Type
-set "WRAP_PY=%APP_DIR%\scripts\build_wrappers.py"
-if exist "%APP_DIR%\scripts\build_wrappers.ps1" del /f /q "%APP_DIR%\scripts\build_wrappers.ps1" >>"%LOG_FILE%" 2>&1
-if exist "!WRAP_PY!" (
-    call :log "Compiling launcher wrappers..."
-    "!PY_DIR!\python.exe" "!WRAP_PY!" "!PY_DIR!" >>"%LOG_FILE%" 2>&1
-) else (
-    call :log "Wrapper build script not found; skipping"
+rem Legacy PowerShell wrapper compilation has been deprecated; ensure the script is removed
+if exist "%APP_DIR%\scripts\build_wrappers.ps1" (
+    del /f /q "%APP_DIR%\scripts\build_wrappers.ps1" >>"%LOG_FILE%" 2>&1
+    call :log "Removed obsolete PowerShell wrapper builder"
 )
+call :log "Wrapper executables are no longer required; skipping compilation step"
 
-exit /b
+exit /b 0
+
+:pip_error
+call :log "Impossibile aggiornare pip: controllare l'installazione di Python"
+exit /b 1
+
+:resolve_hash_root
+set "HASH_ROOT="
+if defined DOCROPPER_HASH_DIR if not "%DOCROPPER_HASH_DIR%"=="" set "HASH_ROOT=%DOCROPPER_HASH_DIR%"
+if not defined HASH_ROOT if defined LOCALAPPDATA set "HASH_ROOT=%LOCALAPPDATA%\DocCropper"
+if not defined HASH_ROOT if defined APPDATA set "HASH_ROOT=%APPDATA%\DocCropper"
+if not defined HASH_ROOT if defined USERPROFILE set "HASH_ROOT=%USERPROFILE%\DocCropper"
+if not defined HASH_ROOT if defined PROGRAMDATA set "HASH_ROOT=%PROGRAMDATA%\DocCropper"
+if not defined HASH_ROOT if defined TEMP set "HASH_ROOT=%TEMP%\DocCropper"
+if not defined HASH_ROOT set "HASH_ROOT=%APP_DIR%\temp\DocCropper"
+if "!HASH_ROOT!"=="" set "HASH_ROOT=%TEMP%\DocCropper"
+if not exist "!HASH_ROOT!" (
+    mkdir "!HASH_ROOT!" >nul 2>&1
+    if errorlevel 1 (
+        if defined TEMP (
+            set "HASH_ROOT=%TEMP%\DocCropper"
+            if not exist "!HASH_ROOT!" mkdir "!HASH_ROOT!" >nul 2>&1
+        )
+    )
+)
+if not exist "!HASH_ROOT!" set "HASH_ROOT=%TEMP%"
+exit /b 0
+
+:prepare_pip
+if "%PIP_PREPARED%"=="1" exit /b 0
+if not defined PYTHON_CMD (
+    call :log "Variabile PYTHON_CMD non definita"
+    exit /b 1
+)
+if not exist "!PYTHON_CMD!" (
+    call :log "Percorso Python inesistente: !PYTHON_CMD!"
+    exit /b 1
+)
+"!PYTHON_CMD!" -m pip install --upgrade pip >>"%LOG_FILE%" 2>&1
+if errorlevel 1 (
+    call :log "Aggiornamento di pip non riuscito"
+    exit /b 1
+)
+set "PIP_PREPARED=1"
+exit /b 0
 
 :ensure_python
 set "PYTHON_CMD="
@@ -362,7 +596,7 @@ set "PY_EMBED="
 set "PY_DIR=!APP_DIR!\python"
 if exist "!PY_DIR!\python.exe" (
     for /f "tokens=2 delims= " %%V in ('"!PY_DIR!\python.exe" -V 2^>^&1') do set "PY_FOUND=%%V"
-    if "!PY_FOUND!"=="%PY_VER%" (
+    if "!PY_FOUND!"=="!PY_VER!" (
         set "PYTHON_CMD=!PY_DIR!\python.exe"
         set "PYTHONW_CMD=!PY_DIR!\pythonw.exe"
         set "PY_EMBED=1"
@@ -373,15 +607,37 @@ if exist "!PY_DIR!\python.exe" (
 
 rem Always use embeddable runtime; ignore system Python
 
-
-call :log "Python %PY_VER% not found. Downloading embeddable runtime..."
-set "PY_ZIP=python-%PY_VER%-embed-amd64.zip"
-if not exist "%TEMP%" mkdir "%TEMP%"
-powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/!PY_VER!/!PY_ZIP!' -OutFile '%TEMP%\!PY_ZIP!'" >>"%LOG_FILE%" 2>&1
-if not exist "%TEMP%\!PY_ZIP!" (
-    call :log "Failed to download Python !PY_VER! embeddable package."
+call :log "Python !PY_VER! not found. Downloading embeddable runtime..."
+set "PY_SUCCESS="
+set "PY_ATTEMPTS=!PY_VER!"
+if defined PY_DEFAULT if /I not "!PY_VER!"=="!PY_DEFAULT!" set "PY_ATTEMPTS=!PY_ATTEMPTS! !PY_DEFAULT!"
+set "ARCH_SOURCE=%PROCESSOR_ARCHITEW6432%"
+if not defined ARCH_SOURCE set "ARCH_SOURCE=%PROCESSOR_ARCHITECTURE%"
+set "PY_ARCH=amd64"
+if /I "!ARCH_SOURCE!"=="x86" set "PY_ARCH=win32"
+if /I "!ARCH_SOURCE!"=="arm64" set "PY_ARCH=arm64"
+if /I "!ARCH_SOURCE!"=="arm" set "PY_ARCH=arm64"
+for %%V in (!PY_ATTEMPTS!) do (
+    if not defined PY_SUCCESS (
+        set "PY_CANDIDATE=%%~V"
+        if not "!PY_CANDIDATE!"=="" (
+            set "PY_ZIP=python-!PY_CANDIDATE!-embed-!PY_ARCH!.zip"
+            call :log "Downloading Python !PY_CANDIDATE! embeddable runtime (!PY_ARCH!)..."
+            if not exist "%TEMP%" mkdir "%TEMP%"
+            powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/!PY_CANDIDATE!/!PY_ZIP!' -OutFile '%TEMP%\!PY_ZIP!'" >>"%LOG_FILE%" 2>&1
+            if exist "%TEMP%\!PY_ZIP!" (
+                set "PY_SUCCESS=1"
+                set "PY_VER=!PY_CANDIDATE!"
+            ) else (
+                call :log "Failed to download Python !PY_CANDIDATE! embeddable package."
+            )
+        )
+    )
+)
+if not defined PY_SUCCESS (
     exit /b 1
 )
+for /f "tokens=1,2 delims=." %%A in ("!PY_VER!") do set "PY_SHORT=%%A%%B"
 if exist "!PY_DIR!" rmdir /S /Q "!PY_DIR!" >>"%LOG_FILE%" 2>&1
 mkdir "!PY_DIR!" >>"%LOG_FILE%" 2>&1
 powershell -NoProfile -Command "Expand-Archive -Path '%TEMP%\!PY_ZIP!' -DestinationPath '!PY_DIR!'" >>"%LOG_FILE%" 2>&1
@@ -394,5 +650,5 @@ call :log "Bootstrapping pip..."
 powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://bootstrap.pypa.io/get-pip.py' -OutFile '!PY_DIR!\get-pip.py'" >>"%LOG_FILE%" 2>&1
 "!PYTHON_CMD!" "!PY_DIR!\get-pip.py" >>"%LOG_FILE%" 2>&1
 del "!PY_DIR!\get-pip.py" >>"%LOG_FILE%" 2>&1
-call :log "Using Python at !PYTHON_CMD!"
+call :log "Using Python at !PYTHON_CMD! (version !PY_VER!)"
 exit /b 0

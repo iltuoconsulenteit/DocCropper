@@ -10,6 +10,60 @@ import { initImageEditorPlugin } from './plugins/imageeditor.js';
 import { initFormFieldsPlugin } from './plugins/formfields.js';
 import { initScanPlugin } from './plugins/scan.js';
 
+const API_BASE = window.DC_API_BASE || '/api';
+const ABSOLUTE_URL_RE = /^[a-zA-Z][a-zA-Z0-9+.-]*:/;
+const SKIP_PREFIXES = [
+    '/static/',
+    '/wiki/',
+    '/index.php',
+    '/admin/',
+    '/docs',
+    '/openapi',
+];
+
+function normalizeApiPath(path) {
+    if (typeof path !== 'string' || !path) {
+        return path;
+    }
+    if (ABSOLUTE_URL_RE.test(path)) {
+        return path;
+    }
+    if (path.startsWith(API_BASE)) {
+        return path;
+    }
+    for (const prefix of SKIP_PREFIXES) {
+        if (path.startsWith(prefix)) {
+            return path;
+        }
+    }
+    if (!path.startsWith('/')) {
+        path = `/${path}`;
+    }
+    return `${API_BASE}${path}`;
+}
+
+function createApiFetch() {
+    const hasRequest = typeof Request !== 'undefined';
+    return (resource, init) => {
+        if (typeof resource === 'string') {
+            return fetch(normalizeApiPath(resource), init);
+        }
+        if (hasRequest && resource instanceof Request) {
+            const url = normalizeApiPath(resource.url);
+            if (url === resource.url) {
+                return fetch(resource, init);
+            }
+            const cloned = new Request(url, resource);
+            return fetch(cloned, init);
+        }
+        return fetch(resource, init);
+    };
+}
+
+const apiFetch = (window.DC_API_HELPER && typeof window.DC_API_HELPER.apiFetch === 'function')
+    ? window.DC_API_HELPER.apiFetch
+    : createApiFetch();
+
 let scaling_factor_w;
 let scaling_factor_h;
 let origW;
@@ -79,7 +133,7 @@ async function checkForUpdate(first = false) {
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const resp = await fetch('/update-check/', { signal: controller.signal });
+        const resp = await apiFetch('/update-check/', { signal: controller.signal });
         clearTimeout(timeoutId);
         if (resp.ok) {
             const data = await resp.json();
@@ -110,7 +164,7 @@ if (updateBell) {
         const pin = updatePinInput.value.trim();
         if (!pin) return;
         try {
-            const resp = await fetch('/update/', {
+            const resp = await apiFetch('/update/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pin })
@@ -126,7 +180,7 @@ if (updateBell) {
         const pin = updatePinInput.value.trim();
         if (!pin) return;
         try {
-            const resp = await fetch('/rollback/', {
+            const resp = await apiFetch('/rollback/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pin })
@@ -170,12 +224,14 @@ const DEFAULT_PAYPAL = 'https://www.paypal.com/donate/?hosted_button_id=XGKVRL2Y
 const bannerBox = document.getElementById('brandArea');
 const closeBanner = document.getElementById('closeBanner');
 const sloganImg = document.getElementById('sloganImg');
-const wikiFrame = document.getElementById('wikiFrame');
+const wikiContent = document.getElementById('wikiContent');
+const wikiStatus = document.getElementById('wikiStatus');
 const openWikiLink = document.getElementById('openWikiLink');
 const sponsorBanner = document.getElementById('sponsorBanner');
 const sponsorBannerImg = document.getElementById('sponsorBannerImg');
 const sponsorBannerLink = document.getElementById('sponsorBannerLink');
 let sponsorPreview;
+let sponsorFeaturesEnabled = false;
 const devSettingsBtn = document.getElementById('devSettingsBtn');
 const devSettingsBox = document.getElementById('devSettingsBox');
 let settingsUnlocked = false;
@@ -319,6 +375,7 @@ let scanEnabled = false;
 let translations = {};
 let currentLang = window.DC_LANG || 'it';
 let currentSettings = {};
+let currentWikiPage = 'index.html';
 
 async function enumerateCameras() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
@@ -398,7 +455,7 @@ if (digitalSignBtn) {
         }
         statusMessageElement.textContent = translations['signingPdf'] || 'Signing PDF...';
         try {
-            const resp = await fetch('/docuseal-sign/', {method: 'POST'});
+            const resp = await apiFetch('/docuseal-sign/', {method: 'POST'});
             const data = await resp.json();
             if (data.url) {
                 window.open(data.url, '_blank');
@@ -499,7 +556,7 @@ async function convertPdfToImages(file) {
     form.append('pdf_file', file, file.name);
     form.append('threshold', blankThreshold);
     form.append('skip_blank', skipBlank ? '1' : '0');
-    const resp = await fetch('/pdf-to-images/', { method: 'POST', body: form });
+    const resp = await apiFetch('/pdf-to-images/', { method: 'POST', body: form });
     if (!resp.ok) {
         if (resp.status === 413) {
             statusMessageElement.textContent = t('fileTooLarge').replace('{mb}', MAX_FILE_MB);
@@ -578,7 +635,7 @@ async function importPdfPages(file) {
 async function loadSettings() {
     const url = userInfo ? '/user-settings/' : '/settings/';
     try {
-        const resp = await fetch(url + `?t=${Date.now()}` , { cache: 'no-store' });
+        const resp = await apiFetch(url + `?t=${Date.now()}`, { cache: 'no-store' });
         if (resp.ok) {
             return await resp.json();
         }
@@ -590,7 +647,7 @@ async function loadSettings() {
 
 function saveSettings(data) {
     const url = userInfo ? '/user-settings/' : '/settings/';
-    fetch(url, {
+    apiFetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -601,7 +658,7 @@ async function refreshLicenseInfo() {
     const cfg = await loadSettings();
     applySettings(cfg);
     try {
-        const resp = await fetch('/license/status?t=' + Date.now(), { cache: 'no-store' });
+        const resp = await apiFetch('/license/status?t=' + Date.now(), { cache: 'no-store' });
         if (resp.ok) {
             const info = await resp.json();
             isLicensed = info.valid && !!info.license_key;
@@ -616,6 +673,13 @@ async function refreshLicenseInfo() {
 }
 
 function initSponsorPreview(cfg) {
+    if (!sponsorFeaturesEnabled) {
+        if (sponsorPreview && sponsorPreview.parentElement) {
+            sponsorPreview.parentElement.removeChild(sponsorPreview);
+        }
+        sponsorPreview = null;
+        return;
+    }
     if (!processedGallery) return;
     if (sponsorPreview) sponsorPreview.remove();
     sponsorPreview = document.createElement('div');
@@ -683,6 +747,9 @@ function initSponsorPreview(cfg) {
 }
 
 function ensureSponsorPreviewLast() {
+    if (!sponsorFeaturesEnabled) {
+        return;
+    }
     if (sponsorPreview && processedGallery) {
         processedGallery.appendChild(sponsorPreview);
     }
@@ -691,6 +758,30 @@ function ensureSponsorPreviewLast() {
 function applySettings(cfg) {
     currentSettings = cfg;
     currentSettings.enable_sponsor_video = !!cfg.enable_sponsor_video;
+    sponsorFeaturesEnabled = !!cfg.enable_sponsor_features;
+    currentSettings.enable_sponsor_features = sponsorFeaturesEnabled;
+    document.querySelectorAll('[data-sponsor]').forEach((el) => {
+        if (!sponsorFeaturesEnabled) {
+            el.classList.remove('visible');
+            el.style.display = 'none';
+        }
+    });
+    if (sponsorBtn) {
+        sponsorBtn.style.display = sponsorFeaturesEnabled ? '' : 'none';
+    }
+    if (!sponsorFeaturesEnabled) {
+        if (sponsorBox) {
+            sponsorBox.classList.remove('visible');
+            sponsorBox.style.display = 'none';
+        }
+        if (sponsorBanner) {
+            sponsorBanner.style.display = 'none';
+        }
+        if (sponsorPreview && sponsorPreview.parentElement) {
+            sponsorPreview.parentElement.removeChild(sponsorPreview);
+        }
+        sponsorPreview = null;
+    }
     const urlLang = window.DC_LANG;
     currentLang = urlLang || cfg.language || 'it';
     langSelect.value = currentLang;
@@ -766,7 +857,9 @@ function applySettings(cfg) {
         }
     }
     if (sponsorLogo && sponsorLogoLink) {
-        if (cfg.sponsor_logo) {
+        if (!sponsorFeaturesEnabled) {
+            sponsorLogoLink.style.display = 'none';
+        } else if (cfg.sponsor_logo) {
             sponsorLogo.src = `/static/logos/${cfg.sponsor_logo}`;
             sponsorLogoLink.href = cfg.sponsor_url || '#';
             sponsorLogoLink.style.display = 'block';
@@ -785,7 +878,9 @@ function applySettings(cfg) {
         }
     }
     if (sponsorBadge && sponsorBadgeLink) {
-        if (cfg.sponsor_logo) {
+        if (!sponsorFeaturesEnabled) {
+            sponsorBadgeLink.style.display = 'none';
+        } else if (cfg.sponsor_logo) {
             sponsorBadge.src = `/static/logos/${cfg.sponsor_logo}`;
             sponsorBadgeLink.href = cfg.sponsor_url || '#';
             sponsorBadgeLink.style.display = 'block';
@@ -795,7 +890,9 @@ function applySettings(cfg) {
         }
     }
     if (sponsorBanner && sponsorBannerImg && sponsorBannerLink) {
-        if (cfg.sponsor_banner) {
+        if (!sponsorFeaturesEnabled) {
+            sponsorBanner.style.display = 'none';
+        } else if (cfg.sponsor_banner) {
             sponsorBannerImg.src = `/static/logos/${cfg.sponsor_banner}`;
             sponsorBannerLink.href = cfg.sponsor_url || '#';
             sponsorBanner.style.display = 'block';
@@ -825,19 +922,57 @@ function applySettings(cfg) {
     if (cfg.version_date) {
         appVersionDate = cfg.version_date;
     }
-    const activePlugins = cfg.active_plugins || [];
-    docusealEnabled = activePlugins.includes('docuseal') && !!cfg.docuseal_api_url;
-    signEnabled = activePlugins.includes('sign');
-    mobileSignEnabled = activePlugins.includes('mobilesign');
-    remoteSignEnabled = activePlugins.includes('remotesign');
-    removeBgEnabled = activePlugins.includes('removebg');
-    watermarkEnabled = activePlugins.includes('watermark');
-    downloadPngEnabled = activePlugins.includes('downloadpng');
-    pageSelectEnabled = activePlugins.includes('pageselect');
-    colorModePluginEnabled = activePlugins.includes('colormode');
-    imageEditorEnabled = activePlugins.includes('imageeditor');
-    formFieldsEnabled = activePlugins.includes('formfields');
-    scanEnabled = activePlugins.includes('scan');
+    const activePlugins = Array.isArray(cfg.active_plugins) ? cfg.active_plugins : [];
+    const activePluginSet = new Set(activePlugins);
+    const normalizedLicenseKey = (cfg.license_key || '').toString().trim().toUpperCase();
+    const normalizedLevel = (cfg.license_level || cfg.license_type || '').toString().trim().toLowerCase();
+    const hasDeveloperLicense = normalizedLevel === 'developer' || normalizedLicenseKey.endsWith('-DEV');
+
+    const isTruthy = (value) => {
+        if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase();
+            if (!normalized) {
+                return false;
+            }
+            if (['false', '0', 'no', 'off'].includes(normalized)) {
+                return false;
+            }
+            return true;
+        }
+        return Boolean(value);
+    };
+
+    const ensurePlugin = (name, enabledFlag, devOnlyFlag) => {
+        if (activePluginSet.has(name)) {
+            return true;
+        }
+        const enabled = enabledFlag === undefined ? false : isTruthy(enabledFlag);
+        if (!enabled) {
+            return false;
+        }
+        const devOnly = devOnlyFlag === undefined ? false : isTruthy(devOnlyFlag);
+        if (devOnly && !hasDeveloperLicense) {
+            return false;
+        }
+        activePluginSet.add(name);
+        return true;
+    };
+
+    docusealEnabled = (activePluginSet.has('docuseal') || ensurePlugin('docuseal', cfg.enable_docuseal, cfg.docuseal_dev_only))
+        && !!cfg.docuseal_api_url;
+    signEnabled = activePluginSet.has('sign') || ensurePlugin('sign', cfg.enable_sign, cfg.sign_dev_only);
+    mobileSignEnabled = activePluginSet.has('mobilesign') || ensurePlugin('mobilesign', cfg.enable_mobilesign, cfg.mobilesign_dev_only);
+    remoteSignEnabled = activePluginSet.has('remotesign') || ensurePlugin('remotesign', cfg.enable_remotesign, cfg.remotesign_dev_only);
+    removeBgEnabled = activePluginSet.has('removebg') || ensurePlugin('removebg', cfg.enable_removebg, cfg.removebg_dev_only);
+    watermarkEnabled = activePluginSet.has('watermark')
+        || ensurePlugin('watermark', cfg.enable_watermark || normalizedLevel === 'free', cfg.watermark_dev_only);
+    downloadPngEnabled = activePluginSet.has('downloadpng') || ensurePlugin('downloadpng', cfg.enable_downloadpng, cfg.downloadpng_dev_only);
+    pageSelectEnabled = activePluginSet.has('pageselect') || ensurePlugin('pageselect', cfg.enable_pageselect, cfg.pageselect_dev_only);
+    colorModePluginEnabled = activePluginSet.has('colormode') || ensurePlugin('colormode', cfg.enable_colormode, cfg.colormode_dev_only);
+    imageEditorEnabled = activePluginSet.has('imageeditor') || ensurePlugin('imageeditor', cfg.enable_imageeditor, cfg.imageeditor_dev_only);
+    formFieldsEnabled = activePluginSet.has('formfields') || ensurePlugin('formfields', cfg.enable_formfields, cfg.formfields_dev_only);
+    scanEnabled = activePluginSet.has('scan') || ensurePlugin('scan', cfg.enable_scan, cfg.scan_dev_only);
+    compressEnabled = activePluginSet.has('compresspdf') || ensurePlugin('compresspdf', cfg.enable_compresspdf, cfg.compresspdf_dev_only);
     if (typeof initRemoveBgPlugin === 'function' && Object.keys(translations).length) {
         initRemoveBgPlugin(translations, removeBgEnabled);
     }
@@ -862,7 +997,6 @@ function applySettings(cfg) {
     if (typeof initFormFieldsPlugin === 'function') {
         initFormFieldsPlugin(translations, formFieldsEnabled);
     }
-    compressEnabled = activePlugins.includes('compresspdf');
     if (cfg.update_interval !== undefined) {
         updateInterval = parseInt(cfg.update_interval);
     }
@@ -932,6 +1066,19 @@ function updateGalleryLayout() {
     }
 }
 
+if (wikiContent) {
+    wikiContent.addEventListener('click', (event) => {
+        const anchor = event.target.closest('a[href]');
+        if (!anchor) return;
+        const href = anchor.getAttribute('href');
+        if (!href || anchor.target === '_blank' || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('http')) {
+            return;
+        }
+        event.preventDefault();
+        loadWiki(href);
+    });
+}
+
 if (layoutToggleBtn) {
     layoutToggleBtn.addEventListener('click', () => {
         galleryHorizontal = !galleryHorizontal;
@@ -998,15 +1145,62 @@ function applyTranslations() {
     if (autoDetectHint) {
         autoDetectHint.textContent = translations['autoHint'] || 'Double click to auto-detect';
     }
+    if (wikiStatus && wikiStatus.style.display !== 'none') {
+        if (wikiStatus.classList.contains('error')) {
+            wikiStatus.textContent = translations['guideFailed'] || wikiStatus.textContent;
+        } else {
+            wikiStatus.textContent = translations['guideLoading'] || wikiStatus.textContent;
+        }
+    }
     updateGalleryLayout();
     updateWikiLinks();
     startBannerRotation();
 }
 
 function updateWikiLinks() {
-    const url = `/wiki/${currentLang}/index.html`;
-    if (wikiFrame) wikiFrame.src = url;
-    if (openWikiLink) openWikiLink.href = url;
+    if (openWikiLink) openWikiLink.href = `/wiki/${currentLang}/${currentWikiPage}`;
+}
+
+function setWikiStatus(message = '', type = 'info') {
+    if (!wikiStatus) return;
+    wikiStatus.classList.remove('info', 'error');
+    if (!message) {
+        wikiStatus.style.display = 'none';
+        wikiStatus.textContent = '';
+        return;
+    }
+    wikiStatus.textContent = message;
+    wikiStatus.style.display = 'block';
+    wikiStatus.classList.add(type === 'error' ? 'error' : 'info');
+}
+
+function renderWiki(html) {
+    if (!wikiContent) return;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    wikiContent.innerHTML = doc.body ? doc.body.innerHTML : html;
+    wikiContent.scrollTop = 0;
+}
+
+async function loadWiki(page = 'index.html') {
+    if (!wikiContent) return;
+    const normalized = (page || 'index.html').split('#')[0].trim().replace(/^\/+/, '') || 'index.html';
+    currentWikiPage = normalized;
+    setWikiStatus(t('guideLoading'), 'info');
+    wikiContent.innerHTML = '';
+    try {
+        const resp = await apiFetch(`/wiki-content/${currentLang}/${normalized}`);
+        if (!resp.ok) {
+            throw new Error(`HTTP ${resp.status}`);
+        }
+        const html = await resp.text();
+        renderWiki(html);
+        updateWikiLinks();
+        setWikiStatus();
+    } catch (err) {
+        console.error('Failed to load wiki', err);
+        setWikiStatus(t('guideFailed'), 'error');
+    }
 }
 
 function updateBannerImage() {
@@ -1299,7 +1493,7 @@ function deleteImage(index) {
         signaturePreview.style.display = 'none';
         signatureHint.style.display = 'none';
         if (legalDisclaimerEl) legalDisclaimerEl.style.display = 'none';
-        fetch('/clear-session/', {method:'POST'}).catch(()=>{});
+        apiFetch('/clear-session/', {method:'POST'}).catch(()=>{});
     }
 }
 
@@ -2219,7 +2413,7 @@ submitBtn.addEventListener('click', () => {
     formData.append('brightness', brightnessRange.value);
     formData.append('contrast', contrastRange.value);
 
-    fetch('/process-image/', {
+    apiFetch('/process-image/', {
         method: 'POST',
         body: formData,
     })
@@ -2364,7 +2558,7 @@ async function generatePdf() {
     if (window.lastSignEmail || window.lastSignPhone || window.lastSignName) {
         payload.sign_info = { email: window.lastSignEmail, phone: window.lastSignPhone, name: window.lastSignName };
     }
-    fetch('/create-pdf/', {
+    apiFetch('/create-pdf/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -2446,7 +2640,7 @@ if (OCR_ENABLED) {
             return;
         }
         statusMessageElement.textContent = 'Extracting text...';
-        fetch('/ocr/', {
+        apiFetch('/ocr/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ images: processedImages })
@@ -2519,15 +2713,23 @@ purchaseBtn.addEventListener('click', () => {
         purchaseBox.classList.toggle('visible');
     }
 });
-sponsorBtn.addEventListener("click", () => {
-    const rect = sponsorBtn.getBoundingClientRect();
-    sponsorBox.style.top = (rect.bottom + window.scrollY) + 'px';
-    sponsorBox.classList.toggle('visible');
-    if (!sponsorBox.dataset.loaded) {
-        loadSponsorLevels();
-        sponsorBox.dataset.loaded = '1';
-    }
-});
+if (sponsorBtn) {
+    sponsorBtn.addEventListener("click", () => {
+        if (!sponsorFeaturesEnabled) {
+            return;
+        }
+        if (!sponsorBox) {
+            return;
+        }
+        const rect = sponsorBtn.getBoundingClientRect();
+        sponsorBox.style.top = (rect.bottom + window.scrollY) + 'px';
+        sponsorBox.classList.toggle('visible');
+        if (!sponsorBox.dataset.loaded) {
+            loadSponsorLevels();
+            sponsorBox.dataset.loaded = '1';
+        }
+    });
+}
 licenseBtn.addEventListener('click', () => {
     const rect = licenseBtn.getBoundingClientRect();
     licenseBox.style.display = 'block';
@@ -2543,7 +2745,7 @@ settingsBtn.addEventListener('click', async () => {
     if (!settingsUnlocked) {
         const pwd = prompt(t('enterSettingsPassword'));
         if (!pwd) return;
-        const resp = await fetch('/settings-login/', {
+        const resp = await apiFetch('/settings-login/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password: pwd })
@@ -2565,7 +2767,7 @@ if (devSettingsBtn) {
         if (!devSettingsUnlocked) {
             const pwd = prompt(t('enterDevPassword'));
             if (!pwd) return;
-            const resp = await fetch('/developer-login/', {
+            const resp = await apiFetch('/developer-login/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ password: pwd })
@@ -2766,6 +2968,8 @@ langSelect.addEventListener('change', async () => {
     renderPaymentBox(currentSettings);
     renderLicenseBox();
     settingsBox.innerHTML = '';
+    currentWikiPage = 'index.html';
+    loadWiki(currentWikiPage);
     saveSettings({ language: currentLang });
 });
 
@@ -3163,7 +3367,7 @@ function autoDetectCorners() {
     statusMessageElement.textContent = translations['detectingEdges'] || 'Detecting edges...';
     const formData = new FormData();
     formData.append('image_file', currentFile);
-    fetch('/detect-corners/', { method: 'POST', body: formData })
+    apiFetch('/detect-corners/', { method: 'POST', body: formData })
         .then(resp => {
             if (!resp.ok) {
                 if (resp.status === 413) {
@@ -3333,7 +3537,7 @@ function renderPaymentBox(cfg) {
     const proBtn = document.getElementById('stripeProBtn');
     if (proBtn) {
         proBtn.addEventListener('click', async () => {
-            const res = await fetch('/stripe-checkout/', {
+            const res = await apiFetch('/stripe-checkout/', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({level: 'pro'})
@@ -3351,7 +3555,7 @@ function renderPaymentBox(cfg) {
     const fullBtn = document.getElementById('stripeFullBtn');
     if (fullBtn) {
         fullBtn.addEventListener('click', async () => {
-            const res = await fetch('/stripe-checkout/', {
+            const res = await apiFetch('/stripe-checkout/', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({level: 'full'})
@@ -3373,6 +3577,7 @@ async function loadSponsorLevels() {
     sponsorBox.innerHTML = `<h3 data-i18n="sponsorTitle">${t('sponsorTitle')}</h3><p data-i18n="sponsorIntro">${t('sponsorIntro')}</p><table id="sponsorTable" class="sponsor-table"><thead><tr><th data-i18n="sponsorBenefit">${t('sponsorBenefit')}</th><th>Bronze</th><th>Silver</th><th>Gold</th></tr></thead><tbody><tr><td data-i18n="sponsorPrice">${t('sponsorPrice')}</td><td id="priceBronze">€ xxx</td><td id="priceSilver">€ xxx</td><td id="priceGold">€ xxx</td></tr><tr><td data-i18n="sponsorBenefitVisibility">${t('sponsorBenefitVisibility')}</td><td class="check">✔</td><td class="check">✔</td><td class="check">✔</td></tr><tr><td data-i18n="sponsorBenefitBanner">${t('sponsorBenefitBanner')}</td><td>–</td><td class="check">✔</td><td class="check">✔</td></tr><tr><td data-i18n="sponsorBenefitMarketing">${t('sponsorBenefitMarketing')}</td><td>–</td><td class="check">✔</td><td class="check">✔</td></tr><tr><td data-i18n="sponsorBenefitLicense">${t('sponsorBenefitLicense')}</td><td>Base</td><td>Pro LAN</td><td>Full</td></tr></tbody></table><div class="sponsor-contact"><a href="mailto:info@iltuoconsulente.it" class="btn btn-primary" data-i18n="contactSponsor">${t('contactSponsor')}</a></div><p data-i18n="sponsorNote">${t('sponsorNote')}</p>`;
     try {
         const resp = await fetch('/index.php?option=com_fabrik&view=list&listid=XX&format=raw&format=json');
+        if (!resp.ok) return;
         const data = await resp.json();
         const prices = {bronze:'',silver:'',gold:''};
         data.forEach(item => {
@@ -3383,7 +3588,7 @@ async function loadSponsorLevels() {
         document.getElementById('priceBronze').textContent = prices.bronze ? `€${prices.bronze}` : '€ xxx';
         document.getElementById('priceSilver').textContent = prices.silver ? `€${prices.silver}` : '€ xxx';
         document.getElementById('priceGold').textContent = prices.gold ? `€${prices.gold}` : '€ xxx';
-    } catch (e) {}
+    } catch {}
     applyTranslations();
 }
 
@@ -3426,7 +3631,7 @@ function renderLicenseBox() {
         btn.addEventListener('click', async () => {
             const key = document.getElementById('licenseKeyInput').value.trim();
             const name = document.getElementById('licenseNameInput').value.trim();
-            const resp = await fetch('/license/manual', {
+            const resp = await apiFetch('/license/manual', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ key, name })
@@ -3437,7 +3642,7 @@ function renderLicenseBox() {
                 return;
             }
             await refreshLicenseInfo();
-            await fetch('/restart/', {method: 'POST'});
+            await apiFetch('/restart/', {method: 'POST'});
             if ('caches' in window) {
                 const keys = await caches.keys();
                 for (const k of keys) {
@@ -3457,14 +3662,14 @@ function renderLicenseBox() {
             }
             const fd = new FormData();
             fd.append('file', f);
-            const resp = await fetch('/license/upload', { method: 'POST', body: fd });
+            const resp = await apiFetch('/license/upload', { method: 'POST', body: fd });
             if (!resp.ok) {
                 const txt = await resp.text();
                 alert('License save failed: ' + txt);
                 return;
             }
             await refreshLicenseInfo();
-            await fetch('/restart/', {method: 'POST'});
+            await apiFetch('/restart/', {method: 'POST'});
             if ('caches' in window) {
                 const keys = await caches.keys();
                 for (const k of keys) {
@@ -3479,7 +3684,7 @@ function renderLicenseBox() {
         if (buyBtn) {
             buyBtn.addEventListener('click', async () => {
                 const level = document.getElementById('purchaseLevel').value;
-                const res = await fetch('/stripe-checkout/', {
+                const res = await apiFetch('/stripe-checkout/', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({level})
@@ -3606,7 +3811,7 @@ function renderLogin(cfg) {
         google.accounts.id.initialize({
             client_id: cfg.google_client_id,
             callback: async (response) => {
-                const res = await fetch('/google-login/', {
+                const res = await apiFetch('/google-login/', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({token: response.credential})
@@ -3677,6 +3882,8 @@ loadSettings().then(async (cfg) => {
     updateLayoutPreview();
     setupDeviceMode();
     updateInputMode();
+    currentWikiPage = 'index.html';
+    loadWiki(currentWikiPage);
     if (updateBell) {
         checkForUpdate();
         setInterval(checkForUpdate, updateInterval);

@@ -1,3 +1,57 @@
+const API_BASE = window.DC_API_BASE || '/api';
+const ABSOLUTE_URL_RE = /^[a-zA-Z][a-zA-Z0-9+.-]*:/;
+const SKIP_PREFIXES = [
+  '/static/',
+  '/wiki/',
+  '/index.php',
+  '/admin/',
+  '/docs',
+  '/openapi',
+];
+
+function normalizeApiPath(path) {
+  if (typeof path !== 'string' || !path) {
+    return path;
+  }
+  if (ABSOLUTE_URL_RE.test(path)) {
+    return path;
+  }
+  if (path.startsWith(API_BASE)) {
+    return path;
+  }
+  for (const prefix of SKIP_PREFIXES) {
+    if (path.startsWith(prefix)) {
+      return path;
+    }
+  }
+  if (!path.startsWith('/')) {
+    path = `/${path}`;
+  }
+  return `${API_BASE}${path}`;
+}
+
+function createApiFetch() {
+  const hasRequest = typeof Request !== 'undefined';
+  return (resource, init) => {
+    if (typeof resource === 'string') {
+      return fetch(normalizeApiPath(resource), init);
+    }
+    if (hasRequest && resource instanceof Request) {
+      const url = normalizeApiPath(resource.url);
+      if (url === resource.url) {
+        return fetch(resource, init);
+      }
+      const cloned = new Request(url, resource);
+      return fetch(cloned, init);
+    }
+    return fetch(resource, init);
+  };
+}
+
+const apiFetch = (window.DC_API_HELPER && typeof window.DC_API_HELPER.apiFetch === 'function')
+  ? window.DC_API_HELPER.apiFetch
+  : createApiFetch();
+
 export async function verifyTokenLocally(token, secret) {
   try {
     const [headerB64, payloadB64, signatureB64] = token.split('.');
@@ -33,7 +87,7 @@ export async function verifyTokenLocally(token, secret) {
 }
 
 export async function verifyTokenRemotely(token) {
-  const resp = await fetch('/license/verify', {
+  const resp = await apiFetch('/license/verify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token, domain: location.hostname })

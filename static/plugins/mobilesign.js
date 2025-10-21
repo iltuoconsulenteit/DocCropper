@@ -1,3 +1,57 @@
+const API_BASE = window.DC_API_BASE || '/api';
+const ABSOLUTE_URL_RE = /^[a-zA-Z][a-zA-Z0-9+.-]*:/;
+const SKIP_PREFIXES = [
+    '/static/',
+    '/wiki/',
+    '/index.php',
+    '/admin/',
+    '/docs',
+    '/openapi',
+];
+
+function normalizeApiPath(path) {
+    if (typeof path !== 'string' || !path) {
+        return path;
+    }
+    if (ABSOLUTE_URL_RE.test(path)) {
+        return path;
+    }
+    if (path.startsWith(API_BASE)) {
+        return path;
+    }
+    for (const prefix of SKIP_PREFIXES) {
+        if (path.startsWith(prefix)) {
+            return path;
+        }
+    }
+    if (!path.startsWith('/')) {
+        path = `/${path}`;
+    }
+    return `${API_BASE}${path}`;
+}
+
+function createApiFetch() {
+    const hasRequest = typeof Request !== 'undefined';
+    return (resource, init) => {
+        if (typeof resource === 'string') {
+            return fetch(normalizeApiPath(resource), init);
+        }
+        if (hasRequest && resource instanceof Request) {
+            const url = normalizeApiPath(resource.url);
+            if (url === resource.url) {
+                return fetch(resource, init);
+            }
+            const cloned = new Request(url, resource);
+            return fetch(cloned, init);
+        }
+        return fetch(resource, init);
+    };
+}
+
+const apiFetch = (window.DC_API_HELPER && typeof window.DC_API_HELPER.apiFetch === 'function')
+    ? window.DC_API_HELPER.apiFetch
+    : createApiFetch();
+
 export function initSignaturePlugin(translations, enabled = true) {
     const mobileSignBtn = document.getElementById('mobileSignBtn');
     const signQR = document.getElementById('signQR');
@@ -27,7 +81,7 @@ export function initSignaturePlugin(translations, enabled = true) {
 
     async function pollPdf(token) {
         try {
-            const r = await fetch(`/signed-pdf/${token}`);
+            const r = await apiFetch(`/signed-pdf/${token}`);
             if (r.status === 200) {
                 const d = await r.json();
                 if (d.url) {
@@ -44,7 +98,7 @@ export function initSignaturePlugin(translations, enabled = true) {
 
     async function pollSignature(token) {
         try {
-            const resp = await fetch(`/signature-result/${token}`);
+            const resp = await apiFetch(`/signature-result/${token}`);
             if (resp.status === 200) {
                 const data = await resp.json();
                 window.lastSignName = data.name || '';
@@ -90,7 +144,7 @@ export function initSignaturePlugin(translations, enabled = true) {
             if (window.lastSignName) payload.name = window.lastSignName;
             if (window.lastSignEmail) payload.email = window.lastSignEmail;
             if (window.lastSignPhone) payload.phone = window.lastSignPhone;
-            const resp = await fetch('/start-sign/', {
+            const resp = await apiFetch('/start-sign/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
