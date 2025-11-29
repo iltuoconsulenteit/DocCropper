@@ -1,6 +1,15 @@
 {
   "language": "it",
   "template": "expressive",
+  "enable_pocketbase_plugin": false,
+  "pocketbase_url": "http://127.0.0.1:8090",
+  "pocketbase_admin_token": "",
+  "pocketbase_collections": {
+    "users": "users",
+    "sessions": "sessions",
+    "user_settings": "user_settings",
+    "data": "data"
+  },
   "layout": 1,
   "orientation": "portrait",
   "arrangement": "auto",

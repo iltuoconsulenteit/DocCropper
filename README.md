@@ -8,6 +8,30 @@ All project changes are documented in [UPDATES.md](UPDATES.md). Run `python scri
 
 Configuration variables, environment files, and the `settings.json` options are detailed in [CONFIGURATION.md](CONFIGURATION.md).
 
+### PocketBase plugin
+
+The optional PocketBase plugin lets DocCropper offload user login and settings persistence to a PocketBase instance.
+
+1. Download PocketBase from https://pocketbase.io/docs/ and run it locally:
+
+   ```bash
+   ./pocketbase serve --http 127.0.0.1:8090
+   ```
+
+2. In the PocketBase dashboard create the following collections:
+   - **users**: standard auth collection with email/password enabled (keep default auth rules).
+   - **sessions**: fields `user` (relation to `users`, not required), `email` (text), and `token` (text, unique recommended).
+   - **user_settings**: fields `email` (text, unique) and `data` (JSON/object) to store user preferences.
+   - **data**: optional general-purpose collection for additional app records (JSON/object field is sufficient).
+
+3. Copy an admin JWT token from **Settings → API** in PocketBase and set these keys in `settings.json` (or matching environment variables):
+   - `enable_pocketbase_plugin`: `true`
+   - `pocketbase_url`: base URL for your instance, e.g., `http://127.0.0.1:8090`
+   - `pocketbase_admin_token`: the admin JWT
+   - `pocketbase_collections`: override collection names if you used different ones
+
+When enabled, `/auth/jwt/login` automatically authenticates against PocketBase, stores session tokens in the `sessions` collection, and user preference endpoints read/write the `user_settings` collection. If the plugin is disabled or PocketBase is unreachable, DocCropper falls back to local authentication and file-based settings.
+
 ---
 
 ## ✨ Key Features
