@@ -11,7 +11,7 @@ import uuid
 from pathlib import Path
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any
+from typing import Any, Callable, Iterable
 
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, Body, Request, Depends, HTTPException
@@ -82,25 +82,10 @@ def get_fitz():
     if _fitz is None:
         _fitz = importlib.import_module("fitz")
     return _fitz
-from plugin.core.sign import register as register_sign
-from app.licensing.check import verify_license
 from jose import jwt, JWTError
+from app.licensing.check import verify_license
 from app.licensing.fingerprint import get_machine_fingerprint
-import time
-from app.auth.routes import router as auth_router, fastapi_users
-from app.auth.models import User
-from plugin.core.mobilesign import register as register_mobilesign
-from plugin.core.remotesign import register as register_remotesign
-from plugin.core.docuseal import register as register_docuseal
-from plugin.core.crop import register as register_crop
-from plugin.core.removebg import register as register_removebg
-from plugin.core.compresspdf import register as register_compresspdf
-from plugin.core.watermark import register as register_watermark
-from plugin.core.login import register as register_login
-from plugin.core.downloadpng import register as register_downloadpng
-from plugin.core.pageselect import register as register_pageselect
-from plugin.core.colormode import register as register_colormode
-from plugin.core.scan import register as register_scan
+from app.plugins import FunctionPlugin, load_plugins, shutdown_plugins
 
 try:
     import stripe
@@ -314,6 +299,7 @@ DEFAULT_SETTINGS = {
     "stripe_cancel_url": "",
     "bank_info": "",
     "google_client_id": "",
+    "enable_plugins": True,
     "license_check": False,
     "license_level": "full",
     "brand_html": "",
@@ -817,6 +803,11 @@ def save_settings(update: dict):
             json.dump(current, fh, indent=2)
     return data
 
+
+def plugins_enabled(settings: dict | None = None) -> bool:
+    settings = settings or load_settings()
+    return bool(settings.get("enable_plugins", True))
+
 def sanitize_email(email: str) -> str:
     return email.replace("@", "_at_").replace(".", "_")
 
@@ -863,39 +854,80 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+settings = load_settings()
+PLUGINS_ENABLED = plugins_enabled(settings)
+AUTH_ENABLED = PLUGINS_ENABLED and settings.get("license_check", False)
+
+if AUTH_ENABLED:
+    from app.auth.routes import router as auth_router, fastapi_users
+    from app.auth.models import User
+
+    optional_user_dependency = fastapi_users.current_user(optional=True)
+    required_user_dependency = fastapi_users.current_user()
+else:  # pragma: no cover - fallback for no-auth builds
+    auth_router = None
+
+    class User(SimpleNamespace):
+        email: str | None = None
+        license_type: str = "plugins_disabled"
+        license_token: str = ""
+        is_superuser: bool = False
+
+    async def optional_user_dependency():  # type: ignore[override]
+        return None
+
+    async def required_user_dependency():  # type: ignore[override]
+        raise HTTPException(status_code=401, detail="Authentication disabled")
+
+ACTIVE_PLUGINS: list[str] = []
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.auth.database import async_session_maker, init_db
-    from fastapi_users.db import SQLAlchemyUserDatabase
     from app.utils.backup import backup_all
 
-    # Ensure database and tables exist
-    await init_db()
+    loaded_plugins = []
+    app.state.active_plugins = []
 
-    # Create default admin user if none exists
-    admin_email = os.getenv("DOCROPPER_ADMIN_EMAIL", "admin@example.com")
-    admin_password = os.getenv("DOCROPPER_ADMIN_PASSWORD", "admin")
-    async with async_session_maker() as session:
-        user_db = SQLAlchemyUserDatabase(session, User)
-        existing = await user_db.get_by_email(admin_email)
-        if existing is None:
-            hashed = bcrypt.hash(admin_password)
-            admin = User(
-                email=admin_email,
-                hashed_password=hashed,
-                is_active=True,
-                is_superuser=True,
-                is_verified=True,
-            )
-            session.add(admin)
-            await session.commit()
+    if not PLUGINS_ENABLED:
+        logger.info("Plugins disabled; skipping auth and database initialization")
+        backup_all()
+        try:
+            yield
+        finally:
+            backup_all()
+        return
 
-    # Initial backup on start
-    backup_all()
+    if AUTH_ENABLED:
+        from app.auth.database import async_session_maker, init_db
+        from fastapi_users.db import SQLAlchemyUserDatabase
+
+        await init_db()
+
+        admin_email = os.getenv("DOCROPPER_ADMIN_EMAIL", "admin@example.com")
+        admin_password = os.getenv("DOCROPPER_ADMIN_PASSWORD", "admin")
+        async with async_session_maker() as session:
+            user_db = SQLAlchemyUserDatabase(session, User)
+            existing = await user_db.get_by_email(admin_email)
+            if existing is None:
+                hashed = bcrypt.hash(admin_password)
+                admin = User(
+                    email=admin_email,
+                    hashed_password=hashed,
+                    is_active=True,
+                    is_superuser=True,
+                    is_verified=True,
+                )
+                session.add(admin)
+                await session.commit()
+    else:
+        logger.info("Authentication disabled; database setup skipped")
+
+    loaded_plugins = await load_builtin_plugins(app)
+    app.state.active_plugins = [plugin.name for plugin in loaded_plugins]
     try:
         yield
     finally:
-        # Backup again on shutdown
+        await shutdown_plugins(app, loaded_plugins)
         backup_all()
 
 # Expose the OpenAPI schema and docs under the /api path so the Swagger UI
@@ -917,8 +949,10 @@ async def set_frame_options(request, call_next):
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     return response
 # Only enable authentication routes when license checking is active
-if load_settings().get("license_check", False):
+if AUTH_ENABLED and auth_router:
     app.include_router(auth_router)
+elif not PLUGINS_ENABLED:
+    logger.info("Authentication routes not loaded; plugins disabled")
 
 # Enable cross-origin requests if needed
 origins = os.getenv("DOCROPPER_CORS_ORIGINS", "*")
@@ -956,8 +990,12 @@ async def root_redirect_empty() -> RedirectResponse:
 # Dependency used to enforce that the configured license is valid
 async def require_valid_license(
     request: Request,
-    user: User | None = Depends(fastapi_users.current_user(optional=True)),
+    user: User | None = Depends(optional_user_dependency),
 ):
+    if not PLUGINS_ENABLED:
+        logger.info("License validation skipped because plugins are disabled")
+        return user
+
     settings = load_settings()
     if not settings.get("license_check", False):
         return user
@@ -1038,106 +1076,118 @@ plugin_utils = {
     'MAX_UPLOAD_BYTES': MAX_UPLOAD_BYTES,
 }
 
-settings = load_settings()
-ACTIVE_PLUGINS: list[str] = []
-key_upper = settings.get('license_key', '').strip().upper()
-dev_env = DEV_LICENSE_KEY_UPPER
-license_level = settings.get('license_level', '').strip().lower() or settings.get('license_type', '').strip().lower()
-is_dev_license = (
-    license_level == 'developer'
-    or (dev_env and key_upper == dev_env)
-    or key_upper.endswith('-DEV')
-)
+def build_core_plugins(settings: dict, is_dev_license: bool) -> list[FunctionPlugin]:
+    from plugin.core.compresspdf import register as register_compresspdf
+    from plugin.core.crop import register as register_crop
+    from plugin.core.docuseal import register as register_docuseal
+    from plugin.core.downloadpng import register as register_downloadpng
+    from plugin.core.login import register as register_login
+    from plugin.core.mobilesign import register as register_mobilesign
+    from plugin.core.pageselect import register as register_pageselect
+    from plugin.core.removebg import register as register_removebg
+    from plugin.core.remotesign import register as register_remotesign
+    from plugin.core.scan import register as register_scan
+    from plugin.core.sign import register as register_sign
+    from plugin.core.watermark import register as register_watermark
+    from plugin.core.colormode import register as register_colormode
 
-crop_dev = str(os.getenv('DOCROPPER_CROP_DEV_ONLY', settings.get('crop_dev_only', False))).lower() == 'true'
-if not crop_dev or is_dev_license:
-    register_crop(app, plugin_utils)
-    ACTIVE_PLUGINS.append('crop')
+    plugins: list[FunctionPlugin] = []
 
-enable_login = settings.get('license_check', False)
-login_dev = str(os.getenv('DOCROPPER_LOGIN_DEV_ONLY', settings.get('login_dev_only', True))).lower() == 'true'
-if enable_login and (not login_dev or is_dev_license):
-    register_login(app, plugin_utils)
-    ACTIVE_PLUGINS.append('login')
+    crop_dev = str(os.getenv('DOCROPPER_CROP_DEV_ONLY', settings.get('crop_dev_only', False))).lower() == 'true'
+    plugins.append(FunctionPlugin('crop', register_crop, enabled=not crop_dev or is_dev_license))
 
-enable_sign = str(os.getenv('DOCROPPER_ENABLE_SIGN', settings.get('enable_sign', True))).lower() != 'false'
-sign_dev = str(os.getenv('DOCROPPER_SIGN_DEV_ONLY', settings.get('sign_dev_only', False))).lower() == 'true'
-enable_mobilesign = str(os.getenv('DOCROPPER_ENABLE_MOBILESIGN', settings.get('enable_mobilesign', False))).lower() == 'true'
-mobilesign_dev = str(os.getenv('DOCROPPER_MOBILESIGN_DEV_ONLY', settings.get('mobilesign_dev_only', False))).lower() == 'true'
-enable_remotesign = str(os.getenv('DOCROPPER_ENABLE_REMOTESIGN', settings.get('enable_remotesign', False))).lower() == 'true'
-remotesign_dev = str(os.getenv('DOCROPPER_REMOTESIGN_DEV_ONLY', settings.get('remotesign_dev_only', True))).lower() == 'true'
-enable_docuseal = str(os.getenv('DOCROPPER_ENABLE_DOCUSEAL', settings.get('enable_docuseal', False))).lower() == 'true'
-docuseal_dev = str(os.getenv('DOCROPPER_DOCUSEAL_DEV_ONLY', settings.get('docuseal_dev_only', True))).lower() == 'true'
-enable_removebg = str(os.getenv('DOCROPPER_ENABLE_REMOVEBG', settings.get('enable_removebg', False))).lower() == 'true'
-removebg_dev = str(os.getenv('DOCROPPER_REMOVEBG_DEV_ONLY', settings.get('removebg_dev_only', False))).lower() == 'true'
-enable_compresspdf = str(os.getenv('DOCROPPER_ENABLE_COMPRESSPDF', settings.get('enable_compresspdf', False))).lower() == 'true'
-compresspdf_dev = str(os.getenv('DOCROPPER_COMPRESSPDF_DEV_ONLY', settings.get('compresspdf_dev_only', False))).lower() == 'true'
-enable_watermark = str(os.getenv('DOCROPPER_ENABLE_WATERMARK', settings.get('enable_watermark', False))).lower() == 'true'
-watermark_dev = str(os.getenv('DOCROPPER_WATERMARK_DEV_ONLY', settings.get('watermark_dev_only', False))).lower() == 'true'
-enable_downloadpng = str(os.getenv('DOCROPPER_ENABLE_DOWNLOADPNG', settings.get('enable_downloadpng', False))).lower() == 'true'
-downloadpng_dev = str(os.getenv('DOCROPPER_DOWNLOADPNG_DEV_ONLY', settings.get('downloadpng_dev_only', True))).lower() == 'true'
-enable_pageselect = str(os.getenv('DOCROPPER_ENABLE_PAGESELECT', settings.get('enable_pageselect', True))).lower() == 'true'
-pageselect_dev = str(os.getenv('DOCROPPER_PAGESELECT_DEV_ONLY', settings.get('pageselect_dev_only', False))).lower() == 'true'
-enable_colormode = str(os.getenv('DOCROPPER_ENABLE_COLORMODE', settings.get('enable_colormode', True))).lower() == 'true'
-colormode_dev = str(os.getenv('DOCROPPER_COLORMODE_DEV_ONLY', settings.get('colormode_dev_only', False))).lower() == 'true'
-enable_imageeditor = str(os.getenv('DOCROPPER_ENABLE_IMAGEEDITOR', settings.get('enable_imageeditor', True))).lower() == 'true'
-imageeditor_dev = str(os.getenv('DOCROPPER_IMAGEEDITOR_DEV_ONLY', settings.get('imageeditor_dev_only', True))).lower() == 'true'
-enable_formfields = str(os.getenv('DOCROPPER_ENABLE_FORMFIELDS', settings.get('enable_formfields', False))).lower() == 'true'
-formfields_dev = str(os.getenv('DOCROPPER_FORMFIELDS_DEV_ONLY', settings.get('formfields_dev_only', True))).lower() == 'true'
-enable_scan = str(os.getenv('DOCROPPER_ENABLE_SCAN', settings.get('enable_scan', False))).lower() == 'true'
-scan_dev = str(os.getenv('DOCROPPER_SCAN_DEV_ONLY', settings.get('scan_dev_only', True))).lower() == 'true'
+    enable_login = AUTH_ENABLED
+    login_dev = str(os.getenv('DOCROPPER_LOGIN_DEV_ONLY', settings.get('login_dev_only', True))).lower() == 'true'
+    plugins.append(FunctionPlugin('login', register_login, enabled=enable_login and (not login_dev or is_dev_license)))
 
-if enable_sign and (not sign_dev or is_dev_license):
-    register_sign(app, plugin_utils)
-    ACTIVE_PLUGINS.append('sign')
-if enable_mobilesign and (not mobilesign_dev or is_dev_license):
-    register_mobilesign(app, plugin_utils)
-    ACTIVE_PLUGINS.append('mobilesign')
-if enable_remotesign and (not remotesign_dev or is_dev_license):
-    register_remotesign(app, plugin_utils)
-    ACTIVE_PLUGINS.append('remotesign')
-if enable_docuseal and (not docuseal_dev or is_dev_license):
-    register_docuseal(app, plugin_utils)
-    ACTIVE_PLUGINS.append('docuseal')
-if enable_removebg and (not removebg_dev or is_dev_license):
-    register_removebg(app, plugin_utils)
-    ACTIVE_PLUGINS.append('removebg')
-if enable_compresspdf and (not compresspdf_dev or is_dev_license):
-    register_compresspdf(app, plugin_utils)
-    ACTIVE_PLUGINS.append('compresspdf')
-if license_level == 'free':
-    register_watermark(app, plugin_utils)
-    ACTIVE_PLUGINS.append('watermark')
-elif enable_watermark and (not watermark_dev or is_dev_license):
-    register_watermark(app, plugin_utils)
-    ACTIVE_PLUGINS.append('watermark')
-if enable_downloadpng and (not downloadpng_dev or is_dev_license):
-    register_downloadpng(app, plugin_utils)
-    ACTIVE_PLUGINS.append('downloadpng')
-if enable_pageselect and (not pageselect_dev or is_dev_license):
-    register_pageselect(app, plugin_utils)
-    ACTIVE_PLUGINS.append('pageselect')
-if enable_colormode and (not colormode_dev or is_dev_license):
-    register_colormode(app, plugin_utils)
-    ACTIVE_PLUGINS.append('colormode')
-if enable_imageeditor and (not imageeditor_dev or is_dev_license):
-    from plugin.core.imageeditor import register as register_imageeditor
-    register_imageeditor(app, plugin_utils)
-    ACTIVE_PLUGINS.append('imageeditor')
-if enable_formfields and (not formfields_dev or is_dev_license):
-    from plugin.core.formfields import register as register_formfields
-    register_formfields(app, plugin_utils)
-    ACTIVE_PLUGINS.append('formfields')
-if enable_scan and (not scan_dev or is_dev_license):
-    register_scan(app, plugin_utils)
-    ACTIVE_PLUGINS.append('scan')
+    enable_sign = str(os.getenv('DOCROPPER_ENABLE_SIGN', settings.get('enable_sign', True))).lower() != 'false'
+    sign_dev = str(os.getenv('DOCROPPER_SIGN_DEV_ONLY', settings.get('sign_dev_only', False))).lower() == 'true'
+    plugins.append(FunctionPlugin('sign', register_sign, enabled=enable_sign and (not sign_dev or is_dev_license)))
 
-logger.info("active_plugins %s", ACTIVE_PLUGINS)
+    enable_mobilesign = str(os.getenv('DOCROPPER_ENABLE_MOBILESIGN', settings.get('enable_mobilesign', False))).lower() == 'true'
+    mobilesign_dev = str(os.getenv('DOCROPPER_MOBILESIGN_DEV_ONLY', settings.get('mobilesign_dev_only', False))).lower() == 'true'
+    plugins.append(FunctionPlugin('mobilesign', register_mobilesign, enabled=enable_mobilesign and (not mobilesign_dev or is_dev_license)))
+
+    enable_remotesign = str(os.getenv('DOCROPPER_ENABLE_REMOTESIGN', settings.get('enable_remotesign', False))).lower() == 'true'
+    remotesign_dev = str(os.getenv('DOCROPPER_REMOTESIGN_DEV_ONLY', settings.get('remotesign_dev_only', True))).lower() == 'true'
+    plugins.append(FunctionPlugin('remotesign', register_remotesign, enabled=enable_remotesign and (not remotesign_dev or is_dev_license)))
+
+    enable_docuseal = str(os.getenv('DOCROPPER_ENABLE_DOCUSEAL', settings.get('enable_docuseal', False))).lower() == 'true'
+    docuseal_dev = str(os.getenv('DOCROPPER_DOCUSEAL_DEV_ONLY', settings.get('docuseal_dev_only', True))).lower() == 'true'
+    plugins.append(FunctionPlugin('docuseal', register_docuseal, enabled=enable_docuseal and (not docuseal_dev or is_dev_license)))
+
+    enable_removebg = str(os.getenv('DOCROPPER_ENABLE_REMOVEBG', settings.get('enable_removebg', False))).lower() == 'true'
+    removebg_dev = str(os.getenv('DOCROPPER_REMOVEBG_DEV_ONLY', settings.get('removebg_dev_only', False))).lower() == 'true'
+    plugins.append(FunctionPlugin('removebg', register_removebg, enabled=enable_removebg and (not removebg_dev or is_dev_license)))
+
+    enable_compresspdf = str(os.getenv('DOCROPPER_ENABLE_COMPRESSPDF', settings.get('enable_compresspdf', False))).lower() == 'true'
+    compresspdf_dev = str(os.getenv('DOCROPPER_COMPRESSPDF_DEV_ONLY', settings.get('compresspdf_dev_only', False))).lower() == 'true'
+    plugins.append(FunctionPlugin('compresspdf', register_compresspdf, enabled=enable_compresspdf and (not compresspdf_dev or is_dev_license)))
+
+    enable_watermark = str(os.getenv('DOCROPPER_ENABLE_WATERMARK', settings.get('enable_watermark', False))).lower() == 'true'
+    watermark_dev = str(os.getenv('DOCROPPER_WATERMARK_DEV_ONLY', settings.get('watermark_dev_only', False))).lower() == 'true'
+    license_level = settings.get('license_level', '').strip().lower() or settings.get('license_type', '').strip().lower()
+    plugins.append(FunctionPlugin('watermark', register_watermark, enabled=(license_level == 'free') or (enable_watermark and (not watermark_dev or is_dev_license))))
+
+    enable_downloadpng = str(os.getenv('DOCROPPER_ENABLE_DOWNLOADPNG', settings.get('enable_downloadpng', False))).lower() == 'true'
+    downloadpng_dev = str(os.getenv('DOCROPPER_DOWNLOADPNG_DEV_ONLY', settings.get('downloadpng_dev_only', True))).lower() == 'true'
+    plugins.append(FunctionPlugin('downloadpng', register_downloadpng, enabled=enable_downloadpng and (not downloadpng_dev or is_dev_license)))
+
+    enable_pageselect = str(os.getenv('DOCROPPER_ENABLE_PAGESELECT', settings.get('enable_pageselect', True))).lower() == 'true'
+    pageselect_dev = str(os.getenv('DOCROPPER_PAGESELECT_DEV_ONLY', settings.get('pageselect_dev_only', False))).lower() == 'true'
+    plugins.append(FunctionPlugin('pageselect', register_pageselect, enabled=enable_pageselect and (not pageselect_dev or is_dev_license)))
+
+    enable_colormode = str(os.getenv('DOCROPPER_ENABLE_COLORMODE', settings.get('enable_colormode', True))).lower() == 'true'
+    colormode_dev = str(os.getenv('DOCROPPER_COLORMODE_DEV_ONLY', settings.get('colormode_dev_only', False))).lower() == 'true'
+    plugins.append(FunctionPlugin('colormode', register_colormode, enabled=enable_colormode and (not colormode_dev or is_dev_license)))
+
+    enable_imageeditor = str(os.getenv('DOCROPPER_ENABLE_IMAGEEDITOR', settings.get('enable_imageeditor', True))).lower() == 'true'
+    imageeditor_dev = str(os.getenv('DOCROPPER_IMAGEEDITOR_DEV_ONLY', settings.get('imageeditor_dev_only', True))).lower() == 'true'
+    if enable_imageeditor and (not imageeditor_dev or is_dev_license):
+        from plugin.core.imageeditor import register as register_imageeditor
+        plugins.append(FunctionPlugin('imageeditor', register_imageeditor))
+
+    enable_formfields = str(os.getenv('DOCROPPER_ENABLE_FORMFIELDS', settings.get('enable_formfields', False))).lower() == 'true'
+    formfields_dev = str(os.getenv('DOCROPPER_FORMFIELDS_DEV_ONLY', settings.get('formfields_dev_only', True))).lower() == 'true'
+    if enable_formfields and (not formfields_dev or is_dev_license):
+        from plugin.core.formfields import register as register_formfields
+        plugins.append(FunctionPlugin('formfields', register_formfields))
+
+    enable_scan = str(os.getenv('DOCROPPER_ENABLE_SCAN', settings.get('enable_scan', False))).lower() == 'true'
+    scan_dev = str(os.getenv('DOCROPPER_SCAN_DEV_ONLY', settings.get('scan_dev_only', True))).lower() == 'true'
+    plugins.append(FunctionPlugin('scan', register_scan, enabled=enable_scan and (not scan_dev or is_dev_license)))
+
+    return plugins
+
+
+async def load_builtin_plugins(app: FastAPI):
+    if not PLUGINS_ENABLED:
+        logger.info("Plugin loading skipped because enable_plugins is false")
+        return []
+
+    refreshed_settings = load_settings()
+    key_upper = refreshed_settings.get('license_key', '').strip().upper()
+    dev_env = DEV_LICENSE_KEY_UPPER
+    license_level = refreshed_settings.get('license_level', '').strip().lower() or refreshed_settings.get('license_type', '').strip().lower()
+    is_dev_license = (
+        license_level == 'developer'
+        or (dev_env and key_upper == dev_env)
+        or key_upper.endswith('-DEV')
+    )
+
+    plugins = build_core_plugins(refreshed_settings, is_dev_license)
+    active = await load_plugins(app, plugin_utils, plugins)
+    ACTIVE_PLUGINS[:] = [plugin.name for plugin in active]
+    logger.info("active_plugins %s", ACTIVE_PLUGINS)
+    return active
+
 
 @app.get("/me", tags=["auth"])
-async def get_me(user: User = Depends(fastapi_users.current_user())):
+async def get_me(user: User = Depends(required_user_dependency)):
+    if not AUTH_ENABLED:
+        logger.info("/me requested while authentication is disabled")
+        return {"email": None, "license": "plugins_disabled"}
     return {"email": user.email, "license": user.license_type}
-
 @app.get('/favicon.ico')
 async def favicon():
     icon_path = os.path.join(os.path.dirname(__file__), 'static', 'logos', 'app_logo.png')
@@ -1205,8 +1255,10 @@ async def read_root_lang(lang: str, request: Request):
     return make_index_response(request, lang)
 
 
-async def require_superuser(user: User = Depends(fastapi_users.current_user())):
-    if not user.is_superuser:
+async def require_superuser(user: User | None = Depends(required_user_dependency)):
+    if not AUTH_ENABLED:
+        raise HTTPException(status_code=403, detail="Admin access unavailable")
+    if not user or not getattr(user, "is_superuser", False):
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
@@ -1236,7 +1288,7 @@ async def get_settings():
     version, version_date = get_version_info()
     data["version"] = version
     data["version_date"] = version_date
-    data["active_plugins"] = ACTIVE_PLUGINS
+    data["active_plugins"] = getattr(app.state, "active_plugins", ACTIVE_PLUGINS)
     if "stripe_secret_key" in data:
         data.pop("stripe_secret_key")
     return JSONResponse(data, headers={"Cache-Control": "no-store, max-age=0"})
