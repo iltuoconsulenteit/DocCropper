@@ -101,6 +101,7 @@ from plugin.core.downloadpng import register as register_downloadpng
 from plugin.core.pageselect import register as register_pageselect
 from plugin.core.colormode import register as register_colormode
 from plugin.core.scan import register as register_scan
+from plugin.pocketbase_plugin import PocketBasePlugin, get_active_plugin
 
 try:
     import stripe
@@ -372,6 +373,15 @@ DEFAULT_SETTINGS = {
     "demo_full_mode": True,
     "public_url": "",
     "template": "static",
+    "enable_pocketbase_plugin": False,
+    "pocketbase_url": "http://127.0.0.1:8090",
+    "pocketbase_admin_token": "",
+    "pocketbase_collections": {
+        "users": "users",
+        "sessions": "sessions",
+        "user_settings": "user_settings",
+        "data": "data",
+    },
     "update_pin": "",
     "update_interval": 3600000,
     "settings_password": DEFAULT_SETTINGS_PASSWORD,
@@ -822,6 +832,13 @@ def sanitize_email(email: str) -> str:
 
 def load_user_settings(email: str):
     base = load_settings()
+    plugin = get_active_plugin()
+    if isinstance(plugin, PocketBasePlugin) and plugin.config.enabled:
+        remote = plugin.load_user_settings(email)
+        if isinstance(remote, dict):
+            merged = base.copy()
+            merged.update(remote)
+            return merged
     os.makedirs(USERS_DIR, exist_ok=True)
     path = os.path.join(USERS_DIR, sanitize_email(email) + ".json")
     if os.path.exists(path):
@@ -834,6 +851,13 @@ def load_user_settings(email: str):
     return base
 
 def save_user_settings(email: str, update: dict):
+    plugin = get_active_plugin()
+    if isinstance(plugin, PocketBasePlugin) and plugin.config.enabled:
+        stored = plugin.save_user_settings(email, update)
+        if isinstance(stored, dict):
+            merged = load_settings()
+            merged.update(stored)
+            return merged
     os.makedirs(USERS_DIR, exist_ok=True)
     path = os.path.join(USERS_DIR, sanitize_email(email) + ".json")
     data = {}
@@ -1027,6 +1051,7 @@ app.mount(
 js_dir = Path("static/js")
 if js_dir.is_dir():
     app.mount("/js", NoCacheStaticFiles(directory=str(js_dir)), name="js")
+POCKETBASE_PLUGIN: PocketBasePlugin | None = None
 plugin_utils = {
     'load_settings': load_settings,
     'get_session_dir': get_session_dir,
@@ -1036,9 +1061,17 @@ plugin_utils = {
     'encrypt_bytes': encrypt_bytes,
     'ENC_SUFFIX': ENC_SUFFIX,
     'MAX_UPLOAD_BYTES': MAX_UPLOAD_BYTES,
+    'get_pocketbase_plugin': lambda: POCKETBASE_PLUGIN,
 }
 
 settings = load_settings()
+if settings.get('enable_pocketbase_plugin', False):
+    try:
+        from plugin.pocketbase_plugin import register as register_pocketbase
+
+        POCKETBASE_PLUGIN = register_pocketbase(app, plugin_utils)
+    except Exception:
+        logger.exception("Failed to enable PocketBase plugin")
 ACTIVE_PLUGINS: list[str] = []
 key_upper = settings.get('license_key', '').strip().upper()
 dev_env = DEV_LICENSE_KEY_UPPER
@@ -1048,6 +1081,9 @@ is_dev_license = (
     or (dev_env and key_upper == dev_env)
     or key_upper.endswith('-DEV')
 )
+
+if POCKETBASE_PLUGIN and POCKETBASE_PLUGIN.config.enabled:
+    ACTIVE_PLUGINS.append('pocketbase')
 
 crop_dev = str(os.getenv('DOCROPPER_CROP_DEV_ONLY', settings.get('crop_dev_only', False))).lower() == 'true'
 if not crop_dev or is_dev_license:

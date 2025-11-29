@@ -12,6 +12,7 @@ from app.auth.database import get_user_db, async_session_maker
 from app.auth.schemas import UserRead, UserCreate, UserUpdate
 from sqlalchemy import delete, select, func
 import os
+from plugin.pocketbase_plugin import PocketBasePlugin, get_active_plugin
 
 cookie_transport = CookieTransport(cookie_name="auth", cookie_max_age=3600)
 
@@ -77,6 +78,25 @@ async def login(
     credentials: OAuth2PasswordRequestForm = Depends(),
     user_manager: UserManager = Depends(get_user_manager),
 ):
+    pocketbase = get_active_plugin()
+    if isinstance(pocketbase, PocketBasePlugin) and pocketbase.config.enabled:
+        auth = pocketbase.authenticate(credentials.username, credentials.password)
+        if not auth or not auth.get("token"):
+            raise HTTPException(status_code=400, detail="Invalid credentials")
+        token = auth.get("token")
+        record = auth.get("record", {})
+        response.set_cookie(
+            cookie_transport.cookie_name,
+            token,
+            max_age=cookie_transport.cookie_max_age,
+            httponly=True,
+            samesite="lax",
+        )
+        if record.get("email"):
+            response.set_cookie("user_email", record.get("email"), httponly=True)
+        pocketbase.track_session(record, token)
+        return {"access_token": token, "token_type": "bearer", "backend": "pocketbase"}
+
     user = await user_manager.authenticate(credentials)
     if user is None:
         raise HTTPException(status_code=400, detail="Invalid credentials")
@@ -111,6 +131,14 @@ async def logout(
     user: User | None = Depends(fastapi_users.current_user(optional=True)),
 ):
     """Remove the active UserSession entry and clear the auth cookie."""
+
+    pocketbase = get_active_plugin()
+    if isinstance(pocketbase, PocketBasePlugin) and pocketbase.config.enabled:
+        token = request.cookies.get(cookie_transport.cookie_name) or request.cookies.get("pocketbase_token")
+        pocketbase.end_session(token)
+        response.delete_cookie(cookie_transport.cookie_name)
+        response.delete_cookie("user_email")
+        return Response(status_code=204)
 
     token = request.cookies.get(cookie_transport.cookie_name)
     if user and token:
