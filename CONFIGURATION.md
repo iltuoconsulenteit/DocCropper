@@ -109,6 +109,7 @@ Copy the `*.env.example` files in `env/` to `*.env` and adjust the values.  All 
 - `skip_blank` – remove blank pages on import
 
 ### License and plugin flags
+- `enable_plugins` – toggle all plugin loading; when `false` authentication and database-backed plugins are skipped
 - `license_level` – installation tier (`free`, `pro`, `full`)
 - `license_check` – enable remote license validation
 - `enable_sign`, `enable_mobilesign`, `enable_removebg`, `enable_compresspdf`, `enable_watermark`, `enable_pageselect`, `enable_colormode`

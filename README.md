@@ -185,6 +185,10 @@ Activate your virtual environment and run the server with `uvicorn main:app --ho
 
 Send a POST to `/shutdown/` to stop the server. The helper script `doccropper_tray.py` may also be used to manage the server via a system tray icon.
 
+### Standalone (no-auth/no-db) mode
+
+Set `enable_plugins` to `false` in `settings.json` to skip authentication, database migrations, and optional plugin initialization. In this mode DocCropper serves the UI and API with stubbed responses for auth-protected endpoints while leaving the plugin system dormant. The lightweight plugin interface lives under `app/plugins/base.py`, and built-in plugins are loaded through `app/plugins/loader.py` only when the flag is enabled.
+
 ### Tray icon usage
 
 The tray helper works on Windows and most Linux desktops. macOS support is

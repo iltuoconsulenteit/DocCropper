@@ -72,12 +72,15 @@ if __name__ == '__main__':
             print("PID file not found. Server may not be running.")
         raise SystemExit
 
-    try:
-        call_command('migrate', run_syncdb=True, interactive=False, verbosity=0)
-    except Exception as e:
-        print(f"Database migration failed: {e}")
-
     settings = load_settings()
+
+    if settings.get("enable_plugins", True):
+        try:
+            call_command('migrate', run_syncdb=True, interactive=False, verbosity=0)
+        except Exception as e:
+            print(f"Database migration failed: {e}")
+    else:
+        print("Skipping database migration because plugins are disabled")
     port = args.port if args.port is not None else int(settings.get('port', 8765))
     host = args.host
     if settings.get('license_level', 'free').lower() != 'full':

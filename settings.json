@@ -21,6 +21,7 @@
   "stripe_cancel_url": "",
   "bank_info": "",
   "google_client_id": "",
+  "enable_plugins": true,
   "brand_html": "",
   "client_logo": "client_logo.png",
   "sponsor_logo": "sponsor_logo.png",
