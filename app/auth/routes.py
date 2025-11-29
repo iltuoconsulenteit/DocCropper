@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_users import FastAPIUsers
 from fastapi_users.authentication import (
@@ -6,6 +6,8 @@ from fastapi_users.authentication import (
     AuthenticationBackend,
     CookieTransport,
 )
+from fastapi_users.exceptions import UserNotExists
+import secrets
 from app.auth.models import User, UserSession
 from app.auth.user_manager import UserManager
 from app.auth.database import get_user_db, async_session_maker
@@ -125,3 +127,85 @@ async def logout(
 
     response.delete_cookie(cookie_transport.cookie_name)
     return Response(status_code=204)
+
+
+@router.post("/auth/pocketbase/login")
+async def pocketbase_login(
+    response: Response,
+    auth: dict = Body(..., embed=True),
+    user_manager: UserManager = Depends(get_user_manager),
+):
+    """Bridge PocketBase auth to the local JWT cookie used by FastAPI Users.
+
+    The PocketBase session token is stored in a separate cookie so that the
+    ``auth`` cookie always contains a JWT signed with ``SECRET_KEY``. This keeps
+    FastAPI Users authentication functional for routes that depend on it while
+    still preserving the PocketBase token for client-side use.
+    """
+
+    token = auth.get("token") if isinstance(auth, dict) else None
+    record = auth.get("record") if isinstance(auth, dict) else None
+
+    if not isinstance(token, str) or not token:
+        raise HTTPException(status_code=400, detail="Missing PocketBase token")
+
+    if not isinstance(record, dict):
+        record = {}
+
+    email = (record.get("email") or record.get("username") or "").strip().lower()
+    user = None
+    if email:
+        try:
+            user = await user_manager.get_by_email(email)
+        except UserNotExists:
+            user = None
+
+    if user is None:
+        generated_email = email or f"pb-{record.get('id', secrets.token_hex(4))}@example.invalid"
+        user_create = UserCreate(
+            email=generated_email,
+            password=secrets.token_urlsafe(32),
+            is_active=True,
+            is_superuser=False,
+            is_verified=True,
+            license_type=record.get("license_type", "free"),
+            license_token=record.get("license_token"),
+            max_sessions=record.get("max_sessions") or 1,
+        )
+        user = await user_manager.create(user_create)
+
+    count = await active_session_count(user.id)
+    max_sessions = getattr(user, "max_sessions", 1)
+    if count >= max_sessions:
+        raise HTTPException(status_code=403, detail="Too many active sessions")
+
+    jwt_token = await get_jwt_strategy().write_token(user)
+
+    response.set_cookie(
+        cookie_transport.cookie_name,
+        jwt_token,
+        max_age=cookie_transport.cookie_max_age,
+        httponly=True,
+        samesite="lax",
+    )
+
+    response.set_cookie(
+        "pb_auth",
+        token,
+        max_age=cookie_transport.cookie_max_age,
+        httponly=True,
+        samesite="lax",
+    )
+
+    async with async_session_maker() as session:
+        session.add(UserSession(user_id=user.id, token=jwt_token))
+        await session.commit()
+
+    await user_manager.on_after_login(user, None, response)
+
+    return {
+        "access_token": jwt_token,
+        "token_type": "bearer",
+        "user": UserRead.from_orm(user),
+        "pocketbase": {"token": token, "record": record},
+    }
