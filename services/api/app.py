@@ -1174,9 +1174,18 @@ if enable_scan and (not scan_dev or is_dev_license):
 
 logger.info("active_plugins %s", ACTIVE_PLUGINS)
 
+if settings.get("license_check", False):
+    current_user_dependency = fastapi_users.current_user()
+else:
+    async def current_user_dependency():  # type: ignore[override]
+        return None
+
+
 @app.get("/me", tags=["auth"])
-async def get_me(user: User = Depends(fastapi_users.current_user())):
-    return {"email": user.email, "license": user.license_type}
+async def get_me(user: User | None = Depends(current_user_dependency)):
+    if user:
+        return {"email": user.email, "license": user.license_type}
+    return {"email": None, "license": "plugins_disabled"}
 
 @app.get('/favicon.ico')
 async def favicon():
