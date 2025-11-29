@@ -307,20 +307,29 @@ DocCropper ships with three editions. A **Licenses** button in the header opens 
 
 ### Activating a license
 
-Import a signed license file from the **Licenses** panel in the web interface.
-The token is stored in `env/license.env` and applied immediately so the
-page reflects the active edition without a restart. The running server
-exposes `/license/status` which returns the current license name, level,
-and a validity flag so you can verify the edition after an update.
+Import a signed license file from the **Licenses** panel in the web interface
+or supply a code in `settings.json`/`.env`. License codes are validated
+locally using `DOCROPPER_LICENSE_SECRET` (default
+`doccropper-offline-secret`) with the format `<base64-json>.<signature>`.
+When validation fails—or when the code is the default `DEMO-FULL-DC`—the app
+stays in demo mode and keeps the export watermark enabled by default. The
+running server exposes `/license/status` which returns the current license
+name, level, and a validity flag so you can verify the edition after an
+update.
 
 - leave the value empty or set it to `FREE` for the basic demo
 - use `DEMO-FULL-DC` to unlock the **Demo Full** mode with all features but a
   watermark
 - enter the developer key defined by `DOCROPPER_DEV_LICENSE` (default
   `DEVELOPER`) to enable developer features and plugins
- - keys matching `DOCROPPER_ONLINE_LICENSE` trigger
-  online validation
+  - keys matching `DOCROPPER_ONLINE_LICENSE` trigger
+    online validation
 
+To update the saved code from the command line run
+`python -m app.licensing.validator --code "YOUR-CODE"` (optionally with
+`--validate-only` to skip saving). This helper persists the code to
+`settings.json`, updates the cached `demo_full_mode` flag, and prints a JSON
+summary showing whether watermarks should remain enabled.
 When the LAN plugin is active the `lan_user_limit` setting controls how many
 accounts may use DocCropper over the network. Licenses are typically sold in
 blocks of five users (5, 10, 15 and so on).

@@ -86,6 +86,7 @@ from plugin.core.sign import register as register_sign
 from app.licensing.check import verify_license
 from jose import jwt, JWTError
 from app.licensing.fingerprint import get_machine_fingerprint
+from app.licensing.validator import read_license_code, validate_license_code
 import time
 from app.auth.routes import router as auth_router, fastapi_users
 from app.auth.models import User
@@ -597,8 +598,11 @@ def load_settings():
             merged["settings_password"],
             "settings",
         )
-        if not merged.get("license_key"):
-            merged["license_key"] = DEMO_FULL_LICENSE_KEY
+        license_code = read_license_code(merged)
+        if not license_code:
+            license_code = DEMO_FULL_LICENSE_KEY
+        merged["license_key"] = license_code
+        license_status = validate_license_code(license_code)
         merged.setdefault("license_type", "demo")
         merged.setdefault("enable_sponsor_features", False)
         token = merged.get("license_token")
@@ -628,12 +632,17 @@ def load_settings():
         dev_env = DEV_LICENSE_KEY_UPPER
         manual_env = MANUAL_LICENSE_KEY
         online_env = ONLINE_LICENSE_KEY
-        key_upper = merged.get("license_key", "").strip().upper()
-        if not key_upper:
-            key_upper = DEMO_FULL_LICENSE_KEY
-            merged["license_key"] = DEMO_FULL_LICENSE_KEY
-        is_demo = key_upper == DEMO_FULL_LICENSE_KEY
+        key_upper = license_code.strip().upper()
         is_dev = (dev_env and key_upper == dev_env) or key_upper.endswith("-DEV")
+        is_demo = license_status.should_watermark and not (
+            is_dev
+            or (manual_env and key_upper == manual_env)
+            or (online_env and key_upper == online_env)
+        )
+        merged["license_valid"] = license_status.is_valid or is_dev or (
+            manual_env and key_upper == manual_env
+        ) or (online_env and key_upper == online_env)
+        merged["demo_full_mode"] = is_demo
         if is_demo:
             merged["license_level"] = "full"
             merged["license_type"] = "demo"
@@ -666,6 +675,12 @@ def load_settings():
             if not merged.get("license_name"):
                 merged["license_name"] = "Online License"
             merged["enable_sponsor_features"] = bool(merged.get("enable_sponsor_features"))
+        elif license_status.is_valid:
+            merged["license_level"] = "full"
+            merged["license_type"] = license_status.payload.get("edition", "offline") if license_status.payload else "offline"
+            merged["demo_full_mode"] = license_status.should_watermark
+            merged.setdefault("enable_sponsor_features", False)
+            merged.setdefault("enable_mobilesign", True)
         else:
             merged["license_level"] = "full"
             merged["license_type"] = "demo"
@@ -732,11 +747,36 @@ def save_settings(update: dict):
     data.setdefault("enable_sponsor_features", False)
     if os.getenv("DOCROPPER_PUBLIC_URL"):
         data["public_url"] = os.getenv("DOCROPPER_PUBLIC_URL")
-    key_upper = data.get("license_key", "").strip().upper()
+    license_code = read_license_code(data)
+    if not license_code:
+        license_code = DEMO_FULL_LICENSE_KEY
+    status = validate_license_code(license_code)
+    key_upper = license_code.strip().upper()
     dev_env = DEV_LICENSE_KEY_UPPER
     manual_env = MANUAL_LICENSE_KEY
     online_env = ONLINE_LICENSE_KEY
-    if key_upper == DEMO_FULL_LICENSE_KEY:
+    trusted_override = bool(
+        (dev_env and key_upper == dev_env)
+        or (manual_env and key_upper == manual_env)
+        or (online_env and key_upper == online_env)
+    )
+    watermark_mode = status.should_watermark and not trusted_override
+    data["license_key"] = license_code
+    data["license_valid"] = status.is_valid or trusted_override
+    data["demo_full_mode"] = watermark_mode
+    if watermark_mode:
+        data["license_level"] = "full"
+        data["license_type"] = "demo"
+        data["demo_full_mode"] = True
+        data["enable_sponsor_features"] = False
+        if not data.get("license_name"):
+            data["license_name"] = "Demo User"
+        data["enable_mobilesign"] = True
+        if not data.get("paypal_link"):
+            data["paypal_link"] = "https://www.paypal.com/donate/?hosted_button_id=XGKVRL2YQBPDY"
+        if not data.get("public_url"):
+            data["public_url"] = "https://doccropper.iltuoconsulenteit.it"
+    elif key_upper == DEMO_FULL_LICENSE_KEY:
         data["license_level"] = "full"
         data["license_type"] = "demo"
         data["demo_full_mode"] = True
@@ -1738,9 +1778,17 @@ async def create_pdf(
         license_level = settings.get("license_level", "free").strip().lower()
         dev_env = DEV_LICENSE_KEY_UPPER
         dev_key_valid = dev_env and key == dev_env
-        demo_key = key == DEMO_FULL_LICENSE_KEY
+        license_status = validate_license_code(read_license_code(settings))
+        trusted_override = bool(
+            dev_key_valid
+            or (MANUAL_LICENSE_KEY and key == MANUAL_LICENSE_KEY)
+            or (ONLINE_LICENSE_KEY and key == ONLINE_LICENSE_KEY)
+        )
+        demo_mode = license_status.should_watermark and not trusted_override
+        if dev_key_valid and settings.get("developer_watermark", False):
+            demo_mode = True
         if license_check:
-            if demo_key:
+            if demo_mode:
                 licensed = False
             elif dev_key_valid:
                 licensed = True
@@ -1749,11 +1797,12 @@ async def create_pdf(
             else:
                 licensed = False
         else:
-            licensed = license_level != "free"
-            if demo_key or (dev_key_valid and settings.get("developer_watermark", False)):
-                licensed = False
+            licensed = license_level != "free" and (
+                license_status.is_valid or trusted_override
+            ) and not demo_mode
         if license_level == "free":
             licensed = False
+            demo_mode = True
         session_id = request.cookies.get("session_id")
         if not session_id:
             session_id = uuid.uuid4().hex
@@ -1854,7 +1903,7 @@ async def create_pdf(
 
         header_logo = None
         footer_logo = None
-        if not licensed:
+        if not licensed or demo_mode:
             logos_dir = os.path.join(os.path.dirname(__file__), "static", "logos")
             try:
                 header_logo = Image.open(os.path.join(logos_dir, "header_logo.png")).convert("RGBA")
@@ -1898,7 +1947,7 @@ async def create_pdf(
                 offset_y = row * cell_h + margin + (inner_h - new_h) // 2
                 page.paste(temp, (offset_x, offset_y))
                 placements.append((offset_x, offset_y, new_w, new_h))
-            if not licensed:
+            if not licensed or demo_mode:
                 target_h = page_h // 35
                 hl = fl = None
                 if header_logo:
@@ -1930,7 +1979,7 @@ async def create_pdf(
                     ty = fy + (fl.height - th) // 2
                     draw.text((tx, ty), text, fill="black", font=font)
                     page.paste(fl, (fx, fy), fl)
-            if not licensed:
+            if not licensed or demo_mode:
                 try:
                     wm_text = "DocCropper Demo"
                     wm_font_size = max(page_w, page_h) // 6
@@ -1952,7 +2001,7 @@ async def create_pdf(
                 except Exception:
                     logger.exception("Watermark overlay failed")
             if sig_img and signatures and placements:
-                footer_h = fl.height if (not licensed and fl) else 0
+                footer_h = fl.height if ((not licensed or demo_mode) and fl) else 0
                 img_off_x, img_off_y, img_w, img_h = placements[0]
                 base_ratio = (img_h // 10) / sig_img.height
                 for sig in [s for s in signatures if s.get('page') == page_index]:
