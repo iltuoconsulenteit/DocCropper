@@ -126,6 +126,7 @@ async def logout(
             await session.commit()
 
     response.delete_cookie(cookie_transport.cookie_name)
+    response.delete_cookie("pb_auth")
     return Response(status_code=204)
 
 
