@@ -37,22 +37,68 @@ h1, h2 {
     font-size: 0.8em;
     color: #333;
     min-width: 80px;
-    text-align: right;
+    text-align: center;
+    margin: 0 auto;
+}
+
+#brandBox img {
+    max-height: 60px;
+}
+
+#brandArea {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    margin-left: auto; /* keep to the right of header */
+    order: 101; /* after banner */
+    flex-basis: 100%; /* occupy full row so Help button sits below */
+}
+
+#brandArea img {
+    max-height: 60px;
 }
 #loginArea button {
     margin-left: 5px;
 }
+#actionButtons {
+    display: flex;
+    gap: 5px;
+    order: 102;
+    margin-left: auto;
+    align-self: center;
+}
+#actionButtons button {
+    flex: 1 0 auto;
+    margin: 5px;
+}
 
 #pageFooter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
     text-align: center;
     margin-top: 20px;
     color: #555;
     font-size: 0.9em;
+    padding: 10px 5px;
+    position: relative;
+}
+
+#footerBrand {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    justify-content: center;
+    flex-grow: 1;
 }
 
 #versionBox {
-    margin-left: 10px;
     font-style: italic;
+    margin-left: auto;
 }
 
 #wrapper {
@@ -131,13 +177,35 @@ button:hover {
 
 #footerLogo {
     max-height: 40px;
-    display: block;
-    margin: 5px auto 0;
+    margin-left: 10px;
+}
+
+#galleryWrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+#processedGallery {
+    flex-grow: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+#sloganImg {
+    max-height: 150px;
 }
 
 #statusMessage {
     margin-top: 10px;
     font-weight: bold;
+}
+
+#reorderHint {
+    font-size: 0.9em;
+    margin-bottom: 5px;
+    color: #555;
 }
 
 #processedImage {
@@ -146,27 +214,17 @@ button:hover {
     background-color: #fff;
 }
 
-#processedGallery {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
 .thumbContainer {
     position: relative;
-    display: inline-block;
-}
-
-.thumbButtons {
     display: flex;
-    justify-content: center;
-    gap: 4px;
-    margin-top: 2px;
+    flex-direction: column;
+    align-items: center;
 }
 
-.thumbButtons button {
-    padding: 2px 6px;
+.thumbMenu {
+    margin-top: 2px;
     font-size: 0.8em;
+    width: 100%;
 }
 
 #processedGallery img {
@@ -178,6 +236,47 @@ button:hover {
 
 #layoutControls {
     margin-bottom: 10px;
+}
+
+#signatureControls {
+    margin-bottom: 10px;
+    display: none;
+    border: 1px solid #888;
+    padding: 8px;
+    background: #f8f8f8;
+}
+
+#signaturePreview {
+    border: 1px dashed #666;
+    max-width: 100%;
+    margin-top: 5px;
+}
+
+#drawArea {
+    margin-top: 5px;
+    padding: 5px;
+    border: 1px dashed #888;
+    display: inline-block;
+}
+
+#signatureDrawCanvas {
+    border: 1px solid #666;
+    touch-action: none;
+}
+
+#signatureExtra {
+    margin-top: 5px;
+}
+#signatureExtra select,
+#signatureExtra input[type="range"] {
+    margin-left: 4px;
+    margin-right: 4px;
+}
+
+#signatureHint {
+    font-size: 0.9em;
+    text-align: center;
+    margin-top: 4px;
 }
 
 #scalePercent {
@@ -197,6 +296,15 @@ button:hover {
 #layoutPreview .cell {
     border: 1px solid #aaa;
     background: repeating-linear-gradient(45deg, #f0f0f0, #f0f0f0 10px, #e0e0e0 10px, #e0e0e0 20px);
+}
+
+#adjustControls {
+    margin-top: 10px;
+    display: none;
+}
+
+#adjustControls label {
+    margin-right: 5px;
 }
 
 .modal {
@@ -235,26 +343,184 @@ button:hover {
     pointer-events: none;
 }
 
-#paymentBox {
-    border: 1px solid #888;
-    padding: 10px;
-    margin: 20px auto;
-    max-width: 400px;
+#purchaseBox {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 250px;
     background: #fff;
-    text-align: center;
+    border: 1px solid #888;
+    padding: 8px;
+    z-index: 1000;
+    font-size: 0.9em;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    pointer-events: none;
 }
 
-#paymentBox ul {
+#purchaseBox.visible {
+    transform: translateX(0);
+    pointer-events: auto;
+}
+
+#purchaseBox ul {
     list-style: none;
     padding: 0;
 }
 
-#paymentBox li {
+#purchaseBox li {
     margin: 5px 0;
+}
+
+#licenseBox {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 250px;
+    background: #fff;
+    border: 1px solid #888;
+    padding: 8px;
+    z-index: 1000;
+    font-size: 0.9em;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    pointer-events: none;
+}
+
+#licenseBox.visible {
+    transform: translateX(0);
+    pointer-events: auto;
+}
+
+.licenseForm label {
+    display: block;
+    margin-top: 4px;
+}
+.licenseForm input {
+    width: 100%;
+}
+.licenseForm button {
+    margin-top: 6px;
+}
+
+#exportOptions {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    border: 1px solid #888;
+    padding: 10px;
+    z-index: 1001;
+    text-align: center;
+}
+
+#exportOptions button {
+    margin: 5px;
+}
+
+.iconBtn {
+    font-size: 1.5em;
+    padding: 6px 10px;
+}
+
+.iconTextBtn {
+    font-size: 1em;
+    padding: 6px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 @media (max-width: 600px) {
     #pageHeader {
         flex-direction: column;
     }
+    #actionButtons {
+        justify-content: center;
+        margin-left: 0;
+        width: 100%;
+    }
+    #footerBrand {
+        flex-direction: column;
+    }
+    #versionBox {
+        margin-left: 0;
+        width: 100%;
+        text-align: center;
+    }
+}
+
+#instructionsBox {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 250px;
+    background: #fff;
+    border: 1px solid #888;
+    padding: 8px;
+    z-index: 1000;
+    font-size: 0.9em;
+    transform: translateX(100%); /* hidden off-canvas */
+    transition: transform 0.3s ease;
+    pointer-events: none;
+}
+
+#instructionsBox.visible {
+    transform: translateX(0); /* slide into view */
+    pointer-events: auto;
+}
+
+#cameraPreview {
+    width: 100%;
+    max-height: 240px;
+    border: 1px solid #888;
+    margin-top: 10px;
+}
+
+#wikiFrame {
+    width: 100%;
+    height: 300px;
+    border: none;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+#inputControls {
+    margin-bottom: 10px;
+}
+
+#cameraControls button {
+    margin-top: 10px;
+}
+
+#cameraControls select {
+    margin-top: 5px;
+}
+
+#bannerBox {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    background: #fff;
+    border: 1px solid #888;
+    padding: 4px;
+    margin-top: 5px;
+    order: 100; /* before help button */
+}
+
+#bannerBox img {
+    display: block;
+    max-height: 140px;
+}
+
+#bannerBox .close {
+    position: absolute;
+    top: 0;
+    right: 2px;
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
 }

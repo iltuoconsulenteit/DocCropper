@@ -3,6 +3,10 @@ env/*.env
 !env/.env.example
 __pycache__/
 sessions/
+signatures/
 users/**
 !users/.gitkeep
 doccropper.pid
+.env
+google-credentials.json
+*.p12
